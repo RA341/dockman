@@ -1,3 +1,11 @@
+## [1.0.2](https://github.com/RA341/dockman/compare/v1.0.1...v1.0.2) (2025-06-28)
+
+
+### Bug Fixes
+
+* charts perf ([8cf2975](https://github.com/RA341/dockman/commit/8cf2975fe27e639515ba351bcec7e876a17be75a))
+* improved table loader ([40dabdc](https://github.com/RA341/dockman/commit/40dabdca4726609ee6877c69ba0da31c4fa83eab))
+
 ## [1.0.1](https://github.com/RA341/dockman/compare/v1.0.0...v1.0.1) (2025-06-27)
 
 
