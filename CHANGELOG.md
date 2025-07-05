@@ -1,3 +1,19 @@
+# [1.1.0](https://github.com/RA341/dockman/compare/v1.0.2...v1.1.0) (2025-07-05)
+
+
+### Bug Fixes
+
+* infinite git list refresh ([1a76d16](https://github.com/RA341/dockman/commit/1a76d163622967c6eb2c8ea9464062cf33b2080b))
+* switched to a hybrid frontend/backend sort for better ux ([9fad0f0](https://github.com/RA341/dockman/commit/9fad0f00c6ef6c3c34ee7efb6906404d567f6a0f))
+
+
+### Features
+
+* added file sync ([14c1776](https://github.com/RA341/dockman/commit/14c17763802c870532cab6f01bb566ad2ef802a3))
+* added individual container controls ([7049541](https://github.com/RA341/dockman/commit/70495411c05ad933d016f6c6e3dddec20c47aaad))
+* finalized multi-docker host support ([aa71a94](https://github.com/RA341/dockman/commit/aa71a943a66df09aeabab9c5b2dbc0b4f1a32bab))
+* setting auth user/pass ([a26e3fb](https://github.com/RA341/dockman/commit/a26e3fbc97d3be9db37d675dd7ff97f7d95aa95f))
+
 ## [1.0.2](https://github.com/RA341/dockman/compare/v1.0.1...v1.0.2) (2025-06-28)
 
 
