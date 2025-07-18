@@ -61,7 +61,7 @@ COPY --from=front /frontend/dist/ ./dist
 
 # todo non root
 #RUN chown -R appuser:appgroup /app
-#
+
 #USER appuser
 
 EXPOSE 8866
@@ -83,27 +83,6 @@ COPY --from=front /frontend/dist/ ./dist
 #RUN chown -R appuser:appgroup /app
 #
 #USER appuser
-
-EXPOSE 8866
-
-ENTRYPOINT ["./dockman"]
-
-
-# Scratch target
-FROM scratch AS minimal
-
-# todo user perms and certs to make https requests
-#COPY --from=back /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-#
-#COPY --from=back /etc/passwd /etc/passwd
-#
-#COPY --from=back /etc/group /etc/group
-
-WORKDIR /app
-
-COPY --from=back /core/dockman dockman
-
-COPY --from=front /frontend/dist/ ./dist
 
 EXPOSE 8866
 
