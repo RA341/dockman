@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/pkg"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
@@ -179,54 +178,6 @@ func generateKeyPair() (privateKey []byte, publicKey []byte, err error) {
 	pubKeyBytes := ssh.MarshalAuthorizedKey(rsaPublicKey)
 
 	return privatePEM, pubKeyBytes, nil
-}
-
-// verifySSHKeyPair creates RSA key-pair files,
-// if running in docker and
-//
-// if they do not exist, otherwise skips generation
-//
-// the generated keys can be found in
-func verifySSHKeyPair(baseDir string) (string, error) {
-	baseDir = filepath.Join(baseDir, "ssh")
-	if err := os.MkdirAll(baseDir, 0700); err != nil {
-		return "", fmt.Errorf("unable to create dir: %w", err)
-	}
-
-	if !info.IsDocker() {
-		return baseDir, nil
-	}
-
-	privateKeyPath := fmt.Sprintf("%s/%s", baseDir, "id_rsa")
-	publicKeyPath := fmt.Sprintf("%s/%s", baseDir, "id_rsa.pub")
-
-	defer log.Info().
-		Msgf("to add the public key to other hosts use\nssh-copy-id -i %s <user>@<remote_host>\n", publicKeyPath)
-
-	logF := log.Info().
-		Str("private_key_file", privateKeyPath).
-		Str("public_key_file", publicKeyPath).
-		Str("path", baseDir)
-
-	if pkg.FileExists(privateKeyPath) && pkg.FileExists(publicKeyPath) {
-		logF.Msg("found existing keys... skipping generation")
-		return baseDir, nil
-	}
-
-	privateKey, publicKey, err := generateKeyPair()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to generate key pair")
-	}
-
-	if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
-		log.Fatal().Err(err).Msg("Failed to save private key")
-	}
-	if err := os.WriteFile(publicKeyPath, publicKey, 0644); err != nil {
-		log.Fatal().Err(err).Msg("Failed to save public key")
-	}
-
-	logF.Msg("Generated new SSH key pair")
-	return baseDir, nil
 }
 
 func publicKeyToString(publicKey ssh.PublicKey, comment string) (string, error) {
