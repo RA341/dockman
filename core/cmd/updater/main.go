@@ -12,12 +12,14 @@ import (
 )
 
 func init() {
-	err := LoadConfig()
+	logger.InitDefault()
+
+	err := loadConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load config")
 	}
 
-	logger.InitConsole(conf.logger.Level, conf.logger.Verbose)
+	logger.InitConsole(conf.Logger.Level, conf.Logger.Verbose)
 }
 
 func main() {
@@ -29,8 +31,8 @@ func main() {
 	}
 
 	composeClient := docker.NewComposeService(
-		&conf.composeRoot,
-		&conf.updater.DockmanImageBase,
+		&conf.ComposeRoot,
+		&conf.Updater.DockmanImageBase,
 		docker.NewContainerService(cli),
 		docker.NewNoopSyncer(),
 	)
@@ -50,7 +52,7 @@ func main() {
 func updateHandler(client *docker.ComposeService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pathAuthKey := r.Header.Get("Authorization")
-		if pathAuthKey == "" || conf.updater.PassKey != pathAuthKey {
+		if pathAuthKey == "" || conf.Updater.PassKey != pathAuthKey {
 			http.Error(w, "invalid Authorization", http.StatusForbidden)
 			return
 		}

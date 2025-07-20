@@ -37,8 +37,9 @@ type AuthConfig struct {
 }
 
 type UpdaterConfig struct {
-	Addr    string `config:"flag=upAddr,env=UPDATER_HOST,default=updater:8869,usage=Host address for dockman updater, eg: http://localhost:8869"`
-	PassKey string `config:"flag=upAuth,env=UPDATER_KEY,default=,usage=Authentication key for dockman updater"`
+	Addr             string `config:"flag=upAddr,env=UPDATER_HOST,default=updater:8869,usage=Host address for dockman updater, eg: http://localhost:8869"`
+	PassKey          string `config:"flag=upAuth,env=UPDATER_KEY,default=,usage=Authentication key for dockman updater"`
+	DockmanImageBase string `config:"flag=dib,env=IMAGE_BASE,default=ghcr.io/ra341/dockman,usage=Base image to monitor and update containers running this image"`
 }
 
 type Logger struct {
