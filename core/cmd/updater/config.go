@@ -1,35 +1,31 @@
 package main
 
 import (
+	"fmt"
+	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/pkg/args"
-	"github.com/rs/zerolog/log"
 )
 
-func init() {
-	Load()
-}
+var conf Config
 
 const envPrefix = "DOCKMAN_UPDATER"
 
-type UpdaterConfig struct {
-	ComposeRoot  string `config:"flag=cr,env=COMPOSE_ROOT,default=/stacks,usage=Root directory for compose files must be same as dockman"`
-	UpdaterImage string `config:"flag=image,env=IMAGE,default=,usage=Image to monitor generally "`
-	UpdaterKey   string `config:"flag=authkey,env=AUTHKEY,default=superSecretAuth,usage=Security key to update,hide=true"`
+type Config struct {
+	composeRoot string `config:"flag=cr,env=COMPOSE_ROOT,default=/compose,usage=Root directory for compose files"`
+	logger      config.Logger
+	updater     config.UpdaterConfig
 }
 
-var conf UpdaterConfig
-
-func Load() {
-	if err := args.ParseStruct(&conf, envPrefix); err != nil {
-		log.Fatal().Err(err).Msg("unable to parse config struct")
-		return
+func LoadConfig() error {
+	err := args.ParseAndReadFlags(&conf, envPrefix)
+	if err != nil {
+		return fmt.Errorf("unable to parse struct: %w", err)
 	}
 
-	if conf.UpdaterImage == "" {
-		log.Fatal().Msg("no updater image specified")
-		return
-
+	if conf.updater.DockmanImageBase == "" {
+		return fmt.Errorf("no updater image specified")
 	}
 
 	args.PrettyPrint(&conf, envPrefix)
+	return nil
 }
