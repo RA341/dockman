@@ -18,10 +18,10 @@ type Syncer interface {
 // SFTPSyncer syncs files to a remote host using SFTP.
 type SFTPSyncer struct {
 	sftpClient  *ssh.SftpClient
-	composeRoot string
+	composeRoot *string
 }
 
-func NewSFTPSyncer(sftpClient *ssh.SftpClient, composeRoot string) *SFTPSyncer {
+func NewSFTPSyncer(sftpClient *ssh.SftpClient, composeRoot *string) *SFTPSyncer {
 	return &SFTPSyncer{sftpClient: sftpClient, composeRoot: composeRoot}
 }
 
@@ -35,7 +35,7 @@ func (s *SFTPSyncer) Sync(_ context.Context, project *types.Project) error {
 
 			localSourcePath := vol.Source
 
-			if !strings.HasPrefix(localSourcePath, s.composeRoot) {
+			if !strings.HasPrefix(localSourcePath, *s.composeRoot) {
 				log.Debug().
 					Str("local", localSourcePath).
 					Msg("Skipping bind mount outside of project root")
@@ -65,7 +65,11 @@ func (s *SFTPSyncer) Sync(_ context.Context, project *types.Project) error {
 // NoopSyncer is a syncer that does nothing, for local environments.
 type NoopSyncer struct{}
 
+func NewNoopSyncer() *NoopSyncer {
+	return &NoopSyncer{}
+}
+
+// Sync For local docker, files are already on the host. No sync needed.
 func (n *NoopSyncer) Sync(_ context.Context, _ *types.Project) error {
-	// For local docker, files are already on the host. No sync needed.
 	return nil
 }
