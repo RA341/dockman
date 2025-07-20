@@ -209,7 +209,7 @@ func (h *Handler) executeComposeStreamCommand(
 		return err
 	}
 
-	services = h.srv().withoutDockman(project, services...)
+	services, _ = h.srv().withoutDockman(project, services...)
 	log.Debug().Strs("ssdd", services).Msg("compose stream")
 
 	pipeWriter, wg := streamManager(func(val string) error {

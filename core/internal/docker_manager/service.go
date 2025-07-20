@@ -2,7 +2,6 @@ package docker_manager
 
 import (
 	"fmt"
-	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/ssh"
@@ -13,27 +12,35 @@ import (
 )
 
 type Service struct {
-	manager     *ClientManager
-	git         *git.Service
-	ssh         *ssh.Service
-	composeRoot string
-
+	// config
+	composeRoot   *string
+	baseUpdateImg *string
+	localAddr     *string
+	// services
+	manager *ClientManager
+	git     *git.Service
+	ssh     *ssh.Service
+	// internal
 	mu           sync.RWMutex
 	activeClient *docker.Service
 }
 
-func NewService(git *git.Service, ssh *ssh.Service, composeRoot string) *Service {
-	if !filepath.IsAbs(composeRoot) {
-		log.Fatal().Str("path", composeRoot).Msg("composeRoot must be an absolute path")
+func NewService(git *git.Service, ssh *ssh.Service, localAddr, updateBaseImage, composeRoot *string) *Service {
+	if !filepath.IsAbs(*composeRoot) {
+		log.Fatal().Str("path", *composeRoot).Msg("composeRoot must be an absolute path")
 	}
 
 	clientManager, defaultHost := NewClientManager(ssh)
 	srv := &Service{
-		composeRoot: composeRoot,
-		git:         git,
-		manager:     clientManager,
-		ssh:         ssh,
-		mu:          sync.RWMutex{},
+		composeRoot:   composeRoot,
+		baseUpdateImg: updateBaseImage,
+		localAddr:     localAddr,
+
+		git:     git,
+		manager: clientManager,
+		ssh:     ssh,
+
+		mu: sync.RWMutex{},
 	}
 	if err := srv.SwitchClient(defaultHost); err != nil {
 		log.Fatal().Err(err).Str("name", defaultHost).Msg("unable to switch client")
@@ -189,8 +196,8 @@ func (srv *Service) SwitchClient(name string) error {
 	var syncer docker.Syncer
 	if name == LocalClient {
 		// todo load from service
-		localAddr = config.C.LocalAddr
-		syncer = &docker.NoopSyncer{}
+		localAddr = *srv.localAddr
+		syncer = docker.NewNoopSyncer()
 	} else {
 		localAddr = mach.dockerClient.DaemonHost()
 		syncer = docker.NewSFTPSyncer(mach.ssh.SftpClient, srv.composeRoot)
@@ -199,6 +206,7 @@ func (srv *Service) SwitchClient(name string) error {
 	srv.activeClient = docker.NewService(
 		localAddr,
 		srv.composeRoot,
+		srv.baseUpdateImg,
 		mach.dockerClient,
 		syncer,
 	)

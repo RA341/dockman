@@ -5,14 +5,15 @@ import (
 )
 
 type Service struct {
+	// used to prefix container ports for a full addr
 	localAddr string
 	*ComposeService
 	*ContainerService
 }
 
-func NewService(localAddr, composeRoot string, dockerClient *client.Client, syncer Syncer) *Service {
+func NewService(localAddr string, composeRoot, baseImage *string, dockerClient *client.Client, syncer Syncer) *Service {
 	containerClient := NewContainerService(dockerClient)
-	composeClient := NewComposeService(composeRoot, containerClient, syncer)
+	composeClient := NewComposeService(composeRoot, baseImage, containerClient, syncer)
 
 	return &Service{
 		ContainerService: containerClient,

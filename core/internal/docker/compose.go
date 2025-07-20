@@ -23,14 +23,16 @@ import (
 // reference: https://github.com/portainer/portainer/blob/develop/pkg/libstack/compose/composeplugin.go
 
 type ComposeService struct {
-	composeRoot      string
+	composeRoot      *string
+	updateBaseImage  *string
 	containerService *ContainerService
 	syncer           Syncer
 }
 
-func NewComposeService(composeRoot string, client *ContainerService, syncer Syncer) *ComposeService {
+func NewComposeService(composeRoot, baseImage *string, client *ContainerService, syncer Syncer) *ComposeService {
 	return &ComposeService{
 		composeRoot:      composeRoot,
+		updateBaseImage:  baseImage,
 		containerService: client,
 		syncer:           syncer,
 	}
@@ -210,15 +212,15 @@ func (s *ComposeService) LoadComposeClient(outputStream io.Writer, inputStream i
 }
 
 func (s *ComposeService) LoadProject(ctx context.Context, filename string) (*types.Project, error) {
-	filename = filepath.Join(s.composeRoot, filename)
+	filename = filepath.Join(*s.composeRoot, filename)
 	// will be the parent dir of the compose file else equal to compose root
 	workingDir := filepath.Dir(filename)
 
 	options, err := cli.NewProjectOptions(
 		[]string{filename},
 		// important maintain this order to load .env properly
-		// workingdir -> env -> os -> dot env -> sub dir .envs
-		cli.WithWorkingDirectory(s.composeRoot),
+		// compose-root -> global .env -> os envs -> sub dir .envs
+		cli.WithWorkingDirectory(*s.composeRoot),
 		cli.WithEnvFiles(),
 		cli.WithOsEnv,
 		cli.WithDotEnv,
@@ -246,39 +248,34 @@ func (s *ComposeService) LoadProject(ctx context.Context, filename string) (*typ
 	return project.WithoutUnnecessaryResources(), nil
 }
 
-// todo move to config flag
-const dockmanImage = "ghcr.io/ra341/dockman"
-
-func (s *ComposeService) withoutDockman(project *types.Project, services ...string) []string {
-	// If sftp client exists, it's a remote machine. Do not filter.
-	// todo
-	//if isRemoteDockman := s.containerService.daemon.DaemonHost() != nil; isRemoteDockman {
-	//	return services
-	//}
+// filters out dockman containers from project, prevents dockman from updating itself
+// if dockmanServices is nil, it means no dockman containers were found in the compose file
+func (s *ComposeService) withoutDockman(project *types.Project, services ...string) (withoutDockman []string, dockmanServices []string) {
+	if _, ok := s.syncer.(*SFTPSyncer); ok {
+		// If sftp client exists, it's a remote machine. Do not filter.
+		return services, nil
+	}
 
 	// Find the name of the service running the "dockman" image.
-	var dockmanServiceName string
 	for name, conf := range project.Services {
-		if strings.HasPrefix(conf.Image, dockmanImage) {
-			dockmanServiceName = name
+		if strings.HasPrefix(conf.Image, *s.updateBaseImage) {
+			dockmanServices = append(dockmanServices, name)
 			log.Info().Msg("Found dockman service to filter from action")
 			log.Debug().Str("image", conf.Image).Str("service-name", name).
 				Msg("This service will be excluded from the final list.")
-			break // Found it, no need to keep searching
 		}
 	}
 
 	// If no service is using the dockman image, there's nothing to filter.
-	if dockmanServiceName == "" {
-		if len(services) == 0 {
-			// empty list implies all services, since no other services were explicitly passed
-			return []string{}
-		}
-		return services
+	if len(dockmanServices) == 0 {
+		return services, nil
 	}
+
+	// dockman exists filter it out
 
 	// Determine which list of services to filter.
 	targetServices := services
+
 	// If the user did not provide a specific list of services,
 	// use all services from the project as the target.
 	if len(services) == 0 {
@@ -287,8 +284,8 @@ func (s *ComposeService) withoutDockman(project *types.Project, services ...stri
 
 	// Remove the dockman service from the target list and return the result.
 	return slices.DeleteFunc(targetServices, func(serviceName string) bool {
-		return serviceName == dockmanServiceName
-	})
+		return slices.Contains(dockmanServices, serviceName)
+	}), dockmanServices
 }
 
 func addServiceLabels(project *types.Project) {

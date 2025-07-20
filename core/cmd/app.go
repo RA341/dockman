@@ -41,7 +41,13 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
 	fileSrv := files.NewService(cr)
 	gitSrv := git.NewService(cr)
-	dockerManagerSrv := dm.NewService(gitSrv, sshSrv, cr)
+	dockerManagerSrv := dm.NewService(
+		gitSrv,
+		sshSrv,
+		&config.C.LocalAddr,
+		&config.C.Updater.DockmanImageBase,
+		&cr,
+	)
 
 	log.Info().Msg("Dockman initialized successfully")
 	return &App{
