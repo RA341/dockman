@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+// ParseAndReadFlags calls ParseStruct and then calls flag.Parse
+func ParseAndReadFlags(s interface{}, envPrefix string) error {
+	if err := ParseStruct(s, envPrefix); err != nil {
+		return err
+	}
+
+	flag.Parse()
+	return nil
+}
+
 // ParseStruct uses reflection to iterate over the fields of a struct,
 // read the 'config' tags, and set up the corresponding flags.
 // and populates it from defaults, environment variables,
