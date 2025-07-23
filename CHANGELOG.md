@@ -1,3 +1,32 @@
+# [2.0.0](https://github.com/RA341/dockman/compare/v1.1.0...v2.0.0) (2025-07-23)
+
+
+* Merge pull request [#39](https://github.com/RA341/dockman/issues/39) from RA341/main ([f7f4c0c](https://github.com/RA341/dockman/commit/f7f4c0c9fc958385a6c5d673fd7cf8d93a0c4bae))
+
+
+### Bug Fixes
+
+* empty hosts on first login ([0bd35c9](https://github.com/RA341/dockman/commit/0bd35c9e26b465118719db7be22366c1ff49fc76))
+* infinite refresh on git list fail ([43c16cf](https://github.com/RA341/dockman/commit/43c16cf8fcbcef7d13b70249c2b8bc922ec24287))
+* page switch to empty page on host switch ([d0a7ca3](https://github.com/RA341/dockman/commit/d0a7ca35137ab2ae13551b5db7d94d9cf130ff37))
+* table and layout issues ([a1ba85f](https://github.com/RA341/dockman/commit/a1ba85f98e041528e7ebd61ff2ee6bb9bdedd6e5))
+
+
+### Features
+
+* improved multi-host config and management ([3ea713a](https://github.com/RA341/dockman/commit/3ea713ae59c34f09040279bd252a66c318c5b1d1))
+* new version/changelog tracker ([05fa5bf](https://github.com/RA341/dockman/commit/05fa5bf6b4b3a7b2aa3f9fc39687032d5c7f6e3f))
+
+
+### BREAKING CHANGES
+
+* Remove host.yaml for multihost in favor of UI method
+
+- host.yaml removed (RIP, we barely knew ya)
+- dockman now uses config database
+- Config mount= <path to dockman config>:/config
+- Existing SSH keys will not be used
+
 # [1.1.0](https://github.com/RA341/dockman/compare/v1.0.2...v1.1.0) (2025-07-05)
 
 
