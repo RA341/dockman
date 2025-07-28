@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/RA341/dockman/compare/v2.0.0...v2.0.1) (2025-07-28)
+
+
+### Bug Fixes
+
+* [#40](https://github.com/RA341/dockman/issues/40) git commit hangs for large compose roots ([1610f61](https://github.com/RA341/dockman/commit/1610f6155f9a561e5c89d61f7d4df0659886ec0b))
+
 # [2.0.0](https://github.com/RA341/dockman/compare/v1.1.0...v2.0.0) (2025-07-23)
 
 
