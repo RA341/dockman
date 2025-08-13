@@ -1,3 +1,11 @@
+## [2.1.1](https://github.com/RA341/dockman/compare/v2.1.0...v2.1.1) (2025-08-13)
+
+
+### Bug Fixes
+
+* container logs ([98c70c9](https://github.com/RA341/dockman/commit/98c70c993702f3b26eea8f9f471b45560272123e))
+* move compose files to feature flag ([f549e35](https://github.com/RA341/dockman/commit/f549e35a59b1142bbacbf343ed7f351b07249b01))
+
 # [2.1.0](https://github.com/RA341/dockman/compare/v2.0.1...v2.1.0) (2025-08-13)
 
 
