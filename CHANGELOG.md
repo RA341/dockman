@@ -1,3 +1,18 @@
+# [2.1.0](https://github.com/RA341/dockman/compare/v2.0.1...v2.1.0) (2025-08-13)
+
+
+### Features
+
+* added configurable cookie expiry limit ([a48a382](https://github.com/RA341/dockman/commit/a48a3827d75fc15290094a8cb9d496e0cd361ed3))
+* added direct link to stack file from container ([5f42658](https://github.com/RA341/dockman/commit/5f4265848379e64248b681033a48d3da53dff0ab))
+* added search and shortcuts for containers and images ([e632765](https://github.com/RA341/dockman/commit/e63276523718bfab170bb634a175ec1f3aadc0d6))
+* image controls ([6b37043](https://github.com/RA341/dockman/commit/6b370438975001234be1c8111af41de952e91808))
+* implemented container controls ([dd48570](https://github.com/RA341/dockman/commit/dd485705bc9f97aa32bae0227b8a8ed37178240d))
+* network/volumes/image controls ([fa89603](https://github.com/RA341/dockman/commit/fa896035c80e521abae1610fb9f72491c04455a3))
+* new add file dialog ([fca7ff2](https://github.com/RA341/dockman/commit/fca7ff2588889984d07f5c2cb6987e4d0e7d26c2))
+* new file item view ([d5a146b](https://github.com/RA341/dockman/commit/d5a146b1e1a9c28054ef43d4c471c85d7bdd7eae))
+* new shortcuts for file and dashboard ([fe1d16e](https://github.com/RA341/dockman/commit/fe1d16e820e4b96dbfa79cd9b840bef8c62a1969))
+
 ## [2.0.1](https://github.com/RA341/dockman/compare/v2.0.0...v2.0.1) (2025-07-28)
 
 
