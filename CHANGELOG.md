@@ -1,3 +1,13 @@
+## [2.1.2](https://github.com/RA341/dockman/compare/v2.1.1...v2.1.2) (2025-08-23)
+
+
+### Bug Fixes
+
+* added delete dialog on files ([f93ed8d](https://github.com/RA341/dockman/commit/f93ed8d54b3e3e89c6d41819812f7c5891d45370)), closes [#62](https://github.com/RA341/dockman/issues/62)
+* env loading ([2c20f19](https://github.com/RA341/dockman/commit/2c20f194263972adc04ab043a8f2a33ebf102fa3)), closes [#64](https://github.com/RA341/dockman/issues/64)
+* improved volumes page ([ccdcc62](https://github.com/RA341/dockman/commit/ccdcc62bb3ae7c18bcc59c101ecc19a6ddd5df70)), closes [#59](https://github.com/RA341/dockman/issues/59)
+* network page ([e625d44](https://github.com/RA341/dockman/commit/e625d4407f7c8709379f3bdc52e4c85d2ddd4c89)), closes [#59](https://github.com/RA341/dockman/issues/59)
+
 ## [2.1.1](https://github.com/RA341/dockman/compare/v2.1.0...v2.1.1) (2025-08-13)
 
 
