@@ -1,3 +1,25 @@
+# [2.2.0](https://github.com/RA341/dockman/compare/v2.1.2...v2.2.0) (2025-09-02)
+
+
+### Bug Fixes
+
+* [#71](https://github.com/RA341/dockman/issues/71) file sorting ([a72f1d9](https://github.com/RA341/dockman/commit/a72f1d9bc76e73c381e6508aca896e3daea64f37))
+* [#85](https://github.com/RA341/dockman/issues/85) ([a689977](https://github.com/RA341/dockman/commit/a689977a537569e1a62242c16564294765a3a355))
+* change tab names to fullpath ([1e841dd](https://github.com/RA341/dockman/commit/1e841dd9429f10ae4b89753f4984522789a6782e)), closes [#79](https://github.com/RA341/dockman/issues/79) [#78](https://github.com/RA341/dockman/issues/78)
+* import dialog opening add ([e610df8](https://github.com/RA341/dockman/commit/e610df8fc57f17a6e0bd5a0953aef29539a55bb0))
+* non compose files having tabs ([b3953d2](https://github.com/RA341/dockman/commit/b3953d2a1c8922e18267be0e47eccc3e23cbd34e)), closes [#81](https://github.com/RA341/dockman/issues/81)
+* tty streams ([c333b7e](https://github.com/RA341/dockman/commit/c333b7e978ba1cd9543bc66ec5f253a52d909b2b)), closes [#76](https://github.com/RA341/dockman/issues/76)
+
+
+### Features
+
+* added file pinning ([88b8a95](https://github.com/RA341/dockman/commit/88b8a954636e0998b651c10c746b0270f0a8e428))
+* added rename ([127d008](https://github.com/RA341/dockman/commit/127d008ebba67aaae02803b56d9bb53259e06d77)), closes [#72](https://github.com/RA341/dockman/issues/72)
+* container updater ([26a2173](https://github.com/RA341/dockman/commit/26a217308f0e7433ecf6a4a37d3835ba2c3cd9a2))
+* custom sorts in .dockman.yaml ([52eed5e](https://github.com/RA341/dockman/commit/52eed5ea5118575aa7da73b1ef2a9ec50f25a2d8)), closes [#84](https://github.com/RA341/dockman/issues/84)
+* remember cursor positions ([3c06bf6](https://github.com/RA341/dockman/commit/3c06bf6ff9ab243392a8cf0497b71861b03db057)), closes [#85](https://github.com/RA341/dockman/issues/85) [#80](https://github.com/RA341/dockman/issues/80)
+* remember open tabs ([2c0cc6b](https://github.com/RA341/dockman/commit/2c0cc6bd4272db5b8d37e569a54a4d976b29b079)), closes [#80](https://github.com/RA341/dockman/issues/80)
+
 ## [2.1.2](https://github.com/RA341/dockman/compare/v2.1.1...v2.1.2) (2025-08-23)
 
 
