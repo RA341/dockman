@@ -1,3 +1,20 @@
+# [2.3.0](https://github.com/RA341/dockman/compare/v2.2.0...v2.3.0) (2025-09-22)
+
+
+### Bug Fixes
+
+* ctrl z clearing file contents ([96729f4](https://github.com/RA341/dockman/commit/96729f48f3f44d68649566c001b7959b22352d37)), closes [#60](https://github.com/RA341/dockman/issues/60)
+* file permissions ([3a07821](https://github.com/RA341/dockman/commit/3a07821e4f7b29f468a6c09d81d9c8fac8493043))
+* set default perm to root ([937179a](https://github.com/RA341/dockman/commit/937179a425b4be1dfd53abeb8e10996e19c63106))
+
+
+### Features
+
+* added compose validator ([1616969](https://github.com/RA341/dockman/commit/161696981cceab77bae133c531e9452d463143ee))
+* added disable compose actions ([e43c05f](https://github.com/RA341/dockman/commit/e43c05f5f66bfdbab164088e1899f5a7c755a234))
+* container exec ([1c646ee](https://github.com/RA341/dockman/commit/1c646eee9254d50a400d2f688f4023b62c10fbe5)), closes [#82](https://github.com/RA341/dockman/issues/82)
+* improved logs panel, added search and download ([4ea1cb4](https://github.com/RA341/dockman/commit/4ea1cb4156170a0e95fb6050c22da6325b32295f))
+
 # [2.2.0](https://github.com/RA341/dockman/compare/v2.1.2...v2.2.0) (2025-09-02)
 
 
