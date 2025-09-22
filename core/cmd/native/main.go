@@ -2,10 +2,11 @@ package main
 
 import (
 	"embed"
-	"github.com/RA341/dockman/cmd"
-	"github.com/RA341/dockman/internal/config"
 	"io/fs"
 	"log"
+
+	"github.com/RA341/dockman/internal/app"
+	"github.com/RA341/dockman/internal/config"
 )
 
 //go:embed dist
@@ -18,7 +19,7 @@ func main() {
 		log.Fatal("Error loading frontend directory", err)
 	}
 
-	cmd.StartServer(
+	app.StartServer(
 		config.WithUIFS(subFS),
 	)
 }

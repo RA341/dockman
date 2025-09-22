@@ -34,20 +34,19 @@ interface ContainerTableProps {
     onShowLogs: (containerId: string, containerName: string) => void
     setSelectedServices: (services: string[]) => void,
     useContainerId?: boolean,
-    showExec?: boolean,
     onExec?: (containerId: string, containerName: string) => void
 }
 
-export function ContainerTable({
-                                   containers,
-                                   onShowLogs,
-                                   loading,
-                                   setSelectedServices,
-                                   selectedServices,
-                                   useContainerId = false,
-                                   showExec = false,
-                                   onExec,
-                               }: ContainerTableProps) {
+export function ContainerTable(
+    {
+        containers,
+        onShowLogs,
+        loading,
+        setSelectedServices,
+        selectedServices,
+        useContainerId = false,
+        onExec,
+    }: ContainerTableProps) {
 
     const [isLoaded, setIsLoaded] = useState(false)
     const {handleCopy, copiedId} = useCopyButton()
@@ -169,14 +168,14 @@ export function ContainerTable({
                                 sx={{cursor: 'pointer'}}
                             />
                         </Tooltip>
-                        {showExec && (
+                        {onExec && (
                             <Tooltip title="Exec into container">
                                 <Terminal
                                     aria-label="Exec into container"
                                     color="primary"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onExec?.(container.id, container.name)
+                                        onExec(container.id, container.name)
                                     }}
                                     sx={{cursor: 'pointer'}}
                                 />

@@ -4,27 +4,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/rs/zerolog/log"
-	"io"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 type Service struct {
-	username  string
-	authToken string
-	repoPath  string
-	repo      *git.Repository
+	username             string
+	authToken            string
+	repoPath             string
+	repo                 *git.Repository
+	chownComposeRootFunc func()
 }
 
-func NewService(root string) *Service {
-	service, err := newSrv(root)
+func NewService(root string, chownComposeRootFunc func()) *Service {
+	service, err := newSrv(root, chownComposeRootFunc)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to init git service")
 	}
@@ -32,13 +34,19 @@ func NewService(root string) *Service {
 }
 
 // returns an error instead of fataling useful for testing
-func newSrv(root string) (*Service, error) {
+func newSrv(root string, chownFunc func()) (*Service, error) {
 	repo, err := initializeGit(root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init git repo: %w", err)
 	}
 
-	srv := &Service{repo: repo, repoPath: root}
+	chownFunc()
+
+	srv := &Service{
+		repo:                 repo,
+		repoPath:             root,
+		chownComposeRootFunc: chownFunc,
+	}
 	if err = srv.CommitAll(); err != nil {
 		return nil, fmt.Errorf("failed to create commit: %w", err)
 	}
@@ -191,7 +199,7 @@ func (s *Service) SwitchBranch(name string) error {
 		return fmt.Errorf("failed to commit changes before switching branch: %w", err)
 	}
 
-	return s.WithWorkTree(func(worktree *git.Worktree) error {
+	err := s.WithWorkTree(func(worktree *git.Worktree) error {
 		branchRefName := plumbing.NewBranchReferenceName(name)
 
 		log.Debug().Str("branch", name).Msg("Checking if branch exists...")
@@ -216,6 +224,13 @@ func (s *Service) SwitchBranch(name string) error {
 		log.Info().Str("branch", name).Msg("Switched to branch...")
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	s.chownComposeRootFunc()
+
+	return nil
 }
 
 // SyncFile syncs a file's content to the current worktree from the importingBranch,

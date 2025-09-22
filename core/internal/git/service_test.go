@@ -38,7 +38,7 @@ func Test_WithStagingDelay(t *testing.T) {
 	// Create a large garbage files to slow down git operations
 	createComplexDirectoryStructure(t, root)
 
-	_, err = newSrv(root)
+	_, err = newSrv(root, nil)
 	require.ErrorIs(t, err, ErrStagingDelay, "new srv should fail with a complex dir structure")
 
 	err = os.RemoveAll(root)
@@ -49,7 +49,7 @@ func Test_WithStagingDelay(t *testing.T) {
 
 	err = createLargeGarbageFile(t, root, fileSize10MB)
 
-	_, err = newSrv(root)
+	_, err = newSrv(root, nil)
 	require.NoError(t, err)
 }
 

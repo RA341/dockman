@@ -1,31 +1,41 @@
-import {useEffect, useRef} from 'react';
-import {Box, IconButton, Paper, Typography} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import LogsTerminal, {type TerminalHandle} from './logs-terminal';
+import {Box, IconButton, Paper, Tab, Tabs} from '@mui/material';
+import {Close as CloseIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon} from '@mui/icons-material';
+import LogsTerminal from './logs-terminal';
+
+interface LogTabData {
+    id: string;
+    title: string;
+
+    stream: AsyncIterable<string>;
+    inputFn?: ((cmd: string) => void);
+}
 
 export interface LogsPanelProps {
-    title?: string;
-    logStream: AsyncIterable<string> | null;
+    tabs: LogTabData[];
+    activeTabId: string | null;
     isMinimized: boolean;
-    onError?: (mes: string) => void;
-    onSuccess?: () => void;
+    onTabChange: (tabId: string) => void;
+    onTabClose: (tabId: string) => void;
     onToggle: () => void;
 }
 
-const PANEL_CONTENT_HEIGHT = '40vh'; // The height of the terminal area itself
+const PANEL_CONTENT_HEIGHT = '40vh';
 const TRANSITION_DURATION = '0.15s';
 
-export function LogsPanel({title, logStream, isMinimized, onToggle}: LogsPanelProps) {
-    const terminalRef = useRef<TerminalHandle>(null);
+export function LogsPanel(
+    {
+        tabs,
+        activeTabId,
+        isMinimized,
+        onTabChange,
+        onTabClose,
+        onToggle
+    }: LogsPanelProps) {
 
-    useEffect(() => {
-        if (!isMinimized) {
-            // A delay allows the height transition to complete before fitting the terminal.
-            const timer = setTimeout(() => terminalRef.current?.fit(), 250);
-            return () => clearTimeout(timer);
-        }
-    }, [isMinimized]);
+    const toggle = tabs.length ?
+        onToggle :
+        () => {
+        };
 
     return (
         <Paper
@@ -37,48 +47,97 @@ export function LogsPanel({title, logStream, isMinimized, onToggle}: LogsPanelPr
                 color: '#CCCCCC',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '4px',
-                // This ensures the component doesn't shrink in a flex container
                 flexShrink: 0,
             }}
         >
-            {/* The header is always visible and acts as the toggle button */}
             <Box
-                onClick={onToggle}
+                onClick={toggle}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    p: '4px',
+                    pr: 1,
                     backgroundColor: '#333333',
-                    flexShrink: 0,
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    '&:hover': {
-                        backgroundColor: '#4a4a4a',
-                    },
+                    '&:hover': {backgroundColor: '#3c3c3c',},
                 }}
             >
-                <IconButton size="small" sx={{color: 'white'}} title={isMinimized ? "Expand" : "Collapse"}>
+                <IconButton
+                    size="small"
+                    sx={{color: 'white', m: '0 4px'}}
+                    title={isMinimized ? 'Expand' : 'Collapse'}
+                    onClick={toggle}
+                >
                     {isMinimized ? <ExpandLessIcon/> : <ExpandMoreIcon/>}
                 </IconButton>
-                <Typography variant="body2" sx={{textTransform: 'uppercase', fontWeight: 'bold', ml: 1}}>
-                    {title || 'LOGS'}
-                </Typography>
-            </Box>
 
-            {/* This container's height is animated to show/hide the terminal */}
-            <Box
-                sx={{
-                    height: isMinimized ? 0 : PANEL_CONTENT_HEIGHT,
-                    overflow: 'hidden',
-                    transition: `height ${TRANSITION_DURATION} ease-in-out`,
-                    // The terminal needs a relative parent to fill its space
-                    position: 'relative',
-                    flexGrow: 1,
-                    // Add a top border to separate it from the header when open
-                    borderTop: isMinimized ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-            >
-                <LogsTerminal ref={terminalRef} logStream={logStream}/>
+                <Tabs
+                    value={activeTabId}
+                    onChange={(e, newValue) => {
+                        e.stopPropagation(); // Prevent bubbling to the parent Box
+                        onTabChange(newValue);
+                    }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                        borderBottom: '1px solid #555',
+                        minHeight: '36px',
+                    }}
+                >
+                    {tabs.map((tab) => (
+                        <Tab
+                            key={tab.id}
+                            value={tab.id}
+                            component="div"
+                            sx={{
+                                textTransform: 'none',
+                                minHeight: '36px',
+                                padding: '6px 16px',
+                                marginRight: '2px',
+                                border: '1px solid #555',
+                                borderBottom: 'none',
+                                borderRadius: '4px 4px 0 0',
+                            }}
+                            label={
+                                <Box sx={{display: 'flex', alignItems: 'center'}}>
+                                    {tab.title}
+                                    <IconButton
+                                        size="small"
+                                        component="span"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevent tab selection & parent toggle
+                                            onTabClose(tab.id);
+                                        }}
+                                        sx={{ml: 1.5, p: '2px', '&:hover': {bgcolor: 'rgba(255,255,255,0.2)'}}}
+                                    >
+                                        <CloseIcon sx={{fontSize: '1rem'}}/>
+                                    </IconButton>
+                                </Box>
+                            }
+                        />
+                    ))}
+                </Tabs>
+            </Box>
+            <Box sx={{
+                height: isMinimized ? 0 : PANEL_CONTENT_HEIGHT,
+                overflow: 'hidden',
+                transition: `height ${TRANSITION_DURATION} ease-in-out`,
+                position: 'relative',
+            }}>
+                {tabs.map((tab) => (
+                    <Box
+                        key={tab.id}
+                        sx={{
+                            display: tab.id === activeTabId ? 'block' : 'none',
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                        }}
+                    >
+                        <LogsTerminal
+                            inputFunc={tab.inputFn}
+                            logStream={tab.stream}
+                            isActive={tab.id === activeTabId}
+                        />
+                    </Box>
+                ))}
             </Box>
         </Paper>
     );

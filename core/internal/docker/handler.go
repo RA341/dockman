@@ -19,6 +19,7 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/docker/docker/api/types/container"
@@ -28,11 +29,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// ServiceProvider use a closure instead of passing a concrete Service to change hosts on demand
 type ServiceProvider func() *Service
 
 type Handler struct {
 	srv  ServiceProvider
 	addr string
+
+	// store input channels for a running exec channel
+	execSessions syncmap.Map[string, chan string]
 }
 
 func NewConnectHandler(srv ServiceProvider, host string) *Handler {
@@ -109,6 +114,16 @@ func (h *Handler) ComposeUpdate(ctx context.Context, req *connect.Request[v1.Com
 	//go sendReqToUpdater(h.addr, h.pass, "")
 
 	return nil
+}
+
+func (h *Handler) ComposeValidate(ctx context.Context, req *connect.Request[v1.ComposeFile]) (*connect.Response[v1.ComposeValidateResponse], error) {
+	errs := h.compose().ComposeValidate(ctx, req.Msg.Filename)
+	toMap := ToMap(errs, func(t error) string {
+		return t.Error()
+	})
+	return connect.NewResponse(&v1.ComposeValidateResponse{
+		Errs: toMap,
+	}), nil
 }
 
 func (h *Handler) ComposeList(ctx context.Context, req *connect.Request[v1.ComposeFile]) (*connect.Response[v1.ListResponse], error) {
@@ -296,12 +311,92 @@ func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.Con
 	return nil
 }
 
+func (h *Handler) ContainerExecOutput(ctx context.Context, req *connect.Request[v1.ContainerExecRequest], stream *connect.ServerStream[v1.LogsMessage]) error {
+	if req.Msg.GetContainerID() == "" {
+		return fmt.Errorf("container id is required")
+	}
+
+	containerID := req.Msg.ContainerID
+	resp, err := h.container().ExecContainer(ctx, containerID, req.Msg.ExecCmd)
+	if err != nil {
+		return fmt.Errorf("error starting exec: %w", err)
+	}
+	defer resp.Close()
+
+	inputChan := make(chan string, 20)
+	h.execSessions.Store(containerID, inputChan)
+
+	// Writer goroutine to handle stdin
+	go func() {
+		writer := bufio.NewWriter(resp.Conn)
+		for {
+			select {
+			case line, ok := <-inputChan:
+				if !ok {
+					log.Info().Str("container", containerID[:10]).
+						Msg("stopping exec input listener")
+					return
+				}
+
+				if _, err = writer.WriteString(line + "\n"); err != nil {
+					log.Warn().Err(err).Msg("unable to write to stream")
+					continue
+				}
+
+				if err = writer.Flush(); err != nil {
+					log.Warn().Err(err).Msg("unable to flush writer")
+					continue
+				}
+			case <-ctx.Done():
+				log.Info().Str("container", containerID[:10]).
+					Msg("stopping exec input listener")
+				resp.Close()
+				return
+			}
+		}
+	}()
+
+	// reads from container and sends to stream
+	reader := bufio.NewReader(resp.Conn)
+	for {
+		var line string
+		line, err = reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF || err.Error() == "file has already been closed" {
+				break
+			}
+			return fmt.Errorf("error reading from stdout: %w", err)
+		}
+
+		err = stream.Send(&v1.LogsMessage{Message: line})
+		if err != nil {
+			log.Error().Msg("unable to send message")
+		}
+	}
+
+	close(inputChan)
+	h.execSessions.Delete(containerID)
+	log.Debug().Msg("ending container exec stream")
+	return nil
+}
+
+func (h *Handler) ContainerExecInput(_ context.Context, req *connect.Request[v1.ContainerExecCmdInput]) (*connect.Response[v1.Empty], error) {
+	cont := req.Msg.ContainerID
+	val, ok := h.execSessions.Load(cont)
+	if !ok {
+		return connect.NewResponse(&v1.Empty{}), fmt.Errorf("container %s not found", cont[:12])
+	}
+
+	val <- req.Msg.UserCmd
+	return connect.NewResponse(&v1.Empty{}), nil
+}
+
 ////////////////////////////////////////////
 // 				Image Actions 			  //
 ////////////////////////////////////////////
 
 func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
-	result := make([]Q, len(input))
+	var result []Q
 	for _, t := range input {
 		result = append(result, mapper(t))
 	}
@@ -329,12 +424,12 @@ func (h *Handler) ImageList(ctx context.Context, _ *connect.Request[v1.ListImage
 	for _, img := range images {
 		totalDisk += img.Size
 
-		if img.Containers == 0 {
-			unusedContainers++
-		}
-
 		if len(img.RepoTags) == 0 {
 			untagged++
+		}
+
+		if img.Containers == 0 {
+			unusedContainers++
 		}
 
 		rpcImages = append(rpcImages, &v1.Image{

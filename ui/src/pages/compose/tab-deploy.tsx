@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {
     Box,
     Button,
@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import {ContainerTable} from './components/container-info-table';
 import {LogsPanel} from './components/logs-panel';
-import {transformAsyncIterable, useClient} from "../../lib/api.ts";
+import {callRPC, transformAsyncIterable, useClient} from "../../lib/api.ts";
 import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
 import {useSnackbar} from "../../hooks/snackbar.ts";
@@ -31,6 +31,14 @@ const deployActionsConfig = [
     {name: 'update', rpcName: 'composeUpdate', message: "updated", icon: <UpdateIcon/>},
 ] as const;
 
+interface LogTab {
+    id: string;
+    title: string;
+    stream: AsyncIterable<string>;
+    controller: AbortController;
+    inputFn?: (cmd: string) => void,
+}
+
 interface DeployPageProps {
     selectedPage: string;
 }
@@ -38,109 +46,170 @@ interface DeployPageProps {
 export function TabDeploy({selectedPage}: DeployPageProps) {
     const dockerService = useClient(DockerService);
     const {containers, fetchContainers, loading} = useDockerCompose(selectedPage);
-    const {showSuccess} = useSnackbar()
+    const {showSuccess, showError} = useSnackbar();
 
-    const [panelTitle, setPanelTitle] = useState("Logs")
     const [activeAction, setActiveAction] = useState<string | null>(null);
-    const [logStream, setLogStream] = useState<AsyncIterable<string> | null>(null);
     const [isLogPanelMinimized, setIsLogPanelMinimized] = useState(true);
-    const [selectedServices, setSelectedServices] = useState<string[]>([])
+    const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
-    const abortControllerRef = useRef<AbortController | null>(null);
+    // State is now an array of tabs and an active tab ID
+    const [logTabs, setLogTabs] = useState<LogTab[]>([]);
+    const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
     const [composeErrorDialog, setComposeErrorDialog] = useState<{ dialog: boolean; message: string }>({
         dialog: false,
         message: ''
-    })
-    const closeErrorDialog = () => {
-        setComposeErrorDialog(prev => ({...prev, dialog: false}))
-    }
-    const showErrorDialog = (message: string) => {
-        setComposeErrorDialog(() => ({dialog: true, message}))
-    }
+    });
+
+    const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
+    const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
 
     useEffect(() => {
+        // On unmount, abort all active streams
         return () => {
-            // If there's an active controller when the component unmounts, abort it.
-            abortControllerRef.current?.abort("Component unmounted");
+            logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
         };
-    }, []);
+    }, [logTabs]);
 
     const handleComposeAction = (
         name: typeof deployActionsConfig[number]['name'],
         message: string,
         rpcName: typeof deployActionsConfig[number]['rpcName'],
     ) => {
-        setActiveAction(name)
+        setActiveAction(name);
+        // Create a unique ID and title for the new tab
+        const tabId = `${name}-${Date.now()}`;
+        const tabTitle = `${name} - ${selectedPage.split('/').pop() || selectedPage}`;
 
-        manageStream({
+        createStream({
+            id: tabId,
+            title: tabTitle,
             getStream: signal => dockerService[rpcName]({
                 filename: selectedPage,
                 selectedServices: selectedServices,
-            }, {signal: signal}),
+            }, {signal}),
             transform: item => item.message,
-            panelTitle: `${name} - ${selectedPage}`,
             onSuccess: () => {
-                setTimeout(() => {
-                    setIsLogPanelMinimized(true)
-                }, 1000) // minimize on success
                 showSuccess(`Deployment ${message} successfully`)
+                setIsLogPanelMinimized(true);
             },
             onFinalize: () => {
-                setActiveAction('')
-                fetchContainers().then()
+                setActiveAction('');
+                fetchContainers().then();
             }
-        })
+        });
     };
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        manageStream({
-            getStream: signal => dockerService.containerLogs({containerID: containerId}, {signal: signal}),
+        const tabId = `logs:${containerId}`
+        // If a tab for this container already exists, just switch to it
+        const existingTab = logTabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+            setActiveTabId(tabId);
+            setIsLogPanelMinimized(false);
+            return;
+        }
+
+        createStream({
+            id: tabId,
+            title: `Logs - ${containerName}`,
+            getStream: signal => dockerService.containerLogs({containerID: containerId}, {signal}),
             transform: item => item.message,
-            panelTitle: `Logs - ${containerName}`,
-        })
+        });
     };
 
-    const manageStream = <T, >(
+    const handleContainerExec = (containerId: string, containerName: string) => {
+        const cmd = "/bin/sh"
+        const tabId = `exec:${containerId}`
+
+        const existingTab = logTabs.find(tab => tab.id === tabId);
+        if (existingTab) {
+            setActiveTabId(tabId);
+            setIsLogPanelMinimized(false);
+            return;
+        }
+
+        createStream({
+            id: tabId,
+            title: `Exec - ${containerName}`,
+            getStream: signal => dockerService.containerExecOutput({
+                    containerID: containerId,
+                    execCmd: cmd.trim().split(' ')
+                },
+                {signal}
+            ),
+            transform: item => item.message,
+            inputFn: (cmd: string) => {
+                callRPC(() => dockerService.containerExecInput({
+                    containerID: containerId,
+                    userCmd: cmd
+                })).catch((err) => {
+                    showError(`unable to send cmd: ${err}`)
+                })
+            }
+        });
+    };
+
+    const createStream = <T, >(
         {
-            getStream,
-            transform,
-            panelTitle,
-            onSuccess,
-            onFinalize,
-        }: {
+            id, getStream, transform, title, onSuccess, onFinalize, inputFn
+        }:
+        {
+            id: string;
             getStream: (signal: AbortSignal) => AsyncIterable<T>;
             transform: (item: T) => string;
-            panelTitle: string;
+            title: string;
+            inputFn?: (cmd: string) => void,
             onSuccess?: () => void;
             onFinalize?: () => void;
         }) => {
-
-        // close prev stream
-        abortControllerRef.current?.abort("User started a new action");
         const newController = new AbortController();
-        abortControllerRef.current = newController;
-
-        setPanelTitle(panelTitle);
-
         const sourceStream = getStream(newController.signal);
+
         const transformedStream = transformAsyncIterable(sourceStream, {
             transform,
-            onComplete: () => {
-                console.log("Stream completed successfully.");
-                onSuccess?.();
-            },
-            onError: showErrorDialog,
-            onFinally: () => {
-                if (abortControllerRef.current === newController) {
-                    abortControllerRef.current = null;
+            onComplete: () => onSuccess?.(),
+            onError: (err) => {
+                // Don't show an error dialog if the stream was intentionally aborted
+                if (!newController.signal.aborted) {
+                    showErrorDialog(`Error streaming container logs: ${err}`);
                 }
-                onFinalize?.();
             },
+            onFinally: () => onFinalize?.(),
         });
 
-        setLogStream(transformedStream);
-        setIsLogPanelMinimized(false);
+        const newTab: LogTab = {
+            id,
+            title,
+            stream: transformedStream,
+            controller: newController,
+            inputFn: inputFn
+        };
+
+        setLogTabs(prev => [...prev, newTab]);
+        setActiveTabId(id);
+        setIsLogPanelMinimized(false); // Always expand panel for a new tab
+    };
+
+    const handleCloseTab = (tabIdToClose: string) => {
+        setLogTabs(prevTabs => {
+            const tabToClose = prevTabs.find(tab => tab.id === tabIdToClose);
+            // abort the stream associated with the closing tab
+            tabToClose?.controller.abort("Tab closed by user");
+
+            const remainingTabs = prevTabs.filter(tab => tab.id !== tabIdToClose);
+
+            // Adjust the active tab if the closed one was active
+            if (activeTabId === tabIdToClose) {
+                if (remainingTabs.length > 0) {
+                    setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
+                } else {
+                    setActiveTabId(null);
+                    setIsLogPanelMinimized(true); // Minimize when last tab is closed
+                }
+            }
+            return remainingTabs;
+        });
     };
 
     if (!selectedPage) {
@@ -171,32 +240,35 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                 </Box>
 
                 <Box sx={{
-                    height: '78vh', overflow: 'hidden', border: '3px ridge',
+                    flexGrow: 1, overflow: 'hidden', border: '3px ridge',
                     borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
                     flexDirection: 'column', backgroundColor: 'rgb(41,41,41)'
                 }}>
                     <ContainerTable
                         containers={containers}
                         loading={loading}
-                        onShowLogs={handleContainerLogs}
                         setSelectedServices={setSelectedServices}
                         selectedServices={selectedServices}
+                        onShowLogs={handleContainerLogs}
+                        onExec={handleContainerExec}
                     />
                 </Box>
             </Box>
 
             <LogsPanel
-                title={panelTitle}
-                logStream={logStream}
+                tabs={logTabs}
+                activeTabId={activeTabId}
                 isMinimized={isLogPanelMinimized}
+                onTabChange={setActiveTabId}
+                onTabClose={handleCloseTab}
                 onToggle={() => setIsLogPanelMinimized(prev => !prev)}
             />
 
-            {/* Error Dialog */}
             <Dialog open={composeErrorDialog.dialog} onClose={closeErrorDialog}>
                 <DialogTitle>Error</DialogTitle>
-                <DialogContent><Typography
-                    sx={{whiteSpace: 'pre-wrap'}}>{composeErrorDialog.message}</Typography></DialogContent>
+                <DialogContent>
+                    <Typography sx={{whiteSpace: 'pre-wrap'}}>{composeErrorDialog.message}</Typography>
+                </DialogContent>
                 <DialogActions>
                     <Button onClick={closeErrorDialog} color="primary">Close</Button>
                 </DialogActions>
@@ -204,4 +276,3 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         </Box>
     );
 }
-

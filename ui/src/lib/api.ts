@@ -7,6 +7,14 @@ export const API_URL = import.meta.env.MODE === 'development'
     ? "http://localhost:8866"
     : window.location.origin;
 
+export function getWSUrl(path: string) {
+    const url = new URL(API_URL);
+    const baseUrl = url.host
+    const proto = url.protocol == "http:" ? "wss" : "ws";
+
+    return `${proto}://${baseUrl}/${path}`
+}
+
 console.log(`API url: ${API_URL} `)
 
 const transport = createConnectTransport({
@@ -25,7 +33,12 @@ export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | nul
     } catch (error: unknown) {
         if (error instanceof ConnectError) {
             console.error(`Error: ${error.message}`);
-            return {val: null, err: `${error.code}: ${error.message}`};
+            // todo maybe ?????
+            // if (error.code == Code.Unauthenticated) {
+            //     nav("/")
+            //
+
+            return {val: null, err: `${error.rawMessage}`};
         }
 
         return {val: null, err: `Unknown error while calling api: ${(error as Error).toString()}`};

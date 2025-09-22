@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/RA341/dockman/cmd"
+	"github.com/RA341/dockman/internal/app"
 )
 
 func main() {
-	cmd.StartServer()
+	app.StartServer()
 }

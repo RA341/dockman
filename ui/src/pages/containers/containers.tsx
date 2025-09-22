@@ -6,37 +6,34 @@ import {useDockerContainers} from "../../hooks/docker-containers.ts";
 import {callRPC, useClient} from "../../lib/api.ts";
 import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import LogsDialog from "./logs-dialog.tsx";
-// import ContainerExecDialog from "./exec-dialog.tsx";
 import SearchBar from "../../components/search-bar.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
+import {LogsDialogProvider} from "./logs-dialog/logs-context.tsx";
+import {useLogsDialog} from "./logs-dialog/logs-hook.ts";
+import {useExecDialog} from "./exec-dialog/exec-hook.ts";
+import {ExecDialogProvider} from "./exec-dialog/exec-context.tsx";
 
 function ContainersPage() {
+    return (
+        <ExecDialogProvider>
+            <LogsDialogProvider>
+                <CorePage/>
+            </LogsDialogProvider>
+        </ExecDialogProvider>
+    );
+}
+
+function CorePage() {
     const dockerService = useClient(DockerService)
-    const {showSuccess, showError} = useSnackbar()
     const {containers, loading, fetchContainers} = useDockerContainers();
+    const {showSuccess, showError} = useSnackbar()
 
     const {search, setSearch, searchInputRef} = useSearch()
+    const {showDialog: showLogsDialog} = useLogsDialog()
+    const {showDialog: showExecDialog} = useExecDialog()
 
     const [selectedContainers, setSelectedContainers] = useState<string[]>([])
-
-    // const [execContainerName, setExecContainerName] = useState("")
-    // const [execContainerID, setExecContainerID] = useState("")
-
-    // function handleExecContainerLogs(cid: string, containerName: string): void {
-    //     setExecContainerName(containerName)
-    //     setExecContainerID(cid)
-    // }
-
-
-    const [containerName, setContainerName] = useState("")
-    const [containerID, setContainerID] = useState("")
-
-    function handleContainerLogs(cid: string, containerName: string): void {
-        setContainerName(containerName)
-        setContainerID(cid)
-    }
 
     const actions = [
         {
@@ -97,6 +94,7 @@ function ContainersPage() {
         message: string,
     ) {
         const {err} = await callRPC(
+            // @ts-expect-error: type too complex to represent
             () => dockerService[rpcName]({
                 containerIds: selectedContainers
             }) as Promise<never> // we don't care about the output only err
@@ -128,79 +126,57 @@ function ContainersPage() {
     }, [containers, search]);
 
 
-    return (<>
+    return (
+        <Box sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'background.default'
+        }}>
             <Box sx={{
-                height: '100%',
+                flexGrow: 1,
+                p: 3,
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: 'background.default'
+                overflow: 'hidden'
             }}>
                 <Box sx={{
-                    flexGrow: 1,
-                    p: 3,
                     display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
+                    gap: 2,
+                    flexWrap: 'wrap',
+                    mb: 3,
+                    flexShrink: 0
                 }}>
-                    <Box sx={{
-                        display: 'flex',
-                        gap: 2,
-                        flexWrap: 'wrap',
-                        mb: 3,
-                        flexShrink: 0
-                    }}>
-                        <SearchBar
-                            search={search}
-                            setSearch={setSearch}
-                            inputRef={searchInputRef}
-                        />
+                    <SearchBar
+                        search={search}
+                        setSearch={setSearch}
+                        inputRef={searchInputRef}
+                    />
 
-                        <ActionButtons
-                            actions={actions}
-                            variant={"outlined"}
-                        />
-                    </Box>
+                    <ActionButtons
+                        actions={actions}
+                        variant={"outlined"}
+                    />
+                </Box>
 
-                    <Box sx={{
-                        height: '83vh', overflow: 'hidden', border: '3px ridge',
-                        borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
-                        flexDirection: 'column', backgroundColor: 'rgb(41,41,41)'
-                    }}>
-                        <ContainerTable
-                            containers={filteredContainers}
-                            loading={loading}
-                            onShowLogs={handleContainerLogs}
-                            setSelectedServices={setSelectedContainers}
-                            selectedServices={selectedContainers}
-                            useContainerId={true}
-                            // showExec={true}
-                            // onExec={handleExecContainerLogs}
-                        />
-                    </Box>
+                <Box sx={{
+                    height: '83vh', overflow: 'hidden', border: '3px ridge',
+                    borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
+                    flexDirection: 'column', backgroundColor: 'rgb(41,41,41)'
+                }}>
+                    <ContainerTable
+                        containers={filteredContainers}
+                        loading={loading}
+                        onShowLogs={showLogsDialog}
+                        setSelectedServices={setSelectedContainers}
+                        selectedServices={selectedContainers}
+                        useContainerId={true}
+                        onExec={showExecDialog}
+                    />
                 </Box>
             </Box>
-
-            <LogsDialog
-                hide={() => {
-                    setContainerID("")
-                    setContainerName("")
-                }}
-                show={containerID !== ""}
-                containerID={containerID}
-                name={containerName}
-            />
-
-            {/*<ContainerExecDialog*/}
-            {/*    hide={() => {*/}
-            {/*        setExecContainerID("")*/}
-            {/*        setExecContainerName("")*/}
-            {/*    }}*/}
-            {/*    show={execContainerID !== ""}*/}
-            {/*    containerID={execContainerID}*/}
-            {/*    name={execContainerName}*/}
-            {/*/>*/}
-        </>
-    );
+        </Box>
+    )
 }
 
 export default ContainersPage;

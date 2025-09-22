@@ -1,11 +1,12 @@
 package auth
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"net/http"
+
+	"connectrpc.com/connect"
+	"github.com/rs/zerolog/log"
 )
 
 const HeaderAuth = "Authorization"
@@ -75,7 +76,7 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	) error {
 		ctx, err := i.verifyGrpcCookie(ctx, conn.RequestHeader())
 		if err != nil {
-			return err
+			return connect.NewError(connect.CodeUnauthenticated, err)
 		}
 
 		return next(ctx, conn)
@@ -89,7 +90,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	) (connect.AnyResponse, error) {
 		ctx, err := i.verifyGrpcCookie(ctx, req.Header())
 		if err != nil {
-			return nil, err
+			return nil, connect.NewError(connect.CodeUnauthenticated, err)
 		}
 
 		return next(ctx, req)
@@ -113,7 +114,7 @@ func (i *Interceptor) verifyGrpcCookie(ctx context.Context, header http.Header) 
 
 	user, err := verifyCookie(cookies, i.authService)
 	if err != nil {
-		return ctx, connect.NewError(connect.CodeUnauthenticated, err)
+		return ctx, fmt.Errorf("invalid cookie: %w", err)
 	}
 
 	// add user value to subsequent requests

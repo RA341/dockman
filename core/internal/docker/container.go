@@ -34,6 +34,14 @@ func NewContainerService(u *dependencies) *ContainerService {
 	return &ContainerService{dependencies: u}
 }
 
+// NewSimpleContainerService creates a simple docker client for
+// messing around only has access to the socket
+func NewSimpleContainerService(client *client.Client) *ContainerService {
+	return &ContainerService{dependencies: &dependencies{
+		daemon: client,
+	}}
+}
+
 // NewUpdaterService service used by dockman updater
 func NewUpdaterService(client *client.Client) *ContainerService {
 	u := &dependencies{
@@ -238,6 +246,9 @@ type containersUpdateConfig struct {
 	ForceUpdate     bool
 	// enable this to only notify on new images instead of updating containers
 	NotifyOnlyMode bool
+
+	// change update mode to opt in only, only containers with DockmanOptInUpdateLabel will be updated
+	optInUpdates bool
 }
 
 // WithSelfUpdate allows, if a container is detected as being dockman,
@@ -250,6 +261,11 @@ func WithSelfUpdate() UpdateOption {
 // and updates it anyways
 func WithForceUpdate() UpdateOption {
 	return func(c *containersUpdateConfig) { c.ForceUpdate = true }
+}
+
+// WithOptInUpdate makes dockman update containers only with DockmanOptInUpdateLabel label present
+func WithOptInUpdate() UpdateOption {
+	return func(c *containersUpdateConfig) { c.optInUpdates = true }
 }
 
 // WithNotifyOnly updates the new img id in db
@@ -291,6 +307,11 @@ func (s *ContainerService) containersUpdateLoop(
 			continue
 		}
 
+		if updateConfig.optInUpdates && !hasUpdateLabel(&cur) {
+			// opt in mode and container does not have DockmanOptInUpdateLabel
+			continue
+		}
+
 		s.containerUpdate(ctx, cur, updateConfig)
 	}
 
@@ -310,6 +331,15 @@ func (s *ContainerService) containersUpdateLoop(
 	dockmanUpdate()
 
 	return nil
+}
+
+const DockmanOptInUpdateLabel = "dockman.update"
+
+func hasUpdateLabel(c *container.Summary) bool {
+	if _, ok := c.Labels[DockmanOptInUpdateLabel]; !ok {
+		return false
+	}
+	return true
 }
 
 func (s *ContainerService) containerUpdate(
@@ -778,9 +808,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 
 	var volumeFilters []filters.KeyValuePair
 	for i, vol := range listResp.Volumes {
-		// Add nil check for vol with debug logging
 		if vol == nil {
-			log.Debug().Int("volume_index", i).Msg("Skipping nil volume in listResp")
 			continue
 		}
 
@@ -822,9 +850,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 
 	var volumes []VolumeInfo
 	for _, vol := range listResp.Volumes {
-		// Add nil check for vol with debug logging
 		if vol == nil {
-			log.Debug().Msg("Skipping nil volume in final processing")
 			continue
 		}
 

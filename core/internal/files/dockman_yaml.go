@@ -34,8 +34,12 @@ var defaultDockmanYaml = DockmanYaml{
 type DockmanYaml struct {
 	// define a custom sort to pin certain files when displaying
 	PinnedFiles map[string]int `yaml:"pinnedFiles"`
+
 	// use compose folders https://dockman.radn.dev/docs/file-layout/customize#compose-folders
 	UseComposeFolders bool `yaml:"useComposeFolders"`
+
+	// disable shortcuts under compose files
+	DisableComposeQuickActions bool `yaml:"disableComposeQuickActions"`
 
 	// TabLimit in editor
 	TabLimit int32 `yaml:"tabLimit"`

@@ -15,6 +15,11 @@ service DockerService {
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
 
+  // start a stream that will show container execs
+  rpc ContainerExecOutput(ContainerExecRequest) returns (stream LogsMessage) {}
+  // pass in the commands with the container ID
+  rpc ContainerExecInput(ContainerExecCmdInput) returns (Empty) {}
+
   // compose
   rpc ComposeStart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeStop(ComposeFile) returns (stream LogsMessage) {}
@@ -22,6 +27,7 @@ service DockerService {
   rpc ComposeRestart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeUpdate(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeList(ComposeFile) returns (ListResponse) {}
+  rpc ComposeValidate(ComposeFile) returns (ComposeValidateResponse) {}
 
   // images
   rpc ImageList(ListImagesRequest) returns (ListImagesResponse) {}
@@ -37,6 +43,22 @@ service DockerService {
   rpc NetworkList(ListNetworksRequest) returns (ListNetworksResponse) {}
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
+}
+
+message ComposeValidateResponse {
+  repeated string errs = 1;
+}
+
+// forwards commands from user to a running session
+message ContainerExecCmdInput {
+  string userCmd = 1;
+  string containerID = 2;
+}
+
+message ContainerExecRequest {
+  string containerID = 1;
+  // if not provided uses '/bin/sh' as default
+  repeated string execCmd = 2;
 }
 
 // Image-related messages

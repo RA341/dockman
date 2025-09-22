@@ -21,3 +21,71 @@
     align-items: center;
     justify-content: center;
 }
+
+.outerContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ifm-color-emphasis-300);
+    border-radius: var(--ifm-pre-border-radius);
+    padding: 0.5rem 1rem;
+    margin-bottom: 2rem;
+    max-width: fit-content; /* This makes the box only as wide as its content */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tryNowText {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--ifm-color-primary);
+    margin-right: 1.5rem; /* Space between "Try Now" and the command box */
+    /*text-transform: uppercase;*/
+}
+
+.commandWrapper {
+    display: flex;
+    align-items: flex-start;
+    flex-grow: 1;
+    background-color: transparent; /* Make the background transparent */
+    border: none; /* Remove the individual border */
+    padding: 0;
+    margin: 0;
+}
+
+.commandText {
+    font-family: var(--ifm-font-family-monospace);
+    color: var(--ifm-font-color-base);
+    font-size: 0.95rem;
+    overflow-x: hidden;
+    word-break: break-all;
+    flex-grow: 1;
+    padding-right: 1rem;
+}
+
+.copyButton {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+    align-self: flex-start;
+    transition: transform 0.2s ease-in-out;
+}
+
+.copyButton:hover {
+    transform: scale(1.1);
+}
+
+.iconCopy {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--ifm-color-secondary);
+}
+
+.iconSuccess {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--ifm-color-primary);
+}

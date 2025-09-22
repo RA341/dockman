@@ -342,7 +342,9 @@ function CoreCompose({filename}: { filename: string }) {
                                     key === 0 ? (
                                         <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                                             {status === 'idle' ?
-                                                <span>{details.label}</span> : indicatorMap[status]?.component}
+                                                <span>{details.label}</span> :
+                                                indicatorMap[status]?.component
+                                            }
                                         </Box>
                                     ) : details.label
                                 }

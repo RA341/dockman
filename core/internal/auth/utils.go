@@ -1,15 +1,16 @@
 package auth
 
 import (
-	"connectrpc.com/connect"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/bcrypt"
 	"math/big"
 	"net/http"
 	"time"
+
+	"connectrpc.com/connect"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func setCookie[T any](response *connect.Response[T], token string, expiresAt time.Time) {
@@ -19,8 +20,9 @@ func setCookie[T any](response *connect.Response[T], token string, expiresAt tim
 		Expires:  expiresAt,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // SameSite attribute
-		//Secure:   true,                 // Secure attribute (send only over HTTPS) - for production
+		SameSite: http.SameSiteLaxMode,
+		// Secure attribute (send only over HTTPS) - for production
+		// Secure:   true,
 		// Domain: "example.com", // Uncomment and set if you need to specify the domain
 	}
 

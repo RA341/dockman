@@ -25,10 +25,16 @@ type AppConfig struct {
 	ComposeRoot    string        `config:"flag=cr,env=COMPOSE_ROOT,default=/compose,usage=Root directory for compose files"`
 	ConfigDir      string        `config:"flag=conf,env=CONFIG,default=/config,usage=Directory to store dockman config"`
 	DockYaml       string        `config:"flag=dy,env=DOCK_YAML,default=,usage=Custom path for the .dockman.yml file"`
-	Auth           AuthConfig    `config:""` // indicate to parse struct
+	Perms          FilePerms     `config:""` // indicate to parse struct
+	Auth           AuthConfig    `config:""`
 	Updater        UpdaterConfig `config:""`
 	Log            Logger        `config:""`
 	UIFS           fs.FS         // UIFS has no 'config' tag, so it will be ignored
+}
+
+type FilePerms struct {
+	PUID int `config:"flag=puid,env=PUID,default=0,usage=PUID for composeRoot"`
+	GID  int `config:"flag=gid,env=GID,default=0,usage=GID for composeRoot"`
 }
 
 type AuthConfig struct {

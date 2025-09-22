@@ -22,16 +22,15 @@
     "@mui/styled-engine-sc": "^7.1.1",
     "@nivo/line": "^0.99.0",
     "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-search": "^0.15.0",
     "@xterm/xterm": "^5.5.0",
-    "monaco-languageclient": "^9.8.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.6.2",
     "reconnecting-websocket": "^4.4.0",
     "remark-gfm": "^4.0.1",
-    "styled-components": "^6.1.18",
-    "vscode-ws-jsonrpc": "^3.4.0"
+    "styled-components": "^6.1.18"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

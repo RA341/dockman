@@ -15,6 +15,12 @@ tasks:
     cmds:
       - task --list --sort=alphanumeric
 
+  lint:
+    desc: Lint project
+    dir: core
+    cmds:
+      - golangci-lint run ./...
+
   dock:
     desc: start a a temp dockman on latest tag for testing
     cmds:
@@ -67,13 +73,18 @@ tasks:
       - coreutils mkdir -p {{ .NATIVE_DIR }}/{{ .CMD_NAME }}
       - coreutils touch {{ .NATIVE_DIR }}/{{ .CMD_NAME }}/{{ .CMD_NAME }}.tsx
 
-  ui:r:
-    desc: "Build the latest web ui in {{.UI_DIR}}"
+  ui:dev:
+    desc: "npm run dev in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
-    sources:
-      - "*.tsx"
     cmds:
       - npm run dev
+
+  ui:prev:
+    desc: "npm run dev in {{.UI_DIR}}"
+    dir: "{{.UI_DIR}}"
+    cmds:
+      - npm run preview
+
 
   ui:dep:
     desc: "calls npm install in {{.UI_DIR}}"

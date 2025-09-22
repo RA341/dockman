@@ -3,12 +3,13 @@ package ssh
 import (
 	"bytes"
 	"fmt"
+	"net"
+	"time"
+
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
-	"net"
-	"time"
 )
 
 type Service struct {
@@ -20,7 +21,6 @@ type Service struct {
 func NewService(keyMan KeyManager, machManager MachineManager) *Service {
 	if err := initSSHkeys(keyMan); err != nil {
 		log.Fatal().Err(err).Msg("Failed to initialize ssh keys")
-		return nil
 	}
 
 	srv := &Service{

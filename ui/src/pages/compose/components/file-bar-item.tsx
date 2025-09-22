@@ -481,27 +481,31 @@ const FolderListItem = React.memo(
 
 function ComposeActions({urlPath}: { urlPath: string }) {
     const navigate = useNavigate()
+    const {dockYaml} = useConfig()
 
-    return (<Box sx={{mt: 0.5}}>
-            <Tooltip title="Deploy" arrow>
-                <IconButton
-                    size="small"
-                    onClick={(e) => handleActionClick(e, () => navigate(`${urlPath}?tab=1`))}
-                    color="primary"
-                >
-                    <RocketLaunch fontSize="small"/>
-                </IconButton>
-            </Tooltip>
-            <Tooltip title="Stats" arrow>
-                <IconButton
-                    size="small"
-                    onClick={(e) => handleActionClick(e, () => navigate(`${urlPath}?tab=2`))}
-                    color="secondary"
-                >
-                    <Analytics fontSize="small"/>
-                </IconButton>
-            </Tooltip>
-        </Box>
+    return (
+        (dockYaml?.disableComposeQuickActions ?? false) ?
+            <></> :
+            <Box sx={{mt: 0.5}}>
+                <Tooltip title="Deploy" arrow>
+                    <IconButton
+                        size="small"
+                        onClick={(e) => handleActionClick(e, () => navigate(`${urlPath}?tab=1`))}
+                        color="primary"
+                    >
+                        <RocketLaunch fontSize="small"/>
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Stats" arrow>
+                    <IconButton
+                        size="small"
+                        onClick={(e) => handleActionClick(e, () => navigate(`${urlPath}?tab=2`))}
+                        color="secondary"
+                    >
+                        <Analytics fontSize="small"/>
+                    </IconButton>
+                </Tooltip>
+            </Box>
     )
 }
 

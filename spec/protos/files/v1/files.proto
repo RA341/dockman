@@ -37,6 +37,7 @@ message Empty {}
 
 message DockmanYaml {
   bool useComposeFolders = 1;
+  bool disableComposeQuickActions = 7;
   int32 tabLimit = 6;
   VolumesConfig volumesPage = 2;
   NetworkConfig networkPage = 3;

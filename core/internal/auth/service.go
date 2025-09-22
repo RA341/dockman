@@ -2,33 +2,52 @@ package auth
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Service struct {
-	authDb       DB
+	authDb       Store
 	cookieExpiry time.Duration
 }
 
-func NewService(user, pass string, cookieExpiry time.Duration) *Service {
-	adb := &MemAuthDB{make(map[string]*User)}
-
-	if _, err := adb.NewUser(user, pass); err != nil {
+func NewService(user, pass string, cookieExpiry time.Duration, authDB Store) *Service {
+	s := &Service{
+		authDb:       authDB,
+		cookieExpiry: cookieExpiry,
+	}
+	err := s.create(user, pass)
+	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create default user")
 	}
 
 	log.Debug().Msg("Auth service loaded successfully")
-	return &Service{
-		authDb:       adb,
-		cookieExpiry: cookieExpiry,
-	}
+	return s
 }
 
-func (auth *Service) Login(username, inputPassword string) (*User, string, error) {
-	user, err := auth.authDb.GetUser(username, inputPassword)
+func (auth *Service) create(username, plainTextPassword string) error {
+	encryptedPassword, err := encryptPassword(plainTextPassword)
+	if err != nil {
+		return fmt.Errorf("unable to encrypt password: %v", err)
+	}
+
+	_, err = auth.authDb.NewUser(username, encryptedPassword)
+	if err != nil {
+		return fmt.Errorf("unable to create user: %v", err)
+	}
+
+	return nil
+}
+
+func (auth *Service) Login(username, plainTextPassword string) (*User, string, error) {
+	user, err := auth.authDb.GetUser(username)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed retrive user: %w", err)
+	}
+
+	if ok := checkPassword(plainTextPassword, user.EncryptedPassword); !ok {
+		return nil, "", fmt.Errorf("invalid user/password")
 	}
 
 	unHashedToken := CreateAuthToken(32)

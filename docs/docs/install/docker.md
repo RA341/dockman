@@ -7,13 +7,13 @@ sidebar_position: 0
 
 Try Dockman with this docker run command
 
-:::warning
+:::important
 This quick-start command will **delete all dockman data** when the container stops. Use only for testing.
 
 For a more persistent setup, see the [compose](#docker-compose) section below.
 :::
 
-```bash title="Bash"
+```bash title="docker"
 docker run --rm -p 8866:8866 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest
 ```
 

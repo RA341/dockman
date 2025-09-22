@@ -250,15 +250,16 @@ func (*Empty) Descriptor() ([]byte, []int) {
 }
 
 type DockmanYaml struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	UseComposeFolders bool                   `protobuf:"varint,1,opt,name=useComposeFolders,proto3" json:"useComposeFolders,omitempty"`
-	TabLimit          int32                  `protobuf:"varint,6,opt,name=tabLimit,proto3" json:"tabLimit,omitempty"`
-	VolumesPage       *VolumesConfig         `protobuf:"bytes,2,opt,name=volumesPage,proto3" json:"volumesPage,omitempty"`
-	NetworkPage       *NetworkConfig         `protobuf:"bytes,3,opt,name=networkPage,proto3" json:"networkPage,omitempty"`
-	ImagePage         *ImageConfig           `protobuf:"bytes,4,opt,name=imagePage,proto3" json:"imagePage,omitempty"`
-	ContainerPage     *ContainerConfig       `protobuf:"bytes,5,opt,name=containerPage,proto3" json:"containerPage,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	UseComposeFolders          bool                   `protobuf:"varint,1,opt,name=useComposeFolders,proto3" json:"useComposeFolders,omitempty"`
+	DisableComposeQuickActions bool                   `protobuf:"varint,7,opt,name=disableComposeQuickActions,proto3" json:"disableComposeQuickActions,omitempty"`
+	TabLimit                   int32                  `protobuf:"varint,6,opt,name=tabLimit,proto3" json:"tabLimit,omitempty"`
+	VolumesPage                *VolumesConfig         `protobuf:"bytes,2,opt,name=volumesPage,proto3" json:"volumesPage,omitempty"`
+	NetworkPage                *NetworkConfig         `protobuf:"bytes,3,opt,name=networkPage,proto3" json:"networkPage,omitempty"`
+	ImagePage                  *ImageConfig           `protobuf:"bytes,4,opt,name=imagePage,proto3" json:"imagePage,omitempty"`
+	ContainerPage              *ContainerConfig       `protobuf:"bytes,5,opt,name=containerPage,proto3" json:"containerPage,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *DockmanYaml) Reset() {
@@ -294,6 +295,13 @@ func (*DockmanYaml) Descriptor() ([]byte, []int) {
 func (x *DockmanYaml) GetUseComposeFolders() bool {
 	if x != nil {
 		return x.UseComposeFolders
+	}
+	return false
+}
+
+func (x *DockmanYaml) GetDisableComposeQuickActions() bool {
+	if x != nil {
+		return x.DisableComposeQuickActions
 	}
 	return false
 }
@@ -577,9 +585,10 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\vnewFilePath\x18\x02 \x01(\tR\vnewFilePath\"\"\n" +
 	"\x04File\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\"\a\n" +
-	"\x05Empty\"\xc3\x02\n" +
+	"\x05Empty\"\x83\x03\n" +
 	"\vDockmanYaml\x12,\n" +
-	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12\x1a\n" +
+	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +
+	"\x1adisableComposeQuickActions\x18\a \x01(\bR\x1adisableComposeQuickActions\x12\x1a\n" +
 	"\btabLimit\x18\x06 \x01(\x05R\btabLimit\x129\n" +
 	"\vvolumesPage\x18\x02 \x01(\v2\x17.files.v1.VolumesConfigR\vvolumesPage\x129\n" +
 	"\vnetworkPage\x18\x03 \x01(\v2\x17.files.v1.NetworkConfigR\vnetworkPage\x123\n" +

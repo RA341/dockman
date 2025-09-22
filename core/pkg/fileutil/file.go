@@ -3,9 +3,10 @@ package fileutil
 import (
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io"
 	"os"
+
+	"github.com/rs/zerolog/log"
 )
 
 func CreateSampleFile(filepath, content string) error {
@@ -30,6 +31,14 @@ func OpenFile(filename string) (*os.File, error) {
 func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
+}
+
+func StatFileIfExists(filename string) os.FileInfo {
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return nil
+	}
+	return stat
 }
 
 func Close(rw io.Closer) {

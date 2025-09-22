@@ -5,10 +5,11 @@ go 1.25
 require (
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/cors v0.1.0
-	github.com/compose-spec/compose-go/v2 v2.8.1
-	github.com/docker/cli v28.3.3+incompatible
+	dario.cat/mergo v1.0.2
+	github.com/compose-spec/compose-go/v2 v2.8.2
+	github.com/docker/cli v28.4.0+incompatible
 	github.com/docker/compose/v2 v2.38.2
-	github.com/docker/docker v28.3.3+incompatible
+	github.com/docker/docker v28.4.0+incompatible
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/goccy/go-yaml v1.18.0
@@ -21,16 +22,15 @@ require (
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.41.0
-	golang.org/x/net v0.43.0
-	golang.org/x/sync v0.16.0
-	google.golang.org/protobuf v1.36.8
+	golang.org/x/crypto v0.42.0
+	golang.org/x/net v0.44.0
+	golang.org/x/sync v0.17.0
+	google.golang.org/protobuf v1.36.9
 	gorm.io/driver/sqlite v1.6.0
-	gorm.io/gorm v1.30.1
+	gorm.io/gorm v1.31.0
 )
 
 require (
-	dario.cat/mergo v1.0.1 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.7 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/DefangLabs/secret-detector v0.0.0-20250403165618-22662109213e // indirect
@@ -93,7 +93,8 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
@@ -177,6 +178,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/theupdateframework/notary v0.7.0 // indirect
 	github.com/tilt-dev/fsnotify v1.4.8-0.20220602155310-fff9c274a375 // indirect
 	github.com/tonistiigi/dchapes-mode v0.0.0-20250318174251-73d941a28323 // indirect
@@ -186,9 +188,6 @@ require (
 	github.com/tonistiigi/vt100 v0.0.0-20240514184818-90bafcd6abab // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
-	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	github.com/zclconf/go-cty v1.16.2 // indirect
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
@@ -212,9 +211,9 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/oauth2 v0.29.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250324211829-b45e905df463 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect

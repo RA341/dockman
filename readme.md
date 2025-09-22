@@ -2,9 +2,9 @@
   <img src="docs/static/img/dockman.svg" alt="Logo" width="200" height="200">
   <h1>Dockman</h1>
   <p>
-    A Docker management tool for users who want unfiltered access to their Docker Compose files, like having a specialized editor for your homelab that helps you manage and track your Docker setup.
+    A Docker management tool for users who want unfiltered access to their Docker Compose files.
   </p>
-  <img src="https://github.com/user-attachments/assets/e1d17951-3b40-4833-b01c-c9c6d3f52d5a" alt="Dockman Demo" width="800">
+  <img src="https://github.com/RA341/assets/releases/download/dockman/dockman-demo.gif" alt="Dockman Demo" width="800">
 </div>
 
 ## Contents
@@ -16,7 +16,7 @@
 
 ## Install
 
-To see full documentation go: https://dockman.radn.dev/docs/install/docker
+To see full documentation go: https://dockman.radn.dev/docs/category/install
 
 ### Docker Run
 
@@ -40,7 +40,7 @@ Access at http://localhost:8866
 > * 1️⃣ Environment variable: `DOCKMAN_COMPOSE_ROOT=/path/to/stacks`
 > * 2️⃣ The host side of the volume `/path/to/stacks`
 > * 3️⃣ The container side of the volume `/path/to/stacks`
-  This path consistency is essential for Dockman to locate and manage your compose files properly.
+    This path consistency is essential for Dockman to locate and manage your compose files properly.
 
 ```yaml title="docker-compose.yaml"
 services:

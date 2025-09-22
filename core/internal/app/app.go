@@ -1,4 +1,4 @@
-package cmd
+package app
 
 import (
 	"fmt"
@@ -45,14 +45,19 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		return nil, fmt.Errorf("unable to parse cookie expiry: %w", err)
 	}
 
-	// initialize services
 	dbSrv := database.NewService(conf.ConfigDir)
 	infoSrv := info.NewService(dbSrv.InfoDB)
 
-	authSrv := auth.NewService(conf.Auth.Username, conf.Auth.Password, limit)
+	authSrv := auth.NewService(
+		conf.Auth.Username,
+		conf.Auth.Password,
+		limit,
+		dbSrv.AuthDb,
+	)
+
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
-	fileSrv := files.NewService(cr, conf.DockYaml)
-	gitSrv := git.NewService(cr)
+	fileSrv := files.NewService(cr, conf.DockYaml, conf.Perms.PUID, conf.Perms.GID)
+	gitSrv := git.NewService(cr, fileSrv.ChownComposeRoot)
 	dockerManagerSrv := dm.NewService(
 		gitSrv,
 		sshSrv,

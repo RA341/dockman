@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/RA341/dockman/cmd"
+	"github.com/RA341/dockman/internal/app"
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/pkg/argos"
 )
@@ -12,11 +12,20 @@ import (
 func main() {
 	prefixer := argos.Prefixer(config.EnvPrefix)
 
-	_ = os.Setenv(prefixer("LOG_LEVEL"), "debug")
-	_ = os.Setenv(prefixer("LOG_VERBOSE"), "true")
-	_ = os.Setenv(prefixer("CONFIG"), "./config")
-	_ = os.Setenv(prefixer("COMPOSE_ROOT"), "./compose")
-	_ = os.Setenv(prefixer("UPDATER_HOST"), "http://localhost:8869")
+	envMap := map[string]string{
+		//"AUTH_ENABLE":   "true",
+		"AUTH_USERNAME": "test",
+		"AUTH_PASSWORD": "test",
+		"LOG_LEVEL":     "debug",
+		"LOG_VERBOSE":   "true",
+		"CONFIG":        "./config",
+		"COMPOSE_ROOT":  "./compose",
+		"UPDATER_HOST":  "http://localhost:8869",
+	}
 
-	cmd.StartServer()
+	for k, v := range envMap {
+		_ = os.Setenv(prefixer(k), v)
+	}
+
+	app.StartServer()
 }

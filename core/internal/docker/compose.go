@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/RA341/dockman/pkg/fileutil"
@@ -210,6 +211,64 @@ func (s *ComposeService) LoadComposeClient(outputStream io.Writer, inputStream i
 	}
 
 	return compose.NewComposeService(dockerCli), nil
+}
+
+func (s *ComposeService) ComposeValidate(ctx context.Context, shortName string) []error {
+	var errs []error
+
+	project, err := s.LoadProject(ctx, shortName)
+	if err != nil {
+		return append(errs, err)
+	}
+
+	runningContainers, err := s.containerService.ContainersList(ctx)
+	if err != nil {
+		return append(errs, err)
+	}
+
+	for svcName, svc := range project.Services {
+		for _, portConfig := range svc.Ports {
+			published, err := strconv.Atoi(portConfig.Published)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid port %q in service %s: %w", portConfig.Published, svcName, err))
+				continue
+			}
+
+			// check running Containers using this port
+			conflicts := s.findConflictingContainers(runningContainers, svcName, uint16(published))
+			for _, c := range conflicts {
+				errs = append(errs, fmt.Errorf(
+					"service %q wants port %d, but container %q (id=%s) is already using it",
+					svcName, published, c.Names[0], c.ID[:12],
+				))
+			}
+		}
+	}
+
+	return errs
+}
+
+// findConflictingContainers returns containers using the given port but not matching the service name
+func (s *ComposeService) findConflictingContainers(containers []container.Summary, serviceName string, port uint16) []container.Summary {
+	var matches []container.Summary
+	for _, c := range containers {
+		for _, p := range c.Ports {
+			if p.PublicPort == port {
+				// container names have leading "/" -> strip when comparing
+				containerName := c.Names[0]
+				if len(containerName) > 0 && containerName[0] == '/' {
+					containerName = containerName[1:]
+				}
+
+				serviceLabel := c.Labels[api.ServiceLabel]
+				if serviceLabel != serviceName {
+					matches = append(matches, c)
+				}
+			}
+		}
+	}
+
+	return matches
 }
 
 func (s *ComposeService) LoadProject(ctx context.Context, shortName string) (*types.Project, error) {

@@ -1,15 +1,19 @@
-import type {ReactNode} from 'react';
+import {ReactNode, useState} from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import Heading from '@theme/Heading';
+import IconCopy from "@theme/Icon/Copy";
+import IconSuccess from "@theme/Icon/Success";
 
 import styles from './index.module.css';
 
 function HomepageHeader() {
     const {siteConfig} = useDocusaurusContext();
+    const demoCommand = "docker run --rm -p 8866:8866 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest"
+
     return (
         <header className={clsx('hero', styles.heroBanner)}>
             <div className="container">
@@ -31,14 +35,23 @@ function HomepageHeader() {
                 </p>
 
                 <div style={{textAlign: 'center', marginBottom: '2rem'}}>
-                    <img
-                        src="https://github.com/user-attachments/assets/e1d17951-3b40-4833-b01c-c9c6d3f52d5a"
-                        alt="Dockman Demo"
+                    <video
                         width="1000"
                         height="450"
                         style={{maxWidth: '100%', height: 'auto'}}
-                    />
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                    >
+                        <source src="https://github.com/RA341/assets/releases/download/dockman/dockman-demo.mp4"
+                                type="video/mp4"/>
+                        Your browser does not support the video tag. This is a demo of Dockman.
+                    </video>
                 </div>
+
+                <CopyableCommand command={demoCommand}/>
+
                 <div className={styles.buttons}>
                     <Link
                         className="button button--secondary button--lg"
@@ -48,6 +61,37 @@ function HomepageHeader() {
                 </div>
             </div>
         </header>
+    );
+}
+
+function CopyableCommand({command}) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(command);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    };
+
+    return (
+        <div className={styles.outerContainer}>
+            <div className={styles.tryNowContainer}>
+                <span className={styles.tryNowText}>Try Now</span>
+            </div>
+            <div className={styles.commandWrapper}>
+                <span className={styles.commandText}>{command}</span>
+                <button
+                    className={clsx(styles.copyButton, 'clean-btn')}
+                    onClick={handleCopy}
+                    aria-label="Copy command to clipboard">
+                    {copied ? <IconSuccess className={styles.iconSuccess}/> : <IconCopy className={styles.iconCopy}/>}
+                </button>
+            </div>
+        </div>
     );
 }
 

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/database/impl"
 	"github.com/RA341/dockman/internal/docker"
@@ -15,6 +16,7 @@ type Service struct {
 	InfoDB        *impl.VersionDB
 	UserConfigDB  *impl.UserConfigDB
 	ImageUpdateDB *impl.ImageUpdateDB
+	AuthDb        *impl.AuthDB
 }
 
 func NewService(basepath string) *Service {
@@ -30,6 +32,7 @@ func NewService(basepath string) *Service {
 		&info.VersionHistory{},
 		&config.UserConfig{},
 		&docker.ImageUpdate{},
+		&auth.User{},
 	}
 	if err = gormDB.AutoMigrate(tables...); err != nil {
 		log.Fatal().Err(err).Msg("failed to auto migrate DB")
@@ -40,6 +43,7 @@ func NewService(basepath string) *Service {
 	macMan := impl.NewMachineManagerDB(gormDB)
 	verMan := impl.NewVersionHistoryManager(gormDB)
 	imgMan := impl.NewImageUpdateDB(gormDB)
+	authDb := impl.NewAuthDB(gormDB)
 
 	return &Service{
 		SshKeyDB:      keyman,
@@ -47,6 +51,7 @@ func NewService(basepath string) *Service {
 		InfoDB:        verMan,
 		UserConfigDB:  userMan,
 		ImageUpdateDB: imgMan,
+		AuthDb:        authDb,
 	}
 }
 

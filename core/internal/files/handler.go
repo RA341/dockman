@@ -164,12 +164,13 @@ func (h *Handler) GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*
 
 func (d DockmanYaml) toProto() *v1.DockmanYaml {
 	return &v1.DockmanYaml{
-		UseComposeFolders: d.UseComposeFolders,
-		VolumesPage:       d.VolumesPage.toProto(),
-		TabLimit:          d.TabLimit,
-		NetworkPage:       d.NetworkPage.toProto(),
-		ImagePage:         d.ImagePage.toProto(),
-		ContainerPage:     d.ContainerPage.toProto(),
+		DisableComposeQuickActions: d.DisableComposeQuickActions,
+		UseComposeFolders:          d.UseComposeFolders,
+		VolumesPage:                d.VolumesPage.toProto(),
+		TabLimit:                   d.TabLimit,
+		NetworkPage:                d.NetworkPage.toProto(),
+		ImagePage:                  d.ImagePage.toProto(),
+		ContainerPage:              d.ContainerPage.toProto(),
 	}
 }
 
