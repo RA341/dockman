@@ -2,15 +2,12 @@ import React from 'react';
 import {Box, Tab, Tabs} from "@mui/material";
 import {useSearchParams} from 'react-router-dom';
 import {TabDockerHosts} from "./tab-host.tsx";
-import {TabContainerUpdater} from "./tab-updater.tsx";
 
-// Define the structure for a tab configuration
 interface TabConfig {
     label: string;
     component: React.ReactNode;
 }
 
-// Configuration array for all the tabs
 const tabConfigurations: TabConfig[] = [
     {
         label: "Docker Hosts",
