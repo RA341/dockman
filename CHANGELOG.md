@@ -1,3 +1,18 @@
+# [2.4.0](https://github.com/RA341/dockman/compare/v2.3.0...v2.4.0) (2025-11-07)
+
+
+### Bug Fixes
+
+* header of containers page. ([5188f8f](https://github.com/RA341/dockman/commit/5188f8f5f7e06723e7956c5a6e1722d36ef90608))
+
+
+### Features
+
+* added collapsable filelist ([a61ab1c](https://github.com/RA341/dockman/commit/a61ab1ce4b05912e2f9ebb1c16dd40f4b3bb881a))
+* added yaml formatter ([f5ab87a](https://github.com/RA341/dockman/commit/f5ab87a8374ce78e323a1be69dab4f71600fbee0))
+* arm64 images ([283e52e](https://github.com/RA341/dockman/commit/283e52e17145f2325aa082991f0159936b966407))
+* remove git repo and auto chowning ([14e3634](https://github.com/RA341/dockman/commit/14e36348340cc322477e0e9a65b5caec23ef1fe3))
+
 # [2.3.0](https://github.com/RA341/dockman/compare/v2.2.0...v2.3.0) (2025-09-22)
 
 
