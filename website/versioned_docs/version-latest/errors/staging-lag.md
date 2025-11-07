@@ -54,4 +54,4 @@ Dockman will only see top level directories but Git will attempt to load all fil
       Dockman. The better cleaner practice is to keep only relevant configuration files in your compose root and
       separate your
       stack definitions from your data directories entirely.
-    * **See also:** [Recommended file layout](../file-layout/overview.md) for best practices.
+  * **See also:** [Recommended file layout](../file-layout/overview.md) for best practices.
