@@ -5,20 +5,18 @@ title: Overview
 
 ## **Why Dockman**
 
-I built Dockman to scratch an itch in my homelab. The existing Docker tools never really matched the way I like to work.
+I built Dockman out of my need, the need for speed!, I wanted a compose focused docker management tool that
+deployed with the simplicity of a terminal command and edited via text.
 
-Before Dockman, I had a folder full of Compose files that I’d `scp` around to different servers, plus a pile of scripts
-for things like cleaning up old images and updating stacks. It worked, but it always felt clunky. Every change meant bouncing between terminals, 
-servers, and scripts. Nothing was terrible on its own, but together it added up to a lot of friction.
+No deeply nested menus and buttons, no Enterprise™ features, no paywalls, everything accessible and managed via a simple
+focused WebUI and my keyboard.
 
-I tried other Docker management tools, but they never really clicked for me. Most leaned on heavy GUIs, lots of buttons and menus, 
-and too much “magic” happening behind the scenes. I missed the simplicity of just editing a config file and deploying.
+I tried other Docker management tools, but they never really clicked for me. Most leaned on heavy GUIs, lots of buttons
+and menus, and too much “magic” happening behind the scenes. I missed the simplicity of just editing a config file and
+deploying.
 
-Dockman keeps the parts I liked, editing configs in my own editor, while taking away the annoyance of deployment.
-
-It’s not meant to be for everyone. I’m a developer at heart, so I lean on my editor and my shortcuts. Dockman is my
-attempt to bring that kind of workflow into Docker, something that feels a little like having IntelliJ or VS Code, but
-tailored for Docker.
+Dockman is for people who know their way around Docker and prefer working directly with text, no abstractions, no
+distractions. If that's you, you'll feel right at home.
 
 **Dockman is for people who:**
 
