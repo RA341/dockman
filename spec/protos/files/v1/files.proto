@@ -12,8 +12,17 @@ service FileService {
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
   rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
-
+  rpc Format(FormatRequest) returns (FormatResponse) {}
 }
+
+message FormatRequest {
+  string filename = 1;
+}
+
+message FormatResponse {
+  string contents = 1;
+}
+
 
 message ListResponse {
   repeated FileGroup groups = 1;

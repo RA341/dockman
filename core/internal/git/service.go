@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -25,12 +26,73 @@ type Service struct {
 	chownComposeRootFunc func()
 }
 
-func NewService(root string, chownComposeRootFunc func()) *Service {
-	service, err := newSrv(root, chownComposeRootFunc)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to init git service")
+const DockmanRemoteFolder = ".dockman.remote"
+
+func NewMigrator(root string) error {
+	return migrator(root)
+}
+
+func migrator(root string) error {
+	dockmanBranchFolder := filepath.Join(root, DockmanRemoteFolder)
+	if fileutil.FileExists(dockmanBranchFolder) {
+		log.Info().Msg("Branch folder found, migration successful")
+		return nil
 	}
-	return service
+
+	err := os.MkdirAll(dockmanBranchFolder, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	repo, err := initializeGit(root)
+	if err != nil {
+		return fmt.Errorf("failed to get git repo: %w", err)
+	}
+	if repo == nil {
+		log.Info().Msg("No git repo found, nothing to migrate")
+		return nil
+	}
+
+	srv := Service{
+		repo:                 repo,
+		repoPath:             root,
+		chownComposeRootFunc: func() {},
+	}
+
+	branches, err := srv.ListBranches()
+	if err != nil {
+		return err
+	}
+
+	for _, branch := range branches {
+		if branch == docker.LocalClient {
+			log.Info().Msg("skipping migrating local branch")
+			continue
+		}
+
+		branchDestPath := filepath.Join(dockmanBranchFolder, branch)
+		branchDestPath, err = filepath.Abs(branchDestPath)
+		if err != nil {
+			return err
+		}
+		err = os.MkdirAll(branchDestPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+
+		// list all files
+		files, err := srv.ListFilesInBranch(branch)
+		if err != nil {
+			return err
+		}
+
+		err = srv.copyFilesFromBranch(files, branch, branchDestPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // returns an error instead of fataling useful for testing
@@ -46,9 +108,6 @@ func newSrv(root string, chownFunc func()) (*Service, error) {
 		repo:                 repo,
 		repoPath:             root,
 		chownComposeRootFunc: chownFunc,
-	}
-	if err = srv.CommitAll(); err != nil {
-		return nil, fmt.Errorf("failed to create commit: %w", err)
 	}
 
 	log.Debug().Msg("Git service loaded successfully")
@@ -67,31 +126,33 @@ func initializeGit(root string) (*git.Repository, error) {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
 	}
 
+	return nil, nil
+
 	// PlainOpen returns an error, implies the directory doesn't exist,
 	// or it's not a git repository, initialize
-	newRepo, err := git.PlainInitWithOptions(root, &git.PlainInitOptions{
-		InitOptions: git.InitOptions{
-			DefaultBranch: "refs/heads/local",
-		},
-		Bare: false,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error initializing repository: %s\n", err)
-	}
-
-	dir, err := os.ReadDir(root)
-	if err != nil {
-		return nil, fmt.Errorf("error reading directory: %s\n", err)
-	}
-	// .git will be counted in ReadDir, excluding that
-	if len(dir) < 2 {
-		if err = createSampleFile(root); err != nil {
-			return nil, err
-		}
-	}
-
-	log.Info().Str("path", root).Msg("Created new repository")
-	return newRepo, nil
+	//newRepo, err := git.PlainInitWithOptions(root, &git.PlainInitOptions{
+	//	InitOptions: git.InitOptions{
+	//		DefaultBranch: "refs/heads/local",
+	//	},
+	//	Bare: false,
+	//})
+	//if err != nil {
+	//	return nil, fmt.Errorf("error initializing repository: %s\n", err)
+	//}
+	//
+	//dir, err := os.ReadDir(root)
+	//if err != nil {
+	//	return nil, fmt.Errorf("error reading directory: %s\n", err)
+	//}
+	//// .git will be counted in ReadDir, excluding that
+	//if len(dir) < 2 {
+	//	if err = createSampleFile(root); err != nil {
+	//		return nil, err
+	//	}
+	//}
+	//
+	//log.Info().Str("path", root).Msg("Created new repository")
+	//return newRepo, nil
 }
 
 // an empty git repo will not have any content and will fail to create other branches
@@ -231,6 +292,54 @@ func (s *Service) SwitchBranch(name string) error {
 	s.chownComposeRootFunc()
 
 	return nil
+}
+
+func (s *Service) copyFilesFromBranch(filepaths []string, branch string, path string) error {
+	return s.WithWorkTree(func(workTree *git.Worktree) error {
+		// Resolve the importingBranch name to a commit hash.
+		importingBranchRefName := plumbing.NewBranchReferenceName(branch)
+		importingRef, err := s.repo.Reference(importingBranchRefName, true)
+		if err != nil {
+			return fmt.Errorf("could not resolve branch '%s': %w", branch, err)
+		}
+
+		commit, err := s.repo.CommitObject(importingRef.Hash())
+		if err != nil {
+			return fmt.Errorf("could not get commit object for branch '%s': %w", branch, err)
+		}
+
+		for _, fPath := range filepaths {
+			file, err := commit.File(fPath)
+			if err != nil {
+				return fmt.Errorf("could not find file '%s' in branch '%s': %w", filepaths, branch, err)
+			}
+
+			content, err := file.Contents()
+			if err != nil {
+				return fmt.Errorf("could not read file contents: %w", err)
+			}
+
+			// Write the content to the file in the worktree's filesystem.
+			// This creates or overwrites the file on disk.
+
+			fullPath := filepath.Join(path, fPath)
+			dir := filepath.Dir(fullPath)
+			err = os.MkdirAll(dir, 0755)
+			if err != nil {
+				return err
+			}
+
+			if err = os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+				return fmt.Errorf("failed to write file to worktree: %w", err)
+			}
+
+			log.Debug().Str("file", fPath).Str("branch", branch).
+				Msg("File moved from branch")
+		}
+
+		return nil
+	})
+
 }
 
 // SyncFile syncs a file's content to the current worktree from the importingBranch,

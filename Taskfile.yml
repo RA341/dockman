@@ -21,6 +21,12 @@ tasks:
     cmds:
       - golangci-lint run ./...
 
+  site:
+    desc: Start dev website
+    dir: website
+    cmds:
+      - npm run start
+
   dock:
     desc: start a a temp dockman on latest tag for testing
     cmds:
@@ -111,6 +117,7 @@ tasks:
     desc: "Calls go mod tidy in {{.CORE_DIR}}"
     dir: "{{.CORE_DIR}}"
     cmds:
+      - go mod download
       - go mod tidy -v -x
 
   go:b:*:

@@ -26,3 +26,6 @@ install/stacks/
 /core/internal/git/tests/
 /core/internal/backup/tests/
 /install/docker/
+/core/internal/git/test/
+/core/internal/git/test/compose2/
+/core/internal/git/test/compose

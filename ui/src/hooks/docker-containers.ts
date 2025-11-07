@@ -24,6 +24,10 @@ export function useDockerContainers() {
         setContainers(val?.list || [])
     }, [dockerService, selectedHost])
 
+    const refreshContainers = useCallback(() => {
+        fetchContainers().finally(() => setLoading(false))
+    }, [fetchContainers]);
+
     useEffect(() => {
         setLoading(true)
         fetchContainers().then(() => {
@@ -38,5 +42,5 @@ export function useDockerContainers() {
         return () => clearInterval(intervalId)
     }, [fetchContainers, refreshInterval])
 
-    return {containers, loading, fetchContainers, refreshInterval, setRefreshInterval}
+    return {containers, loading, refreshContainers, fetchContainers, refreshInterval, setRefreshInterval}
 }

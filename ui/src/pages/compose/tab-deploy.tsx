@@ -9,52 +9,36 @@ import {
     DialogTitle,
     Typography
 } from '@mui/material';
-import {
-    Delete as DeleteIcon,
-    PlayArrow as PlayArrowIcon,
-    RestartAlt as RestartAltIcon,
-    Stop as StopIcon,
-    Update as UpdateIcon
-} from '@mui/icons-material';
 import {ContainerTable} from './components/container-info-table';
-import {LogsPanel} from './components/logs-panel';
 import {callRPC, transformAsyncIterable, useClient} from "../../lib/api.ts";
 import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
 import {useSnackbar} from "../../hooks/snackbar.ts";
-
-const deployActionsConfig = [
-    {name: 'start', rpcName: 'composeStart', message: "started", icon: <PlayArrowIcon/>},
-    {name: 'stop', rpcName: 'composeStop', message: "stopped", icon: <StopIcon/>},
-    {name: 'remove', rpcName: 'composeRemove', message: "removed", icon: <DeleteIcon/>},
-    {name: 'restart', rpcName: 'composeRestart', message: "restarted", icon: <RestartAltIcon/>},
-    {name: 'update', rpcName: 'composeUpdate', message: "updated", icon: <UpdateIcon/>},
-] as const;
-
-interface LogTab {
-    id: string;
-    title: string;
-    stream: AsyncIterable<string>;
-    controller: AbortController;
-    inputFn?: (cmd: string) => void,
-}
+import {
+    activeActionAtom,
+    activeTerminalAtom,
+    deployActionsConfig,
+    isTerminalPanelOpenAtom,
+    type LogTab,
+    openTerminalsAtom
+} from "./state.tsx";
+import {useAtom} from "jotai";
 
 interface DeployPageProps {
     selectedPage: string;
 }
 
 export function TabDeploy({selectedPage}: DeployPageProps) {
+    const {showSuccess, showError} = useSnackbar();
     const dockerService = useClient(DockerService);
     const {containers, fetchContainers, loading} = useDockerCompose(selectedPage);
-    const {showSuccess, showError} = useSnackbar();
 
-    const [activeAction, setActiveAction] = useState<string | null>(null);
-    const [isLogPanelMinimized, setIsLogPanelMinimized] = useState(true);
+    const [activeAction, setActiveAction] = useAtom(activeActionAtom);
     const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
-    // State is now an array of tabs and an active tab ID
-    const [logTabs, setLogTabs] = useState<LogTab[]>([]);
-    const [activeTabId, setActiveTabId] = useState<string | null>(null);
+    const [, setIsLogPanelMinimized] = useAtom(isTerminalPanelOpenAtom);
+    const [logTabs, setLogTabs] = useAtom(openTerminalsAtom);
+    const [, setActiveTabId] = useAtom(activeTerminalAtom);
 
     const [composeErrorDialog, setComposeErrorDialog] = useState<{ dialog: boolean; message: string }>({
         dialog: false,
@@ -64,20 +48,13 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
 
-    useEffect(() => {
-        // On unmount, abort all active streams
-        return () => {
-            logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
-        };
-    }, [logTabs]);
-
     const handleComposeAction = (
         name: typeof deployActionsConfig[number]['name'],
         message: string,
         rpcName: typeof deployActionsConfig[number]['rpcName'],
     ) => {
         setActiveAction(name);
-        // Create a unique ID and title for the new tab
+        // unique ID and title for the new tab
         const tabId = `${name}-${Date.now()}`;
         const tabTitle = `${name} - ${selectedPage.split('/').pop() || selectedPage}`;
 
@@ -99,6 +76,14 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
             }
         });
     };
+
+
+    useEffect(() => {
+        // On unmount, abort all active streams
+        return () => {
+            logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
+        };
+    }, [logTabs]);
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
         const tabId = `logs:${containerId}`
@@ -191,27 +176,6 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         setIsLogPanelMinimized(false); // Always expand panel for a new tab
     };
 
-    const handleCloseTab = (tabIdToClose: string) => {
-        setLogTabs(prevTabs => {
-            const tabToClose = prevTabs.find(tab => tab.id === tabIdToClose);
-            // abort the stream associated with the closing tab
-            tabToClose?.controller.abort("Tab closed by user");
-
-            const remainingTabs = prevTabs.filter(tab => tab.id !== tabIdToClose);
-
-            // Adjust the active tab if the closed one was active
-            if (activeTabId === tabIdToClose) {
-                if (remainingTabs.length > 0) {
-                    setActiveTabId(remainingTabs[remainingTabs.length - 1].id);
-                } else {
-                    setActiveTabId(null);
-                    setIsLogPanelMinimized(true); // Minimize when last tab is closed
-                }
-            }
-            return remainingTabs;
-        });
-    };
-
     if (!selectedPage) {
         return (
             <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>
@@ -254,15 +218,6 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                     />
                 </Box>
             </Box>
-
-            <LogsPanel
-                tabs={logTabs}
-                activeTabId={activeTabId}
-                isMinimized={isLogPanelMinimized}
-                onTabChange={setActiveTabId}
-                onTabClose={handleCloseTab}
-                onToggle={() => setIsLogPanelMinimized(prev => !prev)}
-            />
 
             <Dialog open={composeErrorDialog.dialog} onClose={closeErrorDialog}>
                 <DialogTitle>Error</DialogTitle>

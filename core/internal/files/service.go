@@ -5,32 +5,37 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"dario.cat/mergo"
+	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 )
 
-var ignoredFiles = []string{".git"}
+type ActiveMachineFolderProvider func() string
 
 type Service struct {
-	composeRoot  string
-	dockYamlPath string
-
-	guid int
-	puid int
+	machineFolder ActiveMachineFolderProvider
+	composeRoot   func() string
+	dockYamlPath  string
+	guid          int
+	puid          int
 
 	lastModTime time.Time
 	cachedYaml  *DockmanYaml
 }
 
-func NewService(composeRoot, dockYaml string, puid, guid int) *Service {
+func NewService(
+	composeRoot, dockYaml string,
+	puid, guid int,
+	machineFolder ActiveMachineFolderProvider,
+) *Service {
 	if !filepath.IsAbs(composeRoot) {
 		var err error
 		composeRoot, err = filepath.Abs(composeRoot)
@@ -43,10 +48,20 @@ func NewService(composeRoot, dockYaml string, puid, guid int) *Service {
 		log.Fatal().Err(err).Str("compose-root", composeRoot).Msg("failed to create compose root folder")
 	}
 
+	prov := func() string {
+		mach := machineFolder()
+		if mach == docker.LocalClient {
+			// return normal compose root for local client
+			return composeRoot
+		}
+		return filepath.Join(composeRoot, git.DockmanRemoteFolder, mach)
+	}
+
 	srv := &Service{
-		composeRoot: composeRoot,
-		guid:        guid,
-		puid:        puid,
+		composeRoot:   prov,
+		guid:          guid,
+		puid:          puid,
+		machineFolder: machineFolder,
 	}
 
 	if dockYaml != "" {
@@ -60,8 +75,6 @@ func NewService(composeRoot, dockYaml string, puid, guid int) *Service {
 			srv.dockYamlPath = srv.WithRoot(dockYaml)
 		}
 	}
-
-	srv.ChownComposeRoot()
 
 	log.Debug().Msg("File service loaded successfully")
 	return srv
@@ -77,7 +90,12 @@ type dirResult struct {
 }
 
 func (s *Service) List() (map[string][]string, error) {
-	topLevelEntries, err := os.ReadDir(s.composeRoot)
+	err := os.MkdirAll(s.composeRoot(), os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	topLevelEntries, err := os.ReadDir(s.composeRoot())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in compose root: %v", err)
 	}
@@ -86,6 +104,9 @@ func (s *Service) List() (map[string][]string, error) {
 	eg := sync.WaitGroup{}
 
 	subDirChan := make(chan dirResult, len(topLevelEntries))
+
+	var ignoredFiles = []string{".git", git.DockmanRemoteFolder}
+
 	for _, entry := range topLevelEntries {
 		entryName := entry.Name()
 		if slices.Contains(ignoredFiles, entryName) {
@@ -134,33 +155,7 @@ func (s *Service) Create(fileName string) error {
 		return err
 	}
 
-	s.chown(s.WithRoot(fileName))
-
 	return nil
-}
-
-func (s *Service) chown(fileName string) {
-	if runtime.GOOS == "windows" {
-		//log.Debug().Msg("chowning files on windows is not supported")
-		return
-	}
-
-	err := os.Chown(fileName, s.puid, s.guid)
-	if err != nil {
-		log.Warn().
-			Str("path", fileName).Err(err).
-			Msg("Failed to chown file")
-	}
-}
-
-func (s *Service) ChownComposeRoot() {
-	err := filepath.Walk(s.composeRoot, func(path string, info os.FileInfo, err error) error {
-		s.chown(path)
-		return nil
-	})
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to chown compose root")
-	}
 }
 
 func (s *Service) GetDockmanYaml() *DockmanYaml {
@@ -272,6 +267,14 @@ func (s *Service) Save(filename string, destWriter io.Reader) error {
 	return nil
 }
 
+func (s *Service) getFileContents(filename string) ([]byte, error) {
+	file, err := os.ReadFile(s.WithRoot(filepath.ToSlash(filename)))
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
 func (s *Service) LoadFilePath(filename string) (string, error) {
 	return s.WithRoot(filename), nil
 }
@@ -292,9 +295,25 @@ func (s *Service) createFile(filename string) error {
 	return nil
 }
 
-// WithRoot joins s.composeRoot with filename
+// WithRoot joins s.composeRoot() with filename
 func (s *Service) WithRoot(filename string) string {
-	return filepath.Join(s.composeRoot, filename)
+	return filepath.Join(s.composeRoot(), filename)
+}
+
+func (s *Service) Format(filename string) ([]byte, error) {
+	path := s.WithRoot(filename)
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read file %w", err)
+	}
+
+	ext := filepath.Ext(filename)
+	formatter, ok := availableFormatters[ext]
+	if ok {
+		return formatter(contents)
+	}
+
+	return contents, nil
 }
 
 func openFile(filename string) (*os.File, error) {

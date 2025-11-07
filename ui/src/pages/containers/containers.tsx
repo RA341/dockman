@@ -1,5 +1,5 @@
-import {Box} from '@mui/material';
-import {Delete, PlayArrow, RestartAlt, Stop, Update} from '@mui/icons-material';
+import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
+import {Delete, PlayArrow, Refresh, RestartAlt, Stop, Update} from '@mui/icons-material';
 import {ContainerTable} from '../compose/components/container-info-table';
 import {useMemo, useState} from "react";
 import {useDockerContainers} from "../../hooks/docker-containers.ts";
@@ -13,6 +13,8 @@ import {LogsDialogProvider} from "./logs-dialog/logs-context.tsx";
 import {useLogsDialog} from "./logs-dialog/logs-hook.ts";
 import {useExecDialog} from "./exec-dialog/exec-hook.ts";
 import {ExecDialogProvider} from "./exec-dialog/exec-context.tsx";
+import scrollbarStyles from "../../components/scrollbar-style.tsx";
+import {ContainersLoading} from "./containers-loading.tsx";
 
 function ContainersPage() {
     return (
@@ -26,7 +28,7 @@ function ContainersPage() {
 
 function CorePage() {
     const dockerService = useClient(DockerService)
-    const {containers, loading, fetchContainers} = useDockerContainers();
+    const {containers, loading, refreshContainers, fetchContainers} = useDockerContainers();
     const {showSuccess, showError} = useSnackbar()
 
     const {search, setSearch, searchInputRef} = useSearch()
@@ -128,52 +130,92 @@ function CorePage() {
 
     return (
         <Box sx={{
-            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: 'background.default'
+            height: '100vh',
+            p: 3,
+            overflow: 'hidden',
+            ...scrollbarStyles
         }}>
+            <Card
+                sx={{
+                    mb: 3,
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 3,
+                    backgroundColor: 'background.paper',
+                    boxShadow: 2,
+                    borderRadius: 2,
+                    flexShrink: 0,
+                }}
+            >
+                {/* Title and Stats */}
+                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
+                    <Typography variant="h6" sx={{fontWeight: 'bold'}}>
+                        Docker Containers
+                    </Typography>
+                </Box>
+
+                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
+                    <Typography variant="h6">
+                        {containers.length} containers
+                    </Typography>
+                </Box>
+
+                <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
+
+                <Tooltip title={loading ? 'Refreshing...' : 'Refresh containers'}>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={refreshContainers}
+                        disabled={loading}
+                        sx={{minWidth: 'auto', px: 1.5}}
+                    >
+                        {loading ? <CircularProgress size={16} color="inherit"/> : <Refresh/>}
+                    </Button>
+                </Tooltip>
+
+                {/* Spacer */}
+                <Box sx={{flexGrow: 0.95}}/>
+
+                <ActionButtons actions={actions}/>
+            </Card>
+
+            {/* Table Container */}
             <Box sx={{
                 flexGrow: 1,
-                p: 3,
+                border: '3px ridge',
+                borderColor: 'rgba(255, 255, 255, 0.23)',
+                borderRadius: 3,
                 display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
+                flexDirection: 'column', // Add this
+                minHeight: 0,
+                overflow: 'hidden' // Keep this on the outer box
             }}>
-                <Box sx={{
-                    display: 'flex',
-                    gap: 2,
-                    flexWrap: 'wrap',
-                    mb: 3,
-                    flexShrink: 0
-                }}>
-                    <SearchBar
-                        search={search}
-                        setSearch={setSearch}
-                        inputRef={searchInputRef}
-                    />
-
-                    <ActionButtons
-                        actions={actions}
-                        variant={"outlined"}
-                    />
-                </Box>
-
-                <Box sx={{
-                    height: '83vh', overflow: 'hidden', border: '3px ridge',
-                    borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
-                    flexDirection: 'column', backgroundColor: 'rgb(41,41,41)'
-                }}>
-                    <ContainerTable
-                        containers={filteredContainers}
-                        loading={loading}
-                        onShowLogs={showLogsDialog}
-                        setSelectedServices={setSelectedContainers}
-                        selectedServices={selectedContainers}
-                        useContainerId={true}
-                        onExec={showExecDialog}
-                    />
-                </Box>
+                {loading ? (
+                    <ContainersLoading/>
+                ) : (
+                    <Fade in={!loading} timeout={300}>
+                        <div style={{
+                            width: '100%',
+                            height: '100%',
+                            overflow: 'auto' // Add scrolling here
+                        }}>
+                            <ContainerTable
+                                containers={filteredContainers}
+                                loading={loading}
+                                onShowLogs={showLogsDialog}
+                                setSelectedServices={setSelectedContainers}
+                                selectedServices={selectedContainers}
+                                useContainerId={true}
+                                onExec={showExecDialog}
+                            />
+                        </div>
+                    </Fade>
+                )}
             </Box>
         </Box>
     )

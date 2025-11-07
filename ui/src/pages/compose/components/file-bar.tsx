@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip, Typography} from '@mui/material'
 import {Add as AddIcon, Search as SearchIcon, Sync} from '@mui/icons-material'
 import {useParams} from 'react-router-dom'
@@ -10,13 +10,14 @@ import {useTelescope} from "../dialogs/search/search-hook.ts";
 import {useGitImport} from "../dialogs/import/import-hook.ts";
 import {useAddFile} from "../dialogs/add/add-hook.ts";
 import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
+import {useAtom} from "jotai";
+import {openFiles, sideBarState} from "../state.tsx";
+import {useTabs} from "../../../hooks/tabs.ts";
 
-interface FileListProps {
-    closeTab: (tabToClose: string) => void
-}
-
-export function FileList({closeTab}: FileListProps) {
+export function FileList() {
     const {file: currentDir} = useParams<{ file: string }>()
+
+    const {closeTab} = useTabs();
 
     const {selectedHost} = useHost()
     const {files, isLoading, renameFile} = useFiles()
@@ -26,34 +27,30 @@ export function FileList({closeTab}: FileListProps) {
     const {showDialog: showAddFile} = useAddFile()
     const {showDialog: showDeleteFile} = useFileDelete()
 
-    // holds the names of all open directories.
-    const [openDirs, setOpenDirs] = useState(new Set<string>())
+    const [openDirs, setOpenDirs] = useAtom(openFiles)
+
+    const [isSidebarCollapsed] = useAtom(sideBarState)
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            // alt+k to open search
             if ((event.altKey) && event.key === 's') {
-                event.preventDefault() // Prevent the browser's default find action
+                event.preventDefault()
                 showTelescope()
             }
-            // alt + a for creating files
             if ((event.altKey) && event.key === 'a') {
                 event.preventDefault()
                 showAddFile("")
             }
-
-            // alt + s for importing files
             if ((event.altKey) && event.key === 'i') {
                 event.preventDefault()
                 showGitImport()
             }
         }
-        // Add the event listener to the window
         window.addEventListener('keydown', handleKeyDown)
-        // Cleanup: remove the event listener when the component unmounts
         return () => {
             window.removeEventListener('keydown', handleKeyDown)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedHost])
 
     const handleDelete = (file: string) => {
@@ -61,119 +58,180 @@ export function FileList({closeTab}: FileListProps) {
         showDeleteFile(file)
     }
 
-    // file list toggles
-    // if you navigate to a file, its parent directory opens automatically.
     useEffect(() => {
         if (currentDir) {
-            // Add the current directory from the URL to the set of open directories
             setOpenDirs(prevOpenDirs => new Set(prevOpenDirs).add(currentDir))
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDir, selectedHost])
 
     const handleToggle = useCallback((dirName: string) => {
         setOpenDirs(prevOpenDirs => {
             const newOpenDirs = new Set(prevOpenDirs)
             if (newOpenDirs.has(dirName)) {
-                newOpenDirs.delete(dirName) // If it's open, close it
+                newOpenDirs.delete(dirName)
             } else {
-                newOpenDirs.add(dirName) // If it's closed, open it
+                newOpenDirs.add(dirName)
             }
             return newOpenDirs
         })
-    }, [])
-    ////////////////////////////////////////////////////////////////////////////////////
+    }, [setOpenDirs])
+
+    const [panelWidth, setPanelWidth] = useState(250);
+    const [isResizing, setIsResizing] = useState(false);
+    const panelRef = useRef<HTMLDivElement | null>(null);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsResizing(true);
+        e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isResizing || !panelRef.current) return;
+
+        const panelRect = panelRef.current.getBoundingClientRect();
+        const newWidth = e.clientX - panelRect.left; // Changed this line
+        setPanelWidth(Math.max(150, Math.min(600, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+        setIsResizing(false);
+    };
+
+    useEffect(() => {
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+        // eslint-disable-next-line
+    }, [isResizing]);
 
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                overflow: 'hidden'
-            }}
-        >
-            <Toolbar>
-                <Typography variant={"h6"}>
-                    Files
-                </Typography>
+        <>
+            {/* Sidebar Panel */}
+            <Box ref={panelRef}
+                 sx={{
+                     width: isSidebarCollapsed ? 0 : panelWidth,
+                     flexShrink: 0,
+                     borderRight: isSidebarCollapsed ? 0 : 1,
+                     borderColor: 'divider',
+                     overflowY: 'auto',
+                     transition: isResizing ? 'none' : 'width 0.1s ease-in-out',
+                     // transition: isSidebarCollapsed ? 'width 0.15s ease' : 'width 0.15s ease',
+                     overflow: 'hidden',
+                     display: 'flex',
+                     flexDirection: 'column',
+                     height: '100%',
+                     position: 'relative',
+                 }}
+            >
+                <Toolbar>
+                    <Typography variant={"h6"}>
+                        Files
+                    </Typography>
 
-                <Box sx={{flexGrow: 1}}/>
+                    <Box sx={{flexGrow: 1}}/>
 
-                <Tooltip arrow title={
-                    <ShortcutFormatter
-                        title="Search"
-                        keyCombo={["ALT", "S"]}
+                    <Tooltip arrow title={
+                        <ShortcutFormatter
+                            title="Search"
+                            keyCombo={["ALT", "S"]}
+                        />
+                    }>
+                        <IconButton
+                            size="small"
+                            onClick={() => showTelescope()}
+                            color="primary"
+                            aria-label="Search"
+                        >
+                            <SearchIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip arrow title={
+                        <ShortcutFormatter
+                            title="Add"
+                            keyCombo={["ALT", "A"]}
+                        />
+                    }>
+                        <IconButton
+                            size="small"
+                            onClick={() => showAddFile('')}
+                            color="success"
+                            sx={{ml: 1}}
+                            aria-label="Add"
+                        >
+                            <AddIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip arrow title={
+                        <ShortcutFormatter
+                            title="Import"
+                            keyCombo={["ALT", "I"]}
+                        />
+                    }>
+                        <IconButton
+                            size="small"
+                            onClick={() => showGitImport()}
+                            color="info"
+                            sx={{ml: 1}}
+                            aria-label="Import"
+                        >
+                            <Sync fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+                </Toolbar>
+
+                <Divider/>
+
+                <StyledScrollbarBox sx={{flexGrow: 1}}>
+                    {files.length === 0 && isLoading ? (
+                        <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                            <CircularProgress/>
+                        </Box>
+                    ) : (
+                        <List>
+                            {files.map((group) => (
+                                <FileBarItem
+                                    key={group.name}
+                                    group={group}
+                                    onAdd={showAddFile}
+                                    onDelete={handleDelete}
+                                    isOpen={openDirs.has(group.name)}
+                                    onRename={renameFile}
+                                    onToggle={handleToggle}
+                                />
+                            ))}
+                        </List>
+                    )}
+                </StyledScrollbarBox>
+
+                {/* Resize Handle */}
+                {!isSidebarCollapsed && (
+                    <Box
+                        onMouseDown={handleMouseDown}
+                        sx={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '4px',
+                            cursor: 'ew-resize',
+                            backgroundColor: isResizing ? 'primary.main' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: 'primary.main',
+                            },
+                            zIndex: 10,
+                        }}
                     />
-                }>
-                    <IconButton
-                        size="small"
-                        onClick={() => showTelescope()}
-                        color="primary"
-                        aria-label="Search"
-                    >
-                        <SearchIcon fontSize="small"/>
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip arrow title={
-                    <ShortcutFormatter
-                        title="Add"
-                        keyCombo={["ALT", "A"]}
-                    />
-                }>
-                    <IconButton
-                        size="small"
-                        onClick={() => showAddFile('')}
-                        color="success"
-                        sx={{ml: 1}} // Add left margin for spacing between buttons
-                        aria-label="Add"
-                    >
-                        <AddIcon fontSize="small"/>
-                    </IconButton>
-                </Tooltip>
-
-                <Tooltip arrow title={
-                    <ShortcutFormatter
-                        title="Import"
-                        keyCombo={["ALT", "I"]}
-                    />
-                }>
-                    <IconButton
-                        size="small"
-                        onClick={() => showGitImport()}
-                        color="info"
-                        sx={{ml: 1}} // Add left margin for spacing
-                        aria-label="Import"
-                    >
-                        <Sync fontSize="small"/>
-                    </IconButton>
-                </Tooltip>
-            </Toolbar>
-
-            <Divider/>
-
-            <StyledScrollbarBox sx={{flexGrow: 1}}>
-                {files.length === 0 && isLoading ? (
-                    <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                        <CircularProgress/>
-                    </Box>
-                ) : (
-                    <List>
-                        {files.map((group) => (
-                            <FileBarItem
-                                key={group.name}
-                                group={group}
-                                onAdd={showAddFile}
-                                onDelete={handleDelete}
-                                isOpen={openDirs.has(group.name)}
-                                onRename={renameFile}
-                                onToggle={handleToggle}
-                            />
-                        ))}
-                    </List>
                 )}
-            </StyledScrollbarBox>
-        </Box>
+            </Box>
+        </>
     )
 }
 

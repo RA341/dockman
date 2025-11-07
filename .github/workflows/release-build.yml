@@ -1,0 +1,26 @@
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'The tag name to use for the release (e.g., v1.0.0). Required if manually dispatched.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  build-docker:
+    name: Build and Release for Docker
+    uses: ./.github/workflows/action-docker.yml
+    with:
+      is_latest: true
+      version_tag: ${{ github.event.inputs.tag_name }}
+      source_branch: ${{ github.ref_name }}
+      title: 'Dockman'
+    secrets: inherit

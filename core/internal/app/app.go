@@ -11,7 +11,6 @@ import (
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
 	dockermanagerrpc "github.com/RA341/dockman/generated/docker_manager/v1/v1connect"
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
-	gitrpc "github.com/RA341/dockman/generated/git/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/config"
@@ -30,7 +29,6 @@ type App struct {
 	Auth          *auth.Service
 	Config        *config.AppConfig
 	DockerManager *dm.Service
-	Git           *git.Service
 	File          *files.Service
 	DB            *database.Service
 	Info          *info.Service
@@ -56,17 +54,32 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 	)
 
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
-	fileSrv := files.NewService(cr, conf.DockYaml, conf.Perms.PUID, conf.Perms.GID)
-	gitSrv := git.NewService(cr, fileSrv.ChownComposeRoot)
+
 	dockerManagerSrv := dm.NewService(
-		gitSrv,
 		sshSrv,
 		dbSrv.ImageUpdateDB,
 		dbSrv.UserConfigDB,
-		&cr,
-		&conf.Updater.Addr,
-		&conf.LocalAddr,
+		func() string {
+			return conf.ComposeRoot
+		},
+		func() *config.UpdaterConfig {
+			return &conf.Updater
+		},
+		func() string {
+			return conf.LocalAddr
+		},
 	)
+
+	fileSrv := files.NewService(
+		cr, conf.DockYaml,
+		conf.Perms.PUID, conf.Perms.GID,
+		dockerManagerSrv.GetActiveClient,
+	)
+	err = git.NewMigrator(cr)
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to complete git migration")
+	}
+
 	userConfigSrv := config.NewService(
 		dbSrv.UserConfigDB,
 		dockerManagerSrv.ResetContainerUpdater,
@@ -77,7 +90,6 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		Config:        conf,
 		Auth:          authSrv,
 		File:          fileSrv,
-		Git:           gitSrv,
 		DockerManager: dockerManagerSrv,
 		DB:            dbSrv,
 		Info:          infoSrv,
@@ -131,12 +143,12 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			)
 		},
 		// git
-		func() (string, http.Handler) {
-			return gitrpc.NewGitServiceHandler(git.NewConnectHandler(a.Git), authInterceptor)
-		},
-		func() (string, http.Handler) {
-			return a.registerHttpHandler("/api/git", git.NewFileHandler(a.Git))
-		},
+		//func() (string, http.Handler) {
+		//	return gitrpc.NewGitServiceHandler(git.NewConnectHandler(a.Git), authInterceptor)
+		//},
+		//func() (string, http.Handler) {
+		//	return a.registerHttpHandler("/api/git", git.NewFileHandler(a.Git))
+		//},l
 		func() (string, http.Handler) {
 			return a.registerHttpHandler("/auth/ping", http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {

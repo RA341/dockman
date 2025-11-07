@@ -67,6 +67,16 @@ func sortFiles(a, b string, fileList map[string][]string, dockmanConf *DockmanYa
 	return strings.Compare(a, b)
 }
 
+func (h *Handler) Format(ctx context.Context, c *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
+	name := c.Msg.GetFilename()
+	format, err := h.srv.Format(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.FormatResponse{Contents: string(format)}), nil
+}
+
 // getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
 func getSortRank(name string, fileList map[string][]string, conf *DockmanYaml) int {
 	base := filepath.Base(name)

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/static/img/dockman.svg" alt="Logo" width="200" height="200">
+  <img src="website/static/img/dockman.svg" alt="Logo" width="200" height="200">
   <h1>Dockman</h1>
   <p>
     A Docker management tool for users who want unfiltered access to their Docker Compose files.

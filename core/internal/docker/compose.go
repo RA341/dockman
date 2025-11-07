@@ -37,7 +37,7 @@ func NewComposeService(u *dependencies, container *ContainerService) *ComposeSer
 	}
 }
 
-func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, composeClient api.Service, services ...string) error {
+func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	if err := s.syncer.Sync(ctx, project); err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, 
 	return nil
 }
 
-func (s *ComposeService) ComposeDown(ctx context.Context, project *types.Project, composeClient api.Service, services ...string) error {
+func (s *ComposeService) ComposeDown(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	downOpts := api.DownOptions{
 		Services: services,
 	}
@@ -78,7 +78,7 @@ func (s *ComposeService) ComposeDown(ctx context.Context, project *types.Project
 	return nil
 }
 
-func (s *ComposeService) ComposeStop(ctx context.Context, project *types.Project, composeClient api.Service, services ...string) error {
+func (s *ComposeService) ComposeStop(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	stopOpts := api.StopOptions{
 		Services: services,
 	}
@@ -88,7 +88,7 @@ func (s *ComposeService) ComposeStop(ctx context.Context, project *types.Project
 	return nil
 }
 
-func (s *ComposeService) ComposeRestart(ctx context.Context, project *types.Project, composeClient api.Service, services ...string) error {
+func (s *ComposeService) ComposeRestart(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	// A restart might involve changes to the compose file, so we sync first.
 	if err := s.syncer.Sync(ctx, project); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (s *ComposeService) ComposeRestart(ctx context.Context, project *types.Proj
 	return nil
 }
 
-func (s *ComposeService) ComposePull(ctx context.Context, project *types.Project, composeClient api.Service) error {
+func (s *ComposeService) ComposePull(ctx context.Context, project *types.Project, composeClient api.Compose) error {
 	pullOpts := api.PullOptions{}
 	if err := composeClient.Pull(ctx, project, pullOpts); err != nil {
 		return fmt.Errorf("compose pull operation failed: %w", err)
@@ -111,7 +111,7 @@ func (s *ComposeService) ComposePull(ctx context.Context, project *types.Project
 	return nil
 }
 
-func (s *ComposeService) ComposeUpdate(ctx context.Context, project *types.Project, composeClient api.Service, services ...string) error {
+func (s *ComposeService) ComposeUpdate(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	beforeImages, err := s.getProjectImageDigests(ctx, project)
 	if err != nil {
 		return fmt.Errorf("failed to get image info before pull: %w", err)
@@ -195,7 +195,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 	return digests, nil
 }
 
-func (s *ComposeService) LoadComposeClient(outputStream io.Writer, inputStream io.ReadCloser) (api.Service, error) {
+func (s *ComposeService) LoadComposeClient(outputStream io.Writer, inputStream io.ReadCloser) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
 		command.WithAPIClient(s.daemon),
 		command.WithCombinedStreams(outputStream),

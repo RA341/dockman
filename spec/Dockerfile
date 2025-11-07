@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go
-ENV GO_VERSION=1.24.0
+ENV GO_VERSION=1.25.3
 
 RUN curl -OL https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go$GO_VERSION.linux-amd64.tar.gz && \

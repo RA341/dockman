@@ -632,7 +632,7 @@ func (h *Handler) executeComposeStreamCommand(
 	ctx context.Context,
 	composeFile string,
 	responseStream *connect.ServerStream[v1.LogsMessage],
-	action func(context.Context, *types.Project, api.Service, ...string) error,
+	action func(context.Context, *types.Project, api.Compose, ...string) error,
 	services ...string,
 ) error {
 	project, err := h.compose().LoadProject(ctx, composeFile)

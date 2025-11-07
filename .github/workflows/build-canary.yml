@@ -10,7 +10,7 @@ on:
       - Dockerfile
       - Dockerfile.updater
       - .github/workflows/action-docker.yml
-      - build-canary.yml
+      - .github/workflows/build-canary.yml
       - core/**
       - ui/**
 
@@ -19,25 +19,13 @@ permissions:
   packages: write  # To push Docker images to GHCR
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - title: dockman
-            version_tag: canary
-            source_branch: ${{ github.ref_name }}
-            dockerfile: Dockerfile
-
-          - title: dockman/updater
-            version_tag: canary
-            source_branch: ${{ github.ref_name }}
-            dockerfile: Dockerfile.updater
-
-    name: Build ${{ matrix.title }}
+  build-canary:
+    name: Build Canary
     uses: ./.github/workflows/action-docker.yml
     with:
-      title: ${{ matrix.title }}
-      version_tag: ${{ matrix.version_tag }}
-      source_branch: ${{ matrix.source_branch }}
-      dockerfile: ${{ matrix.dockerfile }}
+      version_tag: canary
+      source_branch: ${{ github.ref_name }}
+      is_latest: false
+      title: dockman
+      dockerfile: Dockerfile
     secrets: inherit

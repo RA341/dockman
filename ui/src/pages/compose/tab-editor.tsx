@@ -1,12 +1,14 @@
-import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material";
-import {useCallback, useEffect, useState} from "react";
+import {Box, Fade, IconButton, Tooltip} from "@mui/material";
+import React, {type JSX, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {callRPC, downloadFile, uploadFile, useClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {type SaveState} from "./status-hook.ts";
-import {ChevronLeftRounded, ChevronRightOutlined} from "@mui/icons-material";
+import {CloudUploadOutlined, ErrorOutlineOutlined} from "@mui/icons-material";
 import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 import {isComposeFile} from "../../lib/editor.ts";
+import EditorErrorWidget from "./editor-widget-errors.tsx";
+import EditorDeployWidget from "./editor-widget-deploy.tsx";
 
 interface EditorProps {
     selectedPage: string;
@@ -14,11 +16,16 @@ interface EditorProps {
     handleContentChange: (value: string, onSave: (value: string) => void) => void;
 }
 
-export function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) {
+type ActionItem = {
+    element: JSX.Element;
+    icon: JSX.Element;
+    label: string;
+};
+
+function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) {
     const {showError, showWarning} = useSnackbar();
     const dockerClient = useClient(DockerService)
 
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [errors, setErrors] = useState<string[]>([])
 
     const [fileContent, setFileContent] = useState("")
@@ -31,11 +38,35 @@ export function TabEditor({selectedPage, setStatus, handleContentChange}: Editor
                 setFileContent(file)
             }
         }
+        // eslint-disable-next-line
     }, [selectedPage]);
+
+
+    const actions: Record<string, ActionItem> = useMemo(() => {
+        const baseActions: Record<string, ActionItem> = {
+            errors: {
+                element: <EditorErrorWidget errors={errors}/>,
+                icon: <ErrorOutlineOutlined/>,
+                label: 'Show validation errors',
+            },
+        };
+
+        if (isComposeFile(selectedPage)) {
+            baseActions["deploy"] = {
+                element: <EditorDeployWidget selectedPage={selectedPage}/>,
+                icon: <CloudUploadOutlined/>,
+                label: 'Deploy project',
+            };
+        }
+
+        return baseActions;
+    }, [selectedPage, errors]);
 
     useEffect(() => {
         fetchDataCallback().then()
     }, [fetchDataCallback]);
+
+    const [activeAction, setActiveAction] = useState<keyof typeof actions | null>(null);
 
     const saveFile = useCallback(async (val: string) => {
         const err = await uploadFile(selectedPage, val);
@@ -58,13 +89,47 @@ export function TabEditor({selectedPage, setStatus, handleContentChange}: Editor
 
             if (ssd && ssd.length !== 0) {
                 setErrors(ssd)
-                setIsPanelOpen(true)
+                setActiveAction('errors')
             } else {
                 setErrors([])
-                setIsPanelOpen(false)
+                setActiveAction(null)
             }
         }
+        // eslint-disable-next-line
     }, [selectedPage, setStatus]);
+
+    const [panelWidth, setPanelWidth] = useState(250);
+    const [isResizing, setIsResizing] = useState(false);
+    const panelRef = useRef<HTMLDivElement | null>(null);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsResizing(true);
+        e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isResizing || !panelRef.current) return;
+
+        const panelRect = panelRef.current.getBoundingClientRect();
+        const newWidth = panelRect.right - e.clientX;
+        setPanelWidth(Math.max(150, Math.min(600, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+        setIsResizing(false);
+    };
+
+    useEffect(() => {
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+        // eslint-disable-next-line
+    }, [isResizing]);
 
     function handleEditorChange(value: string | undefined): void {
         const newValue = value!
@@ -117,75 +182,92 @@ export function TabEditor({selectedPage, setStatus, handleContentChange}: Editor
                         </Fade>
                     </Box>
 
-                    {/* Vertical Action Bar for Toggling */}
-                    <Tooltip title={"Show validation errors"}>
-                        <Box
-                            sx={{
-                                backgroundColor: '#252727',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                borderLeft: '1px solid',
-                                borderColor: 'rgba(255, 255, 255, 0.23)',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                                }
-                            }}
-                            onClick={() => setIsPanelOpen(!isPanelOpen)}
-                        >
-                            <IconButton size="small" aria-label="toggle error panel">
-                                {isPanelOpen ? <ChevronRightOutlined/> : <ChevronLeftRounded/>}
-                            </IconButton>
+                    <Box ref={panelRef}
+                         sx={{
+                             width: activeAction !== null ? `${panelWidth}px` : '0px',
+                             transition: isResizing ? 'none' : 'width 0.1s ease-in-out',
+                             overflow: 'hidden',
+                             backgroundColor: '#1E1E1E',
+                             position: 'relative',
+                         }}>
+                        {/* Resize handle */}
+                        {activeAction !== null && (
+                            <Box
+                                onMouseDown={handleMouseDown}
+                                sx={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: '4px',
+                                    cursor: 'ew-resize',
+                                    backgroundColor: isResizing ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                    },
+                                    zIndex: 10,
+                                }}
+                            />
+                        )}
+
+                        {/* Content */}
+                        <Box sx={{p: 2, width: '100%'}}>
+                            {(activeAction) && actions[activeAction].element}
                         </Box>
-                    </Tooltip>
+                    </Box>
 
+                    {/*  Side Widget Panel */}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            backgroundColor: '#252727',
+                            borderLeft: '1px solid',
+                            borderColor: 'rgba(255, 255, 255, 0.23)',
+                        }}
+                    >
+                        {Object.entries(actions).map(([key, {icon, label}]) => {
+                            const isActive = activeAction === key;
 
-                    {/* Collapsible Panel */}
-                    <Box sx={{
-                        width: isPanelOpen ? '250px' : '0px',
-                        transition: 'width 0.2s ease-in-out',
-                        overflow: 'hidden',
-                        backgroundColor: '#1E1E1E',
-                    }}>
-                        {/* Inner wrapper to prevent content from wrapping during animation */}
-                        <Box sx={{p: 2, width: '250px'}}>
-                            {errors.length === 0 ? (
-                                <Typography variant="subtitle1" sx={{mb: 1, fontWeight: 'bold', whiteSpace: 'nowrap'}}>
-                                    No errors detected
-                                </Typography>
-                            ) : <>
-                                <Typography
-                                    variant="subtitle1"
-                                    sx={{mb: 1, fontWeight: 'bold', whiteSpace: 'nowrap'}}
-                                >
-                                    Errors
-                                </Typography>
-
-                                {errors.map((value, index) => (
+                            return (
+                                <Tooltip key={key} title={label} placement="left">
                                     <Box
-                                        key={index}
                                         sx={{
-                                            p: 1.5,
-                                            mb: 3,
-                                            backgroundColor: 'rgba(211, 47, 47, 0.1)', // Faint red background
-                                            border: '1px solid rgba(211, 47, 47, 0.4)',
-                                            borderRadius: 1,
-                                            fontFamily: 'monospace',
-                                            fontSize: '0.875rem',
-                                            color: '#ffcdd2', // Light red text for dark mode
-                                            whiteSpace: 'pre-wrap', // Allows the text to wrap
-                                            wordBreak: 'break-all', // Breaks long unbreakable strings (like paths)
+                                            backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderBottom: '1px solid rgba(255,255,255,0.1)',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                            },
                                         }}
+                                        onClick={() => setActiveAction(isActive ? null : (key as keyof typeof actions))}
                                     >
-                                        {value}
+                                        <IconButton size="small" aria-label={label}>
+                                            <IconButton
+                                                size="small"
+                                                aria-label={label}
+                                                sx={{
+                                                    color: isActive ? 'primary.main' : 'white', // change colors here
+                                                }}
+                                            >
+                                                {icon}
+                                            </IconButton>
+                                        </IconButton>
                                     </Box>
-                                ))}
-                            </>}
-                        </Box>
+                                </Tooltip>
+                            );
+                        })}
                     </Box>
                 </Box>
             </Box>
         </>
     );
 }
+
+export default TabEditor
+
+
+

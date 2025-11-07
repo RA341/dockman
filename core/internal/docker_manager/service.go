@@ -12,15 +12,17 @@ import (
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/sync/errgroup"
 )
 
+type ComposeRootProvider func() string
+type LocalAddrProvider func() string
+type UpdaterConfigProvider func() *config.UpdaterConfig
+
 type Service struct {
-	composeRoot *string
-	localAddr   *string
+	composeRoot ComposeRootProvider
+	localAddr   LocalAddrProvider
 
 	manager *ClientManager
-	git     *git.Service
 	ssh     *ssh.Service
 
 	mu           sync.RWMutex
@@ -30,23 +32,23 @@ type Service struct {
 	updaterCtx chan interface{}
 
 	imageUpdateStore docker.Store
-	updaterUrl       string
+	updater          UpdaterConfigProvider
 }
 
 func NewService(
-	git *git.Service,
 	ssh *ssh.Service,
 	store docker.Store,
 	userConfig config.Store,
-	composeRoot, updaterUrl, localAddr *string,
+	composeRoot ComposeRootProvider,
+	updaterUrl UpdaterConfigProvider,
+	localAddr LocalAddrProvider,
 ) *Service {
-	if !filepath.IsAbs(*composeRoot) {
-		log.Fatal().Str("path", *composeRoot).Msg("composeRoot must be an absolute path")
+	if !filepath.IsAbs(composeRoot()) {
+		log.Fatal().Str("path", composeRoot()).Msg("composeRoot must be an absolute path")
 	}
 
 	clientManager, defaultHost := NewClientManager(ssh)
 	srv := &Service{
-		git:     git,
 		manager: clientManager,
 		ssh:     ssh,
 
@@ -55,7 +57,7 @@ func NewService(
 		localAddr:   localAddr,
 
 		imageUpdateStore: store,
-		updaterUrl:       *updaterUrl,
+		updater:          updaterUrl,
 	}
 	if err := srv.SwitchClient(defaultHost); err != nil {
 		log.Fatal().Err(err).Str("name", defaultHost).Msg("unable to switch client")
@@ -262,26 +264,11 @@ func (srv *Service) enableClient(mach ssh.MachineOptions) error {
 func (srv *Service) SwitchClient(name string) error {
 	oldClient := srv.manager.Active()
 
-	wg := errgroup.Group{}
-	wg.Go(func() error {
-		if err := srv.git.SwitchBranch(name); err != nil {
-			return fmt.Errorf("unable to switch branch :%w", err)
-		}
-		return nil
-	})
-
-	wg.Go(func() error {
-		if err := srv.manager.Switch(name); err != nil {
-			return fmt.Errorf("unable to switch docker client :%w", err)
-		}
-		return nil
-	})
-
-	if err := wg.Wait(); err != nil {
+	err := srv.manager.Switch(name)
+	if err != nil {
 		// back to old client
-		_ = srv.git.SwitchBranch(oldClient)
 		_ = srv.manager.Switch(oldClient)
-		return err
+		return fmt.Errorf("unable to switch docker client :%w", err)
 	}
 
 	srv.mu.Lock()
@@ -299,15 +286,21 @@ func (srv *Service) SwitchClient(name string) error {
 
 func (srv *Service) loadDockerService(name string, mach *ConnectedDockerClient) *docker.Service {
 	// to add direct links to services
+	composeRoot := srv.composeRoot()
+	if name != docker.LocalClient {
+		composeRoot = filepath.Join(composeRoot, git.DockmanRemoteFolder, name)
+	}
+	log.Debug().Str("host", name).Str("composeRoot", composeRoot).Msg("compose root for client")
+
 	var localAddr string
 	var syncer docker.Syncer
 	if name == docker.LocalClient {
 		// todo load from service
-		localAddr = *srv.localAddr
+		localAddr = srv.localAddr()
 		syncer = &docker.NoopSyncer{}
 	} else {
 		localAddr = mach.dockerClient.DaemonHost()
-		syncer = docker.NewSFTPSyncer(mach.ssh.SftpClient, *srv.composeRoot)
+		syncer = docker.NewSFTPSyncer(mach.ssh.SftpClient, composeRoot)
 	}
 
 	service := docker.NewService(
@@ -316,9 +309,13 @@ func (srv *Service) loadDockerService(name string, mach *ConnectedDockerClient) 
 		syncer,
 		srv.imageUpdateStore,
 		name,
-		srv.updaterUrl,
-		*srv.composeRoot,
+		srv.updater().Addr,
+		composeRoot,
 	)
 
 	return service
+}
+
+func (srv *Service) GetActiveClient() string {
+	return srv.manager.Active()
 }

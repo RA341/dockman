@@ -1,0 +1,8 @@
+{
+  "label": "Multihost",
+  "position": 4,
+  "link": {
+    "type": "doc",
+    "id": "multihost/overview"
+  }
+}
