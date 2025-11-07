@@ -16,15 +16,10 @@ const tabConfigurations: TabConfig[] = [
         label: "Docker Hosts",
         component: <TabDockerHosts/>
     },
-    {
-        label: "Container Updater",
-        component: <TabContainerUpdater/>
-    },
-    // To add a new tab, simply add a new object to this array
     // {
-    //   label: "Another Tab",
-    //   component: <AnotherTabComponent />
-    // }
+    //     label: "Container Updater",
+    //     component: <TabContainerUpdater/>
+    // },
 ];
 
 interface TabPanelProps {
