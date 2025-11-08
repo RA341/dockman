@@ -262,18 +262,33 @@ export function ContainerTable(
     const isEmpty = !loading && containers.length === 0
 
     return (
-        <TableContainer component={Paper} sx={{flexGrow: 1, boxShadow: 3, borderRadius: 2, ...scrollbarStyles}}>
-            <Table stickyHeader aria-label="docker containers table">
+        <TableContainer component={Paper}
+                        sx={{
+                            flexGrow: 1,
+                            boxShadow: 3,
+                            borderRadius: 2,
+                            // display: 'flex',
+                            // flexDirection: 'column',
+                            ...scrollbarStyles
+                        }}>
+            <Table stickyHeader aria-label="docker containers table" sx={{
+                // height: '100%',
+                // display: 'flex',
+                // flexDirection: 'column'
+            }}>
                 <TableHead>
                     <TableRow>
-                        {Object.entries(tableInfo).map(([key, val], idx) => <React.Fragment
-                            key={idx}>{val.header(key)}</React.Fragment>)}
+                        {Object.entries(tableInfo).map(([key, val], idx) =>
+                            <React.Fragment key={idx}>{val.header(key)}</React.Fragment>)}
                     </TableRow>
                 </TableHead>
-                <TableBody sx={{opacity: isLoaded ? 1 : 0, transition: 'opacity 200ms ease-in-out'}}>
+                <TableBody sx={{
+                    opacity: isLoaded ? 1 : 0,
+                    transition: 'opacity 200ms ease-in-out'
+                }}>
                     {isEmpty ? (
-                        <TableRow>
-                            <TableCell colSpan={7} sx={{border: 0, height: 550}}>
+                        <TableRow sx={{height: '100%', width: '100%'}}>
+                            <TableCell colSpan={7} sx={{border: 0, height: '100%'}}>
                                 <Box sx={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -297,8 +312,8 @@ export function ContainerTable(
                                 selected={isItemSelected}
                                 sx={{cursor: 'pointer', '&:last-child td, &:last-child th': {border: 0}}}
                             >
-                                {Object.values(tableInfo).map((col, idx) => <React.Fragment
-                                    key={idx}>{col.cell(container)}</React.Fragment>)}
+                                {Object.values(tableInfo).map((col, idx) =>
+                                    <React.Fragment key={idx}>{col.cell(container)}</React.Fragment>)}
                             </TableRow>
                         )
                     })}
