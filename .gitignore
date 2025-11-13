@@ -29,3 +29,4 @@ install/stacks/
 /core/internal/git/test/
 /core/internal/git/test/compose2/
 /core/internal/git/test/compose
+/core/config/dockman.yml
