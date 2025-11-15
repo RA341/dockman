@@ -1,14 +1,15 @@
 import {Box, Fade, IconButton, Tooltip} from "@mui/material";
-import React, {type JSX, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
 import {callRPC, downloadFile, uploadFile, useClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {type SaveState} from "./status-hook.ts";
+import {type SaveState} from "./hooks/status-hook.ts";
 import {CloudUploadOutlined, ErrorOutlineOutlined} from "@mui/icons-material";
 import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 import {isComposeFile} from "../../lib/editor.ts";
 import EditorErrorWidget from "./editor-widget-errors.tsx";
 import EditorDeployWidget from "./editor-widget-deploy.tsx";
+import useResizeBar from "./hooks/resize-hook.ts";
 
 interface EditorProps {
     selectedPage: string;
@@ -41,7 +42,6 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
         // eslint-disable-next-line
     }, [selectedPage]);
 
-
     const actions: Record<string, ActionItem> = useMemo(() => {
         const baseActions: Record<string, ActionItem> = {
             errors: {
@@ -53,7 +53,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
 
         if (isComposeFile(selectedPage)) {
             baseActions["deploy"] = {
-                element: <EditorDeployWidget selectedPage={selectedPage}/>,
+                element: <EditorDeployWidget/>,
                 icon: <CloudUploadOutlined/>,
                 label: 'Deploy project',
             };
@@ -66,7 +66,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
         fetchDataCallback().then()
     }, [fetchDataCallback]);
 
-    const [activeAction, setActiveAction] = useState<keyof typeof actions | null>(null);
+    const [activeAction, setActiveAction] = useState<keyof typeof actions | null>('deploy');
 
     const saveFile = useCallback(async (val: string) => {
         const err = await uploadFile(selectedPage, val);
@@ -98,38 +98,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
         // eslint-disable-next-line
     }, [selectedPage, setStatus]);
 
-    const [panelWidth, setPanelWidth] = useState(250);
-    const [isResizing, setIsResizing] = useState(false);
-    const panelRef = useRef<HTMLDivElement | null>(null);
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        setIsResizing(true);
-        e.preventDefault();
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        if (!isResizing || !panelRef.current) return;
-
-        const panelRect = panelRef.current.getBoundingClientRect();
-        const newWidth = panelRect.right - e.clientX;
-        setPanelWidth(Math.max(150, Math.min(600, newWidth)));
-    };
-
-    const handleMouseUp = () => {
-        setIsResizing(false);
-    };
-
-    useEffect(() => {
-        if (isResizing) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-        }
-        // eslint-disable-next-line
-    }, [isResizing]);
+    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left')
 
     function handleEditorChange(value: string | undefined): void {
         const newValue = value!
@@ -184,7 +153,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
 
                     <Box ref={panelRef}
                          sx={{
-                             width: activeAction !== null ? `${panelWidth}px` : '0px',
+                             width: activeAction !== null ? `${panelSize}px` : '0px',
                              transition: isResizing ? 'none' : 'width 0.1s ease-in-out',
                              overflow: 'hidden',
                              backgroundColor: '#1E1E1E',
@@ -245,16 +214,14 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
                                         }}
                                         onClick={() => setActiveAction(isActive ? null : (key as keyof typeof actions))}
                                     >
-                                        <IconButton size="small" aria-label={label}>
-                                            <IconButton
-                                                size="small"
-                                                aria-label={label}
-                                                sx={{
-                                                    color: isActive ? 'primary.main' : 'white', // change colors here
-                                                }}
-                                            >
-                                                {icon}
-                                            </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            aria-label={label}
+                                            sx={{
+                                                color: isActive ? 'primary.main' : 'white', // change colors here
+                                            }}
+                                        >
+                                            {icon}
                                         </IconButton>
                                     </Box>
                                 </Tooltip>
