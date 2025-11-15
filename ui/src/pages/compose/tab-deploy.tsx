@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {
     Box,
     Button,
@@ -10,35 +10,22 @@ import {
     Typography
 } from '@mui/material';
 import {ContainerTable} from './components/container-info-table';
-import {callRPC, transformAsyncIterable, useClient} from "../../lib/api.ts";
+import {callRPC, useClient} from "../../lib/api.ts";
 import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {
-    activeActionAtom,
-    activeTerminalAtom,
-    deployActionsConfig,
-    isTerminalPanelOpenAtom,
-    type LogTab,
-    openTerminalsAtom
-} from "./state.tsx";
-import {useAtom} from "jotai";
+import {deployActionsConfig, useComposeAction} from "./state/state.tsx";
 
 interface DeployPageProps {
     selectedPage: string;
 }
 
 export function TabDeploy({selectedPage}: DeployPageProps) {
-    const {showSuccess, showError} = useSnackbar();
+    const {showError} = useSnackbar();
     const dockerService = useClient(DockerService);
-    const {containers, fetchContainers, loading} = useDockerCompose(selectedPage);
+    const {containers, loading} = useDockerCompose(selectedPage);
 
-    const [activeAction, setActiveAction] = useAtom(activeActionAtom);
     const [selectedServices, setSelectedServices] = useState<string[]>([]);
-
-    const [, setIsLogPanelMinimized] = useAtom(isTerminalPanelOpenAtom);
-    const [logTabs, setLogTabs] = useAtom(openTerminalsAtom);
-    const [, setActiveTabId] = useAtom(activeTerminalAtom);
 
     const [composeErrorDialog, setComposeErrorDialog] = useState<{ dialog: boolean; message: string }>({
         dialog: false,
@@ -46,54 +33,70 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     });
 
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
-    const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
+    // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
+
+    const runAction = useComposeAction(state => state.runAction)
+
+    const activeAction = useComposeAction(state => state.activeAction)
 
     const handleComposeAction = (
         name: typeof deployActionsConfig[number]['name'],
-        message: string,
+        _message: string,
         rpcName: typeof deployActionsConfig[number]['rpcName'],
     ) => {
-        setActiveAction(name);
-        // unique ID and title for the new tab
-        const tabId = `${name}-${Date.now()}`;
-        const tabTitle = `${name} - ${selectedPage.split('/').pop() || selectedPage}`;
-
-        createStream({
-            id: tabId,
-            title: tabTitle,
-            getStream: signal => dockerService[rpcName]({
-                filename: selectedPage,
-                selectedServices: selectedServices,
-            }, {signal}),
-            transform: item => item.message,
-            onSuccess: () => {
-                showSuccess(`Deployment ${message} successfully`)
-                setIsLogPanelMinimized(true);
-            },
-            onFinalize: () => {
-                setActiveAction('');
-                fetchContainers().then();
-            }
-        });
+        runAction(dockerService[rpcName], name, [])
+        // setLogTabs(prev => [...prev, newTab]);
+        // setActiveTabId(id);
+        // if (isLogPanelMinimized) {
+        //     setIsLogPanelMinimized(false);
+        // }
     };
 
+    // const handleComposeAction = (
+    //     name: typeof deployActionsConfig[number]['name'],
+    //     message: string,
+    //     rpcName: typeof deployActionsConfig[number]['rpcName'],
+    // ) => {
+    //     setActiveAction(name);
+    //     // unique ID and title for the new tab
+    //     const tabId = `${name}-${Date.now()}`;
+    //     const tabTitle = `${name} - ${selectedPage.split('/').pop() || selectedPage}`;
+    //
+    //     createStream({
+    //         id: tabId,
+    //         title: tabTitle,
+    //         getStream: signal => dockerService[rpcName]({
+    //             filename: selectedPage,
+    //             selectedServices: selectedServices,
+    //         }, {signal}),
+    //         transform: item => item.message,
+    //         onSuccess: () => {
+    //             showSuccess(`Deployment ${message} successfully`)
+    //             setIsLogPanelMinimized(true);
+    //         },
+    //         onFinalize: () => {
+    //             setActiveAction('');
+    //             fetchContainers().then();
+    //         }
+    //     });
+    // };
 
-    useEffect(() => {
-        // On unmount, abort all active streams
-        return () => {
-            logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
-        };
-    }, [logTabs]);
+
+    // useEffect(() => {
+    //     // On unmount, abort all active streams
+    //     return () => {
+    //         logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
+    //     };
+    // }, [logTabs]);
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
         const tabId = `logs:${containerId}`
         // If a tab for this container already exists, just switch to it
-        const existingTab = logTabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-            setActiveTabId(tabId);
-            setIsLogPanelMinimized(false);
-            return;
-        }
+        // const existingTab = logTabs.find(tab => tab.id === tabId);
+        // if (existingTab) {
+        //     setActiveTabId(tabId);
+        //     return;
+        // }
 
         createStream({
             id: tabId,
@@ -107,12 +110,11 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         const cmd = "/bin/sh"
         const tabId = `exec:${containerId}`
 
-        const existingTab = logTabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-            setActiveTabId(tabId);
-            setIsLogPanelMinimized(false);
-            return;
-        }
+        // const existingTab = logTabs.find(tab => tab.id === tabId);
+        // if (existingTab) {
+        //     setActiveTabId(tabId);
+        //     return;
+        // }
 
         createStream({
             id: tabId,
@@ -136,8 +138,9 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     };
 
     const createStream = <T, >(
+        // eslint-disable-next-line no-empty-pattern
         {
-            id, getStream, transform, title, onSuccess, onFinalize, inputFn
+            // id, getStream, transform, title, onSuccess, onFinalize, inputFn
         }:
         {
             id: string;
@@ -148,32 +151,31 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
             onSuccess?: () => void;
             onFinalize?: () => void;
         }) => {
-        const newController = new AbortController();
-        const sourceStream = getStream(newController.signal);
+        // const newController = new AbortController();
+        // const sourceStream = getStream(newController.signal);
+        //
+        // const transformedStream = transformAsyncIterable(sourceStream, {
+        //     transform,
+        //     onComplete: () => onSuccess?.(),
+        //     onError: (err) => {
+        //         // Don't show an error dialog if the stream was intentionally aborted
+        //         if (!newController.signal.aborted) {
+        //             showErrorDialog(`Error streaming container logs: ${err}`);
+        //         }
+        //     },
+        //     onFinally: () => onFinalize?.(),
+        // });
 
-        const transformedStream = transformAsyncIterable(sourceStream, {
-            transform,
-            onComplete: () => onSuccess?.(),
-            onError: (err) => {
-                // Don't show an error dialog if the stream was intentionally aborted
-                if (!newController.signal.aborted) {
-                    showErrorDialog(`Error streaming container logs: ${err}`);
-                }
-            },
-            onFinally: () => onFinalize?.(),
-        });
+        // const newTab: TabTerminal = {
+        //     id,
+        //     title,
+        //     stream: transformedStream,
+        //     controller: newController,
+        //     inputFn: inputFn
+        // };
 
-        const newTab: LogTab = {
-            id,
-            title,
-            stream: transformedStream,
-            controller: newController,
-            inputFn: inputFn
-        };
-
-        setLogTabs(prev => [...prev, newTab]);
-        setActiveTabId(id);
-        setIsLogPanelMinimized(false); // Always expand panel for a new tab
+        // setLogTabs(prev => [...prev, newTab]);
+        // setActiveTabId(id);
     };
 
     if (!selectedPage) {

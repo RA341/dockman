@@ -1,26 +1,29 @@
-import {useAtom} from "jotai";
-import {sideBarState} from "../state.tsx";
+import {useSideBarAction, useTerminalAction} from "../state/state.tsx";
 import {Box, IconButton} from "@mui/material";
-import {Folder} from "@mui/icons-material";
+import {Folder, TerminalOutlined} from "@mui/icons-material";
 import {useEffect} from "react";
 
 const ActionBar = () => {
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useAtom(sideBarState)
+    const {isSidebarOpen, toggle: fileSideBarToggle} = useSideBarAction(state => state)
+    const {isTerminalOpen, toggle: terminalToggle} = useTerminalAction(state => state)
 
     useEffect(() => {
-
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.altKey && !e.repeat) {
                 switch (e.code) {
                     // todo move focus to file bar when it is opened like IntelliJ
                     case "Digit1":
-                        setIsSidebarCollapsed(prev => !prev)
+                        fileSideBarToggle()
+                        break;
+                    case "F12":
+                        terminalToggle()
                         break;
                 }
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown)
+        // eslint-disable-next-line
     }, []);
 
     return (
@@ -48,9 +51,9 @@ const ActionBar = () => {
             >
                 <IconButton
                     size="large"
-                    aria-label={isSidebarCollapsed ? "Open file panel" : "Close file panel"}
-                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    sx={{color: isSidebarCollapsed ? 'white' : '#ffc72d'}}
+                    aria-label={isSidebarOpen ? "Open file panel" : "Close file panel"}
+                    onClick={fileSideBarToggle}
+                    sx={{color: isSidebarOpen ? 'white' : '#ffc72d'}}
                 >
                     <Folder/>
                 </IconButton>
@@ -64,9 +67,21 @@ const ActionBar = () => {
                     alignItems: 'center',
                 }}
             >
-                {/*<IconButton size="large" aria-label="Settings" sx={{color: 'white'}}>*/}
-                {/*    <SettingsOutlined/>*/}
-                {/*</IconButton>*/}
+                <IconButton
+                    size="large"
+                    aria-label={isTerminalOpen ? "Close Terminal" : "Open Terminal"}
+                    onClick={terminalToggle}
+                    sx={{
+                        borderRadius: '8px',
+                        color: isTerminalOpen ? 'primary.main' : 'white',
+                        backgroundColor: isTerminalOpen ? 'grey.800' : 'transparent',
+                        '&:hover': {
+                            backgroundColor: isTerminalOpen ? 'grey.600' : 'grey.600'
+                        }
+                    }}
+                >
+                    <TerminalOutlined/>
+                </IconButton>
             </Box>
         </Box>
     );

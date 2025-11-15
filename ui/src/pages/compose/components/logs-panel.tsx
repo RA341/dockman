@@ -1,144 +1,229 @@
-import {Box, IconButton, Paper, Tab, Tabs} from '@mui/material';
-import {Close as CloseIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon} from '@mui/icons-material';
-import LogsTerminal from './logs-terminal';
+import {Box, Divider, IconButton, ListItemButton, Paper, Stack, Typography} from '@mui/material';
+import {Close, ExpandMore, TerminalRounded} from '@mui/icons-material';
+import {useTerminalAction, useTerminalTabs} from "../state/state.tsx";
+import useResizeBar from "../hooks/resize-hook.ts";
+import scrollbarStyles from "../../../components/scrollbar-style.tsx";
+import LogsTerminal from "./logs-terminal.tsx";
+import InsertDriveFile from '@mui/icons-material/InsertDriveFile'; // Import a relevant icon
 
-interface LogTabData {
-    id: string;
-    title: string;
+export function LogsPanel() {
+    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('top')
+    const {isTerminalOpen, toggle} = useTerminalAction(state => state);
+    const {tabs, activeTab, setActiveTab, close} = useTerminalTabs();
 
-    stream: AsyncIterable<string>;
-    inputFn?: ((cmd: string) => void);
-}
-
-export interface LogsPanelProps {
-    tabs: LogTabData[];
-    activeTabId: string | null;
-    isMinimized: boolean;
-    onTabChange: (tabId: string) => void;
-    onTabClose: (tabId: string) => void;
-    onToggle: () => void;
-}
-
-const PANEL_CONTENT_HEIGHT = '40vh';
-const TRANSITION_DURATION = '0.15s';
-
-export function LogsPanel(
-    {
-        tabs,
-        activeTabId,
-        isMinimized,
-        onTabChange,
-        onTabClose,
-        onToggle
-    }: LogsPanelProps) {
-
-    const toggle = tabs.length ?
-        onToggle :
-        () => {
-        };
-
-    return (
+    return isTerminalOpen && (
         <Paper
             elevation={8}
+            ref={panelRef}
             sx={{
+                height: `${panelSize}px`,
+                transition: isResizing ? 'none' : 'height 0.1s ease-in-out',
+                overflow: 'hidden',
+                position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: '#1E1E1E',
-                color: '#CCCCCC',
+                bgcolor: '#000000',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '4px',
                 flexShrink: 0,
             }}
         >
             <Box
-                onClick={toggle}
+                onMouseDown={handleMouseDown}
                 sx={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: '4px',
+                    cursor: 'ns-resize',
+                    backgroundColor: isResizing ? '#8a8a8a' : 'transparent',
+                    '&:hover': {
+                        backgroundColor: '#8a8a8a',
+                    },
+                    zIndex: 10,
+                }}
+            />
+
+            <Box
+                sx={{
+                    height: `10px`,
                     display: 'flex',
-                    alignItems: 'center',
-                    pr: 1,
-                    backgroundColor: '#333333',
-                    '&:hover': {backgroundColor: '#3c3c3c',},
+                    flexDirection: 'row',
+                    flex: 1,
+                    overflow: 'hidden',
+                    minHeight: 0,
                 }}
             >
-                <IconButton
-                    size="small"
-                    sx={{color: 'white', m: '0 4px'}}
-                    title={isMinimized ? 'Expand' : 'Collapse'}
-                    onClick={toggle}
-                >
-                    {isMinimized ? <ExpandLessIcon/> : <ExpandMoreIcon/>}
-                </IconButton>
+                <Box sx={{
+                    width: 250,
+                    minWidth: 200,
+                    // pl: 2,
+                    border: '1px solid rgba(0, 0, 0, 0.2)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                }}>
+                    <Box sx={{
+                        overflow: 'auto',
+                        flex: 1,
+                        ...scrollbarStyles
+                    }}>
+                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                        }}>
+                            <IconButton
+                                size="small"
+                                sx={{color: 'white', m: '0 4px'}}
+                                title={isTerminalOpen ? 'Expand' : 'Collapse'}
+                                onClick={(ev) => {
+                                    ev.stopPropagation()
+                                    toggle()
+                                }}
+                            >
+                                <ExpandMore/>
+                            </IconButton>
 
-                <Tabs
-                    value={activeTabId}
-                    onChange={(e, newValue) => {
-                        e.stopPropagation(); // Prevent bubbling to the parent Box
-                        onTabChange(newValue);
-                    }}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{
-                        borderBottom: '1px solid #555',
-                        minHeight: '36px',
-                    }}
-                >
-                    {tabs.map((tab) => (
-                        <Tab
-                            key={tab.id}
-                            value={tab.id}
-                            component="div"
-                            sx={{
-                                textTransform: 'none',
-                                minHeight: '36px',
-                                padding: '6px 16px',
-                                marginRight: '2px',
-                                border: '1px solid #555',
-                                borderBottom: 'none',
-                                borderRadius: '4px 4px 0 0',
-                            }}
-                            label={
-                                <Box sx={{display: 'flex', alignItems: 'center'}}>
-                                    {tab.title}
-                                    <IconButton
-                                        size="small"
-                                        component="span"
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Prevent tab selection & parent toggle
-                                            onTabClose(tab.id);
-                                        }}
-                                        sx={{ml: 1.5, p: '2px', '&:hover': {bgcolor: 'rgba(255,255,255,0.2)'}}}
+                            <Divider/>
+
+                            <Typography variant="h6" gutterBottom sx={{flexShrink: 0, color: 'white'}}>
+                                Logs
+                            </Typography>
+
+                        </Box>
+
+                        <Divider/>
+                        {tabs.size === 0 ?
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    minHeight: '150px',
+                                    p: 2
+                                }}
+                            >
+                                <Stack spacing={2} alignItems="center">
+                                    <InsertDriveFile sx={{fontSize: 30, color: "text.secondary"}}/>
+                                    <Typography variant="body1" color="text.secondary" align="center">
+                                        No active logs
+                                    </Typography>
+                                </Stack>
+                            </Box> :
+                            [...tabs.entries()].map(([key, value]) => (
+                                <ListItemButton
+                                    key={key}
+                                    sx={{
+                                        py: 1,
+                                        px: 1.5,
+                                        border: 1,
+                                        borderColor: 'divider',
+                                        color: 'white',
+                                        borderRadius: 1,
+                                        mb: 0.5,
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        transition: 'background-color 0.2s',
+                                        '&.Mui-selected': {
+                                            backgroundColor: 'action.selected',
+                                            borderColor: 'primary.main',
+                                        },
+                                        '&:hover': {
+                                            backgroundColor: 'action.hover',
+                                            cursor: 'pointer',
+                                        },
+                                    }}
+                                    title={value.title}
+                                    onClick={() => {
+                                        setActiveTab(key)
+                                    }}
+                                    selected={key === activeTab}
+                                >
+                                    <Typography variant="body2" sx={{
+                                        flexGrow: 1,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        marginRight: 1,
+                                    }}>
+                                        {value.title}
+                                    </Typography>
+
+                                    <Box
+                                        sx={{display: 'flex', gap: 0.5}}
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        <CloseIcon sx={{fontSize: '1rem'}}/>
-                                    </IconButton>
-                                </Box>
-                            }
-                        />
-                    ))}
-                </Tabs>
-            </Box>
-            <Box sx={{
-                height: isMinimized ? 0 : PANEL_CONTENT_HEIGHT,
-                overflow: 'hidden',
-                transition: `height ${TRANSITION_DURATION} ease-in-out`,
-                position: 'relative',
-            }}>
-                {tabs.map((tab) => (
-                    <Box
-                        key={tab.id}
-                        sx={{
-                            display: tab.id === activeTabId ? 'block' : 'none',
-                            position: 'absolute',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                        }}
-                    >
-                        <LogsTerminal
-                            inputFunc={tab.inputFn}
-                            logStream={tab.stream}
-                            isActive={tab.id === activeTabId}
-                        />
+                                        {/*<IconButton*/}
+                                        {/*    size="small"*/}
+                                        {/*    onClick={() => {*/}
+
+                                        {/*    }}*/}
+                                        {/*>*/}
+                                        {/*    <EditIcon fontSize="small"/>*/}
+                                        {/*</IconButton>*/}
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                                close(key)
+                                            }}
+                                        >
+                                            <Close fontSize="small"/>
+                                        </IconButton>
+                                    </Box>
+                                </ListItemButton>)
+                            )}
+
                     </Box>
-                ))}
+                </Box>
+
+                <Divider orientation="vertical" flexItem/>
+
+                <Box sx={{
+                    overflow: 'hidden',
+                    position: 'relative',
+                    flex: 1,
+                }}>
+                    {activeTab === null ?
+                        <LogsEmpty/> :
+                        <LogsTerminal
+                            logStream={tabs.get(activeTab)?.stream ?? tabs.get(activeTab)!.cache}
+                            isActive={true}
+                        />
+                    }
+                </Box>
             </Box>
         </Paper>
+    )
+}
+
+function LogsEmpty() {
+    return (
+        <Box
+            sx={{
+                flexGrow: 1,
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                p: 4,
+            }}
+        >
+            <Stack spacing={2} alignItems="center">
+                <TerminalRounded
+                    sx={{fontSize: 40}}
+                    color="primary"
+                />
+                <Typography
+                    variant="h6"
+                    color="text.secondary"
+                    align="center"
+                >
+                    No log panel selected.
+                </Typography>
+
+            </Stack>
+        </Box>
     );
 }

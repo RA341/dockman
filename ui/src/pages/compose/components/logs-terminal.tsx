@@ -7,7 +7,7 @@ import {SearchAddon} from '@xterm/addon-search';
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalComponentProps {
-    logStream: AsyncIterable<string> | null;
+    logStream: AsyncIterable<string> | string[] | null;
     inputFunc?: (cmd: string) => void;
     // indicate if the terminal is currently visible in the UI.
     isActive: boolean;
@@ -69,6 +69,24 @@ const LogsTerminal = ({logStream, inputFunc, isActive}: TerminalComponentProps) 
     };
 
     useEffect(() => {
+        if (!terminalRef.current || !fitAddon.current) return;
+
+        const resizeObserver = new ResizeObserver(() => {
+            // Debounce rapid resize events
+            requestAnimationFrame(() => {
+                fitAddon.current?.fit();
+            });
+        });
+
+        resizeObserver.observe(terminalRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+        // eslint-disable-next-line
+    }, [fitAddon.current]);
+
+    useEffect(() => {
         // This effect ensures the terminal fits its container when it becomes active.
         if (isActive && fitAddon.current) {
             const timer = setTimeout(() => fitAddon.current?.fit(), 50);
@@ -112,7 +130,7 @@ const LogsTerminal = ({logStream, inputFunc, isActive}: TerminalComponentProps) 
 
         xterm.loadAddon(fit);
         xterm.loadAddon(search);
-        xterm.open(terminalRef.current);
+        xterm.open(terminalRef?.current);
         fit.fit();
 
         if (!inputFunc) {
@@ -166,10 +184,30 @@ const LogsTerminal = ({logStream, inputFunc, isActive}: TerminalComponentProps) 
 
         const currentTerm = term.current;
         currentTerm.clear();
+        // todo refactor idiot
 
-        const processStream = async () => {
+        if (Symbol.asyncIterator in logStream) {
+            const asyncStream = async () => {
+                try {
+                    for await (const item of logStream) {
+                        if (term.current) {
+                            term.current.write(item);
+                        }
+                    }
+                } catch (error) {
+                    if (term.current && error instanceof Error && error.name !== 'AbortError') {
+                        term.current.write(`\r\n\x1b[31mStream Error: ${error.message}\x1b[0m`);
+                    }
+                }
+            };
+            asyncStream().then();
+            return;
+        }
+
+        const syncStream = () => {
+            console.debug("Using sync stream...");
             try {
-                for await (const item of logStream) {
+                for (const item of logStream as string[]) {
                     if (term.current) {
                         term.current.write(item);
                     }
@@ -180,8 +218,8 @@ const LogsTerminal = ({logStream, inputFunc, isActive}: TerminalComponentProps) 
                 }
             }
         };
+        syncStream();
 
-        processStream().then();
     }, [logStream]);
 
     // custom scrollbar styles to the xterm viewport
