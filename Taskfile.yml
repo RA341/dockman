@@ -130,10 +130,10 @@ tasks:
       - task: init:build
     sources:
       - "**/*.go"
-    generates:
-      - "{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}"
     cmds:
-      - go build -v -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}} ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
+      - go build -v 
+          -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}} 
+          ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
     summary: |
       Builds the '{{.CMD_NAME}}' Go command.
       Source: '{{.GO_CMD_DIR}}/{{.CMD_NAME}}'
