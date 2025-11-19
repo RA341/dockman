@@ -20,7 +20,6 @@ import (
 	"github.com/RA341/dockman/internal/files"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/info"
-	"github.com/RA341/dockman/internal/lsp"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/rs/zerolog/log"
 )
@@ -163,16 +162,23 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			return dockermanagerrpc.NewDockerManagerServiceHandler(dm.NewConnectHandler(a.DockerManager), authInterceptor)
 		},
 		// lsp
-		func() (string, http.Handler) {
-			wsFunc := lsp.WebSocketHandler(lsp.DefaultUpgrader)
-			return a.registerHttpHandler("/ws/lsp", wsFunc)
-		},
+		//func() (string, http.Handler) {
+		//	wsFunc := lsp.WebSocketHandler(lsp.DefaultUpgrader)
+		//	return a.registerHttpHandler("/ws/lsp", wsFunc)
+		//},
 	}
 
 	for _, hand := range handlers {
 		path, handler := hand()
 		mux.Handle(path, handler)
 	}
+
+	var handler http.Handler = docker.NewWSExec(a.DockerManager.GetService)
+	if a.Config.Auth.Enable {
+		authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
+		handler = authMiddleware(handler)
+	}
+	mux.Handle("GET /docker/exec/{contID}", handler)
 }
 
 func (a *App) registerHttpHandler(basePath string, subMux http.Handler) (string, http.Handler) {

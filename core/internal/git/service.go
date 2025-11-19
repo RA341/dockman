@@ -35,7 +35,7 @@ func NewMigrator(root string) error {
 func migrator(root string) error {
 	dockmanBranchFolder := filepath.Join(root, DockmanRemoteFolder)
 	if fileutil.FileExists(dockmanBranchFolder) {
-		log.Info().Msg("Branch folder found, migration successful")
+		log.Info().Msg("Branch folder found")
 		return nil
 	}
 
