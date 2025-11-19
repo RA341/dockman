@@ -15,11 +15,6 @@ service DockerService {
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
 
-  // start a stream that will show container execs
-  rpc ContainerExecOutput(ContainerExecRequest) returns (stream LogsMessage) {}
-  // pass in the commands with the container ID
-  rpc ContainerExecInput(ContainerExecCmdInput) returns (Empty) {}
-
   // compose
   rpc ComposeStart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeStop(ComposeFile) returns (stream LogsMessage) {}
