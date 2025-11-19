@@ -1,73 +1,94 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"log"
-	"os"
+	"net/http"
 
-	"github.com/RA341/dockman/internal/docker"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/gorilla/websocket"
 )
 
-func main() {
-	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		log.Fatal(fmt.Errorf("unable to create docker client: %w", err))
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+var containerID string
+
+func wsHandler(w http.ResponseWriter, r *http.Request) {
+	ws, _ := upgrader.Upgrade(w, r, nil)
+	defer ws.Close()
+
+	execConfig := container.ExecOptions{
+		AttachStdin: true, AttachStdout: true, AttachStderr: true, Tty: true,
+		Cmd: []string{"/bin/sh"},
 	}
 
-	srv := docker.NewSimpleContainerService(dockerClient)
 	ctx := context.Background()
+	execResp, err := clu.ContainerExecCreate(ctx, containerID, execConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	contId := "8e6a715cdb9ce8e4c1718ca847dcb09a5dfe8ffea63d223b482deb6b78e85b4e"
-	cmd := []string{"/bin/sh"}
-
-	resp, err := srv.ExecContainer(ctx, contId, cmd)
+	resp, err := clu.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{Tty: true})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Close()
 
-	// Writer goroutine to handle stdin
 	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		writer := bufio.NewWriter(resp.Conn)
-
-		for scanner.Scan() {
-			line := scanner.Text()
-			if line == "clear" {
-				fmt.Print("\033[2J\033[H")
-				continue
-			}
-			_, err := writer.WriteString(line + "\n")
+		// Simple buffer to copy data
+		buf := make([]byte, 1024)
+		for {
+			n, err := resp.Reader.Read(buf)
 			if err != nil {
-				log.Println("unable to write to stdout", err)
-				continue
-			}
-			err = writer.Flush()
-			if err != nil {
-				log.Println("unable to write to stdout", err)
-				continue
-			}
-
-			if line == "exit" {
 				break
 			}
+			ws.WriteMessage(websocket.TextMessage, buf[:n])
 		}
 	}()
 
-	reader := bufio.NewReader(resp.Conn)
+	// 6. Stream WebSocket Input -> Docker
 	for {
-		line, err := reader.ReadString('\n')
+		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal(err)
+			break
 		}
+		resp.Conn.Write(msg)
+	}
+}
 
-		fmt.Print(line)
+var clu *client.Client
+
+func main() {
+	var err error
+	clu, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal(fmt.Errorf("unable to create docker client: %w", err))
+	}
+
+	ctx := context.Background()
+	resp, err := clu.ContainerCreate(ctx, &container.Config{
+		Image: "postgres:alpine",
+		Env:   []string{"POSTGRES_PASSWORD=mysecretpassword"},
+	}, nil, nil, nil, "")
+	if err != nil {
+		log.Fatal(fmt.Errorf("unable to create docker container: %w", err))
+	}
+	defer clu.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
+
+	containerID = resp.ID
+
+	err = clu.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		log.Fatal(fmt.Errorf("unable to start docker container: %w", err))
+	}
+
+	http.HandleFunc("/exec", wsHandler)
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatal(fmt.Errorf("unable to start http server: %w", err))
 	}
 }

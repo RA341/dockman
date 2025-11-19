@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Docker Shell</title>
+    <link href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            height: 100vh;
+        }
+
+        #terminal {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="terminal"></div>
+
+<script>
+    // 2. Initialize the Terminal
+    const term = new Terminal({
+        cursorBlink: true,
+        macOptionIsMeta: true,
+        scrollback: 1000,
+    });
+    term.open(document.getElementById('terminal'));
+
+    // 3. Connect to your Go WebSocket
+    const ws = new WebSocket("ws://localhost:8866/docker/exec/18b18b61809d397523cb0a1a4486890ebc3a31242c2f99c5c943f57200862ff5");
+
+    ws.onopen = () => {
+        term.write('\r\n*** Connected to Docker ***\r\n');
+    };
+
+    // 4. Browser Terminal -> WebSocket -> Docker
+    // (Capture keystrokes and send them to Go)
+    term.onData((data) => {
+        ws.send(data);
+    });
+
+    // 5. Docker -> WebSocket -> Browser Terminal
+    // (Receive output from Go and write to xterm)
+    ws.onmessage = (event) => {
+        term.write(event.data);
+    };
+</script>
+</body>
+</html>
