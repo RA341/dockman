@@ -1,9 +1,10 @@
 import {Delete, PlayArrow, RestartAlt, Stop, Update} from "@mui/icons-material";
 import {atom} from "jotai";
 import {create} from 'zustand'
-import {type ComposeFile, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
+import {type ComposeFile, type ContainerLogsRequest, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
 import type {CallOptions} from "@connectrpc/connect";
 import {transformAsyncIterable} from "../../../lib/api.ts";
+import type {ITerminalInitOnlyOptions, ITerminalOptions} from "@xterm/xterm";
 
 interface ActiveComposeFileState {
     activeComposeFile: string | null;
@@ -38,28 +39,121 @@ type ActiveAction = typeof deployActionsConfig[number]['name'];
 type ComposeFileClean = Omit<ComposeFile, "$typeName" | "$unknown">;
 type ComposeActionStreamFn = (request: ComposeFileClean, options?: CallOptions) => AsyncIterable<LogsMessage>;
 
+type ContainerLogsClean = Omit<ContainerLogsRequest, "$typeName" | "$unknown">;
+type ContainerLogsStreamFn = (request: ContainerLogsClean, options?: CallOptions) => AsyncIterable<LogsMessage>;
+
+export const terminalConfig: ITerminalOptions & ITerminalInitOnlyOptions = {
+    theme: {background: '#1E1E1E', foreground: '#CCCCCC'},
+    // theme: {background: '#1E1E1E', foreground: '#CCCCCC'},
+    scrollback: 5000,
+    fontSize: 13,
+    lineHeight: 1.2,
+    fontFamily: 'monospace, Menlo, Monaco, "Courier New"',
+}
+export const containerClassName = 'logs-terminal-container';
+export const scrollbarStyles = `
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar { width: 8px; height: 8px; }
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
+        .${containerClassName} .xterm-viewport { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1); }
+    `;
+
+
+export const useContainerExec = create<{
+    execParams: (
+        title: string,
+        wsUrl: string,
+    ) => void
+}>(() => ({
+    execParams: (title, wsUrl) => {
+        useTerminalAction.getState().open()
+
+        const term: TabTerminal = {
+            id: title,
+            title: title,
+            wsUrl: wsUrl,
+            // cache: [],
+            // error: null,
+        }
+
+        useTerminalTabs.getState().addTab(title, term)
+    },
+}))
+
+
+export const useContainerLogs = create<{
+    streamLogs: (
+        title: string,
+        input: ContainerLogsClean,
+        streamFn: ContainerLogsStreamFn,
+    ) => void
+}>(() => ({
+    streamLogs: (title, input, streamFn) => {
+        useTerminalAction.getState().open()
+
+        const abort = new AbortController();
+        const stream = streamFn(input, {signal: abort.signal});
+
+        const term: TabTerminal = {
+            id: title,
+            title: title,
+            controller: abort,
+            stream: null,
+            // cache: [],
+            // error: null,
+        }
+
+        useTerminalTabs.getState().addTab(title, term)
+
+        const transformedStream = transformAsyncIterable(stream, {
+            transform: item => {
+                const message = item.message;
+                // useTerminalTabs.getState().updateTab(title, curTab => ({
+                //     ...curTab,
+                //     cache: [...curTab.cache, message]
+                // }))
+                return message
+            },
+            onComplete: () => {
+                useTerminalTabs.getState().updateTab(title, curTab => ({
+                    ...curTab,
+                    stream: null,
+                }))
+            },
+            onError: (err) => {
+                console.log("Error while streaming", err)
+                const message = `Error streaming logs: ${err}`;
+                useTerminalTabs.getState().updateTab(title, curTab => ({
+                    ...curTab,
+                    error: message
+                }))
+            },
+        });
+
+        useTerminalTabs.getState().updateTab(title, curTab => ({
+            ...curTab,
+            stream: transformedStream,
+        }))
+    },
+}))
+
 export const useComposeAction = create<{
     activeAction: ActiveAction | null
-    error: string | null
-    abortController: AbortController | null
-    actionStream: AsyncIterable<string> | null
     runAction: (
         streamFn: ComposeActionStreamFn,
         action: ActiveAction,
-        selectedService: string[]
+        selectedService: string[],
+        onDone?: () => void
     ) => void
-    cancel: (message: string) => void
     reset: () => void
-    clearErr: () => void
 }>((set, get) => ({
     activeAction: null,
-    abortController: null,
-    error: null,
-    actionStream: null,
     runAction: (
         streamFn: ComposeActionStreamFn,
         action: ActiveAction,
-        selectedService: string[] = []
+        selectedService: string[] = [],
+        onDone?: () => void
     ) => {
         const composeFile = useActiveComposeFile.getState().activeComposeFile;
         if (!composeFile) {
@@ -68,6 +162,7 @@ export const useComposeAction = create<{
         }
 
         set({activeAction: action})
+
         useTerminalAction.getState().open()
 
         const abort = new AbortController();
@@ -83,8 +178,8 @@ export const useComposeAction = create<{
             title: title,
             controller: abort,
             stream: null,
-            cache: [],
-            error: null,
+            // cache: [],
+            // error: null,
         }
 
         useTerminalTabs.getState().addTab(title, term)
@@ -92,10 +187,10 @@ export const useComposeAction = create<{
         const transformedStream = transformAsyncIterable(stream, {
             transform: item => {
                 const message = item.message;
-                useTerminalTabs.getState().updateTab(title, curTab => ({
-                    ...curTab,
-                    cache: [...curTab.cache, message]
-                }))
+                // useTerminalTabs.getState().updateTab(title, curTab => ({
+                //     ...curTab,
+                //     cache: [...curTab.cache, message]
+                // }))
                 return message
             },
             onComplete: () => {
@@ -103,6 +198,8 @@ export const useComposeAction = create<{
                     ...curTab,
                     stream: null,
                 }))
+
+                onDone?.()
             },
             onFinally: get().reset,
             onError: (err) => {
@@ -111,7 +208,6 @@ export const useComposeAction = create<{
                     ...curTab,
                     error: message
                 }))
-                get().cancel(message)
             },
         });
 
@@ -119,34 +215,21 @@ export const useComposeAction = create<{
             ...curTab,
             stream: transformedStream,
         }))
-
-    },
-    cancel: (reason: string) => {
-        if (get().abortController) {
-            get().abortController?.abort(reason)
-            console.info(`cancelling action ${get().activeAction}`)
-        } else {
-            console.warn("Empty abort controller")
-        }
-
-        get().reset()
     },
     reset: () => {
-        set({activeAction: null, actionStream: null, abortController: null})
+        set({activeAction: null})
     },
-    clearErr: () => {
-        set({error: null})
-    }
 }))
 
 export interface TabTerminal {
     id: string;
     title: string;
-    stream: AsyncIterable<string> | null;
-    cache: string[]; // stores the logs from the async iterable
-    error: string | null;
-    controller: AbortController;
-    inputFn?: (cmd: string) => void,
+    stream?: AsyncIterable<string> | null;
+    controller?: AbortController;
+
+    wsUrl?: string;
+    // cache: string[]; // stores the logs from the async iterable
+    // error: string | null;
 }
 
 export const useTerminalTabs = create<{

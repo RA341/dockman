@@ -66,7 +66,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
         fetchDataCallback().then()
     }, [fetchDataCallback]);
 
-    const [activeAction, setActiveAction] = useState<keyof typeof actions | null>('deploy');
+    const [activeAction, setActiveAction] = useState<keyof typeof actions | null>(null);
 
     const saveFile = useCallback(async (val: string) => {
         const err = await uploadFile(selectedPage, val);

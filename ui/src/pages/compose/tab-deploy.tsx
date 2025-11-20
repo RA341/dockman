@@ -10,20 +10,19 @@ import {
     Typography
 } from '@mui/material';
 import {ContainerTable} from './components/container-info-table';
-import {callRPC, useClient} from "../../lib/api.ts";
+import {getWSUrl, useClient} from "../../lib/api.ts";
 import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {useSnackbar} from "../../hooks/snackbar.ts";
-import {deployActionsConfig, useComposeAction} from "./state/state.tsx";
+import {deployActionsConfig, useComposeAction, useContainerExec, useContainerLogs} from "./state/state.tsx";
 
 interface DeployPageProps {
     selectedPage: string;
 }
 
 export function TabDeploy({selectedPage}: DeployPageProps) {
-    const {showError} = useSnackbar();
+    // const {showError} = useSnackbar();
     const dockerService = useClient(DockerService);
-    const {containers, loading} = useDockerCompose(selectedPage);
+    const {containers, loading, fetchContainers} = useDockerCompose(selectedPage);
 
     const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
@@ -44,138 +43,23 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         _message: string,
         rpcName: typeof deployActionsConfig[number]['rpcName'],
     ) => {
-        runAction(dockerService[rpcName], name, [])
-        // setLogTabs(prev => [...prev, newTab]);
-        // setActiveTabId(id);
-        // if (isLogPanelMinimized) {
-        //     setIsLogPanelMinimized(false);
-        // }
+        runAction(dockerService[rpcName], name, selectedServices, () => {
+            fetchContainers().then()
+        })
     };
-
-    // const handleComposeAction = (
-    //     name: typeof deployActionsConfig[number]['name'],
-    //     message: string,
-    //     rpcName: typeof deployActionsConfig[number]['rpcName'],
-    // ) => {
-    //     setActiveAction(name);
-    //     // unique ID and title for the new tab
-    //     const tabId = `${name}-${Date.now()}`;
-    //     const tabTitle = `${name} - ${selectedPage.split('/').pop() || selectedPage}`;
-    //
-    //     createStream({
-    //         id: tabId,
-    //         title: tabTitle,
-    //         getStream: signal => dockerService[rpcName]({
-    //             filename: selectedPage,
-    //             selectedServices: selectedServices,
-    //         }, {signal}),
-    //         transform: item => item.message,
-    //         onSuccess: () => {
-    //             showSuccess(`Deployment ${message} successfully`)
-    //             setIsLogPanelMinimized(true);
-    //         },
-    //         onFinalize: () => {
-    //             setActiveAction('');
-    //             fetchContainers().then();
-    //         }
-    //     });
-    // };
-
-
-    // useEffect(() => {
-    //     // On unmount, abort all active streams
-    //     return () => {
-    //         logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
-    //     };
-    // }, [logTabs]);
+    const streamLogs = useContainerLogs(state => state.streamLogs)
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const tabId = `logs:${containerId}`
-        // If a tab for this container already exists, just switch to it
-        // const existingTab = logTabs.find(tab => tab.id === tabId);
-        // if (existingTab) {
-        //     setActiveTabId(tabId);
-        //     return;
-        // }
-
-        createStream({
-            id: tabId,
-            title: `Logs - ${containerName}`,
-            getStream: signal => dockerService.containerLogs({containerID: containerId}, {signal}),
-            transform: item => item.message,
-        });
+        const tabId = `${containerName}-logs-${containerId}`
+        streamLogs(tabId, {containerID: containerId}, dockerService.containerLogs)
     };
 
+    const execContainer = useContainerExec(state => state.execParams)
     const handleContainerExec = (containerId: string, containerName: string) => {
         const cmd = "/bin/sh"
-        const tabId = `exec:${containerId}`
-
-        // const existingTab = logTabs.find(tab => tab.id === tabId);
-        // if (existingTab) {
-        //     setActiveTabId(tabId);
-        //     return;
-        // }
-
-        createStream({
-            id: tabId,
-            title: `Exec - ${containerName}`,
-            getStream: signal => dockerService.containerExecOutput({
-                    containerID: containerId,
-                    execCmd: cmd.trim().split(' ')
-                },
-                {signal}
-            ),
-            transform: item => item.message,
-            inputFn: (cmd: string) => {
-                callRPC(() => dockerService.containerExecInput({
-                    containerID: containerId,
-                    userCmd: cmd
-                })).catch((err) => {
-                    showError(`unable to send cmd: ${err}`)
-                })
-            }
-        });
-    };
-
-    const createStream = <T, >(
-        // eslint-disable-next-line no-empty-pattern
-        {
-            // id, getStream, transform, title, onSuccess, onFinalize, inputFn
-        }:
-        {
-            id: string;
-            getStream: (signal: AbortSignal) => AsyncIterable<T>;
-            transform: (item: T) => string;
-            title: string;
-            inputFn?: (cmd: string) => void,
-            onSuccess?: () => void;
-            onFinalize?: () => void;
-        }) => {
-        // const newController = new AbortController();
-        // const sourceStream = getStream(newController.signal);
-        //
-        // const transformedStream = transformAsyncIterable(sourceStream, {
-        //     transform,
-        //     onComplete: () => onSuccess?.(),
-        //     onError: (err) => {
-        //         // Don't show an error dialog if the stream was intentionally aborted
-        //         if (!newController.signal.aborted) {
-        //             showErrorDialog(`Error streaming container logs: ${err}`);
-        //         }
-        //     },
-        //     onFinally: () => onFinalize?.(),
-        // });
-
-        // const newTab: TabTerminal = {
-        //     id,
-        //     title,
-        //     stream: transformedStream,
-        //     controller: newController,
-        //     inputFn: inputFn
-        // };
-
-        // setLogTabs(prev => [...prev, newTab]);
-        // setActiveTabId(id);
+        const encodedCmd = encodeURIComponent(cmd);
+        const url = getWSUrl(`docker/exec/${containerId}?cmd=${encodedCmd}`)
+        execContainer(`exec:${containerName}`, url)
     };
 
     if (!selectedPage) {
