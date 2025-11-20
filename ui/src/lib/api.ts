@@ -10,7 +10,7 @@ export const API_URL = import.meta.env.MODE === 'development'
 export function getWSUrl(path: string) {
     const url = new URL(API_URL);
     const baseUrl = url.host
-    const proto = url.protocol == "http:" ? "wss" : "ws";
+    const proto = url.protocol == "http:" ? "ws" : "wss";
 
     return `${proto}://${baseUrl}/${path}`
 }
@@ -109,7 +109,7 @@ async function download(subPath: string) {
 }
 
 interface TransformAsyncIterableOptions<T, U> {
-    transform: (item: T) => U | Promise<U>;
+    transform: (item: T) => U;
     onComplete?: () => void;
     onError?: (error: string) => void;
     onFinally?: () => void;
@@ -131,7 +131,7 @@ export async function* transformAsyncIterable<T, U>(
 
     try {
         for await (const item of source) {
-            yield await transform(item);
+            yield transform(item);
         }
         // The stream completed without any errors.
         onComplete?.();
@@ -149,6 +149,7 @@ export async function* transformAsyncIterable<T, U>(
         }
 
         onError?.(errMessage);
+        // throw error;
     } finally {
         onFinally?.();
     }
