@@ -181,10 +181,16 @@ export function LogsPanel() {
                                 {v.wsUrl !== undefined ?
                                     <InteractiveTerminal
                                         fit={fitAddonRef}
-                                        wsUrl={v.wsUrl} onClose={() => {
-                                        // todo
-                                    }}/> :
-                                    <ReadOnlyTerm fit={fitAddonRef} isActive={key === activeTab} stream={v.stream!}/>}
+                                        wsUrl={v.wsUrl}
+                                        onClose={() => {
+                                            // todo
+                                        }}
+                                    /> :
+                                    <ReadOnlyTerm
+                                        fit={fitAddonRef}
+                                        isActive={key === activeTab}
+                                        stream={v.stream!}
+                                    />}
 
                             </Box>
                         ))

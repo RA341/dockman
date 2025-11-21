@@ -2,6 +2,7 @@ import {type RefObject, useEffect, useRef} from "react";
 import {Terminal} from "@xterm/xterm";
 import {FitAddon} from "@xterm/addon-fit";
 import {containerClassName, scrollbarStyles, terminalConfig} from "../state/state.tsx";
+import { Box } from "@mui/material";
 
 
 const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
@@ -104,14 +105,43 @@ const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
         // eslint-disable-next-line
     }, [wsUrl]);
 
-    return <div
-        className={containerClassName}
-        style={{width: '100%', height: '100%'}}
-        ref={terminalRef}
-    >
-        <style>{scrollbarStyles}</style>
 
-    </div>;
+    return (
+        <Box
+            className={containerClassName}
+            sx={{
+                flex: 1,
+                width: '100%',
+                height: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                bgcolor: '#1E1E1E',
+                '& .xterm': {
+                    height: '100%',
+                    padding: '1px'
+                },
+                '& .xterm-viewport': {
+                    overflowY: 'auto !important'
+                }
+            }}
+        >
+            <style>{scrollbarStyles}</style>
+
+            <div
+                ref={terminalRef}
+                style={{width: '100%', height: '100%'}}
+            />
+        </Box>
+    )
+    // return <div
+    //     className={containerClassName}
+    //     style={{width: '100%', height: '100%'}}
+    //     ref={terminalRef}
+    //
+    // >
+    //     <style>{scrollbarStyles}</style>
+    //
+    // </div>;
 };
 
 export default InteractiveTerminal;

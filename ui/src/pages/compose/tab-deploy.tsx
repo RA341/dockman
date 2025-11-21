@@ -59,7 +59,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         const cmd = "/bin/sh"
         const encodedCmd = encodeURIComponent(cmd);
         const url = getWSUrl(`docker/exec/${containerId}?cmd=${encodedCmd}`)
-        execContainer(`exec:${containerName}`, url)
+        execContainer(`${selectedPage}: exec-${containerName}`, url)
     };
 
     if (!selectedPage) {

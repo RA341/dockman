@@ -3,7 +3,7 @@ import {Terminal} from "@xterm/xterm";
 import {FitAddon} from "@xterm/addon-fit";
 import {SearchAddon} from "@xterm/addon-search";
 import {Box} from '@mui/material'
-import {containerClassName, scrollbarStyles} from "../state/state.tsx";
+import {containerClassName, scrollbarStyles, terminalConfig} from "../state/state.tsx";
 
 function ReadOnlyTerm({stream, isActive, fit}: {
     fit?: RefObject<FitAddon>;
@@ -42,6 +42,7 @@ function ReadOnlyTerm({stream, isActive, fit}: {
         if (!terminalRef.current) return;
 
         const xterm = new Terminal({
+            ...terminalConfig,
             cursorBlink: false,
             disableStdin: true,
             convertEol: true,
@@ -71,7 +72,6 @@ function ReadOnlyTerm({stream, isActive, fit}: {
         };
     }, [fit]);
 
-    // Handle Stream
     useEffect(() => {
         if (stream == null) return;
 
@@ -87,6 +87,8 @@ function ReadOnlyTerm({stream, isActive, fit}: {
                     term.current.write(`\r\n\x1b[31mStream Error: ${error.message}\x1b[0m`);
                 }
             }
+
+            console.log("Exitin main loop")
         };
 
         asyncStream().then();
@@ -104,7 +106,7 @@ function ReadOnlyTerm({stream, isActive, fit}: {
                 bgcolor: '#1E1E1E',
                 '& .xterm': {
                     height: '100%',
-                    padding: '10px'
+                    padding: '1px'
                 },
                 '& .xterm-viewport': {
                     overflowY: 'auto !important'
