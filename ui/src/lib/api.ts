@@ -157,8 +157,11 @@ export async function* transformAsyncIterable<T, U>(
 
 
 export function formatDate(timestamp: bigint | number | string) {
-    const bigIntTimestamp = typeof timestamp === 'bigint' ? Number(timestamp) : timestamp;
-    return new Date(bigIntTimestamp).toLocaleDateString('en-US', {
+    const numericTimestamp = typeof timestamp === 'bigint' ?
+        // convert to ms from seconds
+        Number(timestamp) * 1000 :
+        timestamp;
+    return new Date(numericTimestamp).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
