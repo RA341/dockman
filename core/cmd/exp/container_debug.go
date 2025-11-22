@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -20,7 +22,15 @@ var upgrader = websocket.Upgrader{
 
 var containerID string
 
-func Init() {
+var clu *client.Client
+
+func main() {
+	var err error
+	clu, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal(fmt.Errorf("unable to create docker client: %w", err))
+	}
+
 	//ctx := context.Background()
 	//resp, err := clu.ContainerCreate(ctx, &container.Config{
 	//	Image: "postgres:alpine",
@@ -31,7 +41,7 @@ func Init() {
 	//}
 	//defer clu.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
 
-	containerID = "666173e27d3159876e70bd740a7577997453bc3381d660f59f35db001db76067"
+	containerID = "ac690766760625b27dc2f35aa19ee516a56420083b3d2cfea68b820db078693d"
 
 	//err = clu.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	//if err != nil {
@@ -39,7 +49,7 @@ func Init() {
 	//}
 
 	http.HandleFunc("/exec", wsHandler)
-	err := http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(fmt.Errorf("unable to start http server: %w", err))
 	}
@@ -49,30 +59,22 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	ws, _ := upgrader.Upgrade(w, r, nil)
 	defer ws.Close()
 
-	runId := uuid.New().String()
-	script := renderChrootEntrypoint(runId, 1, false, []string{"/bin/sh"})
-
-	debugContainerID := createDebugContainer(containerID)
-	execConfig := container.ExecOptions{
-		AttachStdin: true, AttachStdout: true, AttachStderr: true, Tty: true,
-		Cmd: []string{
-			"/bin/sh",
-			"-c",
-			script,
-		},
-	}
-
-	ctx := context.Background()
-	execResp, err := clu.ContainerExecCreate(ctx, debugContainerID, execConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	resp, err := clu.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{Tty: true})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Close()
+	resp, contID := execDebugContainer(containerID, "nixery.dev/shell/fish", "fish")
+	defer func() {
+		log.Println("exiting fun")
+		resp.Close()
+		err := clu.ContainerRemove(
+			context.Background(),
+			contID,
+			container.RemoveOptions{
+				Force:         true,
+				RemoveVolumes: true,
+			},
+		)
+		if err != nil {
+			log.Fatal(fmt.Errorf("unable to remove container: %w", err))
+		}
+	}()
 
 	go func() {
 		// Simple buffer to copy data
@@ -86,7 +88,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// 6. Stream WebSocket Input -> Docker
 	for {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
@@ -94,33 +95,64 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		resp.Conn.Write(msg)
 	}
+
+	log.Println("exiting wsHandler")
 }
 
-func createDebugContainer(containerID string) string {
+func execDebugContainer(containerID string, image string, entryCmd string) (types.HijackedResponse, string) {
 	serviceName := fmt.Sprintf("container:%s", containerID)
-	hostConfig := &container.HostConfig{
-		Privileged:  true,
-		AutoRemove:  true,
-		PidMode:     container.PidMode(serviceName),
-		NetworkMode: container.NetworkMode(serviceName),
-	}
+	//hostConfig := &container.HostConfig{
+	//	Privileged: true,
+	//	AutoRemove: true,
+	//}
 
-	containerConfig := &container.Config{
-		Image: "busybox",
-		Cmd: []string{
-			"/bin/sh",
-		},
-		OpenStdin: true,
-		Tty:       true,
-	}
+	//containerConfig := &container.Config{
+	//	Image: image,
+	//	Cmd: []string{
+	//		"/bin/sh",
+	//	},
+	//	OpenStdin: true,
+	//	Tty:       true,
+	//}
 
+	runId := uuid.New().String()
 	ctx := context.Background()
+	script := renderChrootEntrypoint(
+		runId,
+		1,
+		true,
+		[]string{entryCmd},
+	)
 
-	create, err := clu.ContainerCreate(ctx,
-		containerConfig,
-		hostConfig,
-		nil, nil,
-		fmt.Sprintf("debug-%s", containerID))
+	create, err := clu.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image:        image,
+			Entrypoint:   []string{"sh"},
+			Cmd:          []string{"-c", script},
+			Tty:          true,
+			OpenStdin:    true,
+			AttachStdin:  true,
+			AttachStdout: true,
+			AttachStderr: true,
+			//User:         opts.user,
+		},
+		&container.HostConfig{
+			Privileged: true, // target.HostConfig.Privileged || opts.privileged,
+			//CapAdd:     target.HostConfig.CapAdd,
+			//CapDrop:    target.HostConfig.CapDrop,
+
+			AutoRemove: true,
+
+			PidMode:     container.PidMode(serviceName),
+			NetworkMode: container.NetworkMode(serviceName),
+
+			//Init: ptr(false),
+		},
+		nil,
+		nil,
+		fmt.Sprintf("debug-%s", runId),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,10 +162,39 @@ func createDebugContainer(containerID string) string {
 		log.Fatal(err)
 	}
 
-	return create.ID
+	//clu.ContainerWait(ctx, create.ID, container.WaitConditionNotRunning)
+
+	resp, err := clu.ContainerAttach(ctx, create.ID, container.AttachOptions{
+		Stream: true,
+		Stdin:  true,
+		Stdout: true,
+		Stderr: true,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//execConfig := container.ExecOptions{
+	//	AttachStdin: true, AttachStdout: true, AttachStderr: true, Tty: true,
+	//	Privileged: true,
+	//	Cmd: []string{
+	//		"/bin/sh",
+	//		"-c",
+	//	},
+	//}
+
+	//resp, err := clu.ContainerAttach(
+	//	ctx,
+	//	execResp.ID,
+	//	container.ExecAttachOptions{Tty: true},
+	//)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	return resp, create.ID
 }
 
-// renderChrootEntrypoint creates the same script cdebug creates.
 func renderChrootEntrypoint(runID string, targetPID int, isNix bool, cmd []string) string {
 	shellCmd := "sh"
 	if len(cmd) > 0 {
@@ -150,18 +211,20 @@ func renderChrootEntrypoint(runID string, targetPID int, isNix bool, cmd []strin
 CURRENT_PID=$(sh -c 'echo $PPID')
 
 %[1]s
-ln -s /proc/${CURRENT_PID}/root/ /proc/%[2]d/root/.cdebug-%[3]s
+ln -s /proc/${CURRENT_PID}/root/ /proc/%[2]d/root/.dkmn-%[3]s
 
-export CDEBUG_ROOTFS=/.cdebug-%[3]s
+export DKMN_ROOTFS=/.dkmn-%[3]s
 
-cat > /.cdebug-entrypoint.sh <<'EOF'
+cat > /.dkmn-entrypoint.sh <<'EOF'
 #!/bin/sh
-export PATH=$PATH:$CDEBUG_ROOTFS/bin:$CDEBUG_ROOTFS/usr/bin:$CDEBUG_ROOTFS/sbin:$CDEBUG_ROOTFS/usr/sbin:$CDEBUG_ROOTFS/usr/local/bin:$CDEBUG_ROOTFS/usr/local/sbin
+export PATH=$PATH:$DKMN_ROOTFS/bin:$DKMN_ROOTFS/usr/bin:$DKMN_ROOTFS/sbin:$DKMN_ROOTFS/usr/sbin:$DKMN_ROOTFS/usr/local/bin:$DKMN_ROOTFS/usr/local/sbin
 
 chroot /proc/%[2]d/root %[4]s
 EOF
 
-exec sh /.cdebug-entrypoint.sh
+exec sh /.dkmn-entrypoint.sh
+
+rm -f /proc/%[2]d/root/.dkmn-%[3]s
 `,
 		// Insert nix handling if necessary:
 		func() string {
