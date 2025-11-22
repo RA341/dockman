@@ -1,3 +1,10 @@
+## [2.4.1](https://github.com/RA341/dockman/compare/v2.4.0...v2.4.1) (2025-11-22)
+
+
+### Bug Fixes
+
+* incorrect date display ([9c3e24b](https://github.com/RA341/dockman/commit/9c3e24bbd805dbd2da3fff9ace8a42f227a7edbc)), closes [#117](https://github.com/RA341/dockman/issues/117)
+
 # [2.4.0](https://github.com/RA341/dockman/compare/v2.3.0...v2.4.0) (2025-11-07)
 
 
