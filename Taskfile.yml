@@ -7,7 +7,7 @@ vars:
   # Directory for Go source commands
   GO_CMD_DIR: cmd
   # Directory for build output
-  BUILD_DIR: build
+  BUILD_DIR: .build
 
 tasks:
   default:
@@ -130,14 +130,15 @@ tasks:
       - task: init:build
     sources:
       - "**/*.go"
-    cmds:
-      - go build -v 
-          -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}} 
-          ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
     summary: |
       Builds the '{{.CMD_NAME}}' Go command.
       Source: '{{.GO_CMD_DIR}}/{{.CMD_NAME}}'
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
+    cmds:
+      - mkdir -p ../{{.BUILD_DIR}}/{{.CMD_NAME}}
+      - go build -v
+        -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}
+        ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 
   go:*:
     dir: "{{.BUILD_DIR}}"
@@ -145,10 +146,13 @@ tasks:
     vars:
       CMD_NAME: "{{index .MATCH 0}}"
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
-      ARGS: '{{if eq .CMD_NAME "updater"}} -cr={{.CMD_NAME}}/compose {{else}} -conf={{.CMD_NAME}}/config -cr={{.CMD_NAME}}/compose{{end}}'
+      ARGS: '{{if eq .CMD_NAME "updater"}} 
+              -cr={{.CMD_NAME}}/compose {{else}} 
+              -conf={{.CMD_NAME}}/config 
+              -cr={{.CMD_NAME}}/compose{{end}}'
     cmds:
       - task: go:b:{{.CMD_NAME}}
-      - ../{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
+      - ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
 
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"

@@ -43,7 +43,10 @@ type ContainerLogsClean = Omit<ContainerLogsRequest, "$typeName" | "$unknown">;
 type ContainerLogsStreamFn = (request: ContainerLogsClean, options?: CallOptions) => AsyncIterable<LogsMessage>;
 
 export const terminalConfig: ITerminalOptions & ITerminalInitOnlyOptions = {
-    theme: {background: '#1E1E1E', foreground: '#CCCCCC'},
+    theme: {
+        background: '#1E1E1E',
+        foreground: '#CCCCCC'
+    },
     // theme: {background: '#1E1E1E', foreground: '#CCCCCC'},
     scrollback: 5000,
     fontSize: 13,
@@ -226,8 +229,8 @@ export interface TabTerminal {
     title: string;
     stream?: AsyncIterable<string> | null;
     controller?: AbortController;
-
     wsUrl?: string;
+
     // cache: string[]; // stores the logs from the async iterable
     // error: string | null;
 }
