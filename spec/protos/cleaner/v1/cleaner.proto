@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package cleaner.v1;
+
+option go_package = "github.com/RA341/dockman/generated/cleaner/v1";
+
+service CleanerService {
+  rpc ListHistory(ListHistoryRequest) returns (ListHistoryResponse) {}
+  rpc RunCleaner(RunCleanerRequest) returns (RunCleanerResponse) {}
+
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
+  rpc EditConfig(EditConfigRequest) returns (EditConfigResponse) {}
+}
+
+message EditConfigRequest {
+  PruneConfig config = 1;
+}
+
+message EditConfigResponse {}
+
+message GetConfigRequest {}
+
+message GetConfigResponse {
+  PruneConfig config = 1;
+}
+
+message ListHistoryRequest {}
+
+message ListHistoryResponse {}
+
+message RunCleanerRequest {}
+
+message RunCleanerResponse {}
+
+message PruneResult {}
+
+message PruneConfig {
+  bool Enabled = 1;
+  uint32 IntervalInHours = 2;
+
+  bool Volumes = 3;
+  bool Networks = 4;
+  bool Images = 5;
+  bool Containers = 6;
+  bool BuildCache = 7;
+}
