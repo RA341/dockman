@@ -21,9 +21,9 @@ tasks:
       PACKAGE_PATH: "{{ .PROTODIR }}/{{ .PROTO_PACKAGE }}/{{ .VERSION }}"
       FILE_PATH: "{{ .PACKAGE_PATH }}/{{ .PROTO_PACKAGE }}.proto"
     cmds:
-      - coreutils mkdir -p {{ .PACKAGE_PATH }}
+      - mkdir -p {{ .PACKAGE_PATH }}
       - |
-        coreutils cat <<EOF > {{ .FILE_PATH }}
+        cat <<EOF > {{ .FILE_PATH }}
         syntax = "proto3";
 
         package {{ .PROTO_PACKAGE }}.{{ .VERSION }};
@@ -84,9 +84,9 @@ tasks:
       TARGET_DIR: '{{.TARGET_DIR}}'
       SOURCE_PATTERN: '{{.SOURCE_PATTERN}}'
     cmds:
-      - coreutils rm -f -r {{.TARGET_DIR}}/*
-      - coreutils mkdir -p {{.TARGET_DIR}}
-      - coreutils cp -r {{.SOURCE_PATTERN}} {{.TARGET_DIR}}/
+      - rm -f -r {{.TARGET_DIR}}/*
+      - mkdir -p {{.TARGET_DIR}}
+      - cp -r {{.SOURCE_PATTERN}} {{.TARGET_DIR}}/
 
   it:
     desc: drop into a shell and interact with the image. CTRL+D to exit
