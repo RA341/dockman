@@ -38,7 +38,7 @@ func NewContainerService(u *dependencies) *ContainerService {
 // messing around only has access to the socket
 func NewSimpleContainerService(client *client.Client) *ContainerService {
 	return &ContainerService{dependencies: &dependencies{
-		daemon: client,
+		Daemon: client,
 	}}
 }
 
@@ -46,7 +46,7 @@ func NewSimpleContainerService(client *client.Client) *ContainerService {
 func NewUpdaterService(client *client.Client) *ContainerService {
 	u := &dependencies{
 		hostname:         LocalClient,
-		daemon:           client,
+		Daemon:           client,
 		syncer:           NewNoopSyncer(),
 		imageUpdateStore: NewNoopStore(),
 		// not needed by updater service
@@ -62,7 +62,7 @@ func NewUpdaterService(client *client.Client) *ContainerService {
 // Container stuff
 
 func (s *ContainerService) ContainersList(ctx context.Context) ([]container.Summary, error) {
-	return s.daemon.ContainerList(ctx, container.ListOptions{
+	return s.Daemon.ContainerList(ctx, container.ListOptions{
 		All:    true,
 		Size:   false,
 		Latest: false,
@@ -80,7 +80,7 @@ func (s *ContainerService) containerListByIDs(ctx context.Context, containerID .
 		Filters: filterArgs,
 	}
 
-	list, err := s.daemon.ContainerList(ctx, options)
+	list, err := s.Daemon.ContainerList(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch container info: %w", err)
 	}
@@ -90,7 +90,7 @@ func (s *ContainerService) containerListByIDs(ctx context.Context, containerID .
 
 func (s *ContainerService) ContainersStart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.daemon.ContainerStart(ctx, cont, container.StartOptions{})
+		err := s.Daemon.ContainerStart(ctx, cont, container.StartOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to start Container: %s => %w", cont, err)
 		}
@@ -100,7 +100,7 @@ func (s *ContainerService) ContainersStart(ctx context.Context, containerId ...s
 
 func (s *ContainerService) ContainersStop(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.daemon.ContainerStop(ctx, cont, container.StopOptions{})
+		err := s.Daemon.ContainerStop(ctx, cont, container.StopOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to stop Container: %s => %w", cont, err)
 		}
@@ -110,7 +110,7 @@ func (s *ContainerService) ContainersStop(ctx context.Context, containerId ...st
 
 func (s *ContainerService) ContainersRestart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.daemon.ContainerRestart(ctx, cont, container.StopOptions{})
+		err := s.Daemon.ContainerRestart(ctx, cont, container.StopOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to restart Container: %s => %w", cont, err)
 		}
@@ -120,7 +120,7 @@ func (s *ContainerService) ContainersRestart(ctx context.Context, containerId ..
 
 func (s *ContainerService) ContainersRemove(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.daemon.ContainerRemove(ctx, cont, container.RemoveOptions{
+		err := s.Daemon.ContainerRemove(ctx, cont, container.RemoveOptions{
 			Force: true,
 		})
 		if err != nil {
@@ -131,12 +131,12 @@ func (s *ContainerService) ContainersRemove(ctx context.Context, containerId ...
 }
 
 func (s *ContainerService) ContainerLogs(ctx context.Context, containerID string) (io.ReadCloser, bool, error) {
-	inspect, err := s.daemon.ContainerInspect(ctx, containerID)
+	inspect, err := s.Daemon.ContainerInspect(ctx, containerID)
 	if err != nil {
 		return nil, false, fmt.Errorf("unable to inspect container: %w", err)
 	}
 
-	logStream, err := s.daemon.ContainerLogs(ctx, containerID, container.LogsOptions{
+	logStream, err := s.Daemon.ContainerLogs(ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -150,7 +150,7 @@ func (s *ContainerService) ContainerLogs(ctx context.Context, containerID string
 }
 
 func (s *ContainerService) ContainerStats(ctx context.Context, filter container.ListOptions) ([]ContainerStats, error) {
-	containers, err := s.daemon.ContainerList(ctx, filter)
+	containers, err := s.Daemon.ContainerList(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not list containers: %w", err)
 	}
@@ -175,7 +175,7 @@ func (s *ContainerService) containerGetStatsFromList(ctx context.Context, contai
 }
 
 func (s *ContainerService) ContainersUpdateAll(ctx context.Context, opts ...UpdateOption) error {
-	containers, err := s.daemon.ContainerList(ctx,
+	containers, err := s.Daemon.ContainerList(ctx,
 		container.ListOptions{
 			All: true,
 		},
@@ -220,7 +220,7 @@ func (s *ContainerService) ContainersUpdateByImage(ctx context.Context, imageTag
 	containerFilters := filters.NewArgs()
 	containerFilters.Add("ancestor", imageTag)
 
-	containers, err := s.daemon.ContainerList(ctx, container.ListOptions{
+	containers, err := s.Daemon.ContainerList(ctx, container.ListOptions{
 		All:     true, // Consider both running and stopped containers
 		Filters: containerFilters,
 	})
@@ -437,19 +437,19 @@ func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag strin
 
 	log.Debug().Msgf("Processing container: %s (ID: %s)", containerName, oldContainer.ID[:12])
 
-	inspectedData, err := s.daemon.ContainerInspect(ctx, oldContainer.ID)
+	inspectedData, err := s.Daemon.ContainerInspect(ctx, oldContainer.ID)
 	if err != nil {
 		return fmt.Errorf("failed to inspect container %s: %w", oldContainer.ID, err)
 	}
 
 	log.Debug().Msgf("Stopping old container %s...", containerName)
-	if err := s.daemon.ContainerStop(ctx, oldContainer.ID, container.StopOptions{}); err != nil {
+	if err := s.Daemon.ContainerStop(ctx, oldContainer.ID, container.StopOptions{}); err != nil {
 		return fmt.Errorf("failed to stop container %s: %w", oldContainer.ID, err)
 	}
 
 	// if container was not running before create but do not start
 	if !inspectedData.State.Running {
-		if err := s.daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{}); err != nil {
+		if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{}); err != nil {
 			return fmt.Errorf("failed to remove old container %s: %w", oldContainer.ID, err)
 		}
 
@@ -467,9 +467,9 @@ func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag strin
 	}
 
 	log.Debug().Msgf("Starting new container %s...", newContainer.ID[:12])
-	if err = s.daemon.ContainerStart(ctx, newContainer.ID, container.StartOptions{}); err != nil {
+	if err = s.Daemon.ContainerStart(ctx, newContainer.ID, container.StartOptions{}); err != nil {
 
-		err = s.daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
+		err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
 		if err != nil {
 			return err
 		}
@@ -479,7 +479,7 @@ func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag strin
 
 	if err = s.ContainerHealthCheck(newContainer.ID, &inspectedData); err != nil {
 
-		err = s.daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
+		err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
 		if err != nil {
 			return err
 		}
@@ -490,12 +490,12 @@ func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag strin
 	// Health check passed - now we can safely remove old container and rename new one
 	log.Debug().Msgf("Health check passed, finalizing update...")
 
-	if err := s.daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{Force: true}); err != nil {
+	if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{Force: true}); err != nil {
 		log.Warn().Msgf("Failed to remove old container: %v", err)
 	}
 
 	// Rename new container to original name
-	if err := s.daemon.ContainerRename(ctx, newContainer.ID, containerName); err != nil {
+	if err := s.Daemon.ContainerRename(ctx, newContainer.ID, containerName); err != nil {
 		log.Warn().Msgf("Failed to rename container to original name: %v", err)
 	}
 
@@ -506,7 +506,7 @@ func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag strin
 func (s *ContainerService) containerRollbackToOldContainer(ctx context.Context, oldContainerID, containerName string, originalErr error) error {
 	log.Warn().Msgf("Rolling back to old container %s", containerName)
 
-	if err := s.daemon.ContainerStart(ctx, oldContainerID, container.StartOptions{}); err != nil {
+	if err := s.Daemon.ContainerStart(ctx, oldContainerID, container.StartOptions{}); err != nil {
 		return fmt.Errorf("rollback failed - cannot restart old container: %w (original error: %v)", err, originalErr)
 	}
 
@@ -523,7 +523,7 @@ func (s *ContainerService) containerCreate(
 	// The inspected config has the old image name, so we update it.
 	log.Debug().Msgf("Creating new container %s with updated image...", containerName)
 	inspectedData.Config.Image = imageTag
-	newContainer, err := s.daemon.ContainerCreate(ctx,
+	newContainer, err := s.Daemon.ContainerCreate(ctx,
 		inspectedData.Config,
 		inspectedData.HostConfig,
 		&network.NetworkingConfig{
@@ -582,7 +582,7 @@ func (s *ContainerService) containerHealthCheckUptime(containerID string, c *con
 	defer timer.Stop()
 	<-timer.C
 
-	inspect, err := s.daemon.ContainerInspect(context.Background(), containerID)
+	inspect, err := s.Daemon.ContainerInspect(context.Background(), containerID)
 	if err != nil {
 		return err
 	}
@@ -644,7 +644,7 @@ func (s *ContainerService) containerHealthCheckPing(c *container.InspectResponse
 // Image stuff
 
 func (s *ContainerService) ImageList(ctx context.Context) ([]image.Summary, error) {
-	return s.daemon.ImageList(ctx, image.ListOptions{
+	return s.Daemon.ImageList(ctx, image.ListOptions{
 		All:        true,
 		SharedSize: true,
 		Manifests:  true,
@@ -653,7 +653,7 @@ func (s *ContainerService) ImageList(ctx context.Context) ([]image.Summary, erro
 
 func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName string) (bool, string, error) {
 	// Get local image info
-	localImages, err := s.daemon.ImageList(ctx, image.ListOptions{
+	localImages, err := s.Daemon.ImageList(ctx, image.ListOptions{
 		Filters: filters.NewArgs(filters.Arg("reference", imageName)),
 	})
 	if err != nil {
@@ -666,7 +666,7 @@ func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName s
 	}
 
 	// Get remote image info
-	distributionInspect, err := s.daemon.DistributionInspect(ctx, imageName, "")
+	distributionInspect, err := s.Daemon.DistributionInspect(ctx, imageName, "")
 	if err != nil {
 		return false, "", err
 	}
@@ -681,7 +681,7 @@ func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName s
 func (s *ContainerService) ImagePull(ctx context.Context, imageTag string) error {
 	log.Info().Msg("Pulling latest image")
 
-	reader, err := s.daemon.ImagePull(ctx, imageTag, image.PullOptions{})
+	reader, err := s.Daemon.ImagePull(ctx, imageTag, image.PullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageTag, err)
 	}
@@ -697,7 +697,7 @@ func (s *ContainerService) ImagePull(ctx context.Context, imageTag string) error
 }
 
 func (s *ContainerService) ImageDelete(ctx context.Context, imageId string) ([]image.DeleteResponse, error) {
-	return s.daemon.ImageRemove(ctx, imageId, image.RemoveOptions{})
+	return s.Daemon.ImageRemove(ctx, imageId, image.RemoveOptions{})
 }
 
 func (s *ContainerService) ImagePruneUntagged(ctx context.Context) (image.PruneReport, error) {
@@ -705,7 +705,7 @@ func (s *ContainerService) ImagePruneUntagged(ctx context.Context) (image.PruneR
 	// removes dangling (untagged) mostly due to image being updated
 	filter.Add("dangling", "true")
 
-	prune, err := s.daemon.ImagesPrune(ctx, filter)
+	prune, err := s.Daemon.ImagesPrune(ctx, filter)
 	if err != nil {
 		return prune, err
 	}
@@ -726,14 +726,14 @@ func (s *ContainerService) ImagePruneUnused(ctx context.Context) (image.PruneRep
 	filter := filters.NewArgs()
 	filter.Add("dangling", "false")
 	// force remove all unused
-	return s.daemon.ImagesPrune(ctx, filter)
+	return s.Daemon.ImagesPrune(ctx, filter)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Network stuff
 
 func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect, error) {
-	list, err := s.daemon.NetworkList(ctx, network.ListOptions{})
+	list, err := s.Daemon.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +741,7 @@ func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect,
 	var errs []error
 	var result []network.Inspect
 	for _, ref := range list {
-		networkInspect, err2 := s.daemon.NetworkInspect(ctx, ref.ID, network.InspectOptions{})
+		networkInspect, err2 := s.Daemon.NetworkInspect(ctx, ref.ID, network.InspectOptions{})
 		if err2 != nil {
 			errs = append(errs, err2)
 			continue
@@ -757,15 +757,15 @@ func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect,
 }
 
 func (s *ContainerService) NetworksCreate(ctx context.Context, name string) (network.CreateResponse, error) {
-	return s.daemon.NetworkCreate(ctx, name, network.CreateOptions{})
+	return s.Daemon.NetworkCreate(ctx, name, network.CreateOptions{})
 }
 
 func (s *ContainerService) NetworksDelete(ctx context.Context, networkID string) error {
-	return s.daemon.NetworkRemove(ctx, networkID)
+	return s.Daemon.NetworkRemove(ctx, networkID)
 }
 
 func (s *ContainerService) NetworksPrune(ctx context.Context) (network.PruneReport, error) {
-	return s.daemon.NetworksPrune(ctx, filters.NewArgs())
+	return s.Daemon.NetworksPrune(ctx, filters.NewArgs())
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -779,7 +779,7 @@ type VolumeInfo struct {
 }
 
 func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error) {
-	listResp, err := s.daemon.VolumeList(ctx, volume.ListOptions{})
+	listResp, err := s.Daemon.VolumeList(ctx, volume.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -788,7 +788,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 		return []VolumeInfo{}, nil // Return empty slice instead of nil
 	}
 
-	diskUsage, err := s.daemon.DiskUsage(ctx, types.DiskUsageOptions{
+	diskUsage, err := s.Daemon.DiskUsage(ctx, types.DiskUsageOptions{
 		Types: []types.DiskUsageObject{types.VolumeObject}, // fetch volumes only
 	})
 	if err != nil {
@@ -823,7 +823,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 		volumeFilters = append(volumeFilters, filters.Arg("volume", vol.Name))
 	}
 
-	containers, err := s.daemon.ContainerList(ctx, container.ListOptions{
+	containers, err := s.Daemon.ContainerList(ctx, container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(volumeFilters...),
 	})
@@ -868,17 +868,17 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 }
 
 func (s *ContainerService) VolumesCreate(ctx context.Context, name string) (volume.Volume, error) {
-	return s.daemon.VolumeCreate(ctx, volume.CreateOptions{
+	return s.Daemon.VolumeCreate(ctx, volume.CreateOptions{
 		Name: name,
 	})
 }
 
 func (s *ContainerService) VolumesDelete(ctx context.Context, volumeName string, force bool) error {
-	return s.daemon.VolumeRemove(ctx, volumeName, force)
+	return s.Daemon.VolumeRemove(ctx, volumeName, force)
 }
 
 func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
-	volResponse, err := s.daemon.VolumeList(ctx, volume.ListOptions{})
+	volResponse, err := s.Daemon.VolumeList(ctx, volume.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get disk usage data: %w", err)
 	}
@@ -888,7 +888,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 		volumeFilters = append(volumeFilters, filters.Arg("volume", vol.Name))
 	}
 
-	containers, err := s.daemon.ContainerList(ctx, container.ListOptions{
+	containers, err := s.Daemon.ContainerList(ctx, container.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(volumeFilters...),
 	})
@@ -915,7 +915,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 			continue
 		}
 
-		err = s.daemon.VolumeRemove(ctx, vol.Name, false)
+		err = s.Daemon.VolumeRemove(ctx, vol.Name, false)
 		if err != nil {
 			delErr = fmt.Errorf("%w\n%w", delErr, err)
 		}
@@ -925,7 +925,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 }
 
 func (s *ContainerService) VolumesPrune(ctx context.Context) error {
-	prune, err := s.daemon.VolumesPrune(ctx, filters.NewArgs())
+	prune, err := s.Daemon.VolumesPrune(ctx, filters.NewArgs())
 	if err != nil {
 		log.Debug().Any("report", prune).Msg("VolumesPrune result")
 	}
@@ -937,7 +937,7 @@ func (s *ContainerService) VolumesPrune(ctx context.Context) error {
 
 func (s *ContainerService) getAndFormatStats(ctx context.Context, info container.Summary) (ContainerStats, error) {
 	contId := info.ID[:12]
-	stats, err := s.daemon.ContainerStats(ctx, info.ID, false)
+	stats, err := s.Daemon.ContainerStats(ctx, info.ID, false)
 	if err != nil {
 		return ContainerStats{}, fmt.Errorf("failed to get stats for cont %s: %w", contId, err)
 	}
@@ -978,7 +978,7 @@ func (s *ContainerService) ExecContainer(ctx context.Context, containerID string
 		Tty:          true,
 	}
 
-	execCreateResp, err := s.daemon.ContainerExecCreate(ctx, containerID, execConfig)
+	execCreateResp, err := s.Daemon.ContainerExecCreate(ctx, containerID, execConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create exec instance: %w", err)
 	}
@@ -988,12 +988,12 @@ func (s *ContainerService) ExecContainer(ctx context.Context, containerID string
 		Tty:    true,
 	}
 
-	hijackedResp, err := s.daemon.ContainerExecAttach(ctx, execCreateResp.ID, execAttachOptions)
+	hijackedResp, err := s.Daemon.ContainerExecAttach(ctx, execCreateResp.ID, execAttachOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to attach to exec instance: %w", err)
 	}
 
-	err = s.daemon.ContainerExecStart(ctx, execCreateResp.ID, container.ExecStartOptions{
+	err = s.Daemon.ContainerExecStart(ctx, execCreateResp.ID, container.ExecStartOptions{
 		Detach: false,
 		Tty:    true,
 	})

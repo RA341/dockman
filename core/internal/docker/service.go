@@ -18,7 +18,7 @@ type Service struct {
 type dependencies struct {
 	// hostname of the machine used to identify which client is running on
 	hostname string
-	daemon   *client.Client
+	Daemon   *client.Client
 	// address used to prefix container ports for direct links
 	daemonAddr string
 	// syncs local files to remote host
@@ -44,7 +44,7 @@ func NewService(
 ) *Service {
 	uts := &dependencies{
 		hostname:         name,
-		daemon:           dockerClient,
+		Daemon:           dockerClient,
 		syncer:           syncer,
 		daemonAddr:       daemonAddr,
 		composeRoot:      composeRoot,

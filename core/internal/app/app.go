@@ -7,12 +7,14 @@ import (
 
 	"connectrpc.com/connect"
 	authrpc "github.com/RA341/dockman/generated/auth/v1/v1connect"
+	"github.com/RA341/dockman/generated/cleaner/v1/v1connect"
 	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
 	dockermanagerrpc "github.com/RA341/dockman/generated/docker_manager/v1/v1connect"
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 	"github.com/RA341/dockman/internal/auth"
+	"github.com/RA341/dockman/internal/cleaner"
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/database"
 	"github.com/RA341/dockman/internal/docker"
@@ -21,6 +23,7 @@ import (
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
+	"github.com/docker/docker/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -115,6 +118,13 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		authInterceptor = connect.WithInterceptors(auth.NewInterceptor(a.Auth))
 	}
 
+	cleanerSrv := cleaner.NewService(
+		func() *client.Client {
+			return a.DockerManager.GetService().Container.Daemon
+		},
+		a.DB.CleanerStore,
+	)
+
 	handlers := []func() (string, http.Handler){
 		// auth
 		func() (string, http.Handler) {
@@ -140,6 +150,9 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			return dockerpc.NewDockerServiceHandler(docker.NewConnectHandler(a.DockerManager.GetService, a.Config.Updater.Addr),
 				authInterceptor,
 			)
+		},
+		func() (string, http.Handler) {
+			return v1connect.NewCleanerServiceHandler(cleaner.NewHandler(cleanerSrv))
 		},
 		// git
 		//func() (string, http.Handler) {

@@ -187,7 +187,7 @@ func (s *ComposeService) ComposeList(ctx context.Context, project *types.Project
 	projectLabel := fmt.Sprintf("%s=%s", api.ProjectLabel, project.Name)
 	containerFilters.Add("label", projectLabel)
 
-	result, err := s.daemon.ContainerList(ctx, container.ListOptions{
+	result, err := s.Daemon.ContainerList(ctx, container.ListOptions{
 		All:     all,
 		Filters: containerFilters,
 	})
@@ -217,7 +217,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 			continue
 		}
 
-		imageInspect, err := s.daemon.ImageInspect(ctx, service.Image)
+		imageInspect, err := s.Daemon.ImageInspect(ctx, service.Image)
 		if err != nil {
 			// Image might not exist locally yet
 			digests[serviceName] = ""
@@ -237,7 +237,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 
 func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
-		command.WithAPIClient(s.daemon),
+		command.WithAPIClient(s.Daemon),
 		command.WithCombinedStreams(outputStream),
 	)
 	if err != nil {
