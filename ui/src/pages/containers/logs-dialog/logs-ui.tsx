@@ -4,7 +4,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import {getWSUrl, useClient} from "../../../lib/api.ts";
 import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
 import {FitAddon} from "@xterm/addon-fit";
-import AppTerminal from "../../compose/components/logs-terminal-interactive.tsx";
+import AppTerminal from "../../compose/components/logs-terminal.tsx";
 import {interactiveTermFn} from "../../compose/state/state.tsx";
 
 interface LogsDialogProps {

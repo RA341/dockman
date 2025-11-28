@@ -1,21 +1,40 @@
 import {type RefObject, useEffect, useRef} from "react";
-import {Terminal} from "@xterm/xterm";
+import {type ITerminalInitOnlyOptions, type ITerminalOptions, Terminal} from "@xterm/xterm";
 import {FitAddon} from "@xterm/addon-fit";
-import {containerClassName, scrollbarStyles, terminalConfig} from "../state/state.tsx";
-import { Box } from "@mui/material";
+import {Box} from "@mui/material";
+import type {TabTerminal} from "../state/state.tsx";
+
+const terminalConfig: ITerminalOptions & ITerminalInitOnlyOptions = {
+    theme: {
+        background: '#1E1E1E',
+        foreground: '#CCCCCC'
+    },
+    // theme: {background: '#1E1E1E', foreground: '#CCCCCC'},
+    scrollback: 5000,
+    fontSize: 13,
+    lineHeight: 1.2,
+    fontFamily: 'monospace, Menlo, Monaco, "Courier New"',
+}
+
+const containerClassName = 'logs-terminal-container';
+const scrollbarStyles = `
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar { width: 8px; height: 8px; }
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+        .${containerClassName} .xterm-viewport::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
+        .${containerClassName} .xterm-viewport { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1); }
+    `;
 
 
-const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
-    wsUrl: string;
-    onClose?: () => void;
-    isActive?: boolean;
-    fit?: RefObject<FitAddon>
-}) => {
+type AppTerminalProps = TabTerminal & {
+    fit?: RefObject<FitAddon>;
+    isActive: boolean;
+};
+
+const AppTerminal = ({fit, interactive, onTerminal, isActive}: AppTerminalProps) => {
     const terminalRef = useRef<HTMLDivElement>(null);
-    const wsRef = useRef<WebSocket | null>(null);
     const xtermRef = useRef<Terminal | null>(null);
 
-    // Handle Resizing
     useEffect(() => {
         if (!terminalRef.current || !fit?.current) return;
 
@@ -41,12 +60,26 @@ const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
     }, [fit, isActive]);
 
     useEffect(() => {
-        const term = new Terminal({
-            ...terminalConfig,
-            cursorBlink: true,
-            cursorWidth: 1,
-            cursorStyle: 'bar'
-        });
+        let term: Terminal;
+
+        if (interactive) {
+            term = new Terminal({
+                ...terminalConfig,
+                cursorBlink: true,
+                cursorWidth: 1,
+                cursorStyle: 'bar'
+            });
+        } else {
+            term = new Terminal({
+                ...terminalConfig,
+                cursorBlink: false,
+                disableStdin: true,
+                // keep this for proper new lines
+                convertEol: true,
+            });
+
+            term.write('\x1b[?25l'); // Hide cursor
+        }
 
         if (fit) {
             term.loadAddon(fit.current);
@@ -59,40 +92,7 @@ const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
 
         xtermRef.current = term;
 
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
-        ws.binaryType = "arraybuffer";
-
-        ws.onopen = () => {
-            term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
-            term.focus();
-        };
-
-        ws.onmessage = (event) => {
-            term.write(
-                typeof event.data === 'string' ?
-                    event.data :
-                    new Uint8Array(event.data)
-            );
-        };
-
-        ws.onclose = () => {
-            term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
-            onClose?.()
-        };
-
-        ws.onerror = (err) => {
-            console.error("WS Error", err);
-            term.write('\r\n\x1b[31m*** Connection Error ***\x1b[0m\r\n');
-        };
-
-        term.onData((data) => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(data);
-            }
-        });
-
-        xtermRef.current = term;
+        onTerminal(xtermRef.current)
 
         setTimeout(() => {
             fit?.current.fit();
@@ -103,7 +103,7 @@ const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
             xtermRef.current = null;
         };
         // eslint-disable-next-line
-    }, [wsUrl]);
+    }, []);
 
 
     return (
@@ -144,4 +144,4 @@ const InteractiveTerminal = ({wsUrl, onClose, isActive = true, fit}: {
     // </div>;
 };
 
-export default InteractiveTerminal;
+export default AppTerminal;

@@ -14,7 +14,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import "@xterm/xterm/css/xterm.css";
 import {getWSUrl} from "../../../lib/api.ts";
-import AppTerminal from "../../compose/components/logs-terminal-interactive.tsx";
+import AppTerminal from "../../compose/components/logs-terminal.tsx";
 import {FitAddon} from "@xterm/addon-fit";
 import {interactiveTermFn} from "../../compose/state/state.tsx";
 

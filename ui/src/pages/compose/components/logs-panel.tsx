@@ -6,8 +6,7 @@ import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 import InsertDriveFile from '@mui/icons-material/InsertDriveFile';
 
 import "@xterm/xterm/css/xterm.css";
-import ReadOnlyTerm from "./logs-terminal-readonly.tsx";
-import InteractiveTerminal from "./logs-terminal-interactive.tsx";
+import AppTerminal from "./logs-terminal.tsx";
 import {useRef} from "react";
 import {FitAddon} from "@xterm/addon-fit";
 
@@ -169,7 +168,6 @@ export function LogsPanel() {
                     ) : (
                         [...tabs.entries()].map(([key, v]) => (
                             <Box
-                                key={key}
                                 sx={{
                                     display: key === activeTab ? 'flex' : 'none',
                                     height: '100%',
@@ -178,20 +176,11 @@ export function LogsPanel() {
                                     flex: 1
                                 }}
                             >
-                                {v.wsUrl !== undefined ?
-                                    <InteractiveTerminal
-                                        fit={fitAddonRef}
-                                        wsUrl={v.wsUrl}
-                                        onClose={() => {
-                                            // todo
-                                        }}
-                                    /> :
-                                    <ReadOnlyTerm
-                                        fit={fitAddonRef}
-                                        isActive={key === activeTab}
-                                        stream={v.stream!}
-                                    />}
-
+                                <AppTerminal
+                                    {...v}
+                                    fit={fitAddonRef}
+                                    isActive={key === activeTab}
+                                />
                             </Box>
                         ))
                     )}
