@@ -13,7 +13,7 @@ import {ContainerTable} from './components/container-info-table';
 import {getWSUrl, useClient} from "../../lib/api.ts";
 import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {deployActionsConfig, useComposeAction, useContainerExec, useContainerLogs} from "./state/state.tsx";
+import {deployActionsConfig, useComposeAction, useContainerExec} from "./state/state.tsx";
 
 interface DeployPageProps {
     selectedPage: string;
@@ -47,11 +47,10 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
             fetchContainers().then()
         })
     };
-    const streamLogs = useContainerLogs(state => state.streamLogs)
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const tabId = `${containerName}-logs-${containerId}`
-        streamLogs(tabId, {containerID: containerId}, dockerService.containerLogs)
+        const url = getWSUrl(`docker/logs/${containerId}`)
+        execContainer(`${selectedPage}: logs-${containerName}`, url, false)
     };
 
     const execContainer = useContainerExec(state => state.execParams)
@@ -59,7 +58,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         const cmd = "/bin/sh"
         const encodedCmd = encodeURIComponent(cmd);
         const url = getWSUrl(`docker/exec/${containerId}?cmd=${encodedCmd}`)
-        execContainer(`${selectedPage}: exec-${containerName}`, url)
+        execContainer(`${selectedPage}: exec-${containerName}`, url, true)
     };
 
     if (!selectedPage) {

@@ -1,10 +1,9 @@
 import {Delete, PlayArrow, RestartAlt, Stop, Update} from "@mui/icons-material";
 import {atom} from "jotai";
 import {create} from 'zustand'
-import {type ComposeFile, type ContainerLogsRequest, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
+import {type ComposeFile, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
 import type {CallOptions} from "@connectrpc/connect";
-import {transformAsyncIterable} from "../../../lib/api.ts";
-import type {ITerminalInitOnlyOptions, ITerminalOptions} from "@xterm/xterm";
+import type {Terminal} from "@xterm/xterm";
 
 interface ActiveComposeFileState {
     activeComposeFile: string | null;
@@ -39,107 +38,140 @@ type ActiveAction = typeof deployActionsConfig[number]['name'];
 type ComposeFileClean = Omit<ComposeFile, "$typeName" | "$unknown">;
 type ComposeActionStreamFn = (request: ComposeFileClean, options?: CallOptions) => AsyncIterable<LogsMessage>;
 
-type ContainerLogsClean = Omit<ContainerLogsRequest, "$typeName" | "$unknown">;
-type ContainerLogsStreamFn = (request: ContainerLogsClean, options?: CallOptions) => AsyncIterable<LogsMessage>;
-
-export const terminalConfig: ITerminalOptions & ITerminalInitOnlyOptions = {
-    theme: {
-        background: '#1E1E1E',
-        foreground: '#CCCCCC'
-    },
-    // theme: {background: '#1E1E1E', foreground: '#CCCCCC'},
-    scrollback: 5000,
-    fontSize: 13,
-    lineHeight: 1.2,
-    fontFamily: 'monospace, Menlo, Monaco, "Courier New"',
+const writeTermErr = (term: Terminal, err: string) => {
+    console.error("Error", err);
+    term.write('\r\n\x1b[31m*** Error ***\n');
+    term.write(`${err}\x1b[0m\r`);
 }
-export const containerClassName = 'logs-terminal-container';
-export const scrollbarStyles = `
-        .${containerClassName} .xterm-viewport::-webkit-scrollbar { width: 8px; height: 8px; }
-        .${containerClassName} .xterm-viewport::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
-        .${containerClassName} .xterm-viewport::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
-        .${containerClassName} .xterm-viewport::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
-        .${containerClassName} .xterm-viewport { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1); }
-    `;
 
+export function interactiveTermFn(term: Terminal, wsUrl: string) {
+    try {
+        const ws = new WebSocket(wsUrl);
+        ws.binaryType = "arraybuffer";
+
+        ws.onopen = () => {
+            term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
+            term.focus();
+        };
+
+        ws.onmessage = (event) => {
+            term.write(
+                typeof event.data === 'string' ?
+                    event.data :
+                    new Uint8Array(event.data)
+            );
+        };
+
+        ws.onclose = () => {
+            term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
+            // onClose?.()
+        };
+
+        ws.onerror = (err) => {
+            writeTermErr(term, err.toString());
+        };
+
+        term.onData((data) => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(data);
+            }
+        });
+    } catch (e: unknown) {
+        // @ts-expect-error: dumbass language
+        writeTermErr(term, e.toString());
+    }
+}
 
 export const useContainerExec = create<{
     execParams: (
         title: string,
         wsUrl: string,
+        interactive: boolean,
     ) => void
 }>(() => ({
-    execParams: (title, wsUrl) => {
+    execParams: (title, wsUrl, interactive) => {
         useTerminalAction.getState().open()
 
-        const term: TabTerminal = {
+        const tab: TabTerminal = {
             id: title,
             title: title,
-            wsUrl: wsUrl,
-            // cache: [],
-            // error: null,
+            interactive: interactive,
+            onTerminal: term => {
+                interactiveTermFn(term, wsUrl);
+            },
+
         }
 
-        useTerminalTabs.getState().addTab(title, term)
+        useTerminalTabs.getState().addTab(title, tab)
     },
 }))
 
-
-export const useContainerLogs = create<{
-    streamLogs: (
-        title: string,
-        input: ContainerLogsClean,
-        streamFn: ContainerLogsStreamFn,
-    ) => void
-}>(() => ({
-    streamLogs: (title, input, streamFn) => {
-        useTerminalAction.getState().open()
-
-        const abort = new AbortController();
-        const stream = streamFn(input, {signal: abort.signal});
-
-        const term: TabTerminal = {
-            id: title,
-            title: title,
-            controller: abort,
-            stream: null,
-            // cache: [],
-            // error: null,
-        }
-
-        useTerminalTabs.getState().addTab(title, term)
-
-        const transformedStream = transformAsyncIterable(stream, {
-            transform: item => {
-                const message = item.message;
-                // useTerminalTabs.getState().updateTab(title, curTab => ({
-                //     ...curTab,
-                //     cache: [...curTab.cache, message]
-                // }))
-                return message
-            },
-            onComplete: () => {
-                useTerminalTabs.getState().updateTab(title, curTab => ({
-                    ...curTab,
-                    stream: null,
-                }))
-            },
-            onError: (err) => {
-                console.log("Error while streaming", err)
-                const message = `Error streaming logs: ${err}`;
-                useTerminalTabs.getState().updateTab(title, curTab => ({
-                    ...curTab,
-                    error: message
-                }))
-            },
-        });
-
-        useTerminalTabs.getState().updateTab(title, curTab => ({
-            ...curTab,
-            stream: transformedStream,
-        }))
-    },
-}))
+// export const useContainerLogs = create<{
+//     streamLogs: (
+//         title: string,
+//         input: ContainerLogsClean,
+//         streamFn: ContainerLogsStreamFn,
+//     ) => void
+// }>(() => ({
+//     streamLogs: (title, input, streamFn) => {
+//         useTerminalAction.getState().open()
+//
+//         const abort = new AbortController();
+//         const stream = streamFn(input, {signal: abort.signal});
+//
+//         const tab: TabTerminal = {
+//             id: title,
+//             title: title,
+//             interactive: false,
+//             onTerminal: term => {
+//                 function writeTermErr(err: string) {
+//                     console.error("Error", err);
+//
+//                     term.write('\r\n\x1b[31m*** Error ***\n');
+//                     term.write(`${err}\x1b[0m\r`);
+//                 }
+//
+//                 try {
+//                     const ws = new WebSocket(wsUrl);
+//                     ws.binaryType = "arraybuffer";
+//
+//                     ws.onopen = () => {
+//                         term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
+//                         term.focus();
+//                     };
+//
+//                     ws.onmessage = (event) => {
+//                         term.write(
+//                             typeof event.data === 'string' ?
+//                                 event.data :
+//                                 new Uint8Array(event.data)
+//                         );
+//                     };
+//
+//                     ws.onclose = () => {
+//                         term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
+//                         // onClose?.()
+//                     };
+//
+//                     ws.onerror = (err) => {
+//                         writeTermErr(err.toString());
+//                     };
+//
+//                     term.onData((data) => {
+//                         if (ws.readyState === WebSocket.OPEN) {
+//                             ws.send(data);
+//                         }
+//                     });
+//                 } catch (e: unknown) {
+//                     writeTermErr(e.toString());
+//                 }
+//             }
+//         }
+//
+//         useTerminalTabs.getState().addTab(title, tab)
+//
+//     },
+// }))
 
 export const useComposeAction = create<{
     activeAction: ActiveAction | null
@@ -175,49 +207,43 @@ export const useComposeAction = create<{
         }, {signal: abort.signal});
 
         const title = `${composeFile}-${action}`;
-
-        const term: TabTerminal = {
+        const tab: TabTerminal = {
             id: title,
             title: title,
-            controller: abort,
-            stream: null,
-            // cache: [],
-            // error: null,
+            interactive: false,
+            onTerminal: term => {
+                const asyncStream = async () => {
+                    console.log("starting stream")
+                    try {
+                        for await (const item of stream) {
+                            term.write(item.message);
+                        }
+                        onDone?.();
+                    } catch (error: unknown) {
+                        let err: string
+                        if (error instanceof Error && error.name !== 'AbortError') {
+                            err = error.message
+                        } else {
+                            // @ts-expect-error: fuck this dumbass error handling
+                            err = error.toString()
+                        }
+
+                        console.log("error", err);
+                        term.write(`\r\n\x1b[31mStream Error: ${err}\x1b[0m`);
+                    }
+
+                    console.log("ending action stream")
+                    get().reset()
+                };
+
+                asyncStream().then();
+            },
         }
+        console.log("Removing tab")
+        useTerminalTabs.getState().close(title)
 
-        useTerminalTabs.getState().addTab(title, term)
-
-        const transformedStream = transformAsyncIterable(stream, {
-            transform: item => {
-                const message = item.message;
-                // useTerminalTabs.getState().updateTab(title, curTab => ({
-                //     ...curTab,
-                //     cache: [...curTab.cache, message]
-                // }))
-                return message
-            },
-            onComplete: () => {
-                useTerminalTabs.getState().updateTab(title, curTab => ({
-                    ...curTab,
-                    stream: null,
-                }))
-
-                onDone?.()
-            },
-            onFinally: get().reset,
-            onError: (err) => {
-                const message = `Error streaming logs: ${err}`;
-                useTerminalTabs.getState().updateTab(title, curTab => ({
-                    ...curTab,
-                    error: message
-                }))
-            },
-        });
-
-        useTerminalTabs.getState().updateTab(title, curTab => ({
-            ...curTab,
-            stream: transformedStream,
-        }))
+        console.log("adding new tab")
+        useTerminalTabs.getState().addTab(title, tab)
     },
     reset: () => {
         set({activeAction: null})
@@ -227,12 +253,8 @@ export const useComposeAction = create<{
 export interface TabTerminal {
     id: string;
     title: string;
-    stream?: AsyncIterable<string> | null;
-    controller?: AbortController;
-    wsUrl?: string;
-
-    // cache: string[]; // stores the logs from the async iterable
-    // error: string | null;
+    onTerminal: (term: Terminal) => void;
+    interactive: boolean;
 }
 
 export const useTerminalTabs = create<{
