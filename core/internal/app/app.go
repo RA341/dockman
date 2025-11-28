@@ -173,12 +173,16 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		mux.Handle(path, handler)
 	}
 
-	var handler http.Handler = docker.NewWSExec(a.DockerManager.GetService)
+	var execHandler http.Handler = docker.NewExecWSHandler(a.DockerManager.GetService)
+	var logHandler http.Handler = docker.NewLogWSHandler(a.DockerManager.GetService)
 	if a.Config.Auth.Enable {
 		authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
-		handler = authMiddleware(handler)
+		execHandler = authMiddleware(execHandler)
+		logHandler = authMiddleware(logHandler)
 	}
-	mux.Handle("GET /docker/exec/{contID}", handler)
+
+	mux.Handle("GET /docker/exec/{contID}", execHandler)
+	mux.Handle("GET /docker/logs/{contID}", logHandler)
 }
 
 func (a *App) registerHttpHandler(basePath string, subMux http.Handler) (string, http.Handler) {

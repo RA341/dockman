@@ -195,11 +195,10 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 	return digests, nil
 }
 
-func (s *ComposeService) LoadComposeClient(outputStream io.Writer, inputStream io.ReadCloser) (api.Compose, error) {
+func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
 		command.WithAPIClient(s.daemon),
 		command.WithCombinedStreams(outputStream),
-		command.WithInputStream(inputStream),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cli client to docker for compose: %w", err)

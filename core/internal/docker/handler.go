@@ -567,7 +567,7 @@ func (h *Handler) executeComposeStreamCommand(
 		return nil
 	})
 
-	composeClient, err := h.compose().LoadComposeClient(pipeWriter, nil)
+	composeClient, err := h.compose().LoadComposeClient(pipeWriter)
 	if err != nil {
 		return err
 	}
@@ -583,6 +583,18 @@ func (h *Handler) executeComposeStreamCommand(
 	wg.Wait()
 
 	return nil
+}
+
+type LogStreamWriter struct {
+	responseStream *connect.ServerStream[v1.LogsMessage]
+}
+
+func (l *LogStreamWriter) Write(p []byte) (n int, err error) {
+	err = l.responseStream.Send(&v1.LogsMessage{})
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 func ToRPCStat(cont ContainerStats) *v1.ContainerStats {

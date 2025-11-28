@@ -2,10 +2,13 @@ package docker
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -14,18 +17,14 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-type HandlerWS struct {
-	srv ServiceProvider
+func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		ExecWSHandler(srv, writer, request)
+	}
 }
 
-func NewWSExec(srv ServiceProvider) http.HandlerFunc {
-	ws := &HandlerWS{srv: srv}
-	return ws.wsHandler
-}
-
-// in router setup
-// add/provisions/{id}
-func (h *HandlerWS) wsHandler(w http.ResponseWriter, r *http.Request) {
+// ExecWSHandler in router setup
+func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) {
 	contId := r.PathValue("contID")
 	log.Debug().Str("container", contId).Msg("Entering container")
 	if contId == "" {
@@ -49,16 +48,16 @@ func (h *HandlerWS) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fileutil.Close(ws)
 
-	daemon := h.srv().Container.daemon
+	daemon := srv().Container.daemon
 	execResp, err := daemon.ContainerExecCreate(ctx, contId, execConfig)
 	if err != nil {
-		http.Error(w, "Error creating shell into container "+err.Error(), http.StatusInternalServerError)
+		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
 		return
 	}
 
 	resp, err := daemon.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{Tty: true})
 	if err != nil {
-		http.Error(w, "Error creating shell into container "+err.Error(), http.StatusInternalServerError)
+		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
 		return
 	}
 	defer resp.Close()
@@ -92,4 +91,76 @@ func (h *HandlerWS) wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func NewLogWSHandler(srv ServiceProvider) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		LogWSHandler(srv, writer, request)
+	}
+}
+
+// LogWSHandler in router setup
+func LogWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) {
+	contId := r.PathValue("contID")
+	if contId == "" {
+		http.Error(w, "No container ID found in path", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	logsReader, tty, err := srv().Container.ContainerLogs(ctx, contId)
+	if err != nil {
+		http.Error(w, "unable to stream container logs: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer fileutil.Close(logsReader)
+
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer fileutil.Close(ws)
+
+	writer := NewWsWriter(ws)
+	if tty {
+		// tty streams dont need docker demultiplexing
+		_, err = io.Copy(writer, logsReader)
+	} else {
+		// docker multiplexed stream
+		_, err = stdcopy.StdCopy(writer, writer, logsReader)
+	}
+	if err != nil {
+		wsErr(ws, fmt.Errorf("error: copying container stream: %w", err))
+		return
+	}
+}
+
+func wsErr(ws *websocket.Conn, err error) {
+	err2 := ws.WriteMessage(websocket.TextMessage, []byte(err.Error()))
+	if err2 != nil {
+		log.Warn().Err(err2).Msg("Unable to write to stream")
+	}
+}
+
+type WsWriter struct {
+	ws *websocket.Conn
+}
+
+func NewWsWriter(ws *websocket.Conn) *WsWriter {
+	return &WsWriter{
+		ws: ws,
+	}
+}
+
+func (w *WsWriter) Write(p []byte) (n int, err error) {
+	err = w.ws.WriteMessage(websocket.TextMessage, p)
+	if err != nil {
+		log.Warn().Err(err).Msg("Unable to write to websocket")
+		return len(p), err
+	}
+
+	return len(p), nil
 }
