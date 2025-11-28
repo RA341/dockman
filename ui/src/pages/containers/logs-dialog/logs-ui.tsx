@@ -1,10 +1,11 @@
 import {useEffect, useRef, useState} from "react";
 import {Box, Dialog, DialogActions, DialogContent, DialogTitle, IconButton} from '@mui/material';
 import CloseIcon from "@mui/icons-material/Close";
-import {transformAsyncIterable, useClient} from "../../../lib/api.ts";
-import {DockerService, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
-import ReadOnlyTerm from "../../compose/components/logs-terminal-readonly.tsx";
-
+import {getWSUrl, useClient} from "../../../lib/api.ts";
+import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
+import {FitAddon} from "@xterm/addon-fit";
+import AppTerminal from "../../compose/components/logs-terminal-interactive.tsx";
+import {interactiveTermFn} from "../../compose/state/state.tsx";
 
 interface LogsDialogProps {
     show: boolean;
@@ -17,65 +18,22 @@ export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => 
     const dockerService = useClient(DockerService);
 
     const [panelTitle, setPanelTitle] = useState('');
-    const [logStream, setLogStream] = useState<AsyncIterable<string> | null>(null);
-
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const fitAddonRef = useRef<FitAddon>(new FitAddon());
 
     useEffect(() => {
         if (containerID) {
             setPanelTitle(`Logs - ${name}`);
-            manageStream<LogsMessage>({
-                getStream: signal => dockerService.containerLogs({containerID: containerID}, {signal}),
-                transform: item => item.message,
-            });
         }
-
         return () => {
-            abortControllerRef.current?.abort()
             setPanelTitle('')
-            setLogStream(null)
         };
     }, [containerID, dockerService, name]);
 
-    const manageStream = <T, >({getStream, transform}: {
-        getStream: (signal: AbortSignal) => AsyncIterable<T>;
-        transform: (item: T) => string;
-    }) => {
-        // Close any previous stream before starting a new one
-        abortControllerRef.current?.abort("User started a new action");
-        const newController = new AbortController();
-        abortControllerRef.current = newController;
-
-        const sourceStream = getStream(newController.signal);
-        const transformedStream = transformAsyncIterable(sourceStream, {
-            transform,
-            onComplete: () => {
-                console.log("Stream completed successfully.");
-            },
-            onError: error => {
-                console.log(`Stream error: ${error}`);
-            },
-            onFinally: () => {
-                if (abortControllerRef.current === newController) {
-                    abortControllerRef.current = null;
-                }
-            },
-        });
-
-        setLogStream(transformedStream);
-    };
-
-    /**
-     * Handles closing the dialog. This function will:
-     * 1. Abort the active network request for the log stream.
-     * 2. Clear the log stream state.
-     * 3. Call the parent's `hide` function to update visibility state.
-     */
     const handleClose = () => {
-        abortControllerRef.current?.abort("Dialog closed by user");
-        setLogStream(null);
         hide();
     };
+
+    const getWsUrl = () => getWSUrl(`docker/logs/${containerID}`);
 
     return (
         <Dialog
@@ -120,7 +78,16 @@ export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => 
                 backgroundColor: '#000',
                 // borderColor: '#858484',
             }}>
-                <ReadOnlyTerm isActive={true} stream={logStream}/>
+                <AppTerminal
+                    id={containerID}
+                    fit={fitAddonRef}
+                    title={`Logs ${name}`}
+                    onTerminal={
+                        term => interactiveTermFn(term, getWsUrl())
+                    }
+                    isActive={true}
+                    interactive={false}
+                />
             </DialogContent>
             <DialogActions sx={{
                 backgroundColor: '#2e2e2e',

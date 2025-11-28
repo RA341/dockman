@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {
     Autocomplete,
     Box,
@@ -14,7 +14,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import "@xterm/xterm/css/xterm.css";
 import {getWSUrl} from "../../../lib/api.ts";
-import InteractiveTerminal from "../../compose/components/logs-terminal-interactive.tsx";
+import AppTerminal from "../../compose/components/logs-terminal-interactive.tsx";
+import {FitAddon} from "@xterm/addon-fit";
+import {interactiveTermFn} from "../../compose/state/state.tsx";
 
 export const ExecDialog = ({show, hide, name, containerID}: {
     show: boolean;
@@ -27,6 +29,7 @@ export const ExecDialog = ({show, hide, name, containerID}: {
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
     const [isConnected, setIsConnected] = useState(false);
 
+    const fitAddonRef = useRef<FitAddon>(new FitAddon());
     // Reset state when dialog opens/closes or container changes
     useEffect(() => {
         if (!show) {
@@ -118,10 +121,12 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                                         label="Shell Command"
                                         variant="outlined"
                                         size="small"
-                                        InputLabelProps={{style: {color: '#aaa'}}}
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            style: {color: '#fff', backgroundColor: '#333'}
+                                        slotProps={{
+                                            inputLabel: {style: {color: '#aaa'}},
+                                            input: {
+                                                ...params.InputProps,
+                                                style: {color: '#fff', backgroundColor: '#333'}
+                                            }
                                         }}
                                     />
                                 )}
@@ -137,9 +142,15 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                     </Box>
                 ) : (
                     <Box sx={{flex: 1, p: 1, overflow: 'hidden'}}>
-                        <InteractiveTerminal
-                            wsUrl={getWsUrl()}
-                            onClose={() => setIsConnected(false)}
+                        <AppTerminal
+                            isActive={true}
+                            id={containerID}
+                            interactive={true}
+                            fit={fitAddonRef}
+                            title={`Exec ${name}`}
+                            onTerminal={
+                                term => interactiveTermFn(term, getWsUrl())
+                            }
                         />
                     </Box>
                 )}
