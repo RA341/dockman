@@ -77,8 +77,8 @@ func PrintInfo() {
 		fields.DashDivider()
 		fields.NewGithubMetadata(
 			repo,
-			Branch,
 			CommitInfo,
+			Branch,
 		)
 	}
 
