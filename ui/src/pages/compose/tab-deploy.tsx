@@ -1,19 +1,10 @@
 import {useState} from 'react';
-import {
-    Box,
-    Button,
-    CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Typography
-} from '@mui/material';
+import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography} from '@mui/material';
 import {ContainerTable} from './components/container-info-table';
-import {getWSUrl, useClient} from "../../lib/api.ts";
-import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
+import {getWSUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {deployActionsConfig, useComposeAction, useContainerExec} from "./state/state.tsx";
+import {useContainerExec} from "./state/state.tsx";
+import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
 
 interface DeployPageProps {
     selectedPage: string;
@@ -89,44 +80,4 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
             </Dialog>
         </Box>
     );
-}
-
-function ComposeActionHeaders({selectedServices, fetchContainers}: {
-    selectedServices: string[];
-    fetchContainers: () => Promise<void>
-}) {
-    const dockerService = useClient(DockerService);
-
-    const runAction = useComposeAction(state => state.runAction)
-    const activeAction = useComposeAction(state => state.activeAction)
-
-    const handleComposeAction = (
-        name: typeof deployActionsConfig[number]['name'],
-        _message: string,
-        rpcName: typeof deployActionsConfig[number]['rpcName'],
-    ) => {
-        runAction(dockerService[rpcName], name, selectedServices, () => {
-            fetchContainers().then()
-        })
-    };
-
-    return (
-        <Box sx={{display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, flexShrink: 0}}>
-            {deployActionsConfig.map((action) => (
-                <Button
-                    key={action.name}
-                    variant="outlined"
-                    disabled={!!activeAction}
-                    onClick={() => handleComposeAction(action.name, action.message, action.rpcName)}
-                    startIcon={
-                        activeAction === action.name ?
-                            <CircularProgress size={20} color="inherit"/> :
-                            action.icon
-                    }
-                >
-                    {action.name.charAt(0).toUpperCase() + action.name.slice(1)}
-                </Button>
-            ))}
-        </Box>
-    )
 }
