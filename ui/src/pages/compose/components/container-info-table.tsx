@@ -55,7 +55,6 @@ export function ContainerTable(
 
     const getContName = (container: ContainerList) => useContainerId ? container.id : container.serviceName
 
-
     useEffect(() => {
         if (!loading && !isLoaded) setTimeout(() => setIsLoaded(true), 50)
     }, [loading, isLoaded])

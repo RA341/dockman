@@ -22,7 +22,7 @@ func main() {
 	info.Version = info.VersionDev
 
 	envMap := map[string]string{
-		"AUTH_ENABLE":   "true",
+		//"AUTH_ENABLE":   "true",
 		"AUTH_USERNAME": "test",
 		"AUTH_PASSWORD": "test",
 		"LOG_LEVEL":     "debug",
