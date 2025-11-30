@@ -12,6 +12,7 @@ import (
 
 	"github.com/RA341/dockman/pkg/argos"
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/rs/zerolog/log"
 )
 
 const EnvPrefix = "DOCKMAN"
@@ -26,7 +27,7 @@ type AppConfig struct {
 	ConfigDir      string        `config:"flag=conf,env=CONFIG,default=/config,usage=Directory to store dockman config"`
 	DockYaml       string        `config:"flag=dy,env=DOCK_YAML,default=,usage=Custom path for the .dockman.yml file"`
 	Perms          FilePerms     `config:""` // indicate to parse struct
-	Auth           AuthConfig    `config:""`
+	Auth           Auth          `config:""`
 	Updater        UpdaterConfig `config:""`
 	Log            Logger        `config:""`
 	UIFS           fs.FS         // UIFS has no 'config' tag, so it will be ignored
@@ -37,15 +38,30 @@ type FilePerms struct {
 	GID  int `config:"flag=gid,env=GID,default=0,usage=GID for composeRoot"`
 }
 
-type AuthConfig struct {
+type Auth struct {
 	Enable       bool   `config:"flag=auth,env=AUTH_ENABLE,default=false,usage=Enable authentication"`
 	Username     string `config:"flag=au,env=AUTH_USERNAME,default=admin,usage=authentication username"`
 	Password     string `config:"flag=ap,env=AUTH_PASSWORD,default=admin99988,usage=authentication password,hide=true"`
-	CookieExpiry string `config:"flag=ae,env=AUTH_EXPIRY,default=6h,usage=Set cookie expiry-300ms/1.5h/2h45m [ns|us|ms|s|m|h]"`
+	CookieExpiry string `config:"flag=ae,env=AUTH_EXPIRY,default=24h,usage=Set cookie expiry-300ms/1.5h/2h45m [ns|us|ms|s|m|h]"`
+	MaxSessions  int    `config:"flag=mxs,env=AUTH_MAX_SESSIONS,default=5,usage=Set max active sessions per user"`
 }
 
-func (d AuthConfig) GetCookieExpiryLimit() (time.Duration, error) {
-	return time.ParseDuration(d.CookieExpiry)
+const defaultCookieExpiry = time.Hour * 24
+
+func (d *Auth) GetCookieExpiryLimitOrDefault() time.Duration {
+	dur, err := time.ParseDuration(d.CookieExpiry)
+	if err != nil {
+		log.Warn().Err(err).
+			Str("cookieExpiry", d.CookieExpiry).
+			Dur("default", defaultCookieExpiry).
+			Msg(`"Couldn't parse cookie expiry
+				check docs: https://www.geeksforgeeks.org/go-language/time-parseduration-function-in-golang-with-examples
+				using default value`,
+			)
+		return defaultCookieExpiry
+	}
+
+	return dur
 }
 
 type UpdaterConfig struct {

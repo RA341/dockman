@@ -37,19 +37,19 @@ type App struct {
 
 func NewApp(conf *config.AppConfig) (*App, error) {
 	cr := conf.ComposeRoot
-	limit, err := conf.Auth.GetCookieExpiryLimit()
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse cookie expiry: %w", err)
-	}
 
-	dbSrv := database.NewService(conf.ConfigDir)
+	gormDB, dbSrv := database.NewService(conf.ConfigDir)
+
 	infoSrv := info.NewService(dbSrv.InfoDB)
 
+	sessionsDB := auth.NewSessionGormDB(gormDB, uint(conf.Auth.MaxSessions))
+	authDB := auth.NewUserGormDB(gormDB)
 	authSrv := auth.NewService(
 		conf.Auth.Username,
 		conf.Auth.Password,
-		limit,
-		dbSrv.AuthDb,
+		&conf.Auth,
+		authDB,
+		sessionsDB,
 	)
 
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
@@ -74,7 +74,7 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		conf.Perms.PUID, conf.Perms.GID,
 		dockerManagerSrv.GetActiveClient,
 	)
-	err = git.NewMigrator(cr)
+	err := git.NewMigrator(cr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to complete git migration")
 	}

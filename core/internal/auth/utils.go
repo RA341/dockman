@@ -13,9 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func setCookie[T any](response *connect.Response[T], token string, expiresAt time.Time) {
+func setCookie[T any](
+	response *connect.Response[T],
+	value string,
+	token string,
+	expiresAt time.Time,
+) {
 	cookie := http.Cookie{
-		Name:     HeaderAuth,
+		Name:     value,
 		Value:    token,
 		Expires:  expiresAt,
 		Path:     "/",
