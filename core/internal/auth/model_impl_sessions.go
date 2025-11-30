@@ -55,7 +55,7 @@ func (s *SessionGormDB) NewSession(session *Session) error {
 }
 
 func (s *SessionGormDB) DeleteSession(sessionID uint) error {
-	result := s.db.Delete(&Session{}, sessionID)
+	result := s.db.Unscoped().Delete(&Session{}, sessionID)
 	if result.Error != nil {
 		return result.Error
 	}
