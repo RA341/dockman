@@ -33,6 +33,7 @@ export function MonacoEditor(
         setMounted(true);
         editor.focus();
 
+
         editor.addCommand(
             monaco.KeyMod.Alt | monaco.KeyCode.KeyL,
             async () => {
@@ -120,6 +121,7 @@ export function MonacoEditor(
             onMount={handleEditorDidMount}
             theme="vs-dark"
             options={{
+                tabSize: 2,
                 selectOnLineNumbers: true,
                 minimap: {enabled: false},
                 automaticLayout: true,
