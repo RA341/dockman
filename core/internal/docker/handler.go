@@ -55,12 +55,22 @@ func (h *Handler) container() *ContainerService {
 // 			Compose Actions 			  //
 ////////////////////////////////////////////
 
-func (h *Handler) ComposeStart(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+func (h *Handler) ComposeUp(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.executeComposeStreamCommand(
 		ctx,
 		req.Msg.GetFilename(),
 		responseStream,
 		h.compose().ComposeUp,
+		req.Msg.GetSelectedServices()...,
+	)
+}
+
+func (h *Handler) ComposeStart(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+	return h.executeComposeStreamCommand(
+		ctx,
+		req.Msg.GetFilename(),
+		responseStream,
+		h.compose().ComposeStart,
 		req.Msg.GetSelectedServices()...,
 	)
 }
@@ -75,7 +85,7 @@ func (h *Handler) ComposeStop(ctx context.Context, req *connect.Request[v1.Compo
 	)
 }
 
-func (h *Handler) ComposeRemove(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+func (h *Handler) ComposeDown(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.executeComposeStreamCommand(
 		ctx,
 		req.Msg.GetFilename(),

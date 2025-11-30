@@ -22,8 +22,6 @@ function EditorDeployWidget() {
         message: ''
     });
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
-    // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
-    // const {showSuccess} = useSnackbar();
 
     const runAction = useComposeAction(state => state.runAction)
     const activeAction = useComposeAction(state => state.activeAction)
@@ -34,8 +32,6 @@ function EditorDeployWidget() {
         rpcName: typeof deployActionsConfig[number]['rpcName'],
     ) => {
         runAction(dockerService[rpcName], name, [])
-        // setLogTabs(prev => [...prev, newTab]);
-        // setActiveTabId(id);
     };
 
     return (

@@ -42,13 +42,26 @@ func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, 
 		return err
 	}
 
+	servicesSelected := len(services) > 0
+	if servicesSelected {
+		targetServices, err := project.GetServices(services...)
+		if err != nil {
+			return fmt.Errorf("failed to get services: %w", err)
+		}
+		project.Services = targetServices
+	}
+
 	upOpts := api.UpOptions{
 		Create: api.CreateOptions{
 			Build:    &api.BuildOptions{Services: services},
 			Services: services,
 
-			// todo todo these params need to change for updating dockman
-			RemoveOrphans: true, //  todo this false when updating dockman
+			// todo these params need to change for updating dockman
+			IgnoreOrphans: servicesSelected,
+			// remove orphans if all services are expected
+			// otherwise keep them and mess with selected services only
+			RemoveOrphans: !servicesSelected, // todo this false when updating dockman
+
 			//Recreate:             api.RecreateForce, // Force recreation of the specified services
 			//RecreateDependencies: api.RecreateNever, // Do not recreate dependencies
 
@@ -56,12 +69,39 @@ func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, 
 			AssumeYes: true,
 		},
 		Start: api.StartOptions{
+			Project: project,
 			//OnExit:   api.CascadeStop,
-			Services: services,
+			//Services:       services,
 		},
 	}
 
 	if err := composeClient.Up(ctx, project, upOpts); err != nil {
+		return fmt.Errorf("compose up operation failed: %w", err)
+	}
+
+	return nil
+}
+
+func (s *ComposeService) ComposeStart(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+	if err := s.syncer.Sync(ctx, project); err != nil {
+		return err
+	}
+
+	if len(services) > 0 {
+		targetServices, err := project.GetServices(services...)
+		if err != nil {
+			return fmt.Errorf("failed to get services: %w", err)
+		}
+		project.Services = targetServices
+	}
+
+	startOpts := api.StartOptions{
+		//Services: services,
+		Project: project,
+	}
+
+	err := composeClient.Start(ctx, project.Name, startOpts)
+	if err != nil {
 		return fmt.Errorf("compose up operation failed: %w", err)
 	}
 

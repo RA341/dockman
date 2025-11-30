@@ -1,4 +1,4 @@
-import {Delete, PlayArrow, RestartAlt, Stop, Update} from "@mui/icons-material";
+import {ArrowDownward, ArrowUpward, PlayArrow, RestartAlt, Stop, Update} from "@mui/icons-material";
 import {atom} from "jotai";
 import {create} from 'zustand'
 import {type ComposeFile, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
@@ -17,13 +17,16 @@ export const useActiveComposeFile = create<ActiveComposeFileState>((set) => ({
 
 export const deployActionsConfig = [
     {
+        name: 'up', rpcName: 'composeUp', message: "started", icon: <ArrowUpward/>,
+    },
+    {
+        name: 'down', rpcName: 'composeDown', message: "started", icon: <ArrowDownward/>,
+    },
+    {
         name: 'start', rpcName: 'composeStart', message: "started", icon: <PlayArrow/>,
     },
     {
         name: 'stop', rpcName: 'composeStop', message: "stopped", icon: <Stop/>,
-    },
-    {
-        name: 'remove', rpcName: 'composeRemove', message: "removed", icon: <Delete/>,
     },
     {
         name: 'restart', rpcName: 'composeRestart', message: "restarted", icon: <RestartAlt/>,
@@ -161,7 +164,7 @@ export const useComposeAction = create<{
                             err = error.toString()
                         }
 
-                        term.write(`\r\n\x1b[31mStream Error: ${err}\x1b[0m`);
+                        term.write(`\r\n\x1b[31mError: ${err}\x1b[0m`);
                     }
 
                     get().reset()
