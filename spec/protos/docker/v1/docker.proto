@@ -16,9 +16,10 @@ service DockerService {
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
 
   // compose
+  rpc ComposeUp(ComposeFile) returns (stream LogsMessage) {}
+  rpc ComposeDown(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeStart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeStop(ComposeFile) returns (stream LogsMessage) {}
-  rpc ComposeRemove(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeRestart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeUpdate(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeList(ComposeFile) returns (ListResponse) {}
