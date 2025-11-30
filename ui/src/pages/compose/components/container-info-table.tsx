@@ -51,6 +51,8 @@ export function ContainerTable(
     const [isLoaded, setIsLoaded] = useState(false)
     const {handleCopy, copiedId} = useCopyButton()
 
+    const {handleCopy: handleCopyIP, copiedId: copiedIPId} = useCopyButton()
+
     const getContName = (container: ContainerList) => useContainerId ? container.id : container.serviceName
 
 
@@ -241,6 +243,37 @@ export function ContainerTable(
                         stackName={container.stackName}
                         servicePath={container.servicePath}
                     />
+                </TableCell>
+            )
+        },
+        IP: {
+            getValue: () => 0,
+            header: (label) => (
+                <TableCell sx={tableHeaderStyles}>
+                    {label}
+                </TableCell>),
+            cell: (container) => (
+                <TableCell width={200}>
+                    {!container.IPAddress ? (
+                        <Typography variant="body1" fontWeight="500">---</Typography>
+                    ) : (
+                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+                            <Typography
+                                variant="body2"
+                                sx={{textDecoration: 'none', color: 'primary.main'}}
+                                fontWeight="500"
+                            >
+                                {container.IPAddress}
+                            </Typography>
+                            <CopyButton
+                                handleCopy={handleCopyIP}
+                                thisID={container.IPAddress}
+                                activeID={copiedIPId ?? ""}
+                                tooltip={"Copy IP addr"}
+                            />
+                        </Box>
+
+                    )}
                 </TableCell>
             )
         },

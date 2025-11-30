@@ -723,12 +723,18 @@ func toRPCPort(p container.Port) *v1.Port {
 }
 
 func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, update ImageUpdate) *v1.ContainerList {
+	var ipAddr string
+	for _, netConf := range stack.NetworkSettings.Networks {
+		ipAddr = netConf.IPAddress
+	}
+
 	return &v1.ContainerList{
 		Name:            strings.TrimPrefix(stack.Names[0], "/"),
 		Id:              stack.ID,
 		ImageID:         stack.ImageID,
 		ImageName:       stack.Image,
 		Status:          stack.Status,
+		IPAddress:       ipAddr,
 		UpdateAvailable: update.UpdateRef,
 		Ports:           portSlice,
 		ServiceName:     stack.Labels[api.ServiceLabel],

@@ -1827,6 +1827,7 @@ type ContainerList struct {
 	ServicePath     string `protobuf:"bytes,9,opt,name=servicePath,proto3" json:"servicePath,omitempty"`
 	StackName       string `protobuf:"bytes,10,opt,name=stackName,proto3" json:"stackName,omitempty"`
 	UpdateAvailable string `protobuf:"bytes,11,opt,name=updateAvailable,proto3" json:"updateAvailable,omitempty"`
+	IPAddress       string `protobuf:"bytes,12,opt,name=IPAddress,proto3" json:"IPAddress,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1934,6 +1935,13 @@ func (x *ContainerList) GetStackName() string {
 func (x *ContainerList) GetUpdateAvailable() string {
 	if x != nil {
 		return x.UpdateAvailable
+	}
+	return ""
+}
+
+func (x *ContainerList) GetIPAddress() string {
+	if x != nil {
+		return x.IPAddress
 	}
 	return ""
 }
@@ -2380,7 +2388,7 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"memInBytes\x18\x02 \x01(\x04R\n" +
 	"memInBytes\"<\n" +
 	"\fListResponse\x12,\n" +
-	"\x04list\x18\x01 \x03(\v2\x18.docker.v1.ContainerListR\x04list\"\xd0\x02\n" +
+	"\x04list\x18\x01 \x03(\v2\x18.docker.v1.ContainerListR\x04list\"\xee\x02\n" +
 	"\rContainerList\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aimageID\x18\x02 \x01(\tR\aimageID\x12\x1c\n" +
@@ -2393,7 +2401,8 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"\vservicePath\x18\t \x01(\tR\vservicePath\x12\x1c\n" +
 	"\tstackName\x18\n" +
 	" \x01(\tR\tstackName\x12(\n" +
-	"\x0fupdateAvailable\x18\v \x01(\tR\x0fupdateAvailable\"\x95\x02\n" +
+	"\x0fupdateAvailable\x18\v \x01(\tR\x0fupdateAvailable\x12\x1c\n" +
+	"\tIPAddress\x18\f \x01(\tR\tIPAddress\"\x95\x02\n" +
 	"\x0eContainerStats\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
