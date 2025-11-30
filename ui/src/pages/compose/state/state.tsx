@@ -93,7 +93,7 @@ export const useContainerExec = create<{
         useTerminalAction.getState().open()
 
         const tab: TabTerminal = {
-            id: title,
+            id: window.crypto.randomUUID(),
             title: title,
             interactive: interactive,
             onTerminal: term => {
@@ -105,73 +105,6 @@ export const useContainerExec = create<{
         useTerminalTabs.getState().addTab(title, tab)
     },
 }))
-
-// export const useContainerLogs = create<{
-//     streamLogs: (
-//         title: string,
-//         input: ContainerLogsClean,
-//         streamFn: ContainerLogsStreamFn,
-//     ) => void
-// }>(() => ({
-//     streamLogs: (title, input, streamFn) => {
-//         useTerminalAction.getState().open()
-//
-//         const abort = new AbortController();
-//         const stream = streamFn(input, {signal: abort.signal});
-//
-//         const tab: TabTerminal = {
-//             id: title,
-//             title: title,
-//             interactive: false,
-//             onTerminal: term => {
-//                 function writeTermErr(err: string) {
-//                     console.error("Error", err);
-//
-//                     term.write('\r\n\x1b[31m*** Error ***\n');
-//                     term.write(`${err}\x1b[0m\r`);
-//                 }
-//
-//                 try {
-//                     const ws = new WebSocket(wsUrl);
-//                     ws.binaryType = "arraybuffer";
-//
-//                     ws.onopen = () => {
-//                         term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
-//                         term.focus();
-//                     };
-//
-//                     ws.onmessage = (event) => {
-//                         term.write(
-//                             typeof event.data === 'string' ?
-//                                 event.data :
-//                                 new Uint8Array(event.data)
-//                         );
-//                     };
-//
-//                     ws.onclose = () => {
-//                         term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
-//                         // onClose?.()
-//                     };
-//
-//                     ws.onerror = (err) => {
-//                         writeTermErr(err.toString());
-//                     };
-//
-//                     term.onData((data) => {
-//                         if (ws.readyState === WebSocket.OPEN) {
-//                             ws.send(data);
-//                         }
-//                     });
-//                 } catch (e: unknown) {
-//                     writeTermErr(e.toString());
-//                 }
-//             }
-//         }
-//
-//         useTerminalTabs.getState().addTab(title, tab)
-//
-//     },
-// }))
 
 export const useComposeAction = create<{
     activeAction: ActiveAction | null
@@ -208,7 +141,7 @@ export const useComposeAction = create<{
 
         const title = `${composeFile}-${action}`;
         const tab: TabTerminal = {
-            id: title,
+            id: window.crypto.randomUUID(),
             title: title,
             interactive: false,
             onTerminal: term => {
@@ -228,21 +161,17 @@ export const useComposeAction = create<{
                             err = error.toString()
                         }
 
-                        console.log("error", err);
                         term.write(`\r\n\x1b[31mStream Error: ${err}\x1b[0m`);
                     }
 
-                    console.log("ending action stream")
                     get().reset()
                 };
 
                 asyncStream().then();
             },
         }
-        console.log("Removing tab")
-        useTerminalTabs.getState().close(title)
 
-        console.log("adding new tab")
+        useTerminalTabs.getState().close(title)
         useTerminalTabs.getState().addTab(title, tab)
     },
     reset: () => {
@@ -318,50 +247,6 @@ export const useTerminalTabs = create<{
         },
     })
 )
-
-// interface ComposeActionStreamArgs<T> {
-//     id: string;
-//     getStream: (signal: AbortSignal) => AsyncIterable<T>;
-//     transform: (item: T) => string;
-//     title: string;
-//     inputFn?: (cmd: string) => void,
-//     onSuccess?: () => void;
-//     onFinalize?: () => void;
-// }
-//
-// const useComposeActionStream = create((set) => ({
-//     activeStream: null,
-//     error: null,
-//     runAction: async () => {
-//         const newController = new AbortController();
-//
-//         const sourceStream = getStream(newController.signal);
-//
-//         const transformedStream = transformAsyncIterable(sourceStream, {
-//             transform,
-//             onComplete: () => onSuccess?.(),
-//             onError: (err) => {
-//                 // Don't show an error dialog if the stream was intentionally aborted
-//                 if (!newController.signal.aborted) {
-//                     set({activeAction: null, err: `Error streaming logs: ${err}`})
-//                 }
-//             },
-//             onFinally: () => onFinalize?.(),
-//         });
-//
-//         const newTab: LogTab = {
-//             id,
-//             title,
-//             stream: transformedStream,
-//             controller: newController,
-//             inputFn: inputFn
-//         };
-//
-//         setLogTabs(prev => [...prev, newTab]);
-//         setActiveTabId(id);
-//         setIsLogPanelMinimized(false); // Always expand panel for a new tab
-//     },
-// }))
 
 export const useTerminalAction = create<{
     isTerminalOpen: boolean;

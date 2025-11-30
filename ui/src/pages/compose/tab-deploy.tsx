@@ -21,7 +21,7 @@ interface DeployPageProps {
 
 export function TabDeploy({selectedPage}: DeployPageProps) {
     // const {showError} = useSnackbar();
-    const dockerService = useClient(DockerService);
+
     const {containers, loading, fetchContainers} = useDockerCompose(selectedPage);
 
     const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -33,20 +33,6 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
-
-    const runAction = useComposeAction(state => state.runAction)
-
-    const activeAction = useComposeAction(state => state.activeAction)
-
-    const handleComposeAction = (
-        name: typeof deployActionsConfig[number]['name'],
-        _message: string,
-        rpcName: typeof deployActionsConfig[number]['rpcName'],
-    ) => {
-        runAction(dockerService[rpcName], name, selectedServices, () => {
-            fetchContainers().then()
-        })
-    };
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
         const url = getWSUrl(`docker/logs/${containerId}`)
@@ -72,22 +58,10 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     return (
         <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'background.default'}}>
             <Box sx={{flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-                {/* Action Buttons */}
-                <Box sx={{display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, flexShrink: 0}}>
-                    {deployActionsConfig.map((action) => (
-                        <Button
-                            key={action.name}
-                            variant="outlined"
-                            disabled={!!activeAction}
-                            onClick={() => handleComposeAction(action.name, action.message, action.rpcName)}
-                            startIcon={activeAction === action.name ?
-                                <CircularProgress size={20} color="inherit"/> : action.icon}
-                        >
-                            {action.name.charAt(0).toUpperCase() + action.name.slice(1)}
-                        </Button>
-                    ))}
-                </Box>
-
+                <ComposeActionHeaders
+                    selectedServices={selectedServices}
+                    fetchContainers={fetchContainers}
+                />
                 <Box sx={{
                     flexGrow: 1, overflow: 'hidden', border: '3px ridge',
                     borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
@@ -115,4 +89,44 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
             </Dialog>
         </Box>
     );
+}
+
+function ComposeActionHeaders({selectedServices, fetchContainers}: {
+    selectedServices: string[];
+    fetchContainers: () => Promise<void>
+}) {
+    const dockerService = useClient(DockerService);
+
+    const runAction = useComposeAction(state => state.runAction)
+    const activeAction = useComposeAction(state => state.activeAction)
+
+    const handleComposeAction = (
+        name: typeof deployActionsConfig[number]['name'],
+        _message: string,
+        rpcName: typeof deployActionsConfig[number]['rpcName'],
+    ) => {
+        runAction(dockerService[rpcName], name, selectedServices, () => {
+            fetchContainers().then()
+        })
+    };
+
+    return (
+        <Box sx={{display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, flexShrink: 0}}>
+            {deployActionsConfig.map((action) => (
+                <Button
+                    key={action.name}
+                    variant="outlined"
+                    disabled={!!activeAction}
+                    onClick={() => handleComposeAction(action.name, action.message, action.rpcName)}
+                    startIcon={
+                        activeAction === action.name ?
+                            <CircularProgress size={20} color="inherit"/> :
+                            action.icon
+                    }
+                >
+                    {action.name.charAt(0).toUpperCase() + action.name.slice(1)}
+                </Button>
+            ))}
+        </Box>
+    )
 }

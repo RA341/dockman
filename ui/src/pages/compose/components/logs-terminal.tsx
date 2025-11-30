@@ -86,7 +86,7 @@ const AppTerminal = ({fit, interactive, onTerminal, isActive}: AppTerminalProps)
         }
 
         if (terminalRef.current) {
-            term.open(terminalRef.current);
+            term.open(terminalRef?.current);
             fit?.current.fit();
         }
 

@@ -166,23 +166,27 @@ export function LogsPanel() {
                     {tabs.size === 0 ? (
                         <LogsEmpty/>
                     ) : (
-                        [...tabs.entries()].map(([key, v]) => (
-                            <Box
-                                sx={{
-                                    display: key === activeTab ? 'flex' : 'none',
-                                    height: '100%',
-                                    width: '100%',
-                                    flexDirection: 'column',
-                                    flex: 1
-                                }}
-                            >
-                                <AppTerminal
-                                    {...v}
-                                    fit={fitAddonRef}
-                                    isActive={key === activeTab}
-                                />
-                            </Box>
-                        ))
+                        [...tabs.entries()].map(([key, v]) => {
+                            return (
+                                <Box
+                                    key={v.id}
+                                    sx={{
+                                        display: key === activeTab ? 'flex' : 'none',
+                                        height: '100%',
+                                        width: '100%',
+                                        flexDirection: 'column',
+                                        flex: 1
+                                    }}
+                                >
+                                    <AppTerminal
+                                        key={v.id}
+                                        {...v}
+                                        fit={fitAddonRef}
+                                        isActive={key === activeTab}
+                                    />
+                                </Box>
+                            )
+                        })
                     )}
                 </Box>
             </Box>
