@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"path/filepath"
 	"slices"
@@ -21,10 +21,11 @@ import (
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v2/pkg/api"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -160,8 +161,12 @@ func (h *Handler) containersToRpc(result []container.Summary) []*v1.ContainerLis
 
 		var portSlice []*v1.Port
 		for _, p := range stack.Ports {
-			if isIPV4(p.IP) {
-				p.IP = h.container().daemonAddr
+			if p.IP.Is4() {
+				addr, err := netip.ParseAddr(h.container().daemonAddr)
+				if err == nil {
+					p.IP = addr
+				}
+
 				// ignore ipv6 ports no one uses it anyway
 				portSlice = append(portSlice, toRPCPort(p))
 			}
@@ -255,7 +260,7 @@ func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.St
 		}
 		containers, err = h.compose().ComposeStats(ctx, project)
 	} else {
-		containers, err = h.container().ContainerStats(ctx, container.ListOptions{})
+		containers, err = h.container().ContainerStats(ctx, client.ContainerListOptions{})
 	}
 	if err != nil {
 		return nil, err
@@ -525,7 +530,7 @@ func getSubnet(netI network.Inspect) string {
 	if len(netI.IPAM.Config) == 0 {
 		return "-----"
 	}
-	return netI.IPAM.Config[0].Subnet
+	return netI.IPAM.Config[0].Subnet.String()
 }
 
 func (h *Handler) NetworkCreate(_ context.Context, _ *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error) {
@@ -536,7 +541,7 @@ func (h *Handler) NetworkCreate(_ context.Context, _ *connect.Request[v1.CreateN
 func (h *Handler) NetworkDelete(ctx context.Context, req *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error) {
 	var err error
 	if req.Msg.Prune {
-		_, err = h.container().NetworksPrune(ctx)
+		err = h.container().NetworksPrune(ctx)
 	} else {
 		for _, nid := range req.Msg.NetworkIds {
 			err = h.container().NetworksDelete(ctx, nid)
@@ -619,11 +624,6 @@ func ToRPCStat(cont ContainerStats) *v1.ContainerStats {
 		BlockRead:   cont.BlockRead,
 		BlockWrite:  cont.BlockWrite,
 	}
-}
-
-func isIPV4(ip string) bool {
-	parsedIP := net.ParseIP(ip)
-	return parsedIP != nil && parsedIP.To4() != nil
 }
 
 func getSortFn(field v1.SORT_FIELD) func(a, b ContainerStats) int {
@@ -713,11 +713,11 @@ func streamManager(streamFn func(val string) error) (*io.PipeWriter, *sync.WaitG
 	return pipeWriter, &wg
 }
 
-func toRPCPort(p container.Port) *v1.Port {
+func toRPCPort(p container.PortSummary) *v1.Port {
 	return &v1.Port{
 		Public:  int32(p.PublicPort),
 		Private: int32(p.PrivatePort),
-		Host:    p.IP,
+		Host:    p.IP.String(),
 		Type:    p.Type,
 	}
 }
@@ -725,7 +725,7 @@ func toRPCPort(p container.Port) *v1.Port {
 func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, update ImageUpdate) *v1.ContainerList {
 	var ipAddr string
 	for _, netConf := range stack.NetworkSettings.Networks {
-		ipAddr = netConf.IPAddress
+		ipAddr = netConf.IPAddress.String()
 	}
 
 	return &v1.ContainerList{

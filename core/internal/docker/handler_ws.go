@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/websocket"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -39,12 +39,12 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 	}
 
 	ctx := context.Background()
-	execConfig := container.ExecOptions{
+	execConfig := client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
-		Tty:          true,
-		Cmd:          []string{execCmd},
+		TTY:          true,
+		Cmd:          []string{"/bin/sh"},
 	}
 
 	ws, err := upgrader.Upgrade(w, r, nil)
@@ -54,14 +54,14 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 	}
 	defer fileutil.Close(ws)
 
-	daemon := srv().Container.daemon
-	execResp, err := daemon.ContainerExecCreate(ctx, contId, execConfig)
+	daemon := srv().Container.Daemon
+	execResp, err := daemon.ExecCreate(ctx, contId, {})
 	if err != nil {
 		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
 		return
 	}
 
-	resp, err := daemon.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{Tty: true})
+	resp, err := daemon.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{TTY: true})
 	if err != nil {
 		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
 		return

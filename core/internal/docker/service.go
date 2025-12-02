@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // LocalClient is the name given to the local docker daemon instance

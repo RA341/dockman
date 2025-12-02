@@ -4,33 +4,16 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
-
-const configID = 1
-
-type Store interface {
-	GetConfig() (PruneConfig, error)
-	UpdateConfig(*PruneConfig) error
-	InitConfig() error
-
-	AddResult(*PruneResult) error
-	ListResult() ([]PruneResult, error)
-	DeleteResult(id int) error
-}
 
 type GormStore struct {
 	db *gorm.DB
 }
 
-func (g *GormStore) GetModels() []interface{} {
-	return []interface{}{
-		&PruneConfig{},
-		&PruneResult{},
-	}
-}
-
 func NewStore(db *gorm.DB) *GormStore {
+	database.MustMigrate(db, &PruneConfig{}, &PruneResult{})
 	return &GormStore{db: db}
 }
 
@@ -72,13 +55,55 @@ func (g *GormStore) UpdateConfig(config *PruneConfig) error {
 	return g.db.Save(config).Error
 }
 
+const maxPruneResults = 10
+
 func (g *GormStore) AddResult(result *PruneResult) error {
-	return g.db.Save(result).Error
+	//return g.db.Save(result).Error
+
+	return g.db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(&result).Error
+		if err != nil {
+			return err
+		}
+
+		var count int64
+		err = tx.Model(&PruneResult{}).
+			//Where("user_id = ?", session.UserID).
+			Count(&count).Error
+		if err != nil {
+			return err
+		}
+
+		maxSessions := int64(maxPruneResults)
+		if count > maxSessions {
+			sessionsToDelete := count - maxSessions
+
+			var oldSessions []PruneResult
+			// Find the oldest session IDs to delete
+			err = tx.
+				Order("created_at ASC").
+				Limit(int(sessionsToDelete)).
+				Find(&oldSessions).Error
+			if err != nil {
+				return err
+			}
+
+			for _, oldSession := range oldSessions {
+				err = tx.Delete(&oldSession).Error
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+
 }
 
 func (g *GormStore) ListResult() ([]PruneResult, error) {
 	var result []PruneResult
-	err := g.db.Find(&result).Error
+	err := g.db.Order("created_at DESC").Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -87,4 +112,11 @@ func (g *GormStore) ListResult() ([]PruneResult, error) {
 
 func (g *GormStore) DeleteResult(id int) error {
 	return g.db.Delete(&PruneResult{}, id).Error
+}
+
+func (g *GormStore) GetModels() []interface{} {
+	return []interface{}{
+		&PruneConfig{},
+		&PruneResult{},
+	}
 }

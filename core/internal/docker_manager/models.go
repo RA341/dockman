@@ -3,7 +3,7 @@ package docker_manager
 import (
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 type ConnectedDockerClient struct {

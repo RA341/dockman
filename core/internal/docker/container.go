@@ -14,14 +14,12 @@ import (
 
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/docker/compose/v2/pkg/api"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/api/types/volume"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -62,20 +60,24 @@ func NewUpdaterService(client *client.Client) *ContainerService {
 // Container stuff
 
 func (s *ContainerService) ContainersList(ctx context.Context) ([]container.Summary, error) {
-	return s.Daemon.ContainerList(ctx, container.ListOptions{
+	list, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
 		All:    true,
 		Size:   false,
 		Latest: false,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
 }
 
 func (s *ContainerService) containerListByIDs(ctx context.Context, containerID ...string) ([]container.Summary, error) {
-	filterArgs := filters.NewArgs()
+	filterArgs := client.Filters{}
 	for _, id := range containerID {
 		filterArgs.Add("id", id)
 	}
 
-	options := container.ListOptions{
+	options := client.ContainerListOptions{
 		All:     true, // Include stopped containers
 		Filters: filterArgs,
 	}
@@ -85,12 +87,12 @@ func (s *ContainerService) containerListByIDs(ctx context.Context, containerID .
 		return nil, fmt.Errorf("unable to fetch container info: %w", err)
 	}
 
-	return list, nil
+	return list.Items, nil
 }
 
 func (s *ContainerService) ContainersStart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.Daemon.ContainerStart(ctx, cont, container.StartOptions{})
+		_, err := s.Daemon.ContainerStart(ctx, cont, client.ContainerStartOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to start Container: %s => %w", cont, err)
 		}
@@ -100,7 +102,7 @@ func (s *ContainerService) ContainersStart(ctx context.Context, containerId ...s
 
 func (s *ContainerService) ContainersStop(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.Daemon.ContainerStop(ctx, cont, container.StopOptions{})
+		_, err := s.Daemon.ContainerStop(ctx, cont, client.ContainerStopOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to stop Container: %s => %w", cont, err)
 		}
@@ -110,7 +112,7 @@ func (s *ContainerService) ContainersStop(ctx context.Context, containerId ...st
 
 func (s *ContainerService) ContainersRestart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.Daemon.ContainerRestart(ctx, cont, container.StopOptions{})
+		_, err := s.Daemon.ContainerRestart(ctx, cont, client.ContainerRestartOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to restart Container: %s => %w", cont, err)
 		}
@@ -120,7 +122,7 @@ func (s *ContainerService) ContainersRestart(ctx context.Context, containerId ..
 
 func (s *ContainerService) ContainersRemove(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		err := s.Daemon.ContainerRemove(ctx, cont, container.RemoveOptions{
+		_, err := s.Daemon.ContainerRemove(ctx, cont, client.ContainerRemoveOptions{
 			Force: true,
 		})
 		if err != nil {
@@ -131,12 +133,12 @@ func (s *ContainerService) ContainersRemove(ctx context.Context, containerId ...
 }
 
 func (s *ContainerService) ContainerLogs(ctx context.Context, containerID string) (io.ReadCloser, bool, error) {
-	inspect, err := s.Daemon.ContainerInspect(ctx, containerID)
+	inspect, err := s.Daemon.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, false, fmt.Errorf("unable to inspect container: %w", err)
 	}
 
-	logStream, err := s.Daemon.ContainerLogs(ctx, containerID, container.LogsOptions{
+	logStream, err := s.Daemon.ContainerLogs(ctx, containerID, client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -146,14 +148,15 @@ func (s *ContainerService) ContainerLogs(ctx context.Context, containerID string
 		return nil, false, fmt.Errorf("unable to get container logs: %w", err)
 	}
 
-	return logStream, inspect.Config.Tty, nil
+	return logStream, inspect.Container.Config.Tty, nil
 }
 
-func (s *ContainerService) ContainerStats(ctx context.Context, filter container.ListOptions) ([]ContainerStats, error) {
-	containers, err := s.Daemon.ContainerList(ctx, filter)
+func (s *ContainerService) ContainerStats(ctx context.Context, filter client.ContainerListOptions) ([]ContainerStats, error) {
+	contRes, err := s.Daemon.ContainerList(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not list containers: %w", err)
 	}
+	containers := contRes.Items
 
 	if len(containers) == 0 {
 		return []ContainerStats{}, nil
@@ -176,7 +179,7 @@ func (s *ContainerService) containerGetStatsFromList(ctx context.Context, contai
 
 func (s *ContainerService) ContainersUpdateAll(ctx context.Context, opts ...UpdateOption) error {
 	containers, err := s.Daemon.ContainerList(ctx,
-		container.ListOptions{
+		client.ContainerListOptions{
 			All: true,
 		},
 	)
@@ -186,7 +189,7 @@ func (s *ContainerService) ContainersUpdateAll(ctx context.Context, opts ...Upda
 
 	return s.containersUpdateLoop(
 		ctx,
-		containers,
+		containers.Items,
 		opts...,
 	)
 }
@@ -217,10 +220,10 @@ func (s *ContainerService) ContainersUpdateByContainerID(ctx context.Context, co
 // with the new image while preserving their configuration.
 func (s *ContainerService) ContainersUpdateByImage(ctx context.Context, imageTag string) error {
 	// Find all containers using this image
-	containerFilters := filters.NewArgs()
+	containerFilters := client.Filters{}
 	containerFilters.Add("ancestor", imageTag)
 
-	containers, err := s.Daemon.ContainerList(ctx, container.ListOptions{
+	containers, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
 		All:     true, // Consider both running and stopped containers
 		Filters: containerFilters,
 	})
@@ -228,7 +231,7 @@ func (s *ContainerService) ContainersUpdateByImage(ctx context.Context, imageTag
 		return fmt.Errorf("failed to list containers for image %s: %w", imageTag, err)
 	}
 
-	return s.containersUpdateLoop(ctx, containers, WithForceUpdate())
+	return s.containersUpdateLoop(ctx, containers.Items, WithForceUpdate())
 }
 
 type UpdateOption func(*containersUpdateConfig)
@@ -430,83 +433,84 @@ func UpdateDockman(containerID, updaterUrl string) error {
 }
 
 func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag string, oldContainer container.Summary) error {
-	containerName := "Untagged"
-	if len(oldContainer.Names) > 0 {
-		containerName = strings.TrimPrefix(oldContainer.Names[0], "/")
-	}
-
-	log.Debug().Msgf("Processing container: %s (ID: %s)", containerName, oldContainer.ID[:12])
-
-	inspectedData, err := s.Daemon.ContainerInspect(ctx, oldContainer.ID)
-	if err != nil {
-		return fmt.Errorf("failed to inspect container %s: %w", oldContainer.ID, err)
-	}
-
-	log.Debug().Msgf("Stopping old container %s...", containerName)
-	if err := s.Daemon.ContainerStop(ctx, oldContainer.ID, container.StopOptions{}); err != nil {
-		return fmt.Errorf("failed to stop container %s: %w", oldContainer.ID, err)
-	}
-
-	// if container was not running before create but do not start
-	if !inspectedData.State.Running {
-		if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{}); err != nil {
-			return fmt.Errorf("failed to remove old container %s: %w", oldContainer.ID, err)
-		}
-
-		_, err := s.containerCreate(ctx, imageTag, containerName, inspectedData)
-		if err != nil {
-			return fmt.Errorf("failed to create container %s: %w", containerName, err)
-		}
-
-		return nil
-	}
-
-	newContainer, err := s.containerCreate(ctx, imageTag, containerName+"_updated", inspectedData)
-	if err != nil {
-		return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
-	}
-
-	log.Debug().Msgf("Starting new container %s...", newContainer.ID[:12])
-	if err = s.Daemon.ContainerStart(ctx, newContainer.ID, container.StartOptions{}); err != nil {
-
-		err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
-		if err != nil {
-			return err
-		}
-
-		return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
-	}
-
-	if err = s.ContainerHealthCheck(newContainer.ID, &inspectedData); err != nil {
-
-		err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
-		if err != nil {
-			return err
-		}
-
-		return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
-	}
-
-	// Health check passed - now we can safely remove old container and rename new one
-	log.Debug().Msgf("Health check passed, finalizing update...")
-
-	if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{Force: true}); err != nil {
-		log.Warn().Msgf("Failed to remove old container: %v", err)
-	}
-
-	// Rename new container to original name
-	if err := s.Daemon.ContainerRename(ctx, newContainer.ID, containerName); err != nil {
-		log.Warn().Msgf("Failed to rename container to original name: %v", err)
-	}
-
-	log.Info().Msgf("Successfully updated container %s", containerName)
-	return nil
+	//containerName := "Untagged"
+	//if len(oldContainer.Names) > 0 {
+	//	containerName = strings.TrimPrefix(oldContainer.Names[0], "/")
+	//}
+	//
+	//log.Debug().Msgf("Processing container: %s (ID: %s)", containerName, oldContainer.ID[:12])
+	//
+	//inspectedData, err := s.Daemon.ContainerInspect(ctx, oldContainer.ID, client.ContainerInspectOptions{})
+	//if err != nil {
+	//	return fmt.Errorf("failed to inspect container %s: %w", oldContainer.ID, err)
+	//}
+	//
+	//log.Debug().Msgf("Stopping old container %s...", containerName)
+	//if err := s.Daemon.ContainerStop(ctx, oldContainer.ID, container.StopOptions{}); err != nil {
+	//	return fmt.Errorf("failed to stop container %s: %w", oldContainer.ID, err)
+	//}
+	//
+	//// if container was not running before create but do not start
+	//if !inspectedData.State.Running {
+	//	if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{}); err != nil {
+	//		return fmt.Errorf("failed to remove old container %s: %w", oldContainer.ID, err)
+	//	}
+	//
+	//	_, err := s.containerCreate(ctx, imageTag, containerName, inspectedData)
+	//	if err != nil {
+	//		return fmt.Errorf("failed to create container %s: %w", containerName, err)
+	//	}
+	//
+	//	return nil
+	//}
+	//
+	//newContainer, err := s.containerCreate(ctx, imageTag, containerName+"_updated", inspectedData)
+	//if err != nil {
+	//	return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
+	//}
+	//
+	//log.Debug().Msgf("Starting new container %s...", newContainer.ID[:12])
+	//if err = s.Daemon.ContainerStart(ctx, newContainer.ID, container.StartOptions{}); err != nil {
+	//
+	//	err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
+	//}
+	//
+	//if err = s.ContainerHealthCheck(newContainer.ID, &inspectedData); err != nil {
+	//
+	//	err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
+	//}
+	//
+	//// Health check passed - now we can safely remove old container and rename new one
+	//log.Debug().Msgf("Health check passed, finalizing update...")
+	//
+	//if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{Force: true}); err != nil {
+	//	log.Warn().Msgf("Failed to remove old container: %v", err)
+	//}
+	//
+	//// Rename new container to original name
+	//if err := s.Daemon.ContainerRename(ctx, newContainer.ID, containerName); err != nil {
+	//	log.Warn().Msgf("Failed to rename container to original name: %v", err)
+	//}
+	//
+	//log.Info().Msgf("Successfully updated container %s", containerName)
+	return fmt.Errorf("unimplemented dumbass")
 }
 
 func (s *ContainerService) containerRollbackToOldContainer(ctx context.Context, oldContainerID, containerName string, originalErr error) error {
 	log.Warn().Msgf("Rolling back to old container %s", containerName)
 
-	if err := s.Daemon.ContainerStart(ctx, oldContainerID, container.StartOptions{}); err != nil {
+	_, err := s.Daemon.ContainerStart(ctx, oldContainerID, client.ContainerStartOptions{})
+	if err != nil {
 		return fmt.Errorf("rollback failed - cannot restart old container: %w (original error: %v)", err, originalErr)
 	}
 
@@ -519,24 +523,24 @@ func (s *ContainerService) containerCreate(
 	imageTag, containerName string,
 	inspectedData container.InspectResponse,
 ) (container.CreateResponse, error) {
-	// Create a new container with the same configuration but the new image
-	// The inspected config has the old image name, so we update it.
-	log.Debug().Msgf("Creating new container %s with updated image...", containerName)
-	inspectedData.Config.Image = imageTag
-	newContainer, err := s.Daemon.ContainerCreate(ctx,
-		inspectedData.Config,
-		inspectedData.HostConfig,
-		&network.NetworkingConfig{
-			EndpointsConfig: inspectedData.NetworkSettings.Networks,
-		},
-		nil,
-		containerName,
-	)
-	if err != nil {
-		return container.CreateResponse{}, fmt.Errorf("failed to create new container for %s: %w", containerName, err)
-	}
-
-	return newContainer, nil
+	//// Create a new container with the same configuration but the new image
+	//// The inspected config has the old image name, so we update it.
+	//log.Debug().Msgf("Creating new container %s with updated image...", containerName)
+	//inspectedData.Config.Image = imageTag
+	//newContainer, err := s.Daemon.ContainerCreate(ctx,
+	//	inspectedData.Config,
+	//	inspectedData.HostConfig,
+	//	&network.NetworkingConfig{
+	//		EndpointsConfig: inspectedData.NetworkSettings.Networks,
+	//	},
+	//	nil,
+	//	containerName,
+	//)
+	//if err != nil {
+	//	return container.CreateResponse{}, fmt.Errorf("failed to create new container for %s: %w", containerName, err)
+	//}
+	//return newContainer, nil
+	return container.CreateResponse{}, fmt.Errorf("unimplemented container create")
 }
 
 func (s *ContainerService) ContainerHealthCheck(containerID string, c *container.InspectResponse) error {
@@ -582,16 +586,17 @@ func (s *ContainerService) containerHealthCheckUptime(containerID string, c *con
 	defer timer.Stop()
 	<-timer.C
 
-	inspect, err := s.Daemon.ContainerInspect(context.Background(), containerID)
+	inspect, err := s.Daemon.ContainerInspect(context.Background(), containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return err
 	}
 
-	if !inspect.State.Running {
+	state := inspect.Container.State
+	if !state.Running {
 		return fmt.Errorf("container is not running")
 	}
 
-	startedAt, err := time.Parse(time.RFC3339Nano, inspect.State.StartedAt)
+	startedAt, err := time.Parse(time.RFC3339Nano, state.StartedAt)
 	if err != nil {
 		return fmt.Errorf("failed to parse started time: %w", err)
 	}
@@ -644,29 +649,33 @@ func (s *ContainerService) containerHealthCheckPing(c *container.InspectResponse
 // Image stuff
 
 func (s *ContainerService) ImageList(ctx context.Context) ([]image.Summary, error) {
-	return s.Daemon.ImageList(ctx, image.ListOptions{
+	list, err := s.Daemon.ImageList(ctx, client.ImageListOptions{
 		All:        true,
 		SharedSize: true,
 		Manifests:  true,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, err
 }
 
 func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName string) (bool, string, error) {
 	// Get local image info
-	localImages, err := s.Daemon.ImageList(ctx, image.ListOptions{
-		Filters: filters.NewArgs(filters.Arg("reference", imageName)),
+	localImages, err := s.Daemon.ImageList(ctx, client.ImageListOptions{
+		Filters: client.Filters{}.Add("reference", imageName),
 	})
 	if err != nil {
 		return false, "", err
 	}
 
 	var localDigest string
-	for _, img := range localImages {
+	for _, img := range localImages.Items {
 		localDigest = img.ID
 	}
 
 	// Get remote image info
-	distributionInspect, err := s.Daemon.DistributionInspect(ctx, imageName, "")
+	distributionInspect, err := s.Daemon.DistributionInspect(ctx, imageName, client.DistributionInspectOptions{})
 	if err != nil {
 		return false, "", err
 	}
@@ -681,7 +690,7 @@ func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName s
 func (s *ContainerService) ImagePull(ctx context.Context, imageTag string) error {
 	log.Info().Msg("Pulling latest image")
 
-	reader, err := s.Daemon.ImagePull(ctx, imageTag, image.PullOptions{})
+	reader, err := s.Daemon.ImagePull(ctx, imageTag, client.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageTag, err)
 	}
@@ -697,20 +706,24 @@ func (s *ContainerService) ImagePull(ctx context.Context, imageTag string) error
 }
 
 func (s *ContainerService) ImageDelete(ctx context.Context, imageId string) ([]image.DeleteResponse, error) {
-	return s.Daemon.ImageRemove(ctx, imageId, image.RemoveOptions{})
+	remove, err := s.Daemon.ImageRemove(ctx, imageId, client.ImageRemoveOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete image %s: %w", imageId, err)
+	}
+	return remove.Items, err
 }
 
 func (s *ContainerService) ImagePruneUntagged(ctx context.Context) (image.PruneReport, error) {
-	filter := filters.NewArgs()
+	filter := client.Filters{}
 	// removes dangling (untagged) mostly due to image being updated
 	filter.Add("dangling", "true")
 
-	prune, err := s.Daemon.ImagesPrune(ctx, filter)
+	prune, err := s.Daemon.ImagePrune(ctx, client.ImagePruneOptions{})
 	if err != nil {
-		return prune, err
+		return prune.Report, err
 	}
 
-	deletedIDs := ToMap(prune.ImagesDeleted, func(t image.DeleteResponse) string {
+	deletedIDs := ToMap(prune.Report.ImagesDeleted, func(t image.DeleteResponse) string {
 		return t.Deleted
 	})
 
@@ -719,34 +732,38 @@ func (s *ContainerService) ImagePruneUntagged(ctx context.Context) (image.PruneR
 		log.Warn().Err(err).Msg("failed to cleanup image update db")
 	}
 
-	return prune, nil
+	return prune.Report, nil
 }
 
 func (s *ContainerService) ImagePruneUnused(ctx context.Context) (image.PruneReport, error) {
-	filter := filters.NewArgs()
+	filter := client.Filters{}
 	filter.Add("dangling", "false")
 	// force remove all unused
-	return s.Daemon.ImagesPrune(ctx, filter)
+	prune, err := s.Daemon.ImagePrune(ctx, client.ImagePruneOptions{Filters: filter})
+	if err != nil {
+		return prune.Report, err
+	}
+	return prune.Report, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Network stuff
 
 func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect, error) {
-	list, err := s.Daemon.NetworkList(ctx, network.ListOptions{})
+	list, err := s.Daemon.NetworkList(ctx, client.NetworkListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	var errs []error
 	var result []network.Inspect
-	for _, ref := range list {
-		networkInspect, err2 := s.Daemon.NetworkInspect(ctx, ref.ID, network.InspectOptions{})
+	for _, ref := range list.Items {
+		networkInspect, err2 := s.Daemon.NetworkInspect(ctx, ref.ID, client.NetworkInspectOptions{})
 		if err2 != nil {
 			errs = append(errs, err2)
 			continue
 		}
-		result = append(result, networkInspect)
+		result = append(result, networkInspect.Network)
 	}
 
 	if errs != nil {
@@ -756,83 +773,78 @@ func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect,
 	return result, nil
 }
 
-func (s *ContainerService) NetworksCreate(ctx context.Context, name string) (network.CreateResponse, error) {
-	return s.Daemon.NetworkCreate(ctx, name, network.CreateOptions{})
+func (s *ContainerService) NetworksCreate(ctx context.Context, name string) error {
+	_, err := s.Daemon.NetworkCreate(ctx, name, client.NetworkCreateOptions{})
+	return err
 }
 
 func (s *ContainerService) NetworksDelete(ctx context.Context, networkID string) error {
-	return s.Daemon.NetworkRemove(ctx, networkID)
+	_, err := s.Daemon.NetworkRemove(ctx, networkID, client.NetworkRemoveOptions{})
+	return err
 }
 
-func (s *ContainerService) NetworksPrune(ctx context.Context) (network.PruneReport, error) {
-	return s.Daemon.NetworksPrune(ctx, filters.NewArgs())
+func (s *ContainerService) NetworksPrune(ctx context.Context) error {
+	_, err := s.Daemon.NetworkPrune(ctx, client.NetworkPruneOptions{})
+	return err
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Volume stuff
 
 type VolumeInfo struct {
-	*volume.Volume
+	volume.Volume
 	ContainerID        string
 	ComposePath        string
 	ComposeProjectName string
 }
 
 func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error) {
-	listResp, err := s.Daemon.VolumeList(ctx, volume.ListOptions{})
+	listResp, err := s.Daemon.VolumeList(ctx, client.VolumeListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	if listResp.Volumes == nil {
-		return []VolumeInfo{}, nil // Return empty slice instead of nil
+	if listResp.Items == nil {
+		return []VolumeInfo{}, nil
 	}
 
-	diskUsage, err := s.Daemon.DiskUsage(ctx, types.DiskUsageOptions{
-		Types: []types.DiskUsageObject{types.VolumeObject}, // fetch volumes only
+	diskUsage, err := s.Daemon.DiskUsage(ctx, client.DiskUsageOptions{
+		Volumes: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get disk usage data: %w", err)
 	}
 
-	// Add nil check for diskUsage.Volumes with zerolog debug logging
-	tmpMap := make(map[string]*volume.Volume)
-	if diskUsage.Volumes == nil {
+	tmpMap := make(map[string]volume.Volume)
+	sd := diskUsage.Volumes.Items
+	if sd == nil {
 		log.Debug().Msg("DiskUsage returned nil volumes slice")
 	} else {
-		tmpMap = make(map[string]*volume.Volume, len(diskUsage.Volumes))
-		for _, l := range diskUsage.Volumes {
+		tmpMap = make(map[string]volume.Volume, len(sd))
+		for _, l := range sd {
 			tmpMap[l.Name] = l
 		}
 	}
 
-	var volumeFilters []filters.KeyValuePair
-	for i, vol := range listResp.Volumes {
-		if vol == nil {
-			continue
-		}
-
+	var volumeFilters client.Filters
+	for i, vol := range listResp.Items {
 		val, ok := tmpMap[vol.Name]
 		if ok {
-			// overwrite with more metadata from diskusage
-			listResp.Volumes[i] = val
-			volumeFilters = append(volumeFilters, filters.Arg("volume", val.Name))
-			continue
+			listResp.Items[i] = val
 		}
-
-		volumeFilters = append(volumeFilters, filters.Arg("volume", vol.Name))
+		volumeFilters.Add("volume", val.Name)
 	}
 
-	containers, err := s.Daemon.ContainerList(ctx, container.ListOptions{
+	containers, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(volumeFilters...),
+		Filters: volumeFilters,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
 	containersUsingVolumesMap := make(map[string][3]string)
-	for _, c := range containers {
+	for _, c := range containers.Items {
 		// We inspect the container's Mounts to find volume information.
 		for _, mn := range c.Mounts {
 			if mn.Type == mount.TypeVolume {
@@ -849,11 +861,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 	}
 
 	var volumes []VolumeInfo
-	for _, vol := range listResp.Volumes {
-		if vol == nil {
-			continue
-		}
-
+	for _, vol := range listResp.Items {
 		inf := VolumeInfo{Volume: vol}
 		if contID, found := containersUsingVolumesMap[vol.Name]; found {
 			inf.ContainerID = contID[0]
@@ -868,36 +876,44 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 }
 
 func (s *ContainerService) VolumesCreate(ctx context.Context, name string) (volume.Volume, error) {
-	return s.Daemon.VolumeCreate(ctx, volume.CreateOptions{
+	create, err := s.Daemon.VolumeCreate(ctx, client.VolumeCreateOptions{
 		Name: name,
 	})
+	if err != nil {
+		return volume.Volume{}, err
+	}
+	return create.Volume, err
 }
 
 func (s *ContainerService) VolumesDelete(ctx context.Context, volumeName string, force bool) error {
-	return s.Daemon.VolumeRemove(ctx, volumeName, force)
+	_, err := s.Daemon.VolumeRemove(ctx, volumeName, client.VolumeRemoveOptions{Force: force})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
-	volResponse, err := s.Daemon.VolumeList(ctx, volume.ListOptions{})
+	volResponse, err := s.Daemon.VolumeList(ctx, client.VolumeListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get disk usage data: %w", err)
 	}
 
-	var volumeFilters []filters.KeyValuePair
-	for _, vol := range volResponse.Volumes {
-		volumeFilters = append(volumeFilters, filters.Arg("volume", vol.Name))
+	var volumeFilters client.Filters
+	for _, vol := range volResponse.Items {
+		volumeFilters.Add("volume", vol.Name)
 	}
 
-	containers, err := s.Daemon.ContainerList(ctx, container.ListOptions{
+	containers, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
-		Filters: filters.NewArgs(volumeFilters...),
+		Filters: volumeFilters,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 
 	containersUsingVolumesMap := make(map[string]string)
-	for _, c := range containers {
+	for _, c := range containers.Items {
 		// We inspect the container's Mounts to find volume information.
 		for _, mn := range c.Mounts {
 			if mn.Type == mount.TypeVolume {
@@ -910,12 +926,12 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 	}
 
 	var delErr error
-	for _, vol := range volResponse.Volumes {
+	for _, vol := range volResponse.Items {
 		if _, found := containersUsingVolumesMap[vol.Name]; found {
 			continue
 		}
 
-		err = s.Daemon.VolumeRemove(ctx, vol.Name, false)
+		_, err = s.Daemon.VolumeRemove(ctx, vol.Name, client.VolumeRemoveOptions{})
 		if err != nil {
 			delErr = fmt.Errorf("%w\n%w", delErr, err)
 		}
@@ -925,10 +941,8 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 }
 
 func (s *ContainerService) VolumesPrune(ctx context.Context) error {
-	prune, err := s.Daemon.VolumesPrune(ctx, filters.NewArgs())
-	if err != nil {
-		log.Debug().Any("report", prune).Msg("VolumesPrune result")
-	}
+	prune, err := s.Daemon.VolumePrune(ctx, client.VolumePruneOptions{})
+	log.Debug().Any("report", prune).Msg("VolumesPrune result")
 	return err
 }
 
@@ -937,7 +951,7 @@ func (s *ContainerService) VolumesPrune(ctx context.Context) error {
 
 func (s *ContainerService) getAndFormatStats(ctx context.Context, info container.Summary) (ContainerStats, error) {
 	contId := info.ID[:12]
-	stats, err := s.Daemon.ContainerStats(ctx, info.ID, false)
+	stats, err := s.Daemon.ContainerStats(ctx, info.ID, client.ContainerStatsOptions{})
 	if err != nil {
 		return ContainerStats{}, fmt.Errorf("failed to get stats for cont %s: %w", contId, err)
 	}
@@ -967,41 +981,6 @@ func (s *ContainerService) getAndFormatStats(ctx context.Context, info container
 		BlockRead:   blkRead,
 		BlockWrite:  blkWrite,
 	}, nil
-}
-
-func (s *ContainerService) ExecContainer(ctx context.Context, containerID string, cmd []string) (*types.HijackedResponse, error) {
-	execConfig := container.ExecOptions{
-		Cmd:          cmd,
-		AttachStdout: true,
-		AttachStderr: true,
-		AttachStdin:  true,
-		Tty:          true,
-	}
-
-	execCreateResp, err := s.Daemon.ContainerExecCreate(ctx, containerID, execConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create exec instance: %w", err)
-	}
-
-	execAttachOptions := container.ExecAttachOptions{
-		Detach: false,
-		Tty:    true,
-	}
-
-	hijackedResp, err := s.Daemon.ContainerExecAttach(ctx, execCreateResp.ID, execAttachOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to attach to exec instance: %w", err)
-	}
-
-	err = s.Daemon.ContainerExecStart(ctx, execCreateResp.ID, container.ExecStartOptions{
-		Detach: false,
-		Tty:    true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to start exec instance: %w", err)
-	}
-
-	return &hijackedResp, nil
 }
 
 func formatDiskIO(statsJSON container.StatsResponse) (uint64, uint64) {

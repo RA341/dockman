@@ -18,8 +18,9 @@ import (
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/docker/compose/v2/pkg/compose"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -183,11 +184,11 @@ func (s *ComposeService) ComposeUpdate(ctx context.Context, project *types.Proje
 
 // ComposeList The `all` parameter controls whether to show stopped containers.
 func (s *ComposeService) ComposeList(ctx context.Context, project *types.Project, all bool) ([]container.Summary, error) {
-	containerFilters := filters.NewArgs()
+	containerFilters := client.Filters{}
 	projectLabel := fmt.Sprintf("%s=%s", api.ProjectLabel, project.Name)
 	containerFilters.Add("label", projectLabel)
 
-	result, err := s.Daemon.ContainerList(ctx, container.ListOptions{
+	result, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
 		All:     all,
 		Filters: containerFilters,
 	})
@@ -195,7 +196,7 @@ func (s *ComposeService) ComposeList(ctx context.Context, project *types.Project
 		return nil, fmt.Errorf("failed to list containers for project '%s': %w", project.Name, err)
 	}
 
-	return result, nil
+	return result.Items, nil
 }
 
 func (s *ComposeService) ComposeStats(ctx context.Context, project *types.Project) ([]ContainerStats, error) {

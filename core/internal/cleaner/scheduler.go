@@ -85,7 +85,9 @@ func (s *Scheduler) loop() {
 		case _ = <-ticker.C:
 			s.Manual()
 		case <-s.manualChan:
+			log.Debug().Msg("task starting")
 			s.task(s.taskCtx)
+			log.Debug().Msg("task complete")
 		case <-s.cancelChan:
 			return
 		}

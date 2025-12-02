@@ -23,7 +23,7 @@ import (
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,6 +36,7 @@ type App struct {
 	Info          *info.Service
 	SSH           *ssh.Service
 	UserConfigSrv *config.Service
+	CleanerSrv    *cleaner.Service
 }
 
 func NewApp(conf *config.AppConfig) (*App, error) {
@@ -87,6 +88,14 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		dockerManagerSrv.ResetContainerUpdater,
 	)
 
+	cleanerStore := cleaner.NewStore(gormDB)
+	cleanerSrv := cleaner.NewService(
+		func() *client.Client {
+			return dockerManagerSrv.GetService().Container.Daemon
+		},
+		cleanerStore,
+	)
+
 	log.Info().Msg("Dockman initialized successfully")
 	return &App{
 		Config:        conf,
@@ -97,19 +106,8 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		Info:          infoSrv,
 		SSH:           sshSrv,
 		UserConfigSrv: userConfigSrv,
+		CleanerSrv:    cleanerSrv,
 	}, nil
-}
-
-func (a *App) Close() error {
-	if err := a.File.Close(); err != nil {
-		return fmt.Errorf("failed to close file service: %w", err)
-	}
-
-	if err := a.DB.Close(); err != nil {
-		return fmt.Errorf("failed to close database service: %w", err)
-	}
-
-	return nil
 }
 
 func (a *App) registerApiRoutes(mux *http.ServeMux) {
@@ -117,13 +115,6 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 	if a.Config.Auth.Enable {
 		authInterceptor = connect.WithInterceptors(auth.NewInterceptor(a.Auth))
 	}
-
-	cleanerSrv := cleaner.NewService(
-		func() *client.Client {
-			return a.DockerManager.GetService().Container.Daemon
-		},
-		a.DB.CleanerStore,
-	)
 
 	handlers := []func() (string, http.Handler){
 		// auth
@@ -152,7 +143,7 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			)
 		},
 		func() (string, http.Handler) {
-			return v1connect.NewCleanerServiceHandler(cleaner.NewHandler(cleanerSrv))
+			return v1connect.NewCleanerServiceHandler(cleaner.NewHandler(a.CleanerSrv))
 		},
 		// git
 		//func() (string, http.Handler) {
@@ -216,4 +207,16 @@ func (a *App) registerHttpHandler(basePath string, subMux http.Handler) (string,
 	}
 
 	return basePath, baseHandler
+}
+
+func (a *App) Close() error {
+	if err := a.File.Close(); err != nil {
+		return fmt.Errorf("failed to close file service: %w", err)
+	}
+
+	if err := a.DB.Close(); err != nil {
+		return fmt.Errorf("failed to close database service: %w", err)
+	}
+
+	return nil
 }

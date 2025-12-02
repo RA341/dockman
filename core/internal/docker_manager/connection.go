@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 )
@@ -38,21 +38,22 @@ func newDockerSSHClient(sshClient *ssh.Client) (*client.Client, error) {
 // thin wrapper around client.NewClientWithOpts, to load common options
 // between the connection methods
 func newDockerClient(opts ...client.Opt) (*client.Client, error) {
-	opts = append(opts, client.WithAPIVersionNegotiation())
-	return client.NewClientWithOpts(opts...)
+	// enabled by default on moby
+	//opts = append(opts, client.WithAPIVersionNegotiation())
+	return client.New(opts...)
 }
 
-func testDockerConnection(client *client.Client) (system.Info, error) {
-	cliInfo, err := client.Info(context.Background())
+func testDockerConnection(cli *client.Client) (system.Info, error) {
+	cliInfo, err := cli.Info(context.Background(), client.InfoOptions{})
 	if err != nil {
 		return system.Info{}, err
 	}
 
 	log.Info().
-		Str("ID", cliInfo.ID).Str("Kernel", cliInfo.KernelVersion).
-		Str("name", cliInfo.Name).Msg("Connected to client")
+		Str("ID", cliInfo.Info.ID).Str("Kernel", cliInfo.Info.KernelVersion).
+		Str("name", cliInfo.Info.Name).Msg("Connected to client")
 
-	return cliInfo, nil
+	return cliInfo.Info, nil
 }
 
 // dockerSSHDialer custom dialer that uses docker using an SSH connection.

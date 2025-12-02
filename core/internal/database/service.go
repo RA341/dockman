@@ -1,7 +1,8 @@
 package database
 
 import (
-	"github.com/RA341/dockman/internal/auth"
+	"reflect"
+
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/database/impl"
 	"github.com/RA341/dockman/internal/docker"
@@ -32,8 +33,6 @@ func NewService(basepath string) (*gorm.DB, *Service) {
 		&info.VersionHistory{},
 		&config.UserConfig{},
 		&docker.ImageUpdate{},
-		&auth.User{},
-		&auth.Session{},
 	}
 	if err = gormDB.AutoMigrate(tables...); err != nil {
 		log.Fatal().Err(err).Msg("failed to auto migrate DB")
@@ -56,4 +55,21 @@ func NewService(basepath string) (*gorm.DB, *Service) {
 
 func (s *Service) Close() error {
 	return nil
+}
+
+func MustMigrate(db *gorm.DB, tables ...interface{}) {
+	err := db.AutoMigrate(tables...)
+	if err != nil {
+		var tableNames []string
+		for _, table := range tables {
+			t := reflect.TypeOf(table)
+			if t.Kind() == reflect.Ptr {
+				table = append(tableNames, t.Elem().Name())
+			}
+		}
+
+		log.Fatal().
+			Err(err).Strs("tables", tableNames).
+			Msg("failed to auto migrate tables")
+	}
 }
