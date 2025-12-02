@@ -6,18 +6,22 @@ require (
 	connectrpc.com/connect v1.19.1
 	connectrpc.com/cors v0.1.0
 	dario.cat/mergo v1.0.2
-	github.com/compose-spec/compose-go/v2 v2.9.1
+	github.com/compose-spec/compose-go/v2 v2.10.0
+	github.com/docker/cli v29.1.1+incompatible
 	github.com/coreos/go-oidc/v3 v3.17.0
-	github.com/docker/cli v28.5.2+incompatible
 	github.com/docker/compose/v2 v2.40.3
-	// todo move to moby/moby
-	github.com/docker/docker v28.5.2+incompatible
+	github.com/docker/docker v28.5.2+incompatible // indirect
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/goccy/go-yaml v1.19.0
 	github.com/google/uuid v1.6.0
+	github.com/goccy/go-yaml v1.19.0
 	github.com/google/yamlfmt v0.20.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+	//github.com/moby/moby v28.5.2+incompatible
+	github.com/moby/moby/api v1.52.0
+	github.com/moby/moby/client v0.2.1
 	github.com/nikoksr/notify v1.3.0
 	github.com/pkg/sftp v1.13.10
 	github.com/rs/cors v1.11.1
@@ -93,7 +97,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -214,6 +217,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
