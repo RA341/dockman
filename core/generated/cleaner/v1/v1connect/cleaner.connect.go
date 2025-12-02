@@ -39,6 +39,9 @@ const (
 	// CleanerServiceRunCleanerProcedure is the fully-qualified name of the CleanerService's RunCleaner
 	// RPC.
 	CleanerServiceRunCleanerProcedure = "/cleaner.v1.CleanerService/RunCleaner"
+	// CleanerServiceSpaceStatusProcedure is the fully-qualified name of the CleanerService's
+	// SpaceStatus RPC.
+	CleanerServiceSpaceStatusProcedure = "/cleaner.v1.CleanerService/SpaceStatus"
 	// CleanerServiceGetConfigProcedure is the fully-qualified name of the CleanerService's GetConfig
 	// RPC.
 	CleanerServiceGetConfigProcedure = "/cleaner.v1.CleanerService/GetConfig"
@@ -51,6 +54,7 @@ const (
 type CleanerServiceClient interface {
 	ListHistory(context.Context, *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error)
 	RunCleaner(context.Context, *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error)
+	SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error)
 	GetConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
 	EditConfig(context.Context, *connect.Request[v1.EditConfigRequest]) (*connect.Response[v1.EditConfigResponse], error)
 }
@@ -78,6 +82,12 @@ func NewCleanerServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(cleanerServiceMethods.ByName("RunCleaner")),
 			connect.WithClientOptions(opts...),
 		),
+		spaceStatus: connect.NewClient[v1.SpaceStatusRequest, v1.SpaceStatusResponse](
+			httpClient,
+			baseURL+CleanerServiceSpaceStatusProcedure,
+			connect.WithSchema(cleanerServiceMethods.ByName("SpaceStatus")),
+			connect.WithClientOptions(opts...),
+		),
 		getConfig: connect.NewClient[v1.GetConfigRequest, v1.GetConfigResponse](
 			httpClient,
 			baseURL+CleanerServiceGetConfigProcedure,
@@ -97,6 +107,7 @@ func NewCleanerServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 type cleanerServiceClient struct {
 	listHistory *connect.Client[v1.ListHistoryRequest, v1.ListHistoryResponse]
 	runCleaner  *connect.Client[v1.RunCleanerRequest, v1.RunCleanerResponse]
+	spaceStatus *connect.Client[v1.SpaceStatusRequest, v1.SpaceStatusResponse]
 	getConfig   *connect.Client[v1.GetConfigRequest, v1.GetConfigResponse]
 	editConfig  *connect.Client[v1.EditConfigRequest, v1.EditConfigResponse]
 }
@@ -109,6 +120,11 @@ func (c *cleanerServiceClient) ListHistory(ctx context.Context, req *connect.Req
 // RunCleaner calls cleaner.v1.CleanerService.RunCleaner.
 func (c *cleanerServiceClient) RunCleaner(ctx context.Context, req *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
 	return c.runCleaner.CallUnary(ctx, req)
+}
+
+// SpaceStatus calls cleaner.v1.CleanerService.SpaceStatus.
+func (c *cleanerServiceClient) SpaceStatus(ctx context.Context, req *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
+	return c.spaceStatus.CallUnary(ctx, req)
 }
 
 // GetConfig calls cleaner.v1.CleanerService.GetConfig.
@@ -125,6 +141,7 @@ func (c *cleanerServiceClient) EditConfig(ctx context.Context, req *connect.Requ
 type CleanerServiceHandler interface {
 	ListHistory(context.Context, *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error)
 	RunCleaner(context.Context, *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error)
+	SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error)
 	GetConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
 	EditConfig(context.Context, *connect.Request[v1.EditConfigRequest]) (*connect.Response[v1.EditConfigResponse], error)
 }
@@ -148,6 +165,12 @@ func NewCleanerServiceHandler(svc CleanerServiceHandler, opts ...connect.Handler
 		connect.WithSchema(cleanerServiceMethods.ByName("RunCleaner")),
 		connect.WithHandlerOptions(opts...),
 	)
+	cleanerServiceSpaceStatusHandler := connect.NewUnaryHandler(
+		CleanerServiceSpaceStatusProcedure,
+		svc.SpaceStatus,
+		connect.WithSchema(cleanerServiceMethods.ByName("SpaceStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	cleanerServiceGetConfigHandler := connect.NewUnaryHandler(
 		CleanerServiceGetConfigProcedure,
 		svc.GetConfig,
@@ -166,6 +189,8 @@ func NewCleanerServiceHandler(svc CleanerServiceHandler, opts ...connect.Handler
 			cleanerServiceListHistoryHandler.ServeHTTP(w, r)
 		case CleanerServiceRunCleanerProcedure:
 			cleanerServiceRunCleanerHandler.ServeHTTP(w, r)
+		case CleanerServiceSpaceStatusProcedure:
+			cleanerServiceSpaceStatusHandler.ServeHTTP(w, r)
 		case CleanerServiceGetConfigProcedure:
 			cleanerServiceGetConfigHandler.ServeHTTP(w, r)
 		case CleanerServiceEditConfigProcedure:
@@ -185,6 +210,10 @@ func (UnimplementedCleanerServiceHandler) ListHistory(context.Context, *connect.
 
 func (UnimplementedCleanerServiceHandler) RunCleaner(context.Context, *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cleaner.v1.CleanerService.RunCleaner is not implemented"))
+}
+
+func (UnimplementedCleanerServiceHandler) SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cleaner.v1.CleanerService.SpaceStatus is not implemented"))
 }
 
 func (UnimplementedCleanerServiceHandler) GetConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {

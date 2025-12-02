@@ -7,16 +7,29 @@ option go_package = "github.com/RA341/dockman/generated/cleaner/v1";
 service CleanerService {
   rpc ListHistory(ListHistoryRequest) returns (ListHistoryResponse) {}
   rpc RunCleaner(RunCleanerRequest) returns (RunCleanerResponse) {}
+  rpc SpaceStatus(SpaceStatusRequest) returns (SpaceStatusResponse) {}
 
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
   rpc EditConfig(EditConfigRequest) returns (EditConfigResponse) {}
+}
+
+
+message SpaceStatusRequest {}
+
+message SpaceStatusResponse {
+  string Containers = 1;
+  string Images = 2;
+  string Volumes = 3;
+  string BuildCache = 4;
 }
 
 message EditConfigRequest {
   PruneConfig config = 1;
 }
 
-message EditConfigResponse {}
+message EditConfigResponse {
+  PruneConfig config = 1;
+}
 
 message GetConfigRequest {}
 
@@ -24,9 +37,22 @@ message GetConfigResponse {
   PruneConfig config = 1;
 }
 
+message PruneHistory {
+  string TimeRan = 1;
+  string status = 2;
+  string Volumes = 3;
+  string Networks = 4;
+  string Images = 5;
+  string Containers = 6;
+  string BuildCache = 7;
+
+}
+
 message ListHistoryRequest {}
 
-message ListHistoryResponse {}
+message ListHistoryResponse {
+  repeated PruneHistory history = 1;
+}
 
 message RunCleanerRequest {}
 

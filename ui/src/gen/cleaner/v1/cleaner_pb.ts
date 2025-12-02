@@ -2,15 +2,59 @@
 // @generated from file cleaner/v1/cleaner.proto (package cleaner.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type {GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
+import {fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
+import type {Message} from "@bufbuild/protobuf";
 
 /**
  * Describes the file cleaner/v1/cleaner.proto.
  */
 export const file_cleaner_v1_cleaner: GenFile = /*@__PURE__*/
-  fileDesc("ChhjbGVhbmVyL3YxL2NsZWFuZXIucHJvdG8SCmNsZWFuZXIudjEiPAoRRWRpdENvbmZpZ1JlcXVlc3QSJwoGY29uZmlnGAEgASgLMhcuY2xlYW5lci52MS5QcnVuZUNvbmZpZyIUChJFZGl0Q29uZmlnUmVzcG9uc2UiEgoQR2V0Q29uZmlnUmVxdWVzdCI8ChFHZXRDb25maWdSZXNwb25zZRInCgZjb25maWcYASABKAsyFy5jbGVhbmVyLnYxLlBydW5lQ29uZmlnIhQKEkxpc3RIaXN0b3J5UmVxdWVzdCIVChNMaXN0SGlzdG9yeVJlc3BvbnNlIhMKEVJ1bkNsZWFuZXJSZXF1ZXN0IhQKElJ1bkNsZWFuZXJSZXNwb25zZSINCgtQcnVuZVJlc3VsdCKSAQoLUHJ1bmVDb25maWcSDwoHRW5hYmxlZBgBIAEoCBIXCg9JbnRlcnZhbEluSG91cnMYAiABKA0SDwoHVm9sdW1lcxgDIAEoCBIQCghOZXR3b3JrcxgEIAEoCBIOCgZJbWFnZXMYBSABKAgSEgoKQ29udGFpbmVycxgGIAEoCBISCgpCdWlsZENhY2hlGAcgASgIMswCCg5DbGVhbmVyU2VydmljZRJQCgtMaXN0SGlzdG9yeRIeLmNsZWFuZXIudjEuTGlzdEhpc3RvcnlSZXF1ZXN0Gh8uY2xlYW5lci52MS5MaXN0SGlzdG9yeVJlc3BvbnNlIgASTQoKUnVuQ2xlYW5lchIdLmNsZWFuZXIudjEuUnVuQ2xlYW5lclJlcXVlc3QaHi5jbGVhbmVyLnYxLlJ1bkNsZWFuZXJSZXNwb25zZSIAEkoKCUdldENvbmZpZxIcLmNsZWFuZXIudjEuR2V0Q29uZmlnUmVxdWVzdBodLmNsZWFuZXIudjEuR2V0Q29uZmlnUmVzcG9uc2UiABJNCgpFZGl0Q29uZmlnEh0uY2xlYW5lci52MS5FZGl0Q29uZmlnUmVxdWVzdBoeLmNsZWFuZXIudjEuRWRpdENvbmZpZ1Jlc3BvbnNlIgBClgEKDmNvbS5jbGVhbmVyLnYxQgxDbGVhbmVyUHJvdG9QAVotZ2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9jbGVhbmVyL3YxogIDQ1hYqgIKQ2xlYW5lci5WMcoCCkNsZWFuZXJcVjHiAhZDbGVhbmVyXFYxXEdQQk1ldGFkYXRh6gILQ2xlYW5lcjo6VjFiBnByb3RvMw");
+    fileDesc("ChhjbGVhbmVyL3YxL2NsZWFuZXIucHJvdG8SCmNsZWFuZXIudjEiFAoSU3BhY2VTdGF0dXNSZXF1ZXN0Il4KE1NwYWNlU3RhdHVzUmVzcG9uc2USEgoKQ29udGFpbmVycxgBIAEoCRIOCgZJbWFnZXMYAiABKAkSDwoHVm9sdW1lcxgDIAEoCRISCgpCdWlsZENhY2hlGAQgASgJIjwKEUVkaXRDb25maWdSZXF1ZXN0EicKBmNvbmZpZxgBIAEoCzIXLmNsZWFuZXIudjEuUHJ1bmVDb25maWciPQoSRWRpdENvbmZpZ1Jlc3BvbnNlEicKBmNvbmZpZxgBIAEoCzIXLmNsZWFuZXIudjEuUHJ1bmVDb25maWciEgoQR2V0Q29uZmlnUmVxdWVzdCI8ChFHZXRDb25maWdSZXNwb25zZRInCgZjb25maWcYASABKAsyFy5jbGVhbmVyLnYxLlBydW5lQ29uZmlnIooBCgxQcnVuZUhpc3RvcnkSDwoHVGltZVJhbhgBIAEoCRIOCgZzdGF0dXMYAiABKAkSDwoHVm9sdW1lcxgDIAEoCRIQCghOZXR3b3JrcxgEIAEoCRIOCgZJbWFnZXMYBSABKAkSEgoKQ29udGFpbmVycxgGIAEoCRISCgpCdWlsZENhY2hlGAcgASgJIhQKEkxpc3RIaXN0b3J5UmVxdWVzdCJAChNMaXN0SGlzdG9yeVJlc3BvbnNlEikKB2hpc3RvcnkYASADKAsyGC5jbGVhbmVyLnYxLlBydW5lSGlzdG9yeSITChFSdW5DbGVhbmVyUmVxdWVzdCIUChJSdW5DbGVhbmVyUmVzcG9uc2UiDQoLUHJ1bmVSZXN1bHQikgEKC1BydW5lQ29uZmlnEg8KB0VuYWJsZWQYASABKAgSFwoPSW50ZXJ2YWxJbkhvdXJzGAIgASgNEg8KB1ZvbHVtZXMYAyABKAgSEAoITmV0d29ya3MYBCABKAgSDgoGSW1hZ2VzGAUgASgIEhIKCkNvbnRhaW5lcnMYBiABKAgSEgoKQnVpbGRDYWNoZRgHIAEoCDKeAwoOQ2xlYW5lclNlcnZpY2USUAoLTGlzdEhpc3RvcnkSHi5jbGVhbmVyLnYxLkxpc3RIaXN0b3J5UmVxdWVzdBofLmNsZWFuZXIudjEuTGlzdEhpc3RvcnlSZXNwb25zZSIAEk0KClJ1bkNsZWFuZXISHS5jbGVhbmVyLnYxLlJ1bkNsZWFuZXJSZXF1ZXN0Gh4uY2xlYW5lci52MS5SdW5DbGVhbmVyUmVzcG9uc2UiABJQCgtTcGFjZVN0YXR1cxIeLmNsZWFuZXIudjEuU3BhY2VTdGF0dXNSZXF1ZXN0Gh8uY2xlYW5lci52MS5TcGFjZVN0YXR1c1Jlc3BvbnNlIgASSgoJR2V0Q29uZmlnEhwuY2xlYW5lci52MS5HZXRDb25maWdSZXF1ZXN0Gh0uY2xlYW5lci52MS5HZXRDb25maWdSZXNwb25zZSIAEk0KCkVkaXRDb25maWcSHS5jbGVhbmVyLnYxLkVkaXRDb25maWdSZXF1ZXN0Gh4uY2xlYW5lci52MS5FZGl0Q29uZmlnUmVzcG9uc2UiAEKWAQoOY29tLmNsZWFuZXIudjFCDENsZWFuZXJQcm90b1ABWi1naXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2NsZWFuZXIvdjGiAgNDWFiqAgpDbGVhbmVyLlYxygIKQ2xlYW5lclxWMeICFkNsZWFuZXJcVjFcR1BCTWV0YWRhdGHqAgtDbGVhbmVyOjpWMWIGcHJvdG8z");
+
+/**
+ * @generated from message cleaner.v1.SpaceStatusRequest
+ */
+export type SpaceStatusRequest = Message<"cleaner.v1.SpaceStatusRequest"> & {};
+
+/**
+ * Describes the message cleaner.v1.SpaceStatusRequest.
+ * Use `create(SpaceStatusRequestSchema)` to create a new message.
+ */
+export const SpaceStatusRequestSchema: GenMessage<SpaceStatusRequest> = /*@__PURE__*/
+    messageDesc(file_cleaner_v1_cleaner, 0);
+
+/**
+ * @generated from message cleaner.v1.SpaceStatusResponse
+ */
+export type SpaceStatusResponse = Message<"cleaner.v1.SpaceStatusResponse"> & {
+    /**
+     * @generated from field: string Containers = 1;
+     */
+    Containers: string;
+
+    /**
+     * @generated from field: string Images = 2;
+     */
+    Images: string;
+
+    /**
+     * @generated from field: string Volumes = 3;
+     */
+    Volumes: string;
+
+    /**
+     * @generated from field: string BuildCache = 4;
+     */
+    BuildCache: string;
+};
+
+/**
+ * Describes the message cleaner.v1.SpaceStatusResponse.
+ * Use `create(SpaceStatusResponseSchema)` to create a new message.
+ */
+export const SpaceStatusResponseSchema: GenMessage<SpaceStatusResponse> = /*@__PURE__*/
+    messageDesc(file_cleaner_v1_cleaner, 1);
 
 /**
  * @generated from message cleaner.v1.EditConfigRequest
@@ -27,12 +71,16 @@ export type EditConfigRequest = Message<"cleaner.v1.EditConfigRequest"> & {
  * Use `create(EditConfigRequestSchema)` to create a new message.
  */
 export const EditConfigRequestSchema: GenMessage<EditConfigRequest> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 0);
+    messageDesc(file_cleaner_v1_cleaner, 2);
 
 /**
  * @generated from message cleaner.v1.EditConfigResponse
  */
 export type EditConfigResponse = Message<"cleaner.v1.EditConfigResponse"> & {
+    /**
+     * @generated from field: cleaner.v1.PruneConfig config = 1;
+     */
+    config?: PruneConfig;
 };
 
 /**
@@ -40,7 +88,7 @@ export type EditConfigResponse = Message<"cleaner.v1.EditConfigResponse"> & {
  * Use `create(EditConfigResponseSchema)` to create a new message.
  */
 export const EditConfigResponseSchema: GenMessage<EditConfigResponse> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 1);
+    messageDesc(file_cleaner_v1_cleaner, 3);
 
 /**
  * @generated from message cleaner.v1.GetConfigRequest
@@ -53,7 +101,7 @@ export type GetConfigRequest = Message<"cleaner.v1.GetConfigRequest"> & {
  * Use `create(GetConfigRequestSchema)` to create a new message.
  */
 export const GetConfigRequestSchema: GenMessage<GetConfigRequest> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 2);
+    messageDesc(file_cleaner_v1_cleaner, 4);
 
 /**
  * @generated from message cleaner.v1.GetConfigResponse
@@ -70,7 +118,54 @@ export type GetConfigResponse = Message<"cleaner.v1.GetConfigResponse"> & {
  * Use `create(GetConfigResponseSchema)` to create a new message.
  */
 export const GetConfigResponseSchema: GenMessage<GetConfigResponse> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 3);
+    messageDesc(file_cleaner_v1_cleaner, 5);
+
+/**
+ * @generated from message cleaner.v1.PruneHistory
+ */
+export type PruneHistory = Message<"cleaner.v1.PruneHistory"> & {
+    /**
+     * @generated from field: string TimeRan = 1;
+     */
+    TimeRan: string;
+
+    /**
+     * @generated from field: string status = 2;
+     */
+    status: string;
+
+    /**
+     * @generated from field: string Volumes = 3;
+     */
+    Volumes: string;
+
+    /**
+     * @generated from field: string Networks = 4;
+     */
+    Networks: string;
+
+    /**
+     * @generated from field: string Images = 5;
+     */
+    Images: string;
+
+    /**
+     * @generated from field: string Containers = 6;
+     */
+    Containers: string;
+
+    /**
+     * @generated from field: string BuildCache = 7;
+     */
+    BuildCache: string;
+};
+
+/**
+ * Describes the message cleaner.v1.PruneHistory.
+ * Use `create(PruneHistorySchema)` to create a new message.
+ */
+export const PruneHistorySchema: GenMessage<PruneHistory> = /*@__PURE__*/
+    messageDesc(file_cleaner_v1_cleaner, 6);
 
 /**
  * @generated from message cleaner.v1.ListHistoryRequest
@@ -83,12 +178,16 @@ export type ListHistoryRequest = Message<"cleaner.v1.ListHistoryRequest"> & {
  * Use `create(ListHistoryRequestSchema)` to create a new message.
  */
 export const ListHistoryRequestSchema: GenMessage<ListHistoryRequest> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 4);
+    messageDesc(file_cleaner_v1_cleaner, 7);
 
 /**
  * @generated from message cleaner.v1.ListHistoryResponse
  */
 export type ListHistoryResponse = Message<"cleaner.v1.ListHistoryResponse"> & {
+    /**
+     * @generated from field: repeated cleaner.v1.PruneHistory history = 1;
+     */
+    history: PruneHistory[];
 };
 
 /**
@@ -96,7 +195,7 @@ export type ListHistoryResponse = Message<"cleaner.v1.ListHistoryResponse"> & {
  * Use `create(ListHistoryResponseSchema)` to create a new message.
  */
 export const ListHistoryResponseSchema: GenMessage<ListHistoryResponse> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 5);
+    messageDesc(file_cleaner_v1_cleaner, 8);
 
 /**
  * @generated from message cleaner.v1.RunCleanerRequest
@@ -109,7 +208,7 @@ export type RunCleanerRequest = Message<"cleaner.v1.RunCleanerRequest"> & {
  * Use `create(RunCleanerRequestSchema)` to create a new message.
  */
 export const RunCleanerRequestSchema: GenMessage<RunCleanerRequest> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 6);
+    messageDesc(file_cleaner_v1_cleaner, 9);
 
 /**
  * @generated from message cleaner.v1.RunCleanerResponse
@@ -122,7 +221,7 @@ export type RunCleanerResponse = Message<"cleaner.v1.RunCleanerResponse"> & {
  * Use `create(RunCleanerResponseSchema)` to create a new message.
  */
 export const RunCleanerResponseSchema: GenMessage<RunCleanerResponse> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 7);
+    messageDesc(file_cleaner_v1_cleaner, 10);
 
 /**
  * @generated from message cleaner.v1.PruneResult
@@ -135,7 +234,7 @@ export type PruneResult = Message<"cleaner.v1.PruneResult"> & {
  * Use `create(PruneResultSchema)` to create a new message.
  */
 export const PruneResultSchema: GenMessage<PruneResult> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 8);
+    messageDesc(file_cleaner_v1_cleaner, 11);
 
 /**
  * @generated from message cleaner.v1.PruneConfig
@@ -182,7 +281,7 @@ export type PruneConfig = Message<"cleaner.v1.PruneConfig"> & {
  * Use `create(PruneConfigSchema)` to create a new message.
  */
 export const PruneConfigSchema: GenMessage<PruneConfig> = /*@__PURE__*/
-  messageDesc(file_cleaner_v1_cleaner, 9);
+    messageDesc(file_cleaner_v1_cleaner, 12);
 
 /**
  * @generated from service cleaner.v1.CleanerService
@@ -205,6 +304,14 @@ export const CleanerService: GenService<{
     output: typeof RunCleanerResponseSchema;
   },
   /**
+   * @generated from rpc cleaner.v1.CleanerService.SpaceStatus
+   */
+  spaceStatus: {
+      methodKind: "unary";
+      input: typeof SpaceStatusRequestSchema;
+      output: typeof SpaceStatusResponseSchema;
+  },
+    /**
    * @generated from rpc cleaner.v1.CleanerService.GetConfig
    */
   getConfig: {
