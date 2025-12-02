@@ -32,11 +32,13 @@ interface ImageTableProps {
     onSelectionChange?: (selectedIds: string[]) => void;
 }
 
-export const ImageTable = ({
-                               images,
-                               selectedImages = [],
-                               onSelectionChange
-                           }: ImageTableProps) => {
+export const ImageTable = (
+    {
+        images,
+        selectedImages = [],
+        onSelectionChange
+    }: ImageTableProps
+) => {
     const {handleCopy, copiedId} = useCopyButton();
 
     const handleRowSelection = (imageId: string) => {

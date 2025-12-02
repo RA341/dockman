@@ -19,6 +19,7 @@ import ContainersPage from "./pages/containers/containers.tsx";
 import {UserConfigProvider} from "./context/config-context.tsx";
 import {TabsProvider} from "./context/tab-context.tsx";
 import {useTabs} from "./hooks/tabs.ts";
+import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
 
 export function App() {
     return (
@@ -60,7 +61,12 @@ export function App() {
                                         <Route index element={<NetworksPage/>}/>
                                     </Route>
 
+                                    <Route path="cleaner">
+                                        <Route index element={<DockerCleanerPage/>}/>
+                                    </Route>
+
                                     <Route path="settings" element={<SettingsPage/>}/>
+
                                 </Route>
                             </Route>
                             <Route path="/not-found" element={<NotFoundPage/>}/>
