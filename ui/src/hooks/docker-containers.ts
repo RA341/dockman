@@ -35,7 +35,6 @@ export function useDockerContainers() {
         })
     }, [fetchContainers]) // run only once on page load
 
-    // fetch without setting load
     useEffect(() => {
         fetchContainers().then()
         const intervalId = setInterval(fetchContainers, refreshInterval)
