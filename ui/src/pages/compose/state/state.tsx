@@ -85,6 +85,16 @@ export function interactiveTermFn(term: Terminal, wsUrl: string) {
     }
 }
 
+function makeID(length: number = 15): string {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
 export const useContainerExec = create<{
     execParams: (
         title: string,
@@ -96,7 +106,7 @@ export const useContainerExec = create<{
         useTerminalAction.getState().open()
 
         const tab: TabTerminal = {
-            id: window.crypto.randomUUID(),
+            id: makeID(),
             title: title,
             interactive: interactive,
             onTerminal: term => {
@@ -144,7 +154,7 @@ export const useComposeAction = create<{
 
         const title = `${composeFile}-${action}`;
         const tab: TabTerminal = {
-            id: window.crypto.randomUUID(),
+            id: makeID(),
             title: title,
             interactive: false,
             onTerminal: term => {
