@@ -20,7 +20,7 @@ import (
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/docker/compose/v2/pkg/api"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
@@ -576,7 +576,10 @@ func (h *Handler) executeComposeStreamCommand(
 	//log.Debug().Strs("ssdd", services).Msg("compose stream")
 
 	pipeWriter, wg := streamManager(func(val string) error {
-		if err = responseStream.Send(&v1.LogsMessage{Message: val}); err != nil {
+		err = responseStream.Send(
+			&v1.LogsMessage{Message: val},
+		)
+		if err != nil {
 			return err
 		}
 		return nil
@@ -589,7 +592,8 @@ func (h *Handler) executeComposeStreamCommand(
 
 	// incase the stream connection is lost context.Background
 	// will allow the service to continue executing, instead of stopping mid-operation
-	if err = action(context.Background(), project, composeClient, services...); err != nil {
+	err = action(context.Background(), project, composeClient, services...)
+	if err != nil {
 		fileutil.Close(pipeWriter)
 		return err
 	}

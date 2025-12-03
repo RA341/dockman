@@ -44,7 +44,7 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 		AttachStdout: true,
 		AttachStderr: true,
 		TTY:          true,
-		Cmd:          []string{"/bin/sh"},
+		Cmd:          []string{execCmd},
 	}
 
 	ws, err := upgrader.Upgrade(w, r, nil)
@@ -54,8 +54,8 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 	}
 	defer fileutil.Close(ws)
 
-	daemon := srv().Container.Daemon
-	execResp, err := daemon.ExecCreate(ctx, contId, {})
+	daemon := srv().Container.MobyClient
+	execResp, err := daemon.ExecCreate(ctx, contId, execConfig)
 	if err != nil {
 		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
 		return

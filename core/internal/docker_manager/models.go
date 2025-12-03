@@ -3,22 +3,25 @@ package docker_manager
 import (
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/pkg/fileutil"
+	docker "github.com/docker/docker/client"
 	"github.com/moby/moby/client"
 )
 
 type ConnectedDockerClient struct {
-	dockerClient *client.Client
+	mobyClient   *client.Client
+	dockerClient *docker.Client
 	ssh          *ssh.ConnectedMachine
 }
 
-func NewConnectedDockerClient(cli *client.Client, sshConn *ssh.ConnectedMachine) *ConnectedDockerClient {
+func NewConnectedDockerClient(cli *client.Client, dockerClient *docker.Client, sshConn *ssh.ConnectedMachine) *ConnectedDockerClient {
 	return &ConnectedDockerClient{
-		dockerClient: cli,
+		mobyClient:   cli,
 		ssh:          sshConn,
+		dockerClient: dockerClient,
 	}
 }
 
 // Close closes docker conn and ssh client
 func (c *ConnectedDockerClient) Close() {
-	fileutil.Close(c.dockerClient)
+	fileutil.Close(c.mobyClient)
 }

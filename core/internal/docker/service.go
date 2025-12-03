@@ -1,6 +1,7 @@
 package docker
 
 import (
+	docker "github.com/docker/docker/client"
 	"github.com/moby/moby/client"
 )
 
@@ -17,8 +18,10 @@ type Service struct {
 // but since the services are seperated we use this
 type dependencies struct {
 	// hostname of the machine used to identify which client is running on
-	hostname string
-	Daemon   *client.Client
+	hostname   string
+	MobyClient *client.Client
+	// tmp workaround since moby isn't compatible with docker yet
+	DockClient *docker.Client
 	// address used to prefix container ports for direct links
 	daemonAddr string
 	// syncs local files to remote host
@@ -35,7 +38,8 @@ type dependencies struct {
 
 func NewService(
 	daemonAddr string,
-	dockerClient *client.Client,
+	mobyClient *client.Client,
+	dockClient *docker.Client,
 	syncer Syncer,
 	imageUpdateStore Store,
 	name string,
@@ -44,7 +48,8 @@ func NewService(
 ) *Service {
 	uts := &dependencies{
 		hostname:         name,
-		Daemon:           dockerClient,
+		MobyClient:       mobyClient,
+		DockClient:       dockClient,
 		syncer:           syncer,
 		daemonAddr:       daemonAddr,
 		composeRoot:      composeRoot,

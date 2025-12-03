@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -16,9 +17,8 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/compose/v2/pkg/api"
-	"github.com/docker/compose/v2/pkg/compose"
-
+	"github.com/docker/compose/v5/pkg/api"
+	"github.com/docker/compose/v5/pkg/compose"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
@@ -66,8 +66,8 @@ func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, 
 			//Recreate:             api.RecreateForce, // Force recreation of the specified services
 			//RecreateDependencies: api.RecreateNever, // Do not recreate dependencies
 
-			Inherit:   true,
-			AssumeYes: true,
+			Inherit: true,
+			//AssumeYes: true,
 		},
 		Start: api.StartOptions{
 			Project: project,
@@ -76,7 +76,8 @@ func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, 
 		},
 	}
 
-	if err := composeClient.Up(ctx, project, upOpts); err != nil {
+	err := composeClient.Up(ctx, project, upOpts)
+	if err != nil {
 		return fmt.Errorf("compose up operation failed: %w", err)
 	}
 
@@ -188,7 +189,7 @@ func (s *ComposeService) ComposeList(ctx context.Context, project *types.Project
 	projectLabel := fmt.Sprintf("%s=%s", api.ProjectLabel, project.Name)
 	containerFilters.Add("label", projectLabel)
 
-	result, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
+	result, err := s.MobyClient.ContainerList(ctx, client.ContainerListOptions{
 		All:     all,
 		Filters: containerFilters,
 	})
@@ -218,7 +219,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 			continue
 		}
 
-		imageInspect, err := s.Daemon.ImageInspect(ctx, service.Image)
+		imageInspect, err := s.MobyClient.ImageInspect(ctx, service.Image)
 		if err != nil {
 			// Image might not exist locally yet
 			digests[serviceName] = ""
@@ -238,19 +239,28 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 
 func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
-		command.WithAPIClient(s.Daemon),
-		command.WithCombinedStreams(outputStream),
+		command.WithAPIClient(s.DockClient),
+		command.WithOutputStream(os.Stdout),
+		command.WithErrorStream(os.Stderr),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cli client to docker for compose: %w", err)
 	}
 
-	clientOpts := &flags.ClientOptions{}
-	if err = dockerCli.Initialize(clientOpts); err != nil {
+	clientOpts := &flags.ClientOptions{
+		Debug:    true,
+		LogLevel: "debug",
+	}
+	err = dockerCli.Initialize(clientOpts)
+	if err != nil {
 		return nil, err
 	}
 
-	return compose.NewComposeService(dockerCli), nil
+	return compose.NewComposeService(
+		dockerCli,
+		compose.WithOutputStream(os.Stdout),
+		compose.WithErrorStream(os.Stderr),
+	)
 }
 
 func (s *ComposeService) ComposeValidate(ctx context.Context, shortName string) []error {

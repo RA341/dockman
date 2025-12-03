@@ -299,12 +299,13 @@ func (srv *Service) loadDockerService(name string, mach *ConnectedDockerClient) 
 		localAddr = srv.localAddr()
 		syncer = &docker.NoopSyncer{}
 	} else {
-		localAddr = mach.dockerClient.DaemonHost()
+		localAddr = mach.mobyClient.DaemonHost()
 		syncer = docker.NewSFTPSyncer(mach.ssh.SftpClient, composeRoot)
 	}
 
 	service := docker.NewService(
 		localAddr,
+		mach.mobyClient,
 		mach.dockerClient,
 		syncer,
 		srv.imageUpdateStore,

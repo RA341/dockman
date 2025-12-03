@@ -48,7 +48,8 @@ function DockerCleanerPage() {
         if (err) {
             showError(err)
         } else {
-            showSuccess(val.toString())
+            console.log(val)
+            // showSuccess()
         }
         // eslint-disable-next-line
     }, [])

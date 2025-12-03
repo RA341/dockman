@@ -44,16 +44,17 @@ func (h *Handler) ListHistory(ctx context.Context, req *connect.Request[v1.ListH
 }
 
 func (h *Handler) SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
-	storage, err := h.srv.SystemStorage()
+	// todo
+	_, err := h.srv.SystemStorage()
 	if err != nil {
 		return nil, err
 	}
 
 	return connect.NewResponse(&v1.SpaceStatusResponse{
-		Containers: storage.Containers,
-		Images:     storage.Image,
-		Volumes:    storage.Volumes,
-		BuildCache: storage.BuildCache,
+		//Containers: storage.Containers,
+		//Images:     storage.Image,
+		//Volumes:    storage.Volumes,
+		//BuildCache: storage.BuildCache,
 	}), nil
 }
 

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/docker/compose/v2/pkg/api"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/api/types/mount"
@@ -36,7 +36,7 @@ func NewContainerService(u *dependencies) *ContainerService {
 // messing around only has access to the socket
 func NewSimpleContainerService(client *client.Client) *ContainerService {
 	return &ContainerService{dependencies: &dependencies{
-		Daemon: client,
+		MobyClient: client,
 	}}
 }
 
@@ -44,7 +44,7 @@ func NewSimpleContainerService(client *client.Client) *ContainerService {
 func NewUpdaterService(client *client.Client) *ContainerService {
 	u := &dependencies{
 		hostname:         LocalClient,
-		Daemon:           client,
+		MobyClient:       client,
 		syncer:           NewNoopSyncer(),
 		imageUpdateStore: NewNoopStore(),
 		// not needed by updater service
@@ -60,7 +60,7 @@ func NewUpdaterService(client *client.Client) *ContainerService {
 // Container stuff
 
 func (s *ContainerService) ContainersList(ctx context.Context) ([]container.Summary, error) {
-	list, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
+	list, err := s.MobyClient.ContainerList(ctx, client.ContainerListOptions{
 		All:    true,
 		Size:   false,
 		Latest: false,
@@ -82,7 +82,7 @@ func (s *ContainerService) containerListByIDs(ctx context.Context, containerID .
 		Filters: filterArgs,
 	}
 
-	list, err := s.Daemon.ContainerList(ctx, options)
+	list, err := s.MobyClient.ContainerList(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch container info: %w", err)
 	}
@@ -92,7 +92,7 @@ func (s *ContainerService) containerListByIDs(ctx context.Context, containerID .
 
 func (s *ContainerService) ContainersStart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		_, err := s.Daemon.ContainerStart(ctx, cont, client.ContainerStartOptions{})
+		_, err := s.MobyClient.ContainerStart(ctx, cont, client.ContainerStartOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to start Container: %s => %w", cont, err)
 		}
@@ -102,7 +102,7 @@ func (s *ContainerService) ContainersStart(ctx context.Context, containerId ...s
 
 func (s *ContainerService) ContainersStop(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		_, err := s.Daemon.ContainerStop(ctx, cont, client.ContainerStopOptions{})
+		_, err := s.MobyClient.ContainerStop(ctx, cont, client.ContainerStopOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to stop Container: %s => %w", cont, err)
 		}
@@ -112,7 +112,7 @@ func (s *ContainerService) ContainersStop(ctx context.Context, containerId ...st
 
 func (s *ContainerService) ContainersRestart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		_, err := s.Daemon.ContainerRestart(ctx, cont, client.ContainerRestartOptions{})
+		_, err := s.MobyClient.ContainerRestart(ctx, cont, client.ContainerRestartOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to restart Container: %s => %w", cont, err)
 		}
@@ -122,7 +122,7 @@ func (s *ContainerService) ContainersRestart(ctx context.Context, containerId ..
 
 func (s *ContainerService) ContainersRemove(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
-		_, err := s.Daemon.ContainerRemove(ctx, cont, client.ContainerRemoveOptions{
+		_, err := s.MobyClient.ContainerRemove(ctx, cont, client.ContainerRemoveOptions{
 			Force: true,
 		})
 		if err != nil {
@@ -133,12 +133,12 @@ func (s *ContainerService) ContainersRemove(ctx context.Context, containerId ...
 }
 
 func (s *ContainerService) ContainerLogs(ctx context.Context, containerID string) (io.ReadCloser, bool, error) {
-	inspect, err := s.Daemon.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
+	inspect, err := s.MobyClient.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, false, fmt.Errorf("unable to inspect container: %w", err)
 	}
 
-	logStream, err := s.Daemon.ContainerLogs(ctx, containerID, client.ContainerLogsOptions{
+	logStream, err := s.MobyClient.ContainerLogs(ctx, containerID, client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -152,7 +152,7 @@ func (s *ContainerService) ContainerLogs(ctx context.Context, containerID string
 }
 
 func (s *ContainerService) ContainerStats(ctx context.Context, filter client.ContainerListOptions) ([]ContainerStats, error) {
-	contRes, err := s.Daemon.ContainerList(ctx, filter)
+	contRes, err := s.MobyClient.ContainerList(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not list containers: %w", err)
 	}
@@ -178,7 +178,7 @@ func (s *ContainerService) containerGetStatsFromList(ctx context.Context, contai
 }
 
 func (s *ContainerService) ContainersUpdateAll(ctx context.Context, opts ...UpdateOption) error {
-	containers, err := s.Daemon.ContainerList(ctx,
+	containers, err := s.MobyClient.ContainerList(ctx,
 		client.ContainerListOptions{
 			All: true,
 		},
@@ -223,7 +223,7 @@ func (s *ContainerService) ContainersUpdateByImage(ctx context.Context, imageTag
 	containerFilters := client.Filters{}
 	containerFilters.Add("ancestor", imageTag)
 
-	containers, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
+	containers, err := s.MobyClient.ContainerList(ctx, client.ContainerListOptions{
 		All:     true, // Consider both running and stopped containers
 		Filters: containerFilters,
 	})
@@ -509,7 +509,7 @@ func (s *ContainerService) ContainerRecreate(ctx context.Context, imageTag strin
 func (s *ContainerService) containerRollbackToOldContainer(ctx context.Context, oldContainerID, containerName string, originalErr error) error {
 	log.Warn().Msgf("Rolling back to old container %s", containerName)
 
-	_, err := s.Daemon.ContainerStart(ctx, oldContainerID, client.ContainerStartOptions{})
+	_, err := s.MobyClient.ContainerStart(ctx, oldContainerID, client.ContainerStartOptions{})
 	if err != nil {
 		return fmt.Errorf("rollback failed - cannot restart old container: %w (original error: %v)", err, originalErr)
 	}
@@ -586,7 +586,7 @@ func (s *ContainerService) containerHealthCheckUptime(containerID string, c *con
 	defer timer.Stop()
 	<-timer.C
 
-	inspect, err := s.Daemon.ContainerInspect(context.Background(), containerID, client.ContainerInspectOptions{})
+	inspect, err := s.MobyClient.ContainerInspect(context.Background(), containerID, client.ContainerInspectOptions{})
 	if err != nil {
 		return err
 	}
@@ -649,7 +649,7 @@ func (s *ContainerService) containerHealthCheckPing(c *container.InspectResponse
 // Image stuff
 
 func (s *ContainerService) ImageList(ctx context.Context) ([]image.Summary, error) {
-	list, err := s.Daemon.ImageList(ctx, client.ImageListOptions{
+	list, err := s.MobyClient.ImageList(ctx, client.ImageListOptions{
 		All:        true,
 		SharedSize: true,
 		Manifests:  true,
@@ -662,7 +662,7 @@ func (s *ContainerService) ImageList(ctx context.Context) ([]image.Summary, erro
 
 func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName string) (bool, string, error) {
 	// Get local image info
-	localImages, err := s.Daemon.ImageList(ctx, client.ImageListOptions{
+	localImages, err := s.MobyClient.ImageList(ctx, client.ImageListOptions{
 		Filters: client.Filters{}.Add("reference", imageName),
 	})
 	if err != nil {
@@ -675,7 +675,7 @@ func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName s
 	}
 
 	// Get remote image info
-	distributionInspect, err := s.Daemon.DistributionInspect(ctx, imageName, client.DistributionInspectOptions{})
+	distributionInspect, err := s.MobyClient.DistributionInspect(ctx, imageName, client.DistributionInspectOptions{})
 	if err != nil {
 		return false, "", err
 	}
@@ -690,7 +690,7 @@ func (s *ContainerService) ImageUpdateAvailable(ctx context.Context, imageName s
 func (s *ContainerService) ImagePull(ctx context.Context, imageTag string) error {
 	log.Info().Msg("Pulling latest image")
 
-	reader, err := s.Daemon.ImagePull(ctx, imageTag, client.ImagePullOptions{})
+	reader, err := s.MobyClient.ImagePull(ctx, imageTag, client.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", imageTag, err)
 	}
@@ -706,7 +706,7 @@ func (s *ContainerService) ImagePull(ctx context.Context, imageTag string) error
 }
 
 func (s *ContainerService) ImageDelete(ctx context.Context, imageId string) ([]image.DeleteResponse, error) {
-	remove, err := s.Daemon.ImageRemove(ctx, imageId, client.ImageRemoveOptions{})
+	remove, err := s.MobyClient.ImageRemove(ctx, imageId, client.ImageRemoveOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete image %s: %w", imageId, err)
 	}
@@ -718,7 +718,7 @@ func (s *ContainerService) ImagePruneUntagged(ctx context.Context) (image.PruneR
 	// removes dangling (untagged) mostly due to image being updated
 	filter.Add("dangling", "true")
 
-	prune, err := s.Daemon.ImagePrune(ctx, client.ImagePruneOptions{})
+	prune, err := s.MobyClient.ImagePrune(ctx, client.ImagePruneOptions{})
 	if err != nil {
 		return prune.Report, err
 	}
@@ -739,7 +739,7 @@ func (s *ContainerService) ImagePruneUnused(ctx context.Context) (image.PruneRep
 	filter := client.Filters{}
 	filter.Add("dangling", "false")
 	// force remove all unused
-	prune, err := s.Daemon.ImagePrune(ctx, client.ImagePruneOptions{Filters: filter})
+	prune, err := s.MobyClient.ImagePrune(ctx, client.ImagePruneOptions{Filters: filter})
 	if err != nil {
 		return prune.Report, err
 	}
@@ -750,7 +750,7 @@ func (s *ContainerService) ImagePruneUnused(ctx context.Context) (image.PruneRep
 // Network stuff
 
 func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect, error) {
-	list, err := s.Daemon.NetworkList(ctx, client.NetworkListOptions{})
+	list, err := s.MobyClient.NetworkList(ctx, client.NetworkListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -758,7 +758,7 @@ func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect,
 	var errs []error
 	var result []network.Inspect
 	for _, ref := range list.Items {
-		networkInspect, err2 := s.Daemon.NetworkInspect(ctx, ref.ID, client.NetworkInspectOptions{})
+		networkInspect, err2 := s.MobyClient.NetworkInspect(ctx, ref.ID, client.NetworkInspectOptions{})
 		if err2 != nil {
 			errs = append(errs, err2)
 			continue
@@ -774,17 +774,17 @@ func (s *ContainerService) NetworksList(ctx context.Context) ([]network.Inspect,
 }
 
 func (s *ContainerService) NetworksCreate(ctx context.Context, name string) error {
-	_, err := s.Daemon.NetworkCreate(ctx, name, client.NetworkCreateOptions{})
+	_, err := s.MobyClient.NetworkCreate(ctx, name, client.NetworkCreateOptions{})
 	return err
 }
 
 func (s *ContainerService) NetworksDelete(ctx context.Context, networkID string) error {
-	_, err := s.Daemon.NetworkRemove(ctx, networkID, client.NetworkRemoveOptions{})
+	_, err := s.MobyClient.NetworkRemove(ctx, networkID, client.NetworkRemoveOptions{})
 	return err
 }
 
 func (s *ContainerService) NetworksPrune(ctx context.Context) error {
-	_, err := s.Daemon.NetworkPrune(ctx, client.NetworkPruneOptions{})
+	_, err := s.MobyClient.NetworkPrune(ctx, client.NetworkPruneOptions{})
 	return err
 }
 
@@ -799,7 +799,7 @@ type VolumeInfo struct {
 }
 
 func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error) {
-	listResp, err := s.Daemon.VolumeList(ctx, client.VolumeListOptions{})
+	listResp, err := s.MobyClient.VolumeList(ctx, client.VolumeListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -808,7 +808,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 		return []VolumeInfo{}, nil
 	}
 
-	diskUsage, err := s.Daemon.DiskUsage(ctx, client.DiskUsageOptions{
+	diskUsage, err := s.MobyClient.DiskUsage(ctx, client.DiskUsageOptions{
 		Volumes: true,
 	})
 	if err != nil {
@@ -835,7 +835,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 		volumeFilters.Add("volume", val.Name)
 	}
 
-	containers, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
+	containers, err := s.MobyClient.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
 		Filters: volumeFilters,
 	})
@@ -876,7 +876,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 }
 
 func (s *ContainerService) VolumesCreate(ctx context.Context, name string) (volume.Volume, error) {
-	create, err := s.Daemon.VolumeCreate(ctx, client.VolumeCreateOptions{
+	create, err := s.MobyClient.VolumeCreate(ctx, client.VolumeCreateOptions{
 		Name: name,
 	})
 	if err != nil {
@@ -886,7 +886,7 @@ func (s *ContainerService) VolumesCreate(ctx context.Context, name string) (volu
 }
 
 func (s *ContainerService) VolumesDelete(ctx context.Context, volumeName string, force bool) error {
-	_, err := s.Daemon.VolumeRemove(ctx, volumeName, client.VolumeRemoveOptions{Force: force})
+	_, err := s.MobyClient.VolumeRemove(ctx, volumeName, client.VolumeRemoveOptions{Force: force})
 	if err != nil {
 		return err
 	}
@@ -894,7 +894,7 @@ func (s *ContainerService) VolumesDelete(ctx context.Context, volumeName string,
 }
 
 func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
-	volResponse, err := s.Daemon.VolumeList(ctx, client.VolumeListOptions{})
+	volResponse, err := s.MobyClient.VolumeList(ctx, client.VolumeListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get disk usage data: %w", err)
 	}
@@ -904,7 +904,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 		volumeFilters.Add("volume", vol.Name)
 	}
 
-	containers, err := s.Daemon.ContainerList(ctx, client.ContainerListOptions{
+	containers, err := s.MobyClient.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
 		Filters: volumeFilters,
 	})
@@ -931,7 +931,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 			continue
 		}
 
-		_, err = s.Daemon.VolumeRemove(ctx, vol.Name, client.VolumeRemoveOptions{})
+		_, err = s.MobyClient.VolumeRemove(ctx, vol.Name, client.VolumeRemoveOptions{})
 		if err != nil {
 			delErr = fmt.Errorf("%w\n%w", delErr, err)
 		}
@@ -941,7 +941,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 }
 
 func (s *ContainerService) VolumesPrune(ctx context.Context) error {
-	prune, err := s.Daemon.VolumePrune(ctx, client.VolumePruneOptions{})
+	prune, err := s.MobyClient.VolumePrune(ctx, client.VolumePruneOptions{})
 	log.Debug().Any("report", prune).Msg("VolumesPrune result")
 	return err
 }
@@ -951,7 +951,7 @@ func (s *ContainerService) VolumesPrune(ctx context.Context) error {
 
 func (s *ContainerService) getAndFormatStats(ctx context.Context, info container.Summary) (ContainerStats, error) {
 	contId := info.ID[:12]
-	stats, err := s.Daemon.ContainerStats(ctx, info.ID, client.ContainerStatsOptions{})
+	stats, err := s.MobyClient.ContainerStats(ctx, info.ID, client.ContainerStatsOptions{})
 	if err != nil {
 		return ContainerStats{}, fmt.Errorf("failed to get stats for cont %s: %w", contId, err)
 	}

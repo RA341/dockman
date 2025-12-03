@@ -91,7 +91,7 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 	cleanerStore := cleaner.NewStore(gormDB)
 	cleanerSrv := cleaner.NewService(
 		func() *client.Client {
-			return dockerManagerSrv.GetService().Container.Daemon
+			return dockerManagerSrv.GetService().Container.MobyClient
 		},
 		cleanerStore,
 	)
