@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -17,8 +16,8 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/compose/v5/pkg/api"
-	"github.com/docker/compose/v5/pkg/compose"
+	"github.com/docker/compose/v2/pkg/api"
+	"github.com/docker/compose/v2/pkg/compose"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
@@ -240,8 +239,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
 		command.WithAPIClient(s.DockClient),
-		command.WithOutputStream(os.Stdout),
-		command.WithErrorStream(os.Stderr),
+		command.WithCombinedStreams(outputStream),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cli client to docker for compose: %w", err)
@@ -258,9 +256,7 @@ func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose,
 
 	return compose.NewComposeService(
 		dockerCli,
-		compose.WithOutputStream(os.Stdout),
-		compose.WithErrorStream(os.Stderr),
-	)
+	), nil
 }
 
 func (s *ComposeService) ComposeValidate(ctx context.Context, shortName string) []error {

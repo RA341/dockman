@@ -57,13 +57,13 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 	daemon := srv().Container.MobyClient
 	execResp, err := daemon.ExecCreate(ctx, contId, execConfig)
 	if err != nil {
-		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
+		wsErr(ws, fmt.Errorf("error creating shell into container: %w", err))
 		return
 	}
 
 	resp, err := daemon.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{TTY: true})
 	if err != nil {
-		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
+		wsErr(ws, fmt.Errorf("error creating shell into container: %w", err))
 		return
 	}
 	defer resp.Close()

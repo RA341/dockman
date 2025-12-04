@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/cleaner/v1"
+	"github.com/dustin/go-humanize"
 )
 
 type Handler struct {
@@ -44,17 +45,44 @@ func (h *Handler) ListHistory(ctx context.Context, req *connect.Request[v1.ListH
 }
 
 func (h *Handler) SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
-	// todo
-	_, err := h.srv.SystemStorage()
+	sys, err := h.srv.SystemStorage()
 	if err != nil {
 		return nil, err
 	}
 
+	volumes := &v1.SpaceStat{
+		ActiveCount: sys.Volumes.ActiveCount,
+		TotalCount:  sys.Volumes.TotalCount,
+		Reclaimable: humanize.Bytes(uint64(sys.Volumes.Reclaimable)),
+		TotalSize:   humanize.Bytes(uint64(sys.Volumes.TotalSize)),
+	}
+
+	containers := &v1.SpaceStat{
+		ActiveCount: sys.Containers.ActiveCount,
+		TotalCount:  sys.Containers.TotalCount,
+		Reclaimable: humanize.Bytes(uint64(sys.Containers.Reclaimable)),
+		TotalSize:   humanize.Bytes(uint64(sys.Containers.TotalSize)),
+	}
+
+	images := &v1.SpaceStat{
+		ActiveCount: sys.Images.ActiveCount,
+		TotalCount:  sys.Images.TotalCount,
+		Reclaimable: humanize.Bytes(uint64(sys.Images.Reclaimable)),
+		TotalSize:   humanize.Bytes(uint64(sys.Images.TotalSize)),
+	}
+
+	buildCache := &v1.SpaceStat{
+		ActiveCount: sys.BuildCache.ActiveCount,
+		TotalCount:  sys.BuildCache.TotalCount,
+		Reclaimable: humanize.Bytes(uint64(sys.BuildCache.Reclaimable)),
+		TotalSize:   humanize.Bytes(uint64(sys.BuildCache.TotalSize)),
+	}
+
 	return connect.NewResponse(&v1.SpaceStatusResponse{
-		//Containers: storage.Containers,
-		//Images:     storage.Image,
-		//Volumes:    storage.Volumes,
-		//BuildCache: storage.BuildCache,
+		Containers: containers,
+		Images:     images,
+		Volumes:    volumes,
+		BuildCache: buildCache,
 	}), nil
 }
 

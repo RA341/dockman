@@ -59,10 +59,10 @@ func (*SpaceStatusRequest) Descriptor() ([]byte, []int) {
 
 type SpaceStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Containers    string                 `protobuf:"bytes,1,opt,name=Containers,proto3" json:"Containers,omitempty"`
-	Images        string                 `protobuf:"bytes,2,opt,name=Images,proto3" json:"Images,omitempty"`
-	Volumes       string                 `protobuf:"bytes,3,opt,name=Volumes,proto3" json:"Volumes,omitempty"`
-	BuildCache    string                 `protobuf:"bytes,4,opt,name=BuildCache,proto3" json:"BuildCache,omitempty"`
+	Containers    *SpaceStat             `protobuf:"bytes,1,opt,name=Containers,proto3" json:"Containers,omitempty"`
+	Images        *SpaceStat             `protobuf:"bytes,2,opt,name=Images,proto3" json:"Images,omitempty"`
+	Volumes       *SpaceStat             `protobuf:"bytes,3,opt,name=Volumes,proto3" json:"Volumes,omitempty"`
+	BuildCache    *SpaceStat             `protobuf:"bytes,4,opt,name=BuildCache,proto3" json:"BuildCache,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -97,30 +97,98 @@ func (*SpaceStatusResponse) Descriptor() ([]byte, []int) {
 	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SpaceStatusResponse) GetContainers() string {
+func (x *SpaceStatusResponse) GetContainers() *SpaceStat {
 	if x != nil {
 		return x.Containers
 	}
-	return ""
+	return nil
 }
 
-func (x *SpaceStatusResponse) GetImages() string {
+func (x *SpaceStatusResponse) GetImages() *SpaceStat {
 	if x != nil {
 		return x.Images
 	}
-	return ""
+	return nil
 }
 
-func (x *SpaceStatusResponse) GetVolumes() string {
+func (x *SpaceStatusResponse) GetVolumes() *SpaceStat {
 	if x != nil {
 		return x.Volumes
+	}
+	return nil
+}
+
+func (x *SpaceStatusResponse) GetBuildCache() *SpaceStat {
+	if x != nil {
+		return x.BuildCache
+	}
+	return nil
+}
+
+type SpaceStat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ActiveCount   int64                  `protobuf:"varint,1,opt,name=ActiveCount,proto3" json:"ActiveCount,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,2,opt,name=TotalCount,proto3" json:"TotalCount,omitempty"`
+	Reclaimable   string                 `protobuf:"bytes,3,opt,name=Reclaimable,proto3" json:"Reclaimable,omitempty"`
+	TotalSize     string                 `protobuf:"bytes,4,opt,name=TotalSize,proto3" json:"TotalSize,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpaceStat) Reset() {
+	*x = SpaceStat{}
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpaceStat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpaceStat) ProtoMessage() {}
+
+func (x *SpaceStat) ProtoReflect() protoreflect.Message {
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpaceStat.ProtoReflect.Descriptor instead.
+func (*SpaceStat) Descriptor() ([]byte, []int) {
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SpaceStat) GetActiveCount() int64 {
+	if x != nil {
+		return x.ActiveCount
+	}
+	return 0
+}
+
+func (x *SpaceStat) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *SpaceStat) GetReclaimable() string {
+	if x != nil {
+		return x.Reclaimable
 	}
 	return ""
 }
 
-func (x *SpaceStatusResponse) GetBuildCache() string {
+func (x *SpaceStat) GetTotalSize() string {
 	if x != nil {
-		return x.BuildCache
+		return x.TotalSize
 	}
 	return ""
 }
@@ -134,7 +202,7 @@ type EditConfigRequest struct {
 
 func (x *EditConfigRequest) Reset() {
 	*x = EditConfigRequest{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[2]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -146,7 +214,7 @@ func (x *EditConfigRequest) String() string {
 func (*EditConfigRequest) ProtoMessage() {}
 
 func (x *EditConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[2]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -159,7 +227,7 @@ func (x *EditConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditConfigRequest.ProtoReflect.Descriptor instead.
 func (*EditConfigRequest) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{2}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *EditConfigRequest) GetConfig() *PruneConfig {
@@ -178,7 +246,7 @@ type EditConfigResponse struct {
 
 func (x *EditConfigResponse) Reset() {
 	*x = EditConfigResponse{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[3]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -190,7 +258,7 @@ func (x *EditConfigResponse) String() string {
 func (*EditConfigResponse) ProtoMessage() {}
 
 func (x *EditConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[3]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -203,7 +271,7 @@ func (x *EditConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditConfigResponse.ProtoReflect.Descriptor instead.
 func (*EditConfigResponse) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{3}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *EditConfigResponse) GetConfig() *PruneConfig {
@@ -221,7 +289,7 @@ type GetConfigRequest struct {
 
 func (x *GetConfigRequest) Reset() {
 	*x = GetConfigRequest{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[4]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -233,7 +301,7 @@ func (x *GetConfigRequest) String() string {
 func (*GetConfigRequest) ProtoMessage() {}
 
 func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[4]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -246,7 +314,7 @@ func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetConfigRequest) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{4}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{5}
 }
 
 type GetConfigResponse struct {
@@ -258,7 +326,7 @@ type GetConfigResponse struct {
 
 func (x *GetConfigResponse) Reset() {
 	*x = GetConfigResponse{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[5]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +338,7 @@ func (x *GetConfigResponse) String() string {
 func (*GetConfigResponse) ProtoMessage() {}
 
 func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[5]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +351,7 @@ func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetConfigResponse) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{5}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetConfigResponse) GetConfig() *PruneConfig {
@@ -308,7 +376,7 @@ type PruneHistory struct {
 
 func (x *PruneHistory) Reset() {
 	*x = PruneHistory{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[6]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -320,7 +388,7 @@ func (x *PruneHistory) String() string {
 func (*PruneHistory) ProtoMessage() {}
 
 func (x *PruneHistory) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[6]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -333,7 +401,7 @@ func (x *PruneHistory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneHistory.ProtoReflect.Descriptor instead.
 func (*PruneHistory) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{6}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PruneHistory) GetTimeRan() string {
@@ -393,7 +461,7 @@ type ListHistoryRequest struct {
 
 func (x *ListHistoryRequest) Reset() {
 	*x = ListHistoryRequest{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[7]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -405,7 +473,7 @@ func (x *ListHistoryRequest) String() string {
 func (*ListHistoryRequest) ProtoMessage() {}
 
 func (x *ListHistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[7]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -418,7 +486,7 @@ func (x *ListHistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListHistoryRequest.ProtoReflect.Descriptor instead.
 func (*ListHistoryRequest) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{7}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{8}
 }
 
 type ListHistoryResponse struct {
@@ -430,7 +498,7 @@ type ListHistoryResponse struct {
 
 func (x *ListHistoryResponse) Reset() {
 	*x = ListHistoryResponse{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[8]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +510,7 @@ func (x *ListHistoryResponse) String() string {
 func (*ListHistoryResponse) ProtoMessage() {}
 
 func (x *ListHistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[8]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +523,7 @@ func (x *ListHistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListHistoryResponse.ProtoReflect.Descriptor instead.
 func (*ListHistoryResponse) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{8}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListHistoryResponse) GetHistory() []*PruneHistory {
@@ -473,7 +541,7 @@ type RunCleanerRequest struct {
 
 func (x *RunCleanerRequest) Reset() {
 	*x = RunCleanerRequest{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[9]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +553,7 @@ func (x *RunCleanerRequest) String() string {
 func (*RunCleanerRequest) ProtoMessage() {}
 
 func (x *RunCleanerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[9]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +566,7 @@ func (x *RunCleanerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunCleanerRequest.ProtoReflect.Descriptor instead.
 func (*RunCleanerRequest) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{9}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{10}
 }
 
 type RunCleanerResponse struct {
@@ -509,7 +577,7 @@ type RunCleanerResponse struct {
 
 func (x *RunCleanerResponse) Reset() {
 	*x = RunCleanerResponse{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[10]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -521,7 +589,7 @@ func (x *RunCleanerResponse) String() string {
 func (*RunCleanerResponse) ProtoMessage() {}
 
 func (x *RunCleanerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[10]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -534,7 +602,7 @@ func (x *RunCleanerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunCleanerResponse.ProtoReflect.Descriptor instead.
 func (*RunCleanerResponse) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{10}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{11}
 }
 
 type PruneResult struct {
@@ -545,7 +613,7 @@ type PruneResult struct {
 
 func (x *PruneResult) Reset() {
 	*x = PruneResult{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[11]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -557,7 +625,7 @@ func (x *PruneResult) String() string {
 func (*PruneResult) ProtoMessage() {}
 
 func (x *PruneResult) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[11]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -570,7 +638,7 @@ func (x *PruneResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneResult.ProtoReflect.Descriptor instead.
 func (*PruneResult) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{11}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{12}
 }
 
 type PruneConfig struct {
@@ -588,7 +656,7 @@ type PruneConfig struct {
 
 func (x *PruneConfig) Reset() {
 	*x = PruneConfig{}
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[12]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -600,7 +668,7 @@ func (x *PruneConfig) String() string {
 func (*PruneConfig) ProtoMessage() {}
 
 func (x *PruneConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_cleaner_v1_cleaner_proto_msgTypes[12]
+	mi := &file_cleaner_v1_cleaner_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -613,7 +681,7 @@ func (x *PruneConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PruneConfig.ProtoReflect.Descriptor instead.
 func (*PruneConfig) Descriptor() ([]byte, []int) {
-	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{12}
+	return file_cleaner_v1_cleaner_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PruneConfig) GetEnabled() bool {
@@ -671,16 +739,23 @@ const file_cleaner_v1_cleaner_proto_rawDesc = "" +
 	"\n" +
 	"\x18cleaner/v1/cleaner.proto\x12\n" +
 	"cleaner.v1\"\x14\n" +
-	"\x12SpaceStatusRequest\"\x87\x01\n" +
-	"\x13SpaceStatusResponse\x12\x1e\n" +
+	"\x12SpaceStatusRequest\"\xe3\x01\n" +
+	"\x13SpaceStatusResponse\x125\n" +
 	"\n" +
-	"Containers\x18\x01 \x01(\tR\n" +
-	"Containers\x12\x16\n" +
-	"\x06Images\x18\x02 \x01(\tR\x06Images\x12\x18\n" +
-	"\aVolumes\x18\x03 \x01(\tR\aVolumes\x12\x1e\n" +
+	"Containers\x18\x01 \x01(\v2\x15.cleaner.v1.SpaceStatR\n" +
+	"Containers\x12-\n" +
+	"\x06Images\x18\x02 \x01(\v2\x15.cleaner.v1.SpaceStatR\x06Images\x12/\n" +
+	"\aVolumes\x18\x03 \x01(\v2\x15.cleaner.v1.SpaceStatR\aVolumes\x125\n" +
 	"\n" +
-	"BuildCache\x18\x04 \x01(\tR\n" +
-	"BuildCache\"D\n" +
+	"BuildCache\x18\x04 \x01(\v2\x15.cleaner.v1.SpaceStatR\n" +
+	"BuildCache\"\x8d\x01\n" +
+	"\tSpaceStat\x12 \n" +
+	"\vActiveCount\x18\x01 \x01(\x03R\vActiveCount\x12\x1e\n" +
+	"\n" +
+	"TotalCount\x18\x02 \x01(\x03R\n" +
+	"TotalCount\x12 \n" +
+	"\vReclaimable\x18\x03 \x01(\tR\vReclaimable\x12\x1c\n" +
+	"\tTotalSize\x18\x04 \x01(\tR\tTotalSize\"D\n" +
 	"\x11EditConfigRequest\x12/\n" +
 	"\x06config\x18\x01 \x01(\v2\x17.cleaner.v1.PruneConfigR\x06config\"E\n" +
 	"\x12EditConfigResponse\x12/\n" +
@@ -742,42 +817,47 @@ func file_cleaner_v1_cleaner_proto_rawDescGZIP() []byte {
 	return file_cleaner_v1_cleaner_proto_rawDescData
 }
 
-var file_cleaner_v1_cleaner_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_cleaner_v1_cleaner_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_cleaner_v1_cleaner_proto_goTypes = []any{
 	(*SpaceStatusRequest)(nil),  // 0: cleaner.v1.SpaceStatusRequest
 	(*SpaceStatusResponse)(nil), // 1: cleaner.v1.SpaceStatusResponse
-	(*EditConfigRequest)(nil),   // 2: cleaner.v1.EditConfigRequest
-	(*EditConfigResponse)(nil),  // 3: cleaner.v1.EditConfigResponse
-	(*GetConfigRequest)(nil),    // 4: cleaner.v1.GetConfigRequest
-	(*GetConfigResponse)(nil),   // 5: cleaner.v1.GetConfigResponse
-	(*PruneHistory)(nil),        // 6: cleaner.v1.PruneHistory
-	(*ListHistoryRequest)(nil),  // 7: cleaner.v1.ListHistoryRequest
-	(*ListHistoryResponse)(nil), // 8: cleaner.v1.ListHistoryResponse
-	(*RunCleanerRequest)(nil),   // 9: cleaner.v1.RunCleanerRequest
-	(*RunCleanerResponse)(nil),  // 10: cleaner.v1.RunCleanerResponse
-	(*PruneResult)(nil),         // 11: cleaner.v1.PruneResult
-	(*PruneConfig)(nil),         // 12: cleaner.v1.PruneConfig
+	(*SpaceStat)(nil),           // 2: cleaner.v1.SpaceStat
+	(*EditConfigRequest)(nil),   // 3: cleaner.v1.EditConfigRequest
+	(*EditConfigResponse)(nil),  // 4: cleaner.v1.EditConfigResponse
+	(*GetConfigRequest)(nil),    // 5: cleaner.v1.GetConfigRequest
+	(*GetConfigResponse)(nil),   // 6: cleaner.v1.GetConfigResponse
+	(*PruneHistory)(nil),        // 7: cleaner.v1.PruneHistory
+	(*ListHistoryRequest)(nil),  // 8: cleaner.v1.ListHistoryRequest
+	(*ListHistoryResponse)(nil), // 9: cleaner.v1.ListHistoryResponse
+	(*RunCleanerRequest)(nil),   // 10: cleaner.v1.RunCleanerRequest
+	(*RunCleanerResponse)(nil),  // 11: cleaner.v1.RunCleanerResponse
+	(*PruneResult)(nil),         // 12: cleaner.v1.PruneResult
+	(*PruneConfig)(nil),         // 13: cleaner.v1.PruneConfig
 }
 var file_cleaner_v1_cleaner_proto_depIdxs = []int32{
-	12, // 0: cleaner.v1.EditConfigRequest.config:type_name -> cleaner.v1.PruneConfig
-	12, // 1: cleaner.v1.EditConfigResponse.config:type_name -> cleaner.v1.PruneConfig
-	12, // 2: cleaner.v1.GetConfigResponse.config:type_name -> cleaner.v1.PruneConfig
-	6,  // 3: cleaner.v1.ListHistoryResponse.history:type_name -> cleaner.v1.PruneHistory
-	7,  // 4: cleaner.v1.CleanerService.ListHistory:input_type -> cleaner.v1.ListHistoryRequest
-	9,  // 5: cleaner.v1.CleanerService.RunCleaner:input_type -> cleaner.v1.RunCleanerRequest
-	0,  // 6: cleaner.v1.CleanerService.SpaceStatus:input_type -> cleaner.v1.SpaceStatusRequest
-	4,  // 7: cleaner.v1.CleanerService.GetConfig:input_type -> cleaner.v1.GetConfigRequest
-	2,  // 8: cleaner.v1.CleanerService.EditConfig:input_type -> cleaner.v1.EditConfigRequest
-	8,  // 9: cleaner.v1.CleanerService.ListHistory:output_type -> cleaner.v1.ListHistoryResponse
-	10, // 10: cleaner.v1.CleanerService.RunCleaner:output_type -> cleaner.v1.RunCleanerResponse
-	1,  // 11: cleaner.v1.CleanerService.SpaceStatus:output_type -> cleaner.v1.SpaceStatusResponse
-	5,  // 12: cleaner.v1.CleanerService.GetConfig:output_type -> cleaner.v1.GetConfigResponse
-	3,  // 13: cleaner.v1.CleanerService.EditConfig:output_type -> cleaner.v1.EditConfigResponse
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	2,  // 0: cleaner.v1.SpaceStatusResponse.Containers:type_name -> cleaner.v1.SpaceStat
+	2,  // 1: cleaner.v1.SpaceStatusResponse.Images:type_name -> cleaner.v1.SpaceStat
+	2,  // 2: cleaner.v1.SpaceStatusResponse.Volumes:type_name -> cleaner.v1.SpaceStat
+	2,  // 3: cleaner.v1.SpaceStatusResponse.BuildCache:type_name -> cleaner.v1.SpaceStat
+	13, // 4: cleaner.v1.EditConfigRequest.config:type_name -> cleaner.v1.PruneConfig
+	13, // 5: cleaner.v1.EditConfigResponse.config:type_name -> cleaner.v1.PruneConfig
+	13, // 6: cleaner.v1.GetConfigResponse.config:type_name -> cleaner.v1.PruneConfig
+	7,  // 7: cleaner.v1.ListHistoryResponse.history:type_name -> cleaner.v1.PruneHistory
+	8,  // 8: cleaner.v1.CleanerService.ListHistory:input_type -> cleaner.v1.ListHistoryRequest
+	10, // 9: cleaner.v1.CleanerService.RunCleaner:input_type -> cleaner.v1.RunCleanerRequest
+	0,  // 10: cleaner.v1.CleanerService.SpaceStatus:input_type -> cleaner.v1.SpaceStatusRequest
+	5,  // 11: cleaner.v1.CleanerService.GetConfig:input_type -> cleaner.v1.GetConfigRequest
+	3,  // 12: cleaner.v1.CleanerService.EditConfig:input_type -> cleaner.v1.EditConfigRequest
+	9,  // 13: cleaner.v1.CleanerService.ListHistory:output_type -> cleaner.v1.ListHistoryResponse
+	11, // 14: cleaner.v1.CleanerService.RunCleaner:output_type -> cleaner.v1.RunCleanerResponse
+	1,  // 15: cleaner.v1.CleanerService.SpaceStatus:output_type -> cleaner.v1.SpaceStatusResponse
+	6,  // 16: cleaner.v1.CleanerService.GetConfig:output_type -> cleaner.v1.GetConfigResponse
+	4,  // 17: cleaner.v1.CleanerService.EditConfig:output_type -> cleaner.v1.EditConfigResponse
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_cleaner_v1_cleaner_proto_init() }
@@ -791,7 +871,7 @@ func file_cleaner_v1_cleaner_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cleaner_v1_cleaner_proto_rawDesc), len(file_cleaner_v1_cleaner_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

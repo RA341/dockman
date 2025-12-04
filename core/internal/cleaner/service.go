@@ -149,8 +149,8 @@ func (s *Service) Prune(
 	}
 
 	if opts.Images {
-		var imageFilters client.Filters
-		imageFilters.Add("dangling", "false")
+		imageFilters := client.Filters{}
+		imageFilters.Add("dangling", "true")
 
 		imageReport, err := cli.ImagePrune(ctx, client.ImagePruneOptions{
 			Filters: imageFilters,

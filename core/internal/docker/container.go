@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/docker/compose/v5/pkg/api"
+	"github.com/docker/compose/v2/pkg/api"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/api/types/mount"
@@ -826,7 +826,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 		}
 	}
 
-	var volumeFilters client.Filters
+	volumeFilters := client.Filters{}
 	for i, vol := range listResp.Items {
 		val, ok := tmpMap[vol.Name]
 		if ok {
@@ -899,7 +899,7 @@ func (s *ContainerService) VolumesPruneUnunsed(ctx context.Context) error {
 		return fmt.Errorf("failed to get disk usage data: %w", err)
 	}
 
-	var volumeFilters client.Filters
+	volumeFilters := client.Filters{}
 	for _, vol := range volResponse.Items {
 		volumeFilters.Add("volume", vol.Name)
 	}
