@@ -18,8 +18,8 @@ func NewHandler(srv *Service) *Handler {
 	return &Handler{srv: srv}
 }
 
-func (h *Handler) ListHistory(ctx context.Context, req *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {
-	result, err := h.srv.store.ListResult()
+func (h *Handler) ListHistory(context.Context, *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {
+	result, err := h.srv.store.ListResult(h.srv.hostname())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (h *Handler) SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRe
 	}), nil
 }
 
-func (h *Handler) RunCleaner(ctx context.Context, req *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
+func (h *Handler) RunCleaner(context.Context, *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
 	err := h.srv.Run()
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (h *Handler) RunCleaner(ctx context.Context, req *connect.Request[v1.RunCle
 	return connect.NewResponse(&v1.RunCleanerResponse{}), nil
 }
 
-func (h *Handler) GetConfig(ctx context.Context, req *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+func (h *Handler) GetConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
 	config, err := h.srv.store.GetConfig()
 	if err != nil {
 		return nil, err

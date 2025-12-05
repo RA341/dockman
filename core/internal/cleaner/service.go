@@ -21,13 +21,16 @@ type Service struct {
 	log      zerolog.Logger
 	task     *Scheduler
 	taskLock sync.Mutex
+	// use a closure to get the upto date client
+	hostname func() string
 }
 
-func NewService(cli cliFn, store Store) *Service {
+func NewService(cli cliFn, hostname func() string, store Store) *Service {
 	s := &Service{
-		cli:   cli,
-		store: store,
-		log:   log.With().Str("service", "docker cleaner").Logger(),
+		cli:      cli,
+		hostname: hostname,
+		store:    store,
+		log:      log.With().Str("service", "docker cleaner").Logger(),
 	}
 	err := s.store.InitConfig()
 	if err != nil {
@@ -88,6 +91,7 @@ func (s *Service) setupTask(interval time.Duration) {
 
 			cli := s.cli()
 			result := PruneResult{}
+			result.Host = s.hostname()
 
 			s.Prune(ctx, pruneConfig, cli, &result)
 
@@ -131,7 +135,6 @@ func (s *Service) Prune(
 	cli *client.Client,
 	result *PruneResult,
 ) {
-
 	if opts.Containers {
 		containerReport, err := cli.ContainerPrune(ctx, client.ContainerPruneOptions{})
 		var res OpResult
@@ -150,7 +153,8 @@ func (s *Service) Prune(
 
 	if opts.Images {
 		imageFilters := client.Filters{}
-		imageFilters.Add("dangling", "true")
+		// all unused images
+		imageFilters.Add("dangling", "false")
 
 		imageReport, err := cli.ImagePrune(ctx, client.ImagePruneOptions{
 			Filters: imageFilters,

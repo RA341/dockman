@@ -10,6 +10,9 @@ const configID = 1
 
 type PruneResult struct {
 	gorm.Model
+	// machine on which it was cleaned
+	Host string
+
 	Volumes    OpResult `gorm:"embedded;embeddedPrefix:volumes_"`
 	Networks   OpResult `gorm:"embedded;embeddedPrefix:networks_"`
 	Images     OpResult `gorm:"embedded;embeddedPrefix:images_"`
@@ -48,6 +51,6 @@ type Store interface {
 	InitConfig() error
 
 	AddResult(*PruneResult) error
-	ListResult() ([]PruneResult, error)
+	ListResult(host string) ([]PruneResult, error)
 	DeleteResult(id int) error
 }

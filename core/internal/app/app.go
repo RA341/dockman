@@ -93,6 +93,9 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		func() *client.Client {
 			return dockerManagerSrv.GetService().Container.MobyClient
 		},
+		func() string {
+			return dockerManagerSrv.GetActiveClient()
+		},
 		cleanerStore,
 	)
 

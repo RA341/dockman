@@ -68,7 +68,7 @@ func (g *GormStore) AddResult(result *PruneResult) error {
 
 		var count int64
 		err = tx.Model(&PruneResult{}).
-			//Where("user_id = ?", session.UserID).
+			Where("host = ?", result.Host).
 			Count(&count).Error
 		if err != nil {
 			return err
@@ -81,6 +81,7 @@ func (g *GormStore) AddResult(result *PruneResult) error {
 			var oldSessions []PruneResult
 			// Find the oldest session IDs to delete
 			err = tx.
+				Where("host = ?", result.Host).
 				Order("created_at ASC").
 				Limit(int(sessionsToDelete)).
 				Find(&oldSessions).Error
@@ -101,9 +102,13 @@ func (g *GormStore) AddResult(result *PruneResult) error {
 
 }
 
-func (g *GormStore) ListResult() ([]PruneResult, error) {
+func (g *GormStore) ListResult(host string) ([]PruneResult, error) {
 	var result []PruneResult
-	err := g.db.Order("created_at DESC").Find(&result).Error
+	err := g.db.
+		Where("host = ?", host).
+		Order("created_at DESC").
+		Find(&result).
+		Error
 	if err != nil {
 		return nil, err
 	}
