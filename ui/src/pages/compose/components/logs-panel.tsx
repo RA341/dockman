@@ -18,16 +18,16 @@ export function LogsPanel() {
     const {tabs, activeTab, setActiveTab, close} = useTerminalTabs();
     const fitAddonRef = useRef<FitAddon>(new FitAddon());
 
-    return isTerminalOpen && (
+    return (
         <Paper
             elevation={8}
             ref={panelRef}
             sx={{
+                display: (isTerminalOpen) ? 'flex' : 'none',
                 height: `${panelSize}px`,
                 transition: isResizing ? 'none' : 'height 0.1s ease-in-out',
                 overflow: 'hidden',
                 position: 'relative',
-                display: 'flex',
                 flexDirection: 'column',
                 bgcolor: '#000000',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
