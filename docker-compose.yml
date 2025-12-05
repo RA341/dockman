@@ -1,6 +1,21 @@
 # Note: this is a development docker compose.yml file used to test dockman with various services
 # this is not the recommended way to set up see https://dockman.radn.dev/docs/install/docker#docker-compose to setup dockman with compose
 services:
+  dockman:
+    container_name: dockman-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DOCKMAN_PUID: 1000
+      DOCKMAN_GID: 1000
+      DOCKMAN_COMPOSE_ROOT: /home/ra341/Dev/Go/dockman/compose
+    volumes:
+      - /home/ra341/Dev/Go/dockman/compose:/home/ra341/Dev/Go/dockman/compose
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8221:8866"
+
   caddy:
     image: caddy:alpine
     ports:
