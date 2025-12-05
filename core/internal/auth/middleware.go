@@ -9,7 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const HeaderAuth = "Authorization"
+const CookieHeaderAuth = "Authorization"
+const CookieHeaderSessionId = "SessionId"
 const KeyUserCtx = "user"
 
 type HttpMiddleware struct {
@@ -21,6 +22,19 @@ func NewHttpAuthMiddleware(srv *Service) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			u, err := verifyCookie(r.Cookies(), srv)
 			if err != nil {
+				if srv.config.EnableOidc {
+					// IMPORTANT BEFORE CHANGING THE STATUS CODE HERE
+					// update the code here as well: ui/src/lib/api.ts:82
+					w.WriteHeader(http.StatusFound)
+					// todo factor out url
+					_, err = w.Write([]byte("/auth/login/oidc"))
+					if err != nil {
+						log.Warn().Err(err).Msg("Failed to write response")
+						return
+					}
+					return
+				}
+
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
@@ -31,13 +45,13 @@ func NewHttpAuthMiddleware(srv *Service) func(next http.Handler) http.Handler {
 	}
 }
 
-func getCookie(name string, cookies []*http.Cookie) (*http.Cookie, error) {
-	if name == "" {
+func getCookie(cookieName string, cookies []*http.Cookie) (*http.Cookie, error) {
+	if cookieName == "" {
 		return nil, http.ErrNoCookie
 	}
 
 	for _, c := range cookies {
-		if c.Name == HeaderAuth {
+		if c.Name == cookieName {
 			return c, nil
 		}
 	}
@@ -46,7 +60,7 @@ func getCookie(name string, cookies []*http.Cookie) (*http.Cookie, error) {
 }
 
 func verifyCookie(cookies []*http.Cookie, srv *Service) (*User, error) {
-	cookie, err := getCookie(HeaderAuth, cookies)
+	cookie, err := getCookie(CookieHeaderAuth, cookies)
 	if err != nil {
 		return nil, err
 	}

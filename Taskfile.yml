@@ -7,7 +7,7 @@ vars:
   # Directory for Go source commands
   GO_CMD_DIR: cmd
   # Directory for build output
-  BUILD_DIR: build
+  BUILD_DIR: .build
 
 tasks:
   default:
@@ -66,8 +66,6 @@ tasks:
   ui:
     desc: "Build the latest web ui in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
-    #    sources:
-    #      - "**/*.tsx"
     cmds:
       - npm run build
 
@@ -91,22 +89,23 @@ tasks:
     cmds:
       - npm run preview
 
-
   ui:dep:
     desc: "calls npm install in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
     cmds:
       - npm i
 
-  ui:native:
+  ui:b:*:
     dir: "{{.UI_DIR}}"
     vars:
-      NATIVE_DIR: ../{{.CORE_DIR}}/{{.GO_CMD_DIR}}/native
-    desc: "Builds ui and copies for embed binary. Usage: task ui:native"
+      CMD: "{{index .MATCH 0}}"
+      OUT_DIR: ../{{.CORE_DIR}}{{.GO_CMD_DIR}}/{{.CMD}}
+    desc: "Builds ui and copies for embed binary. Usage: task ui:<go cmd target>"
     cmds:
       - task: ui
-      - coreutils rm -f -r {{.NATIVE_DIR}}/dist
-      - coreutils mv -f dist {{.NATIVE_DIR}}/dist
+      - rm -rf {{.OUT_DIR}}/dist
+      - mkdir -p {{.OUT_DIR}}/dist
+      - cp -rf dist {{.OUT_DIR}}/
 
   clean:
     desc: "Removes all files in {{.BUILD_DIR}}"
@@ -130,14 +129,15 @@ tasks:
       - task: init:build
     sources:
       - "**/*.go"
-    generates:
-      - "{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}"
-    cmds:
-      - go build -v -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}} ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
     summary: |
       Builds the '{{.CMD_NAME}}' Go command.
       Source: '{{.GO_CMD_DIR}}/{{.CMD_NAME}}'
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
+    cmds:
+      - mkdir -p ../{{.BUILD_DIR}}/{{.CMD_NAME}}
+      - go build -v
+        -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}
+        ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 
   go:*:
     dir: "{{.BUILD_DIR}}"
@@ -145,10 +145,13 @@ tasks:
     vars:
       CMD_NAME: "{{index .MATCH 0}}"
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
-      ARGS: '{{if eq .CMD_NAME "updater"}} -cr={{.CMD_NAME}}/compose {{else}} -conf={{.CMD_NAME}}/config -cr={{.CMD_NAME}}/compose{{end}}'
+      ARGS: '{{if eq .CMD_NAME "updater"}} 
+              -cr={{.CMD_NAME}}/compose {{else}} 
+              -conf={{.CMD_NAME}}/config 
+              -cr={{.CMD_NAME}}/compose{{end}}'
     cmds:
       - task: go:b:{{.CMD_NAME}}
-      - ../{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
+      - ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
 
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"
@@ -174,6 +177,7 @@ tasks:
     cmds:
       - task dk:b:{{.TARGET}}
       - docker run --rm
+        -e TZ=America/New_York
         -e DOCKMAN_LOG_LEVEL=debug
         -e DOCKMAN_AUTH_ENABLE=false
         -e DOCKMAN_AUTH_USERNAME=wow

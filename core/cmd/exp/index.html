@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compose Terminal</title>
+    <!-- 1. Import xterm.js styles -->
+    <link href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" rel="stylesheet"/>
+    <style>
+        body {
+            background: #1e1e1e;
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            color: white;
+        }
+
+        #terminal-container {
+            width: 100%;
+            height: 600px;
+            background-color: black;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            background: #007acc;
+            color: white;
+            border: none;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #005fa3;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Docker Compose WebSocket Client</h1>
+<button onclick="startCompose()">Run Compose Up</button>
+
+<!-- The container for the terminal -->
+<div id="terminal-container"></div>
+
+<!-- 2. Import xterm.js library -->
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<!-- Optional: Import the 'Fit' addon to resize the terminal automatically -->
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+<script>
+    let term;
+    let ws;
+    let fitAddon;
+
+    // Initialize Terminal on Page Load
+    window.onload = function () {
+        term = new Terminal({
+            cursorBlink: true,
+            convertEol: true, // Treats \n as new line
+            theme: {
+                background: '#000000',
+                foreground: '#ffffff'
+            }
+        });
+
+        fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+
+        term.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+
+        term.write('\x1b[32mWelcome to the Compose Web Terminal\x1b[0m\r\n');
+        term.write('Click "Run Compose Up" to start...\r\n');
+    };
+
+    function startCompose() {
+        if (ws) {
+            ws.close();
+        }
+
+        term.clear();
+        term.write('Connecting to WebSocket...\r\n');
+
+        ws = new WebSocket("ws://localhost:8080/ws");
+
+        ws.onopen = function () {
+            term.write('\x1b[34m>>> Connection Established. Sending Command...\x1b[0m\r\n\r\n');
+        };
+
+        ws.onmessage = function (event) {
+            // Xterm.js parses the ANSI codes for colors and cursor movements automatically
+            term.write(event.data);
+        };
+
+        ws.onclose = function () {
+            term.write('\r\n\x1b[31m>>> Connection Closed\x1b[0m\r\n');
+        };
+
+        ws.onerror = function (err) {
+            term.write('\r\n\x1b[31m>>> Error: connection failed\x1b[0m\r\n');
+        };
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (fitAddon) fitAddon.fit();
+    });
+</script>
+</body>
+</html>

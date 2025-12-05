@@ -8,6 +8,7 @@ import (
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 )
 
 type Service struct {
@@ -16,10 +17,9 @@ type Service struct {
 	InfoDB        *impl.VersionDB
 	UserConfigDB  *impl.UserConfigDB
 	ImageUpdateDB *impl.ImageUpdateDB
-	AuthDb        *impl.AuthDB
 }
 
-func NewService(basepath string) *Service {
+func NewService(basepath string) (*gorm.DB, *Service) {
 	gormDB, err := connect(basepath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Unable to connect to database")
@@ -33,6 +33,7 @@ func NewService(basepath string) *Service {
 		&config.UserConfig{},
 		&docker.ImageUpdate{},
 		&auth.User{},
+		&auth.Session{},
 	}
 	if err = gormDB.AutoMigrate(tables...); err != nil {
 		log.Fatal().Err(err).Msg("failed to auto migrate DB")
@@ -43,15 +44,13 @@ func NewService(basepath string) *Service {
 	macMan := impl.NewMachineManagerDB(gormDB)
 	verMan := impl.NewVersionHistoryManager(gormDB)
 	imgMan := impl.NewImageUpdateDB(gormDB)
-	authDb := impl.NewAuthDB(gormDB)
 
-	return &Service{
+	return gormDB, &Service{
 		SshKeyDB:      keyman,
 		MachineDB:     macMan,
 		InfoDB:        verMan,
 		UserConfigDB:  userMan,
 		ImageUpdateDB: imgMan,
-		AuthDb:        authDb,
 	}
 }
 

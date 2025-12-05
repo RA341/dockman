@@ -1,0 +1,8 @@
+{
+  "label": "Docker Socket",
+  "position": 4,
+  "link": {
+    "type": "doc",
+    "id": "docker-socket/index"
+  }
+}

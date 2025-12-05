@@ -15,15 +15,11 @@ service DockerService {
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
 
-  // start a stream that will show container execs
-  rpc ContainerExecOutput(ContainerExecRequest) returns (stream LogsMessage) {}
-  // pass in the commands with the container ID
-  rpc ContainerExecInput(ContainerExecCmdInput) returns (Empty) {}
-
   // compose
+  rpc ComposeUp(ComposeFile) returns (stream LogsMessage) {}
+  rpc ComposeDown(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeStart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeStop(ComposeFile) returns (stream LogsMessage) {}
-  rpc ComposeRemove(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeRestart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeUpdate(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeList(ComposeFile) returns (ListResponse) {}
@@ -236,6 +232,7 @@ message ContainerList {
   string servicePath = 9;
   string stackName = 10;
   string updateAvailable = 11;
+  string IPAddress = 12;
 }
 
 // ContainerInfo holds metrics for a single Docker container.

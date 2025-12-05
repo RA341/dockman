@@ -19,7 +19,6 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/docker/docker/api/types/container"
@@ -35,9 +34,6 @@ type ServiceProvider func() *Service
 type Handler struct {
 	srv  ServiceProvider
 	addr string
-
-	// store input channels for a running exec channel
-	execSessions syncmap.Map[string, chan string]
 }
 
 func NewConnectHandler(srv ServiceProvider, host string) *Handler {
@@ -59,12 +55,22 @@ func (h *Handler) container() *ContainerService {
 // 			Compose Actions 			  //
 ////////////////////////////////////////////
 
-func (h *Handler) ComposeStart(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+func (h *Handler) ComposeUp(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.executeComposeStreamCommand(
 		ctx,
 		req.Msg.GetFilename(),
 		responseStream,
 		h.compose().ComposeUp,
+		req.Msg.GetSelectedServices()...,
+	)
+}
+
+func (h *Handler) ComposeStart(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+	return h.executeComposeStreamCommand(
+		ctx,
+		req.Msg.GetFilename(),
+		responseStream,
+		h.compose().ComposeStart,
 		req.Msg.GetSelectedServices()...,
 	)
 }
@@ -79,7 +85,7 @@ func (h *Handler) ComposeStop(ctx context.Context, req *connect.Request[v1.Compo
 	)
 }
 
-func (h *Handler) ComposeRemove(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+func (h *Handler) ComposeDown(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.executeComposeStreamCommand(
 		ctx,
 		req.Msg.GetFilename(),
@@ -309,86 +315,6 @@ func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.Con
 	}
 
 	return nil
-}
-
-func (h *Handler) ContainerExecOutput(ctx context.Context, req *connect.Request[v1.ContainerExecRequest], stream *connect.ServerStream[v1.LogsMessage]) error {
-	if req.Msg.GetContainerID() == "" {
-		return fmt.Errorf("container id is required")
-	}
-
-	containerID := req.Msg.ContainerID
-	resp, err := h.container().ExecContainer(ctx, containerID, req.Msg.ExecCmd)
-	if err != nil {
-		return fmt.Errorf("error starting exec: %w", err)
-	}
-	defer resp.Close()
-
-	inputChan := make(chan string, 20)
-	h.execSessions.Store(containerID, inputChan)
-
-	// Writer goroutine to handle stdin
-	go func() {
-		writer := bufio.NewWriter(resp.Conn)
-		for {
-			select {
-			case line, ok := <-inputChan:
-				if !ok {
-					log.Info().Str("container", containerID[:10]).
-						Msg("stopping exec input listener")
-					return
-				}
-
-				if _, err = writer.WriteString(line + "\n"); err != nil {
-					log.Warn().Err(err).Msg("unable to write to stream")
-					continue
-				}
-
-				if err = writer.Flush(); err != nil {
-					log.Warn().Err(err).Msg("unable to flush writer")
-					continue
-				}
-			case <-ctx.Done():
-				log.Info().Str("container", containerID[:10]).
-					Msg("stopping exec input listener")
-				resp.Close()
-				return
-			}
-		}
-	}()
-
-	// reads from container and sends to stream
-	reader := bufio.NewReader(resp.Conn)
-	for {
-		var line string
-		line, err = reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF || err.Error() == "file has already been closed" {
-				break
-			}
-			return fmt.Errorf("error reading from stdout: %w", err)
-		}
-
-		err = stream.Send(&v1.LogsMessage{Message: line})
-		if err != nil {
-			log.Error().Msg("unable to send message")
-		}
-	}
-
-	close(inputChan)
-	h.execSessions.Delete(containerID)
-	log.Debug().Msg("ending container exec stream")
-	return nil
-}
-
-func (h *Handler) ContainerExecInput(_ context.Context, req *connect.Request[v1.ContainerExecCmdInput]) (*connect.Response[v1.Empty], error) {
-	cont := req.Msg.ContainerID
-	val, ok := h.execSessions.Load(cont)
-	if !ok {
-		return connect.NewResponse(&v1.Empty{}), fmt.Errorf("container %s not found", cont[:12])
-	}
-
-	val <- req.Msg.UserCmd
-	return connect.NewResponse(&v1.Empty{}), nil
 }
 
 ////////////////////////////////////////////
@@ -651,7 +577,7 @@ func (h *Handler) executeComposeStreamCommand(
 		return nil
 	})
 
-	composeClient, err := h.compose().LoadComposeClient(pipeWriter, nil)
+	composeClient, err := h.compose().LoadComposeClient(pipeWriter)
 	if err != nil {
 		return err
 	}
@@ -667,6 +593,18 @@ func (h *Handler) executeComposeStreamCommand(
 	wg.Wait()
 
 	return nil
+}
+
+type LogStreamWriter struct {
+	responseStream *connect.ServerStream[v1.LogsMessage]
+}
+
+func (l *LogStreamWriter) Write(p []byte) (n int, err error) {
+	err = l.responseStream.Send(&v1.LogsMessage{})
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 func ToRPCStat(cont ContainerStats) *v1.ContainerStats {
@@ -785,12 +723,18 @@ func toRPCPort(p container.Port) *v1.Port {
 }
 
 func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, update ImageUpdate) *v1.ContainerList {
+	var ipAddr string
+	for _, netConf := range stack.NetworkSettings.Networks {
+		ipAddr = netConf.IPAddress
+	}
+
 	return &v1.ContainerList{
 		Name:            strings.TrimPrefix(stack.Names[0], "/"),
 		Id:              stack.ID,
 		ImageID:         stack.ImageID,
 		ImageName:       stack.Image,
 		Status:          stack.Status,
+		IPAddress:       ipAddr,
 		UpdateAvailable: update.UpdateRef,
 		Ports:           portSlice,
 		ServiceName:     stack.Labels[api.ServiceLabel],

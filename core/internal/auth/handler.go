@@ -1,12 +1,14 @@
 package auth
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
+
+	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/auth/v1"
 	"github.com/rs/zerolog/log"
-	"net/http"
 )
 
 type Handler struct {
@@ -23,13 +25,21 @@ func (a *Handler) Login(_ context.Context, c *connect.Request[v1.User]) (*connec
 		return nil, fmt.Errorf("empty username or password")
 	}
 
-	user, authToken, err := a.auth.Login(username, password)
+	session, authToken, err := a.auth.Login(username, password)
 	if err != nil {
 		return nil, err
 	}
 
 	response := connect.NewResponse(&v1.Empty{})
-	setCookie(response, authToken, user.Expires)
+
+	cookies := createAuthCookies(
+		authToken,
+		session.ID,
+		session.Expires,
+	)
+	for _, cook := range cookies {
+		response.Header().Add("Set-Cookie", cook.String())
+	}
 
 	return response, nil
 }
@@ -40,12 +50,22 @@ func (a *Handler) Logout(_ context.Context, req *connect.Request[v1.Empty]) (*co
 		return nil, err
 	}
 
-	user, err := verifyCookie(cookies, a.auth)
+	_, err = verifyCookie(cookies, a.auth)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
 
-	if err = a.auth.Logout(user); err != nil {
+	sessionIdStr, err := getCookie(CookieHeaderSessionId, cookies)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	sessionID, err := strconv.Atoi(sessionIdStr.Value)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	err = a.auth.Logout(uint(sessionID))
+	if err != nil {
 		log.Warn().Err(err).Msg("error while logging out")
 	}
 

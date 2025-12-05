@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {useCallback, useEffect} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip, Typography} from '@mui/material'
 import {Add as AddIcon, Search as SearchIcon, Sync} from '@mui/icons-material'
 import {useParams} from 'react-router-dom'
@@ -11,8 +11,9 @@ import {useGitImport} from "../dialogs/import/import-hook.ts";
 import {useAddFile} from "../dialogs/add/add-hook.ts";
 import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
 import {useAtom} from "jotai";
-import {openFiles, sideBarState} from "../state.tsx";
+import {openFiles, useSideBarAction} from "../state/state.tsx";
 import {useTabs} from "../../../hooks/tabs.ts";
+import useResizeBar from "../hooks/resize-hook.ts";
 
 export function FileList() {
     const {file: currentDir} = useParams<{ file: string }>()
@@ -29,7 +30,7 @@ export function FileList() {
 
     const [openDirs, setOpenDirs] = useAtom(openFiles)
 
-    const [isSidebarCollapsed] = useAtom(sideBarState)
+    const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -77,45 +78,14 @@ export function FileList() {
         })
     }, [setOpenDirs])
 
-    const [panelWidth, setPanelWidth] = useState(250);
-    const [isResizing, setIsResizing] = useState(false);
-    const panelRef = useRef<HTMLDivElement | null>(null);
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        setIsResizing(true);
-        e.preventDefault();
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        if (!isResizing || !panelRef.current) return;
-
-        const panelRect = panelRef.current.getBoundingClientRect();
-        const newWidth = e.clientX - panelRect.left; // Changed this line
-        setPanelWidth(Math.max(150, Math.min(600, newWidth)));
-    };
-
-    const handleMouseUp = () => {
-        setIsResizing(false);
-    };
-
-    useEffect(() => {
-        if (isResizing) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-        }
-        // eslint-disable-next-line
-    }, [isResizing]);
+    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
 
     return (
         <>
             {/* Sidebar Panel */}
             <Box ref={panelRef}
                  sx={{
-                     width: isSidebarCollapsed ? 0 : panelWidth,
+                     width: isSidebarCollapsed ? 0 : panelSize,
                      flexShrink: 0,
                      borderRight: isSidebarCollapsed ? 0 : 1,
                      borderColor: 'divider',

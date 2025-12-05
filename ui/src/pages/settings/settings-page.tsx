@@ -13,10 +13,6 @@ const tabConfigurations: TabConfig[] = [
         label: "Docker Hosts",
         component: <TabDockerHosts/>
     },
-    // {
-    //     label: "Container Updater",
-    //     component: <TabContainerUpdater/>
-    // },
 ];
 
 interface TabPanelProps {

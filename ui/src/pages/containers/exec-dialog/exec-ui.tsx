@@ -1,3 +1,4 @@
+import {useEffect, useRef, useState} from "react";
 import {
     Autocomplete,
     Box,
@@ -8,105 +9,65 @@ import {
     DialogTitle,
     IconButton,
     TextField
-} from '@mui/material'; // Or your preferred UI library
+} from '@mui/material';
 import CloseIcon from "@mui/icons-material/Close";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
-import {callRPC, transformAsyncIterable, useClient} from "../../../lib/api.ts";
-import LogsTerminal from "../../compose/components/logs-terminal.tsx";
-import {useEffect, useRef, useState} from "react";
-import {DockerService, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
+import "@xterm/xterm/css/xterm.css";
+import {getWSUrl} from "../../../lib/api.ts";
+import AppTerminal from "../../compose/components/logs-terminal.tsx";
+import {FitAddon} from "@xterm/addon-fit";
+import {interactiveTermFn} from "../../compose/state/state.tsx";
 
-interface ExecDialogProps {
+export const ExecDialog = ({show, hide, name, containerID}: {
     show: boolean;
     hide: () => void;
     name: string;
     containerID: string;
-}
+}) => {
+    const {showError} = useSnackbar();
 
-export const ExecDialog = ({show, hide, name, containerID}: ExecDialogProps) => {
-    const {showError, showInfo} = useSnackbar()
-    const dockerService = useClient(DockerService);
-
-    const [panelTitle, setPanelTitle] = useState('');
-    const [logStream, setLogStream] = useState<AsyncIterable<string> | null>(null);
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
-    const [connected, setConnected] = useState(false);
+    const [isConnected, setIsConnected] = useState(false);
 
-    const abortControllerRef = useRef<AbortController | null>(null);
+    const fitAddonRef = useRef<FitAddon>(new FitAddon());
+    // Reset state when dialog opens/closes or container changes
+    useEffect(() => {
+        if (!show) {
+            setIsConnected(false);
+        }
+    }, [show, containerID]);
 
     const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
 
-    useEffect(() => {
-        if (containerID) {
-            setPanelTitle(`Exec - ${name}`);
-        }
-
-        return () => {
-            abortControllerRef.current?.abort()
-            setPanelTitle('')
-            setLogStream(null)
-            setConnected(false)
-        };
-    }, [containerID, name]);
-
-    const manageStream = <T, >({getStream, transform}: {
-        getStream: (signal: AbortSignal) => AsyncIterable<T>;
-        transform: (item: T) => string;
-    }) => {
-        abortControllerRef.current?.abort("User started a new action");
-        const newController = new AbortController();
-        abortControllerRef.current = newController;
-
-        const sourceStream = getStream(newController.signal);
-        const transformedStream = transformAsyncIterable(sourceStream, {
-            transform,
-            onComplete: () => showInfo("Stream completed successfully."),
-            onError: error => showError(`Stream error: ${error}`),
-            onFinally: () => {
-                if (abortControllerRef.current === newController) {
-                    abortControllerRef.current = null;
-                }
-            },
-        });
-
-        setLogStream(transformedStream);
-    };
-
     const handleConnect = () => {
-        if (!containerID) return;
-
-        manageStream<LogsMessage>({
-            getStream: signal => dockerService.containerExecOutput({
-                containerID: containerID,
-                execCmd: selectedCmd.trim().split(' ')
-            }, {signal}),
-            transform: item => item.message,
-        });
-
-        setConnected(true);
+        if (!containerID) {
+            showError("No container ID provided");
+            return;
+        }
+        setIsConnected(true);
     };
 
-    function handleInput(cmd: string) {
-        callRPC(() => dockerService.containerExecInput(
-            {containerID: containerID, userCmd: cmd}
-        )).catch((err) => {
-            showError(`unable to send cmd: ${err}`)
-        })
-    }
+    const getWsUrl = () => {
+        const encodedCmd = encodeURIComponent(selectedCmd);
+        return getWSUrl(`docker/exec/${containerID}?cmd=${encodedCmd}`)
+    };
 
     return (
         <Dialog
             open={show}
             onClose={hide}
             fullWidth
-            maxWidth="md"
+            maxWidth="lg" // Made slightly larger for terminal
             scroll="paper"
             slotProps={{
                 paper: {
                     sx: {
                         borderRadius: '12px',
-                        backgroundColor: '#2e2e2e',
-                        color: '#ffffff'
+                        backgroundColor: '#1e1e1e',
+                        color: '#ffffff',
+                        height: '80vh', // Fixed height for terminal
+                        display: 'flex',
+                        flexDirection: 'column'
                     }
                 }
             }}
@@ -115,70 +76,99 @@ export const ExecDialog = ({show, hide, name, containerID}: ExecDialogProps) => 
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                backgroundColor: '#2e2e2e',
+                backgroundColor: '#252526',
                 color: '#ffffff',
-                borderBottom: '1px solid #333'
+                borderBottom: '1px solid #333',
+                p: 2
             }}>
-                {panelTitle}
+                {name ? `Exec: ${name}` : 'Container Exec'}
                 <IconButton
                     onClick={hide}
-                    sx={{
-                        color: '#ffffff',
-                        '&:hover': {
-                            backgroundColor: '#333'
-                        }
-                    }}
+                    sx={{color: '#ffffff', '&:hover': {backgroundColor: '#333'}}}
                 >
                     <CloseIcon/>
                 </IconButton>
             </DialogTitle>
-            <DialogContent dividers sx={{p: 0, backgroundColor: '#000'}}>
-                {!connected ? (
-                    <Box sx={{p: 2, display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center'}}>
-                        <Autocomplete
-                            freeSolo
-                            options={commandOptions}
-                            value={selectedCmd}
-                            onInputChange={(_, value) => setSelectedCmd(value)}
-                            sx={{flex: 1}}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Initial Command"
-                                    variant="outlined"
-                                    size="small"
-                                    InputLabelProps={{style: {color: '#aaa'}}}
-                                    InputProps={{
-                                        ...params.InputProps,
-                                        style: {color: '#fff'}
-                                    }}
-                                />
-                            )}
-                        />
-                        <Button
-                            variant="contained"
-                            onClick={handleConnect}
-                            sx={{whiteSpace: 'nowrap'}}
-                        >
-                            Connect
-                        </Button>
+
+            <DialogContent sx={{
+                p: 0,
+                backgroundColor: '#000',
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                overflow: 'hidden' // Let xterm handle scroll
+            }}>
+                {!isConnected ? (
+                    <Box sx={{
+                        p: 4,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%'
+                    }}>
+                        <Box sx={{width: '100%', maxWidth: 400, display: 'flex', gap: 1}}>
+                            <Autocomplete
+                                freeSolo
+                                options={commandOptions}
+                                value={selectedCmd}
+                                onInputChange={(_, value) => setSelectedCmd(value)}
+                                sx={{flex: 1}}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Shell Command"
+                                        variant="outlined"
+                                        size="small"
+                                        slotProps={{
+                                            inputLabel: {style: {color: '#aaa'}},
+                                            input: {
+                                                ...params.InputProps,
+                                                style: {color: '#fff', backgroundColor: '#333'}
+                                            }
+                                        }}
+                                    />
+                                )}
+                            />
+                            <Button
+                                variant="contained"
+                                onClick={handleConnect}
+                                color="primary"
+                            >
+                                Connect
+                            </Button>
+                        </Box>
                     </Box>
                 ) : (
-                    <LogsTerminal
-                        isActive={true}
-                        logStream={logStream}
-                        inputFunc={handleInput}
-                    />
+                    <Box sx={{flex: 1, p: 1, overflow: 'hidden'}}>
+                        <AppTerminal
+                            isActive={true}
+                            id={containerID}
+                            interactive={true}
+                            fit={fitAddonRef}
+                            title={`Exec ${name}`}
+                            onTerminal={
+                                term => interactiveTermFn(term, getWsUrl())
+                            }
+                        />
+                    </Box>
                 )}
             </DialogContent>
+
             <DialogActions sx={{
-                backgroundColor: '#2e2e2e',
-                borderTop: '1px solid #333'
+                backgroundColor: '#252526',
+                borderTop: '1px solid #333',
+                p: 1
             }}>
-                <Box sx={{height: '25px'}}/>
+                {/* Status or helper text could go here */}
+                <Box sx={{fontSize: '0.8rem', color: '#666', mr: 2}}>
+                    {isConnected && "Status: Connected via WebSocket"}
+                </Box>
             </DialogActions>
         </Dialog>
-    )
-}
+    );
+};
 
 export default ExecDialog;
+

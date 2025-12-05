@@ -10,7 +10,7 @@ export const API_URL = import.meta.env.MODE === 'development'
 export function getWSUrl(path: string) {
     const url = new URL(API_URL);
     const baseUrl = url.host
-    const proto = url.protocol == "http:" ? "wss" : "ws";
+    const proto = url.protocol == "http:" ? "ws" : "wss";
 
     return `${proto}://${baseUrl}/${path}`
 }
@@ -74,7 +74,18 @@ export async function uploadFile(filename: string, contents: string): Promise<st
 export async function pingWithAuth() {
     try {
         console.log("Checking authentication status with server...");
-        const response = await fetch('/auth/ping');
+        const response = await fetch('/auth/ping', {
+            redirect: 'follow'
+        });
+
+        if (response.status == 302) {
+            const location = await response.text();
+            console.log(`oidc is enabled redirecting to oidc auth: ${location}`);
+            window.location.assign(location)
+
+            return false
+        }
+
         console.log(`Server response isOK: ${response.ok}`);
         return response.ok
     } catch (error) {
@@ -109,7 +120,7 @@ async function download(subPath: string) {
 }
 
 interface TransformAsyncIterableOptions<T, U> {
-    transform: (item: T) => U | Promise<U>;
+    transform: (item: T) => U;
     onComplete?: () => void;
     onError?: (error: string) => void;
     onFinally?: () => void;
@@ -131,7 +142,7 @@ export async function* transformAsyncIterable<T, U>(
 
     try {
         for await (const item of source) {
-            yield await transform(item);
+            yield transform(item);
         }
         // The stream completed without any errors.
         onComplete?.();
@@ -149,6 +160,7 @@ export async function* transformAsyncIterable<T, U>(
         }
 
         onError?.(errMessage);
+        // throw error;
     } finally {
         onFinally?.();
     }

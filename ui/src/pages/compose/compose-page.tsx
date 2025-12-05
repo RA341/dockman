@@ -16,12 +16,12 @@ import {DeleteFileProvider} from "./dialogs/delete/delete-context.tsx";
 import {GitImportProvider} from "./dialogs/import/import-context.tsx";
 import {isComposeFile} from "../../lib/editor.ts";
 import {useTabs} from "../../hooks/tabs.ts";
-import {type SaveState, useSaveStatus} from "./status-hook.ts";
+import {type SaveState, useSaveStatus} from "./hooks/status-hook.ts";
 import ActionBar from "./components/action-bar.tsx";
 import CoreComposeEmpty from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
-import {useAtom, useSetAtom} from "jotai";
-import {activeTerminalAtom, closeTerminalAtom, isTerminalPanelOpenAtom, openTerminalsAtom} from "./state.tsx";
+import {useActiveComposeFile} from "./state/state.tsx";
+import CenteredMessage from "../../components/centered-message.tsx";
 
 export const ComposePage = () => {
     return (
@@ -43,6 +43,9 @@ export const ComposePageInner = () => {
     const {file, child} = useParams<{ file: string; child?: string }>();
     const filename = child ? `${file}/${child}` : file ?? "";
 
+    const setFile = useActiveComposeFile((state) => state.setFile)
+    setFile(filename)
+
     return (
         <Box sx={{
             display: 'flex',
@@ -52,32 +55,51 @@ export const ComposePageInner = () => {
         }}>
             <ActionBar/>
 
-            <FileList/>
-
             <Box sx={{
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden'
             }}>
-                <FileTabBar filename={filename}/>
+                {/* Main content area */}
                 <Box sx={{
-                    flexGrow: 1,
-                    overflow: 'auto',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexGrow: 1,
+                    overflow: 'hidden'
                 }}>
-                    {!filename ?
-                        <CoreComposeEmpty/> :
-                        <CoreCompose filename={filename}/>
-                    }
+                    <FileList/>
+
+                    <Box sx={{
+                        flexGrow: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                    }}>
+                        <FileTabBar/>
+                        <Box sx={{
+                            flexGrow: 1,
+                            overflow: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            {!filename ?
+                                <CoreComposeEmpty/> :
+                                <CoreCompose/>
+                            }
+                        </Box>
+                    </Box>
                 </Box>
+
+                {/* LogsPanel at the bottom */}
+                <LogsPanel/>
             </Box>
         </Box>
     );
 };
 
-const FileTabBar = ({filename}: { filename: string }) => {
+const FileTabBar = () => {
+    const filename = useActiveComposeFile(state => state.activeComposeFile)!
+
     const navigate = useNavigate();
     const {tabs, closeTab, onTabClick, activeTab} = useTabs();
 
@@ -93,7 +115,6 @@ const FileTabBar = ({filename}: { filename: string }) => {
                         e.preventDefault();
                         if (currentIndex > 0) {
                             currentIndex--;
-
                         }
                         break;
                     }
@@ -180,7 +201,32 @@ interface TabDetails {
     shortcut: React.ReactElement;
 }
 
-function CoreCompose({filename}: { filename: string }) {
+const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> = {
+    typing: {
+        color: "primary.main",
+        component: <Typography variant="button" color="primary.main">Typing</Typography>
+    },
+    saving: {
+        color: "info.main",
+        component: <Typography variant="button" color="info.main">Saving</Typography>
+    },
+    success: {
+        color: "success.main",
+        component: <Typography variant="button" color="success.main">Saved</Typography>
+    },
+    error: {
+        color: "error.main",
+        component: <Typography variant="button" color="error.main">Save Failed</Typography>
+    },
+    idle: {
+        color: "primary.secondary",
+        component: <></>
+    }
+};
+
+function CoreCompose() {
+    const filename = useActiveComposeFile(state => state.activeComposeFile)!
+
     const fileService = useClient(FileService);
 
     const navigate = useNavigate();
@@ -189,12 +235,6 @@ function CoreCompose({filename}: { filename: string }) {
 
     const [isLoading, setIsLoading] = useState(true);
     const [fileError, setFileError] = useState("");
-
-
-    const [isLogPanelMinimized, setIsLogPanelMinimized] = useAtom(isTerminalPanelOpenAtom);
-    const [logTabs] = useAtom(openTerminalsAtom);
-    const [activeTerminal, setActiveTerminal] = useAtom(activeTerminalAtom);
-    const closeTab = useSetAtom(closeTerminalAtom);
 
     useEffect(() => {
         setIsLoading(true);
@@ -300,29 +340,6 @@ function CoreCompose({filename}: { filename: string }) {
         );
     }
 
-    const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> = {
-        typing: {
-            color: "primary.main",
-            component: <Typography variant="button" color="primary.main">Typing</Typography>
-        },
-        saving: {
-            color: "info.main",
-            component: <Typography variant="button" color="info.main">Saving</Typography>
-        },
-        success: {
-            color: "success.main",
-            component: <Typography variant="button" color="success.main">Saved</Typography>
-        },
-        error: {
-            color: "error.main",
-            component: <Typography variant="button" color="error.main">Save Failed</Typography>
-        },
-        idle: {
-            color: "primary.secondary",
-            component: <></>
-        }
-    };
-
     const activePanel = tabsList[currentTab].component;
     return (
         <>
@@ -374,49 +391,6 @@ function CoreCompose({filename}: { filename: string }) {
                     </Box>
                 </Fade>
             )}
-
-            <LogsPanel
-                tabs={logTabs}
-                activeTabId={activeTerminal}
-                isMinimized={isLogPanelMinimized}
-                onTabChange={setActiveTerminal}
-                onTabClose={closeTab}
-                onToggle={() => setIsLogPanelMinimized(prev => !prev)}
-            />
         </>
-    );
-}
-
-function CenteredMessage(
-    {
-        icon,
-        title,
-        message
-    }:
-    {
-        icon?: React.ReactNode;
-        title: string;
-        message?: string;
-    }
-) {
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '80vh',
-                textAlign: 'center',
-                p: 3,
-                color: 'text.secondary',
-            }}
-        >
-            {icon && <Box sx={{mb: 2}}>{icon}</Box>}
-            <Typography variant="h5" component="h2" gutterBottom sx={{color: 'text.primary'}}>
-                {title}
-            </Typography>
-            {message && <Typography variant="body1">{message}</Typography>}
-        </Box>
     );
 }

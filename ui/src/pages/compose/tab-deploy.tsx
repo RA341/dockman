@@ -1,44 +1,31 @@
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {
+    Autocomplete,
     Box,
     Button,
-    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
+    TextField,
     Typography
 } from '@mui/material';
 import {ContainerTable} from './components/container-info-table';
-import {callRPC, transformAsyncIterable, useClient} from "../../lib/api.ts";
-import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
+import {getWSUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {useSnackbar} from "../../hooks/snackbar.ts";
-import {
-    activeActionAtom,
-    activeTerminalAtom,
-    deployActionsConfig,
-    isTerminalPanelOpenAtom,
-    type LogTab,
-    openTerminalsAtom
-} from "./state.tsx";
-import {useAtom} from "jotai";
+import {useContainerExec} from "./state/state.tsx";
+import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
 
 interface DeployPageProps {
     selectedPage: string;
 }
 
 export function TabDeploy({selectedPage}: DeployPageProps) {
-    const {showSuccess, showError} = useSnackbar();
-    const dockerService = useClient(DockerService);
-    const {containers, fetchContainers, loading} = useDockerCompose(selectedPage);
+    // const {showError} = useSnackbar();
 
-    const [activeAction, setActiveAction] = useAtom(activeActionAtom);
+    const {containers, loading, fetchContainers} = useDockerCompose(selectedPage);
+
     const [selectedServices, setSelectedServices] = useState<string[]>([]);
-
-    const [, setIsLogPanelMinimized] = useAtom(isTerminalPanelOpenAtom);
-    const [logTabs, setLogTabs] = useAtom(openTerminalsAtom);
-    const [, setActiveTabId] = useAtom(activeTerminalAtom);
 
     const [composeErrorDialog, setComposeErrorDialog] = useState<{ dialog: boolean; message: string }>({
         dialog: false,
@@ -46,135 +33,39 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     });
 
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
-    const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
-
-    const handleComposeAction = (
-        name: typeof deployActionsConfig[number]['name'],
-        message: string,
-        rpcName: typeof deployActionsConfig[number]['rpcName'],
-    ) => {
-        setActiveAction(name);
-        // unique ID and title for the new tab
-        const tabId = `${name}-${Date.now()}`;
-        const tabTitle = `${name} - ${selectedPage.split('/').pop() || selectedPage}`;
-
-        createStream({
-            id: tabId,
-            title: tabTitle,
-            getStream: signal => dockerService[rpcName]({
-                filename: selectedPage,
-                selectedServices: selectedServices,
-            }, {signal}),
-            transform: item => item.message,
-            onSuccess: () => {
-                showSuccess(`Deployment ${message} successfully`)
-                setIsLogPanelMinimized(true);
-            },
-            onFinalize: () => {
-                setActiveAction('');
-                fetchContainers().then();
-            }
-        });
-    };
-
-
-    useEffect(() => {
-        // On unmount, abort all active streams
-        return () => {
-            logTabs.forEach(tab => tab.controller.abort("Component unmounted"));
-        };
-    }, [logTabs]);
+    // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const tabId = `logs:${containerId}`
-        // If a tab for this container already exists, just switch to it
-        const existingTab = logTabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-            setActiveTabId(tabId);
-            setIsLogPanelMinimized(false);
-            return;
-        }
-
-        createStream({
-            id: tabId,
-            title: `Logs - ${containerName}`,
-            getStream: signal => dockerService.containerLogs({containerID: containerId}, {signal}),
-            transform: item => item.message,
-        });
+        const url = getWSUrl(`docker/logs/${containerId}`)
+        execContainer(`${selectedPage}: logs-${containerName}`, url, false)
     };
 
-    const handleContainerExec = (containerId: string, containerName: string) => {
-        const cmd = "/bin/sh"
-        const tabId = `exec:${containerId}`
+    const execContainer = useContainerExec(state => state.execParams)
 
-        const existingTab = logTabs.find(tab => tab.id === tabId);
-        if (existingTab) {
-            setActiveTabId(tabId);
-            setIsLogPanelMinimized(false);
-            return;
-        }
+    const [showExecDialog, setShowExecDialog] = useState(false)
+    const [containerId, setContainerId] = useState("")
+    const [containerName, setContainerName] = useState("")
 
-        createStream({
-            id: tabId,
-            title: `Exec - ${containerName}`,
-            getStream: signal => dockerService.containerExecOutput({
-                    containerID: containerId,
-                    execCmd: cmd.trim().split(' ')
-                },
-                {signal}
-            ),
-            transform: item => item.message,
-            inputFn: (cmd: string) => {
-                callRPC(() => dockerService.containerExecInput({
-                    containerID: containerId,
-                    userCmd: cmd
-                })).catch((err) => {
-                    showError(`unable to send cmd: ${err}`)
-                })
-            }
-        });
-    };
+    function showDialog(containerId: string, containerName: string) {
+        setContainerName(containerName);
+        setContainerId(containerId);
+        setShowExecDialog(true)
+    }
 
-    const createStream = <T, >(
-        {
-            id, getStream, transform, title, onSuccess, onFinalize, inputFn
-        }:
-        {
-            id: string;
-            getStream: (signal: AbortSignal) => AsyncIterable<T>;
-            transform: (item: T) => string;
-            title: string;
-            inputFn?: (cmd: string) => void,
-            onSuccess?: () => void;
-            onFinalize?: () => void;
-        }) => {
-        const newController = new AbortController();
-        const sourceStream = getStream(newController.signal);
+    const closeExecDialog = () => {
+        setContainerName("");
+        setContainerId("");
+        setShowExecDialog(false)
+    }
 
-        const transformedStream = transformAsyncIterable(sourceStream, {
-            transform,
-            onComplete: () => onSuccess?.(),
-            onError: (err) => {
-                // Don't show an error dialog if the stream was intentionally aborted
-                if (!newController.signal.aborted) {
-                    showErrorDialog(`Error streaming container logs: ${err}`);
-                }
-            },
-            onFinally: () => onFinalize?.(),
-        });
-
-        const newTab: LogTab = {
-            id,
-            title,
-            stream: transformedStream,
-            controller: newController,
-            inputFn: inputFn
-        };
-
-        setLogTabs(prev => [...prev, newTab]);
-        setActiveTabId(id);
-        setIsLogPanelMinimized(false); // Always expand panel for a new tab
-    };
+    const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
+    const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
+    const handleConnect = (containerId: string, containerName: string, cmd: string) => {
+        const encodedCmd = encodeURIComponent(cmd);
+        const url = getWSUrl(`docker/exec/${containerId}?cmd=${encodedCmd}`)
+        execContainer(`${selectedPage}: exec-${containerName}`, url, true)
+        closeExecDialog()
+    }
 
     if (!selectedPage) {
         return (
@@ -187,22 +78,10 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     return (
         <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'background.default'}}>
             <Box sx={{flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-                {/* Action Buttons */}
-                <Box sx={{display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, flexShrink: 0}}>
-                    {deployActionsConfig.map((action) => (
-                        <Button
-                            key={action.name}
-                            variant="outlined"
-                            disabled={!!activeAction}
-                            onClick={() => handleComposeAction(action.name, action.message, action.rpcName)}
-                            startIcon={activeAction === action.name ?
-                                <CircularProgress size={20} color="inherit"/> : action.icon}
-                        >
-                            {action.name.charAt(0).toUpperCase() + action.name.slice(1)}
-                        </Button>
-                    ))}
-                </Box>
-
+                <ComposeActionHeaders
+                    selectedServices={selectedServices}
+                    fetchContainers={fetchContainers}
+                />
                 <Box sx={{
                     flexGrow: 1, overflow: 'hidden', border: '3px ridge',
                     borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
@@ -214,7 +93,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                         setSelectedServices={setSelectedServices}
                         selectedServices={selectedServices}
                         onShowLogs={handleContainerLogs}
-                        onExec={handleContainerExec}
+                        onExec={showDialog}
                     />
                 </Box>
             </Box>
@@ -226,6 +105,45 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={closeErrorDialog} color="primary">Close</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={showExecDialog} onClose={closeExecDialog}>
+                <DialogTitle>Choose exec entrypoint</DialogTitle>
+                <DialogContent sx={{overflow: 'visible'}}>
+                    <Autocomplete
+                        freeSolo
+                        options={commandOptions}
+                        value={selectedCmd}
+                        onInputChange={(_, value) => setSelectedCmd(value)}
+                        sx={{flex: 1}}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Shell Command"
+                                variant="outlined"
+                                size="small"
+                                slotProps={{
+                                    inputLabel: {style: {color: '#aaa'}},
+                                    input: {
+                                        ...params.InputProps,
+                                        style: {color: '#fff', backgroundColor: '#333'}
+                                    }
+                                }}
+                            />
+                        )}
+                    />
+                    <Button
+                        variant="contained"
+                        onClick={() => handleConnect(containerId, containerName, selectedCmd)}
+                        color="primary"
+                        sx={{mt: 2}}
+                    >
+                        Connect
+                    </Button>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeExecDialog} color="primary">Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>

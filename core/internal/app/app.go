@@ -20,7 +20,6 @@ import (
 	"github.com/RA341/dockman/internal/files"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/info"
-	"github.com/RA341/dockman/internal/lsp"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/rs/zerolog/log"
 )
@@ -38,19 +37,19 @@ type App struct {
 
 func NewApp(conf *config.AppConfig) (*App, error) {
 	cr := conf.ComposeRoot
-	limit, err := conf.Auth.GetCookieExpiryLimit()
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse cookie expiry: %w", err)
-	}
 
-	dbSrv := database.NewService(conf.ConfigDir)
+	gormDB, dbSrv := database.NewService(conf.ConfigDir)
+
 	infoSrv := info.NewService(dbSrv.InfoDB)
 
+	sessionsDB := auth.NewSessionGormDB(gormDB, uint(conf.Auth.MaxSessions))
+	authDB := auth.NewUserGormDB(gormDB)
 	authSrv := auth.NewService(
 		conf.Auth.Username,
 		conf.Auth.Password,
-		limit,
-		dbSrv.AuthDb,
+		&conf.Auth,
+		authDB,
+		sessionsDB,
 	)
 
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
@@ -75,7 +74,7 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		conf.Perms.PUID, conf.Perms.GID,
 		dockerManagerSrv.GetActiveClient,
 	)
-	err = git.NewMigrator(cr)
+	err := git.NewMigrator(cr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to complete git migration")
 	}
@@ -163,16 +162,33 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			return dockermanagerrpc.NewDockerManagerServiceHandler(dm.NewConnectHandler(a.DockerManager), authInterceptor)
 		},
 		// lsp
-		func() (string, http.Handler) {
-			wsFunc := lsp.WebSocketHandler(lsp.DefaultUpgrader)
-			return a.registerHttpHandler("/ws/lsp", wsFunc)
-		},
+		//func() (string, http.Handler) {
+		//	wsFunc := lsp.WebSocketHandler(lsp.DefaultUpgrader)
+		//	return a.registerHttpHandler("/ws/lsp", wsFunc)
+		//},
 	}
 
 	for _, hand := range handlers {
 		path, handler := hand()
 		mux.Handle(path, handler)
 	}
+
+	oidcHandlers := auth.NewHandlerHttp(a.Auth)
+	if a.Config.Auth.EnableOidc {
+		mux.HandleFunc("GET /auth/login/oidc", oidcHandlers.OIDCLogin)
+		mux.HandleFunc("GET /auth/login/oidc/callback", oidcHandlers.OIDCCallback)
+	}
+
+	var execHandler http.Handler = docker.NewExecWSHandler(a.DockerManager.GetService)
+	var logHandler http.Handler = docker.NewLogWSHandler(a.DockerManager.GetService)
+	if a.Config.Auth.Enable {
+		authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
+		execHandler = authMiddleware(execHandler)
+		logHandler = authMiddleware(logHandler)
+	}
+
+	mux.Handle("GET /docker/exec/{contID}", execHandler)
+	mux.Handle("GET /docker/logs/{contID}", logHandler)
 }
 
 func (a *App) registerHttpHandler(basePath string, subMux http.Handler) (string, http.Handler) {

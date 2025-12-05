@@ -6,16 +6,34 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func setCookie[T any](response *connect.Response[T], token string, expiresAt time.Time) {
+func createAuthCookies(sessionToken string, sessionId uint, expiry time.Time) []http.Cookie {
+	var cookies []http.Cookie
+
+	return append(
+		cookies,
+		createCookie(
+			CookieHeaderAuth,
+			sessionToken,
+			expiry,
+		),
+		createCookie(
+			CookieHeaderSessionId,
+			strconv.Itoa(int(sessionId)),
+			expiry,
+		),
+	)
+}
+
+func createCookie(value string, token string, expiresAt time.Time) http.Cookie {
 	cookie := http.Cookie{
-		Name:     HeaderAuth,
+		Name:     value,
 		Value:    token,
 		Expires:  expiresAt,
 		Path:     "/",
@@ -25,8 +43,7 @@ func setCookie[T any](response *connect.Response[T], token string, expiresAt tim
 		// Secure:   true,
 		// Domain: "example.com", // Uncomment and set if you need to specify the domain
 	}
-
-	response.Header().Add("Set-Cookie", cookie.String())
+	return cookie
 }
 
 func CreateAuthToken(length int) string {

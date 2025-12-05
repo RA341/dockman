@@ -32,7 +32,6 @@ export function TabsProvider({children}: TabsProviderProps) {
     const handleTabClick = useCallback((filename: string) => {
         // capture current row and col
 
-
         const tabDetail = openTabs[filename];
         const url = getEditorUrl(filename, tabDetail);
         navigate(url);
