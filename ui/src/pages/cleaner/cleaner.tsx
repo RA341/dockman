@@ -137,6 +137,19 @@ function DockerCleanerPage() {
                     >
                         Trigger
                     </Button>
+
+                    <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<PlayArrow/>}
+                        onClick={async () => {
+                            await handleSave()
+                            await handleTrigger()
+                        }}
+                        size="large"
+                    >
+                        Save and Trigger
+                    </Button>
                 </Box>
             </Paper>
             <CleanerHistory/>
