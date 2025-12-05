@@ -31,13 +31,15 @@ func (a *Handler) Login(_ context.Context, c *connect.Request[v1.User]) (*connec
 	}
 
 	response := connect.NewResponse(&v1.Empty{})
-	setCookie(response, CookieHeaderAuth, authToken, session.Expires)
-	setCookie(
-		response,
-		CookieHeaderSessionId,
-		strconv.Itoa(int(session.ID)),
+
+	cookies := createAuthCookies(
+		authToken,
+		session.ID,
 		session.Expires,
 	)
+	for _, cook := range cookies {
+		response.Header().Add("Set-Cookie", cook.String())
+	}
 
 	return response, nil
 }

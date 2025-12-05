@@ -173,6 +173,12 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		mux.Handle(path, handler)
 	}
 
+	oidcHandlers := auth.NewHandlerHttp(a.Auth)
+	if a.Config.Auth.EnableOidc {
+		mux.HandleFunc("GET /auth/login/oidc", oidcHandlers.OIDCLogin)
+		mux.HandleFunc("GET /auth/login/oidc/callback", oidcHandlers.OIDCCallback)
+	}
+
 	var execHandler http.Handler = docker.NewExecWSHandler(a.DockerManager.GetService)
 	var logHandler http.Handler = docker.NewLogWSHandler(a.DockerManager.GetService)
 	if a.Config.Auth.Enable {

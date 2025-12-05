@@ -22,6 +22,19 @@ func NewHttpAuthMiddleware(srv *Service) func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			u, err := verifyCookie(r.Cookies(), srv)
 			if err != nil {
+				if srv.config.EnableOidc {
+					// IMPORTANT BEFORE CHANGING THE STATUS CODE HERE
+					// update the code here as well: ui/src/lib/api.ts:82
+					w.WriteHeader(http.StatusFound)
+					// todo factor out url
+					_, err = w.Write([]byte("/auth/login/oidc"))
+					if err != nil {
+						log.Warn().Err(err).Msg("Failed to write response")
+						return
+					}
+					return
+				}
+
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}

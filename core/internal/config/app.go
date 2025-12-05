@@ -44,6 +44,12 @@ type Auth struct {
 	Password     string `config:"flag=ap,env=AUTH_PASSWORD,default=admin99988,usage=authentication password,hide=true"`
 	CookieExpiry string `config:"flag=ae,env=AUTH_EXPIRY,default=24h,usage=Set cookie expiry-300ms/1.5h/2h45m [ns|us|ms|s|m|h]"`
 	MaxSessions  int    `config:"flag=mxs,env=AUTH_MAX_SESSIONS,default=5,usage=Set max active sessions per user"`
+
+	EnableOidc       bool   `config:"flag=eoc,env=AUTH_OIDC_ENABLE,default=false,usage=enable OIDC support"`
+	OIDCIssuerURL    string `config:"flag=oiu,env=AUTH_OIDC_ISSUER,default=,usage=url for your oidc issuer"`
+	OIDCClientID     string `config:"flag=oicd,env=AUTH_OIDC_CLIENT_ID,default=,usage=client id for OIDC"`
+	OIDCClientSecret string `config:"flag=oics,env=AUTH_OIDC_CLIENT_SECRET,default=,usage=client secret for OIDC"`
+	OIDCRedirectURL  string `config:"flag=oiurl,env=AUTH_OIDC_REDIRECT_URL,default=,usage=redirect url for OIDC"`
 }
 
 const defaultCookieExpiry = time.Hour * 24
