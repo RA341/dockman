@@ -32,13 +32,19 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	execCmd := "/bin/sh"
+	queryCmd := r.URL.Query().Get("cmd")
+	if queryCmd != "" {
+		execCmd = queryCmd
+	}
+
 	ctx := context.Background()
 	execConfig := container.ExecOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		Tty:          true,
-		Cmd:          []string{"/bin/sh"},
+		Cmd:          []string{execCmd},
 	}
 
 	ws, err := upgrader.Upgrade(w, r, nil)
