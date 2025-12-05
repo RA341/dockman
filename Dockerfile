@@ -47,30 +47,9 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w \
              -X ${INFO_PACKAGE}.Branch=${BRANCH}" \
     -o dockman "./cmd/server"
 
-
-# Alpine with ssh client target
-FROM alpine:latest AS alpine-ssh
-
-RUN apk add --no-cache ca-certificates openssh-client
-
-WORKDIR /app
-
-COPY --from=back /core/dockman dockman
-
-COPY --from=front /frontend/dist/ ./dist
-
-# todo non root
-#RUN chown -R appuser:appgroup /app
-#
-#USER appuser
-
-EXPOSE 8866
-
-ENTRYPOINT ["./dockman"]
-
-
-# Alpine target
 FROM alpine:latest AS alpine
+
+RUN apk add --no-cache tzdata
 
 # identify dockman containers
 LABEL dockman.container=true
