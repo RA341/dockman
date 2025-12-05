@@ -1,3 +1,21 @@
+# [2.5.0](https://github.com/RA341/dockman/compare/v2.4.1...v2.5.0) (2025-12-05)
+
+
+### Bug Fixes
+
+* added tz package to fix time ([52271fe](https://github.com/RA341/dockman/commit/52271fe8b80d9a54bc12a2c9b651a1e8a172fe75)), closes [#125](https://github.com/RA341/dockman/issues/125)
+* compose up starting all services ([8d00053](https://github.com/RA341/dockman/commit/8d000534f8c7e1d5501d340216369f4e9d70c6e5)), closes [#124](https://github.com/RA341/dockman/issues/124)
+* incorrect date translation ([6e98110](https://github.com/RA341/dockman/commit/6e981101829c1af0595ae7c2d1812b91888f44b4)), closes [#117](https://github.com/RA341/dockman/issues/117)
+* incorrect repo and tag url ([ea2a86f](https://github.com/RA341/dockman/commit/ea2a86f718b40e0f409cd0e37b0cb0f6e6311e9b))
+* set tab length 2 spaces ([023201d](https://github.com/RA341/dockman/commit/023201db169e5d4ca656165f6a2b37842457bbb1))
+
+
+### Features
+
+* added container ip addr to list ([5ced4e3](https://github.com/RA341/dockman/commit/5ced4e3e3a943c2c16704e844ec3f418d7d456db)), closes [#122](https://github.com/RA341/dockman/issues/122)
+* added new session based auth system ([52bba32](https://github.com/RA341/dockman/commit/52bba3272826a674eb55a7fe6146c447ffe424df))
+* added oidc ([3527b71](https://github.com/RA341/dockman/commit/3527b71333e8d681366e58838c0f7b2061a902a4)), closes [#99](https://github.com/RA341/dockman/issues/99)
+
 ## [2.4.1](https://github.com/RA341/dockman/compare/v2.4.0...v2.4.1) (2025-11-22)
 
 
