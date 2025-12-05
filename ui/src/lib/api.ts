@@ -74,7 +74,18 @@ export async function uploadFile(filename: string, contents: string): Promise<st
 export async function pingWithAuth() {
     try {
         console.log("Checking authentication status with server...");
-        const response = await fetch('/auth/ping');
+        const response = await fetch('/auth/ping', {
+            redirect: 'follow'
+        });
+
+        if (response.status == 302) {
+            const location = await response.text();
+            console.log(`oidc is enabled redirecting to oidc auth: ${location}`);
+            window.location.assign(location)
+
+            return false
+        }
+
         console.log(`Server response isOK: ${response.ok}`);
         return response.ok
     } catch (error) {
