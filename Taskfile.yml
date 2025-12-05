@@ -66,8 +66,6 @@ tasks:
   ui:
     desc: "Build the latest web ui in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
-    #    sources:
-    #      - "**/*.tsx"
     cmds:
       - npm run build
 
@@ -91,22 +89,23 @@ tasks:
     cmds:
       - npm run preview
 
-
   ui:dep:
     desc: "calls npm install in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
     cmds:
       - npm i
 
-  ui:native:
+  ui:b:*:
     dir: "{{.UI_DIR}}"
     vars:
-      NATIVE_DIR: ../{{.CORE_DIR}}/{{.GO_CMD_DIR}}/native
-    desc: "Builds ui and copies for embed binary. Usage: task ui:native"
+      CMD: "{{index .MATCH 0}}"
+      OUT_DIR: ../{{.CORE_DIR}}{{.GO_CMD_DIR}}/{{.CMD}}
+    desc: "Builds ui and copies for embed binary. Usage: task ui:<go cmd target>"
     cmds:
       - task: ui
-      - coreutils rm -f -r {{.NATIVE_DIR}}/dist
-      - coreutils mv -f dist {{.NATIVE_DIR}}/dist
+      - rm -rf {{.OUT_DIR}}/dist
+      - mkdir -p {{.OUT_DIR}}/dist
+      - cp -rf dist {{.OUT_DIR}}/
 
   clean:
     desc: "Removes all files in {{.BUILD_DIR}}"
