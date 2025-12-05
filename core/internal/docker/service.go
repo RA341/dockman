@@ -20,7 +20,7 @@ type dependencies struct {
 	// hostname of the machine used to identify which client is running on
 	hostname   string
 	MobyClient *client.Client
-	// tmp workaround since moby isn't compatible with docker yet
+	// tmp workaround since moby isn't compatible with docker compose yet
 	DockClient *docker.Client
 	// address used to prefix container ports for direct links
 	daemonAddr string
@@ -42,12 +42,12 @@ func NewService(
 	dockClient *docker.Client,
 	syncer Syncer,
 	imageUpdateStore Store,
-	name string,
+	hostname string,
 	updaterUrl string,
 	composeRoot string,
 ) *Service {
 	uts := &dependencies{
-		hostname:         name,
+		hostname:         hostname,
 		MobyClient:       mobyClient,
 		DockClient:       dockClient,
 		syncer:           syncer,

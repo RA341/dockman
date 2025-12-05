@@ -817,9 +817,7 @@ func (s *ContainerService) VolumesList(ctx context.Context) ([]VolumeInfo, error
 
 	tmpMap := make(map[string]volume.Volume)
 	sd := diskUsage.Volumes.Items
-	if sd == nil {
-		log.Debug().Msg("DiskUsage returned nil volumes slice")
-	} else {
+	if sd != nil {
 		tmpMap = make(map[string]volume.Volume, len(sd))
 		for _, l := range sd {
 			tmpMap[l.Name] = l
