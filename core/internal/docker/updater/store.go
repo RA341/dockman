@@ -1,6 +1,12 @@
-package docker
+package updater
 
 import "gorm.io/gorm"
+
+type Store interface {
+	GetUpdateAvailable(host string, imageIds ...string) (map[string]ImageUpdate, error)
+	Save(image *ImageUpdate) error
+	Delete(imageIds ...string) error
+}
 
 type ImageUpdate struct {
 	gorm.Model
@@ -25,10 +31,4 @@ func (n *NoopStore) Save(*ImageUpdate) error {
 
 func (n *NoopStore) Delete(...string) error {
 	return nil
-}
-
-type Store interface {
-	GetUpdateAvailable(host string, imageIds ...string) (map[string]ImageUpdate, error)
-	Save(image *ImageUpdate) error
-	Delete(imageIds ...string) error
 }

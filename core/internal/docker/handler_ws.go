@@ -9,7 +9,6 @@ import (
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/gorilla/websocket"
 	"github.com/moby/moby/api/pkg/stdcopy"
-	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,21 +31,6 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	execCmd := "/bin/sh"
-	queryCmd := r.URL.Query().Get("cmd")
-	if queryCmd != "" {
-		execCmd = queryCmd
-	}
-
-	ctx := context.Background()
-	execConfig := client.ExecCreateOptions{
-		AttachStdin:  true,
-		AttachStdout: true,
-		AttachStderr: true,
-		TTY:          true,
-		Cmd:          []string{execCmd},
-	}
-
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
@@ -54,16 +38,22 @@ func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) 
 	}
 	defer fileutil.Close(ws)
 
-	daemon := srv().Container.MobyClient
-	execResp, err := daemon.ExecCreate(ctx, contId, execConfig)
-	if err != nil {
-		wsErr(ws, fmt.Errorf("error creating shell into container: %w", err))
-		return
+	execCmd := "/bin/sh"
+	queryCmd := r.URL.Query().Get("cmd")
+	if queryCmd != "" {
+		execCmd = queryCmd
+	} else {
+		err = ws.WriteMessage(websocket.TextMessage, []byte("unknown cmd passed defaulting to "+execCmd))
+		if err != nil {
+			log.Warn().Err(err).Str("cmd", execCmd).Msg("Failed to write to websocket")
+			return
+		}
 	}
 
-	resp, err := daemon.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{TTY: true})
+	ctx := context.Background()
+	resp, err := srv().Container.ContainerExec(ctx, contId, execCmd)
 	if err != nil {
-		wsErr(ws, fmt.Errorf("error creating shell into container: %w", err))
+		wsErr(ws, err)
 		return
 	}
 	defer resp.Close()

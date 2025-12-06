@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -65,7 +65,7 @@ func migrator(root string) error {
 	}
 
 	for _, branch := range branches {
-		if branch == docker.LocalClient {
+		if branch == container.LocalClient {
 			log.Info().Msg("skipping migrating local branch")
 			continue
 		}

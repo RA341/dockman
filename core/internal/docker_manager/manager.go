@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/pkg/syncmap"
 	dkClient "github.com/docker/docker/client"
@@ -184,8 +184,8 @@ func (m *ClientManager) loadAllHosts() (string, error) {
 	//	return machines.DefaultHost, nil
 	//}
 
-	if m.Exists(docker.LocalClient) {
-		return docker.LocalClient, nil
+	if m.Exists(container.LocalClient) {
+		return container.LocalClient, nil
 	}
 
 	// get first available host
@@ -205,7 +205,7 @@ func (m *ClientManager) loadLocalClient() {
 		return
 	}
 
-	m.testAndStore(docker.LocalClient, NewConnectedDockerClient(
+	m.testAndStore(container.LocalClient, NewConnectedDockerClient(
 		localClient,
 		localDkClient,
 		nil,

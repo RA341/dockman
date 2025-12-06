@@ -1,4 +1,4 @@
-package docker
+package compose
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	containerSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/compose-spec/compose-go/v2/cli"
 	"github.com/compose-spec/compose-go/v2/types"
@@ -18,6 +19,7 @@ import (
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/compose/v2/pkg/api"
 	"github.com/docker/compose/v2/pkg/compose"
+	docker "github.com/docker/docker/client"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
@@ -25,19 +27,31 @@ import (
 
 // reference: https://github.com/portainer/portainer/blob/develop/pkg/libstack/compose/composeplugin.go
 
-type ComposeService struct {
-	containerService *ContainerService
-	*dependencies
+type Service struct {
+	DockClient *docker.Client
+	// syncs local files to remote host
+	syncer Syncer
+	// only used by compose service not needed by container
+	ComposeRoot string
+
+	cont *containerSrv.Service
 }
 
-func NewComposeService(u *dependencies, container *ContainerService) *ComposeService {
-	return &ComposeService{
-		containerService: container,
-		dependencies:     u,
+func New(
+	DockClient *docker.Client,
+	syncer Syncer,
+	composeRoot string,
+	cont *containerSrv.Service,
+) *Service {
+	return &Service{
+		DockClient:  DockClient,
+		syncer:      syncer,
+		ComposeRoot: composeRoot,
+		cont:        cont,
 	}
 }
 
-func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+func (s *Service) ComposeUp(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	if err := s.syncer.Sync(ctx, project); err != nil {
 		return err
 	}
@@ -83,7 +97,7 @@ func (s *ComposeService) ComposeUp(ctx context.Context, project *types.Project, 
 	return nil
 }
 
-func (s *ComposeService) ComposeStart(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+func (s *Service) ComposeStart(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	if err := s.syncer.Sync(ctx, project); err != nil {
 		return err
 	}
@@ -109,7 +123,7 @@ func (s *ComposeService) ComposeStart(ctx context.Context, project *types.Projec
 	return nil
 }
 
-func (s *ComposeService) ComposeDown(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+func (s *Service) ComposeDown(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	downOpts := api.DownOptions{
 		Services: services,
 	}
@@ -119,7 +133,7 @@ func (s *ComposeService) ComposeDown(ctx context.Context, project *types.Project
 	return nil
 }
 
-func (s *ComposeService) ComposeStop(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+func (s *Service) ComposeStop(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	stopOpts := api.StopOptions{
 		Services: services,
 	}
@@ -129,7 +143,7 @@ func (s *ComposeService) ComposeStop(ctx context.Context, project *types.Project
 	return nil
 }
 
-func (s *ComposeService) ComposeRestart(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+func (s *Service) ComposeRestart(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	// A restart might involve changes to the compose file, so we sync first.
 	if err := s.syncer.Sync(ctx, project); err != nil {
 		return err
@@ -144,7 +158,7 @@ func (s *ComposeService) ComposeRestart(ctx context.Context, project *types.Proj
 	return nil
 }
 
-func (s *ComposeService) ComposePull(ctx context.Context, project *types.Project, composeClient api.Compose) error {
+func (s *Service) ComposePull(ctx context.Context, project *types.Project, composeClient api.Compose) error {
 	pullOpts := api.PullOptions{}
 	if err := composeClient.Pull(ctx, project, pullOpts); err != nil {
 		return fmt.Errorf("compose pull operation failed: %w", err)
@@ -152,7 +166,7 @@ func (s *ComposeService) ComposePull(ctx context.Context, project *types.Project
 	return nil
 }
 
-func (s *ComposeService) ComposeUpdate(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
+func (s *Service) ComposeUpdate(ctx context.Context, project *types.Project, composeClient api.Compose, services ...string) error {
 	beforeImages, err := s.getProjectImageDigests(ctx, project)
 	if err != nil {
 		return fmt.Errorf("failed to get image info before pull: %w", err)
@@ -183,12 +197,12 @@ func (s *ComposeService) ComposeUpdate(ctx context.Context, project *types.Proje
 }
 
 // ComposeList The `all` parameter controls whether to show stopped containers.
-func (s *ComposeService) ComposeList(ctx context.Context, project *types.Project, all bool) ([]container.Summary, error) {
+func (s *Service) ComposeList(ctx context.Context, project *types.Project, all bool) ([]container.Summary, error) {
 	containerFilters := client.Filters{}
 	projectLabel := fmt.Sprintf("%s=%s", api.ProjectLabel, project.Name)
 	containerFilters.Add("label", projectLabel)
 
-	result, err := s.MobyClient.ContainerList(ctx, client.ContainerListOptions{
+	result, err := s.cont.Client.ContainerList(ctx, client.ContainerListOptions{
 		All:     all,
 		Filters: containerFilters,
 	})
@@ -199,18 +213,18 @@ func (s *ComposeService) ComposeList(ctx context.Context, project *types.Project
 	return result.Items, nil
 }
 
-func (s *ComposeService) ComposeStats(ctx context.Context, project *types.Project) ([]ContainerStats, error) {
+func (s *Service) ComposeStats(ctx context.Context, project *types.Project) ([]containerSrv.Stats, error) {
 	// Get the list of running containers for the stack.
 	stackList, err := s.ComposeList(ctx, project, false) // `false` for only running
 	if err != nil {
 		return nil, err
 	}
 
-	result := s.containerService.containerGetStatsFromList(ctx, stackList)
+	result := s.cont.ContainerGetStatsFromList(ctx, stackList)
 	return result, nil
 }
 
-func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *types.Project) (map[string]string, error) {
+func (s *Service) getProjectImageDigests(ctx context.Context, project *types.Project) (map[string]string, error) {
 	digests := make(map[string]string)
 
 	for serviceName, service := range project.Services {
@@ -218,7 +232,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 			continue
 		}
 
-		imageInspect, err := s.MobyClient.ImageInspect(ctx, service.Image)
+		imageInspect, err := s.cont.Client.ImageInspect(ctx, service.Image)
 		if err != nil {
 			// Image might not exist locally yet
 			digests[serviceName] = ""
@@ -236,7 +250,7 @@ func (s *ComposeService) getProjectImageDigests(ctx context.Context, project *ty
 	return digests, nil
 }
 
-func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
+func (s *Service) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
 		command.WithAPIClient(s.DockClient),
 		command.WithCombinedStreams(outputStream),
@@ -259,7 +273,7 @@ func (s *ComposeService) LoadComposeClient(outputStream io.Writer) (api.Compose,
 	), nil
 }
 
-func (s *ComposeService) ComposeValidate(ctx context.Context, shortName string) []error {
+func (s *Service) ComposeValidate(ctx context.Context, shortName string) []error {
 	var errs []error
 
 	project, err := s.LoadProject(ctx, shortName)
@@ -267,7 +281,7 @@ func (s *ComposeService) ComposeValidate(ctx context.Context, shortName string) 
 		return append(errs, err)
 	}
 
-	runningContainers, err := s.containerService.ContainersList(ctx)
+	runningContainers, err := s.cont.ContainersList(ctx)
 	if err != nil {
 		return append(errs, err)
 	}
@@ -295,7 +309,7 @@ func (s *ComposeService) ComposeValidate(ctx context.Context, shortName string) 
 }
 
 // findConflictingContainers returns containers using the given port but not matching the service name
-func (s *ComposeService) findConflictingContainers(containers []container.Summary, serviceName string, port uint16) []container.Summary {
+func (s *Service) findConflictingContainers(containers []container.Summary, serviceName string, port uint16) []container.Summary {
 	var matches []container.Summary
 	for _, c := range containers {
 		for _, p := range c.Ports {
@@ -317,15 +331,15 @@ func (s *ComposeService) findConflictingContainers(containers []container.Summar
 	return matches
 }
 
-func (s *ComposeService) LoadProject(ctx context.Context, shortName string) (*types.Project, error) {
-	fullPath := filepath.Join(s.composeRoot, shortName)
+func (s *Service) LoadProject(ctx context.Context, shortName string) (*types.Project, error) {
+	fullPath := filepath.Join(s.ComposeRoot, shortName)
 	// will be the parent dir of the compose file else equal to compose root
 	workingDir := filepath.Dir(fullPath)
 
 	var finalEnv []string
 	for _, file := range []string{
 		// Global .env
-		filepath.Join(s.composeRoot, ".env"),
+		filepath.Join(s.ComposeRoot, ".env"),
 		// Subdirectory .env (will override global)
 		filepath.Join(workingDir, ".env"),
 	} {
@@ -370,7 +384,7 @@ func (s *ComposeService) LoadProject(ctx context.Context, shortName string) (*ty
 // todo move to config flag
 const dockmanImage = "ghcr.io/ra341/dockman"
 
-func (s *ComposeService) withoutDockman(project *types.Project, services ...string) []string {
+func (s *Service) withoutDockman(project *types.Project, services ...string) []string {
 	// If sftp client exists, it's a remote machine. Do not filter.
 	// todo
 	//if isRemoteDockman := .daemon.DaemonHost() != nil; isRemoteDockman {

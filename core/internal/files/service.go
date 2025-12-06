@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"dario.cat/mergo"
-	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/goccy/go-yaml"
@@ -50,7 +50,7 @@ func NewService(
 
 	prov := func() string {
 		mach := machineFolder()
-		if mach == docker.LocalClient {
+		if mach == container.LocalClient {
 			// return normal compose root for local client
 			return composeRoot
 		}
