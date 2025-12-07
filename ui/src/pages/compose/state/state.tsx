@@ -70,7 +70,6 @@ export function createTab(wsUrl: string, title: string, interactive: boolean) {
                 ws.binaryType = "arraybuffer";
 
                 ws.onopen = () => {
-                    term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
                     term.focus();
                 };
 

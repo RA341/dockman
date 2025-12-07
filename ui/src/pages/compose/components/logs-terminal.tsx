@@ -74,7 +74,7 @@ const AppTerminal = ({fit, interactive, onTerminal, isActive, onClose}: AppTermi
                 ...terminalConfig,
                 cursorBlink: false,
                 disableStdin: true,
-                // keep this for proper new lines
+                // keep this for handling \r\n
                 convertEol: true,
             });
 

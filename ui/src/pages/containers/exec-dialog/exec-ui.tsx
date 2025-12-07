@@ -8,7 +8,8 @@ import {
     DialogContent,
     DialogTitle,
     IconButton,
-    TextField
+    TextField,
+    Typography
 } from '@mui/material';
 import CloseIcon from "@mui/icons-material/Close";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
@@ -46,21 +47,21 @@ export const ExecDialog = ({show, hide, name, containerID}: {
         setIsConnected(true);
     };
 
-    // const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
-    // const [debuggerImage, setDebuggerImage] = useState("")
+    const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
+    const [debuggerImage, setDebuggerImage] = useState("")
 
     const setupExec = useCallback(() => {
         const encodedCmd = encodeURIComponent(selectedCmd);
-        const base = `docker/exec/${containerID}?cmd=${encodedCmd}`;
+        let base = `docker/exec/${containerID}?cmd=${encodedCmd}`;
 
-        // if (debuggerImage) {
-        //     console.log("using dockman debug with debuggerImage", debuggerImage);
-        //     base += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec
-        //     base += "&image=" + debuggerImage;
-        // }
+        if (debuggerImage) {
+            console.log("using dockman debug with debuggerImage", debuggerImage);
+            base += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec
+            base += "&image=" + debuggerImage;
+        }
 
         return createTab(getWSUrl(base), `Exec: ${containerID}`, true)
-    }, [containerID, selectedCmd])
+    }, [containerID, debuggerImage, selectedCmd])
 
     return (
         <Dialog
@@ -150,38 +151,36 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                                 Connect
                             </Button>
                         </Box>
-                        {/*todo dockman debug not done yet*/}
-                        {/*<Box sx={{width: '100%', maxWidth: 400, display: 'flex', gap: 1, alignItems: 'center'}}>*/}
-                        {/*    <Typography>*/}
-                        {/*        Dockman Debug*/}
-                        {/*    </Typography>*/}
-
-                        {/*    <Autocomplete*/}
-                        {/*        freeSolo*/}
-                        {/*        options={debugImageOptions}*/}
-                        {/*        value={debuggerImage}*/}
-                        {/*        onInputChange={(_, value) => setDebuggerImage(value)}*/}
-                        {/*        sx={{flex: 1}}*/}
-                        {/*        renderInput={(params) => (*/}
-                        {/*            <TextField*/}
-                        {/*                {...params}*/}
-                        {/*                label="Debugger Image"*/}
-                        {/*                variant="outlined"*/}
-                        {/*                size="small"*/}
-                        {/*                slotProps={{*/}
-                        {/*                    inputLabel: {style: {color: '#aaa'}},*/}
-                        {/*                    input: {*/}
-                        {/*                        ...params.InputProps,*/}
-                        {/*                        style: {color: '#fff', backgroundColor: '#333'}*/}
-                        {/*                    }*/}
-                        {/*                }}*/}
-                        {/*            />*/}
-                        {/*        )}*/}
-                        {/*    />*/}
-                        {/*</Box>*/}
-                        {/*<Typography>*/}
-                        {/*    Exec into any container even if the container does not have a shell*/}
-                        {/*</Typography>*/}
+                        <Box sx={{width: '100%', maxWidth: 400, display: 'flex', gap: 1, alignItems: 'center'}}>
+                            <Typography>
+                                Dockman Debug
+                            </Typography>
+                            <Autocomplete
+                                freeSolo
+                                options={debugImageOptions}
+                                value={debuggerImage}
+                                onInputChange={(_, value) => setDebuggerImage(value)}
+                                sx={{flex: 1}}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Debugger Image"
+                                        variant="outlined"
+                                        size="small"
+                                        slotProps={{
+                                            inputLabel: {style: {color: '#aaa'}},
+                                            input: {
+                                                ...params.InputProps,
+                                                style: {color: '#fff', backgroundColor: '#333'}
+                                            }
+                                        }}
+                                    />
+                                )}
+                            />
+                        </Box>
+                        <Typography>
+                            Exec into any container even if the container does not have a shell
+                        </Typography>
                     </Box>
                 ) : (
                     <Box sx={{flex: 1, p: 1, overflow: 'hidden'}}>

@@ -31,20 +31,27 @@ func (s *Service) Cli() *client.Client {
 	return s.cont.Client
 }
 
-// ExecDebugContainer todo return cleanupFn for the debug container
+// CleanupFn type aliased so that we can add more params/return values if needed
+type CleanupFn func()
+
 func (s *Service) ExecDebugContainer(
 	ctx context.Context,
 	containerID string,
 	debuggerImage string,
 	imgPullWriter io.Writer,
 	debuggerEntryCmd string,
-) (resp client.HijackedResponse, cleanup func(), err error) {
+) (resp client.HijackedResponse, cleanup CleanupFn, err error) {
 	err = s.cont.ImagePull(ctx, debuggerImage, imgPullWriter)
 	if err != nil {
 		return client.HijackedResponse{}, cleanup, fmt.Errorf("unable to pull debugger image: %w", err)
 	}
 
-	serviceName := fmt.Sprintf("container:%s", containerID)
+	target, err := s.Cli().ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
+	if err != nil {
+		return client.HijackedResponse{}, nil, fmt.Errorf("unable to inspect debugger container: %w", err)
+	}
+
+	serviceName := fmt.Sprintf("container:%s", target.Container.Name)
 	//hostConfig := &container.HostConfig{
 	//	Privileged: true,
 	//	AutoRemove: true,
@@ -59,11 +66,16 @@ func (s *Service) ExecDebugContainer(
 	//	Tty:       true,
 	//}
 
+	targetPID := 1
+	if target.Container.HostConfig.PidMode.IsHost() {
+		targetPID = target.Container.State.Pid
+	}
+
 	runId := uuid.New().String()
 	script := renderChrootEntrypoint(
 		runId,
-		1,
-		true,
+		targetPID,
+		strings.Contains(debuggerImage, "nixery"),
 		[]string{debuggerEntryCmd},
 	)
 
@@ -163,7 +175,8 @@ func renderChrootEntrypoint(runID string, targetPID int, isNix bool, cmd []strin
 		shellCmd = "sh -c \"" + strings.Join(cmd, " ") + "\""
 	}
 
-	script := fmt.Sprintf(`set -eu
+	script := fmt.Sprintf(`
+set -eu
 
 CURRENT_PID=$(sh -c 'echo $PPID')
 
@@ -180,8 +193,6 @@ chroot /proc/%[2]d/root %[4]s
 EOF
 
 exec sh /.dkmn-entrypoint.sh
-
-rm -f /proc/%[2]d/root/.dkmn-%[3]s
 `,
 		func() string {
 			if isNix {

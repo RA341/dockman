@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/RA341/dockman/internal/docker/debug"
 	fu "github.com/RA341/dockman/pkg/fileutil"
 	"github.com/gorilla/websocket"
 	"github.com/moby/moby/api/pkg/stdcopy"
@@ -43,7 +44,7 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 			wsMustWrite(ws, "unknown cmd passed defaulting to "+execCmd)
 		}
 
-		ctx := r.Context()
+		readerCtx := r.Context()
 		var resp client.HijackedResponse
 
 		val := query.Get("debug")
@@ -55,11 +56,10 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 			}
 
 			wsWriter := NewWsWriter(ws)
-			// todo add debug container cleanup defer
-			var cleanup func()
+			var cleanup debug.CleanupFn
 
 			resp, cleanup, err = srv().Debugger.ExecDebugContainer(
-				ctx,
+				readerCtx,
 				contId,
 				debuggerImage, wsWriter,
 				queryCmd,
@@ -71,7 +71,7 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 			defer cleanup()
 
 		} else {
-			resp, err = srv().Container.ContainerExec(ctx, contId, execCmd)
+			resp, err = srv().Container.ContainerExec(readerCtx, contId, execCmd)
 			if err != nil {
 				wsErr(ws, err)
 				return
@@ -79,20 +79,35 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 		}
 		defer resp.Close()
 
+		wsInf(ws, "Connected to Container")
+		wsInf(ws, fmt.Sprintf("Entrypoint: %s", execCmd))
+
+		readerCtx, cancel := context.WithCancel(readerCtx)
+		defer cancel()
+
 		go func() {
+			// read from container and send to ws
 			buf := make([]byte, 1024)
 			for {
 				n, err := resp.Reader.Read(buf)
 				if err != nil {
-					log.Debug().Err(err).Msg("Unable to read from container " + err.Error())
+					wsErr(ws, fmt.Errorf("error reading from container: %w", err))
 					break
 				}
 
 				wsMustWrite(ws, string(buf[:n]))
 			}
+
+			cancel()
 		}()
 
 		for {
+			if readerCtx.Err() != nil {
+				wsErr(ws, fmt.Errorf("container stream was closed, exiting"))
+				break
+			}
+
+			// read from ws to container
 			_, msg, err := ws.ReadMessage()
 			if err != nil {
 				log.Debug().Str("cont", contId).Err(err).Msg("Unable to read from socket " + err.Error())
@@ -102,7 +117,7 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 			_, err = resp.Conn.Write(msg)
 			if err != nil {
 				log.Warn().Err(err).Msg("Unable to write to container " + err.Error())
-				return
+				break
 			}
 		}
 
@@ -152,22 +167,34 @@ func NewLogWSHandler(srv ServiceProvider) http.HandlerFunc {
 	}
 }
 
-const AnsiRed = "\\033[31m"
-const AnsiReset = "\\033[0m"
+const (
+	AnsiGreen = "\x1b[32m"
+	AnsiRed   = "\x1b[31m"
+	AnsiReset = "\x1b[0m"
+
+	newLine = "\r\n"
+)
+
+func wsInf(ws *websocket.Conn, message string) {
+	message = formatTermMessage(message, AnsiGreen)
+	wsMustWrite(ws, message)
+}
+
+func wsErr(ws *websocket.Conn, errMessage error) {
+	message := formatTermMessage(errMessage.Error(), AnsiRed)
+	wsMustWrite(ws, message)
+}
+
+func formatTermMessage(message string, color string) string {
+	message = color + message + AnsiReset + newLine
+	return message
+}
 
 func wsMustWrite(ws *websocket.Conn, message string) {
 	err := ws.WriteMessage(websocket.TextMessage, []byte(message))
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to write to socket")
 		return
-	}
-}
-
-func wsErr(ws *websocket.Conn, errMessage error) {
-	message := AnsiRed + errMessage.Error() + AnsiReset
-	err := ws.WriteMessage(websocket.TextMessage, []byte(message))
-	if err != nil {
-		log.Warn().Err(err).Msg("Unable to write to stream")
 	}
 }
 
