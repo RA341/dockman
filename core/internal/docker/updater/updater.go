@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -254,7 +255,7 @@ func (u *Service) containerUpdate(
 		//return
 	}
 
-	err = u.srv.ImagePull(ctx, imgTag)
+	err = u.srv.ImagePull(ctx, imgTag, os.Stdout)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to pull image, skipping...")
 		return

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/moby/moby/api/types/image"
@@ -24,8 +23,7 @@ func (s *Service) ImageList(ctx context.Context) ([]image.Summary, error) {
 	return list.Items, err
 }
 
-// ImagePull todo pass in a io.writer for more info
-func (s *Service) ImagePull(ctx context.Context, imageTag string) error {
+func (s *Service) ImagePull(ctx context.Context, imageTag string, writer io.Writer) error {
 	log.Info().Msg("Pulling latest image")
 
 	reader, err := s.Client.ImagePull(ctx, imageTag, client.ImagePullOptions{})
@@ -35,7 +33,8 @@ func (s *Service) ImagePull(ctx context.Context, imageTag string) error {
 	defer fileutil.Close(reader)
 
 	// Copy the pull output to stdout to show progress
-	if _, err := io.Copy(os.Stdout, reader); err != nil {
+	_, err = io.Copy(writer, reader)
+	if err != nil {
 		return fmt.Errorf("failed to read image pull response: %w", err)
 	}
 

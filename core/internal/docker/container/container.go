@@ -25,34 +25,10 @@ func New(client *client.Client) *Service {
 	}
 }
 
-// NewSimpleContainerService creates a simple docker client for
-// messing around only has access to the socket
-// todo
-//func NewSimpleContainerService(client *client.Client) *Service {
-//	return &Service{dependencies: &dependencies{
-//		MobyClient: client,
-//	}}
-//}
-
-// todo
-// NewUpdaterService service used by dockman updater
-//func NewUpdaterService(client *client.Client) *Service {
-//	u := &dependencies{
-//		hostname:         LocalClient,
-//		MobyClient:       client,
-//		syncer:           NewNoopSyncer(),
-//		imageUpdateStore: NewNoopStore(),
-//		// not needed by updater service
-//		//daemonAddr:       "",
-//		//ComposeRoot:      "",
-//		//updaterUrl:       "",
-//	}
-//
-//	return &Service{dependencies: u}
-//}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Container stuff
+// Cli helper method to get access to raw docker client
+func (s *Service) Cli() *client.Client {
+	return s.Client
+}
 
 func (s *Service) ContainersList(ctx context.Context) ([]container.Summary, error) {
 	list, err := s.Client.ContainerList(ctx, client.ContainerListOptions{
@@ -127,7 +103,7 @@ func (s *Service) ContainersRemove(ctx context.Context, containerId ...string) e
 	return nil
 }
 
-func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd string) (client.ExecAttachResult, error) {
+func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd string) (client.HijackedResponse, error) {
 	execConfig := client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -138,7 +114,7 @@ func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd str
 
 	execResp, err := s.Client.ExecCreate(ctx, containerID, execConfig)
 	if err != nil {
-		return client.ExecAttachResult{}, fmt.Errorf("error creating exec into container: %w", err)
+		return client.HijackedResponse{}, fmt.Errorf("error creating exec into container: %w", err)
 	}
 
 	resp, err := s.Client.ExecAttach(
@@ -147,10 +123,10 @@ func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd str
 		client.ExecAttachOptions{TTY: true},
 	)
 	if err != nil {
-		return client.ExecAttachResult{}, fmt.Errorf("error creating shell into container: %w", err)
+		return client.HijackedResponse{}, fmt.Errorf("error creating shell into container: %w", err)
 	}
 
-	return resp, nil
+	return resp.HijackedResponse, nil
 }
 
 func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.ReadCloser, bool, error) {
