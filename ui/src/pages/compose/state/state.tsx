@@ -47,44 +47,6 @@ const writeTermErr = (term: Terminal, err: string) => {
     term.write(`${err}\x1b[0m\r`);
 }
 
-export function interactiveTermFn(term: Terminal, wsUrl: string) {
-    try {
-        const ws = new WebSocket(wsUrl);
-        ws.binaryType = "arraybuffer";
-
-        ws.onopen = () => {
-            term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
-            term.focus();
-        };
-
-        ws.onmessage = (event) => {
-            term.write(
-                typeof event.data === 'string' ?
-                    event.data :
-                    new Uint8Array(event.data)
-            );
-        };
-
-        ws.onclose = () => {
-            term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
-            // onClose?.()
-        };
-
-        ws.onerror = (err) => {
-            writeTermErr(term, err.toString());
-        };
-
-        term.onData((data) => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(data);
-            }
-        });
-    } catch (e: unknown) {
-        // @ts-expect-error: dumbass language
-        writeTermErr(term, e.toString());
-    }
-}
-
 function makeID(length: number = 15): string {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -93,6 +55,58 @@ function makeID(length: number = 15): string {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result;
+}
+
+export function createTab(wsUrl: string, title: string, interactive: boolean) {
+    let ws: WebSocket | undefined;
+
+    const tab: TabTerminal = {
+        id: makeID(),
+        title: title,
+        interactive: interactive,
+        onTerminal: term => {
+            try {
+                ws = new WebSocket(wsUrl);
+                ws.binaryType = "arraybuffer";
+
+                ws.onopen = () => {
+                    term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
+                    term.focus();
+                };
+
+                ws.onmessage = (event) => {
+                    term.write(
+                        typeof event.data === 'string' ?
+                            event.data :
+                            new Uint8Array(event.data)
+                    );
+                };
+
+                ws.onclose = () => {
+                    term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
+                    console.log(`Closing connection`)
+                    // onClose?.()
+                };
+
+                ws.onerror = (err) => {
+                    writeTermErr(term, err.toString());
+                };
+
+                term.onData((data) => {
+                    if (ws?.readyState === WebSocket.OPEN) {
+                        ws?.send(data);
+                    }
+                });
+            } catch (e: unknown) {
+                // @ts-expect-error: dumbass language
+                writeTermErr(term, e.toString());
+            }
+        },
+        onClose: () => {
+            ws?.close();
+        },
+    }
+    return tab;
 }
 
 export const useContainerExec = create<{
@@ -105,15 +119,7 @@ export const useContainerExec = create<{
     execParams: (title, wsUrl, interactive) => {
         useTerminalAction.getState().open()
 
-        const tab: TabTerminal = {
-            id: makeID(),
-            title: title,
-            interactive: interactive,
-            onTerminal: term => {
-                interactiveTermFn(term, wsUrl);
-            },
-
-        }
+        const tab = createTab(wsUrl, title, interactive);
 
         useTerminalTabs.getState().addTab(title, tab)
     },
@@ -157,6 +163,9 @@ export const useComposeAction = create<{
             id: makeID(),
             title: title,
             interactive: false,
+            onClose: () => {
+                // abort.abort("User closed the connection")
+            },
             onTerminal: term => {
                 const asyncStream = async () => {
                     console.log("starting stream")
@@ -196,6 +205,7 @@ export interface TabTerminal {
     id: string;
     title: string;
     onTerminal: (term: Terminal) => void;
+    onClose: () => void;
     interactive: boolean;
 }
 
