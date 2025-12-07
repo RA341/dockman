@@ -1,3 +1,11 @@
+## [2.5.1](https://github.com/RA341/dockman/compare/v2.5.0...v2.5.1) (2025-12-07)
+
+
+### Bug Fixes
+
+* added proper terminal cleanup ([ba2b8de](https://github.com/RA341/dockman/commit/ba2b8decce3c8e0797f0f0e48eb121be866c5c59))
+* added proper terminal cleanup ([cd4039d](https://github.com/RA341/dockman/commit/cd4039d4c3f9c61d08ff4b3a2b6c931e420e2ac5))
+
 # [2.5.0](https://github.com/RA341/dockman/compare/v2.4.1...v2.5.0) (2025-12-05)
 
 
