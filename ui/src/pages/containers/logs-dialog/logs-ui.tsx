@@ -1,11 +1,11 @@
-import {useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {Box, Dialog, DialogActions, DialogContent, DialogTitle, IconButton} from '@mui/material';
 import CloseIcon from "@mui/icons-material/Close";
 import {getWSUrl, useClient} from "../../../lib/api.ts";
 import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
 import {FitAddon} from "@xterm/addon-fit";
 import AppTerminal from "../../compose/components/logs-terminal.tsx";
-import {interactiveTermFn} from "../../compose/state/state.tsx";
+import {createTab} from "../../compose/state/state.tsx";
 
 interface LogsDialogProps {
     show: boolean;
@@ -33,7 +33,12 @@ export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => 
         hide();
     };
 
-    const getWsUrl = () => getWSUrl(`docker/logs/${containerID}`);
+    const getLogTab = useCallback(() => {
+        return createTab(
+            getWSUrl(`docker/logs/${containerID}`),
+            `Logs: ${containerID}`,
+            false)
+    }, [containerID])
 
     return (
         <Dialog
@@ -79,14 +84,9 @@ export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => 
                 // borderColor: '#858484',
             }}>
                 <AppTerminal
-                    id={containerID}
+                    {...getLogTab()}
                     fit={fitAddonRef}
-                    title={`Logs ${name}`}
-                    onTerminal={
-                        term => interactiveTermFn(term, getWsUrl())
-                    }
                     isActive={true}
-                    interactive={false}
                 />
             </DialogContent>
             <DialogActions sx={{

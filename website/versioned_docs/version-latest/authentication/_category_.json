@@ -1,0 +1,8 @@
+{
+  "label": "Authentication",
+  "position": 2,
+  "link": {
+    "type": "doc",
+    "id": "authentication/index"
+  }
+}
