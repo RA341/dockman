@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {
     Autocomplete,
     Box,
@@ -16,7 +16,7 @@ import "@xterm/xterm/css/xterm.css";
 import {getWSUrl} from "../../../lib/api.ts";
 import AppTerminal from "../../compose/components/logs-terminal.tsx";
 import {FitAddon} from "@xterm/addon-fit";
-import {interactiveTermFn} from "../../compose/state/state.tsx";
+import {createTab} from "../../compose/state/state.tsx";
 
 export const ExecDialog = ({show, hide, name, containerID}: {
     show: boolean;
@@ -30,7 +30,6 @@ export const ExecDialog = ({show, hide, name, containerID}: {
     const [isConnected, setIsConnected] = useState(false);
 
     const fitAddonRef = useRef<FitAddon>(new FitAddon());
-    // Reset state when dialog opens/closes or container changes
     useEffect(() => {
         if (!show) {
             setIsConnected(false);
@@ -47,17 +46,28 @@ export const ExecDialog = ({show, hide, name, containerID}: {
         setIsConnected(true);
     };
 
-    const getWsUrl = () => {
+    // const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
+    // const [debuggerImage, setDebuggerImage] = useState("")
+
+    const setupExec = useCallback(() => {
         const encodedCmd = encodeURIComponent(selectedCmd);
-        return getWSUrl(`docker/exec/${containerID}?cmd=${encodedCmd}`)
-    };
+        const base = `docker/exec/${containerID}?cmd=${encodedCmd}`;
+
+        // if (debuggerImage) {
+        //     console.log("using dockman debug with debuggerImage", debuggerImage);
+        //     base += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec
+        //     base += "&image=" + debuggerImage;
+        // }
+
+        return createTab(getWSUrl(base), `Exec: ${containerID}`, true)
+    }, [containerID, selectedCmd])
 
     return (
         <Dialog
             open={show}
             onClose={hide}
             fullWidth
-            maxWidth="lg" // Made slightly larger for terminal
+            maxWidth="lg"
             scroll="paper"
             slotProps={{
                 paper: {
@@ -65,7 +75,7 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                         borderRadius: '12px',
                         backgroundColor: '#1e1e1e',
                         color: '#ffffff',
-                        height: '80vh', // Fixed height for terminal
+                        height: '80vh',
                         display: 'flex',
                         flexDirection: 'column'
                     }
@@ -96,7 +106,7 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
-                overflow: 'hidden' // Let xterm handle scroll
+                overflow: 'hidden'
             }}>
                 {!isConnected ? (
                     <Box sx={{
@@ -131,6 +141,7 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                                     />
                                 )}
                             />
+
                             <Button
                                 variant="contained"
                                 onClick={handleConnect}
@@ -139,18 +150,45 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                                 Connect
                             </Button>
                         </Box>
+                        {/*todo dockman debug not done yet*/}
+                        {/*<Box sx={{width: '100%', maxWidth: 400, display: 'flex', gap: 1, alignItems: 'center'}}>*/}
+                        {/*    <Typography>*/}
+                        {/*        Dockman Debug*/}
+                        {/*    </Typography>*/}
+
+                        {/*    <Autocomplete*/}
+                        {/*        freeSolo*/}
+                        {/*        options={debugImageOptions}*/}
+                        {/*        value={debuggerImage}*/}
+                        {/*        onInputChange={(_, value) => setDebuggerImage(value)}*/}
+                        {/*        sx={{flex: 1}}*/}
+                        {/*        renderInput={(params) => (*/}
+                        {/*            <TextField*/}
+                        {/*                {...params}*/}
+                        {/*                label="Debugger Image"*/}
+                        {/*                variant="outlined"*/}
+                        {/*                size="small"*/}
+                        {/*                slotProps={{*/}
+                        {/*                    inputLabel: {style: {color: '#aaa'}},*/}
+                        {/*                    input: {*/}
+                        {/*                        ...params.InputProps,*/}
+                        {/*                        style: {color: '#fff', backgroundColor: '#333'}*/}
+                        {/*                    }*/}
+                        {/*                }}*/}
+                        {/*            />*/}
+                        {/*        )}*/}
+                        {/*    />*/}
+                        {/*</Box>*/}
+                        {/*<Typography>*/}
+                        {/*    Exec into any container even if the container does not have a shell*/}
+                        {/*</Typography>*/}
                     </Box>
                 ) : (
                     <Box sx={{flex: 1, p: 1, overflow: 'hidden'}}>
                         <AppTerminal
+                            {...setupExec()}
                             isActive={true}
-                            id={containerID}
-                            interactive={true}
                             fit={fitAddonRef}
-                            title={`Exec ${name}`}
-                            onTerminal={
-                                term => interactiveTermFn(term, getWsUrl())
-                            }
                         />
                     </Box>
                 )}

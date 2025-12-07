@@ -31,7 +31,7 @@ type AppTerminalProps = TabTerminal & {
     isActive: boolean;
 };
 
-const AppTerminal = ({fit, interactive, onTerminal, isActive}: AppTerminalProps) => {
+const AppTerminal = ({fit, interactive, onTerminal, isActive, onClose}: AppTerminalProps) => {
     const terminalRef = useRef<HTMLDivElement>(null);
     const xtermRef = useRef<Terminal | null>(null);
 
@@ -101,6 +101,7 @@ const AppTerminal = ({fit, interactive, onTerminal, isActive}: AppTerminalProps)
         return () => {
             xtermRef.current?.dispose();
             xtermRef.current = null;
+            onClose()
         };
         // eslint-disable-next-line
     }, []);
