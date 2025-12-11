@@ -10,7 +10,41 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file files/v1/files.proto.
  */
 export const file_files_v1_files: GenFile = /*@__PURE__*/
-  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiIQoNRm9ybWF0UmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSIiCg5Gb3JtYXRSZXNwb25zZRIQCghjb250ZW50cxgBIAEoCSIzCgxMaXN0UmVzcG9uc2USIwoGZ3JvdXBzGAEgAygLMhMuZmlsZXMudjEuRmlsZUdyb3VwIisKCUZpbGVHcm91cBIMCgRyb290GAEgASgJEhAKCHN1YkZpbGVzGAIgAygJIjYKClJlbmFtZUZpbGUSEwoLb2xkRmlsZVBhdGgYASABKAkSEwoLbmV3RmlsZVBhdGgYAiABKAkiGAoERmlsZRIQCghmaWxlbmFtZRgBIAEoCSIHCgVFbXB0eSKWAgoLRG9ja21hbllhbWwSGQoRdXNlQ29tcG9zZUZvbGRlcnMYASABKAgSIgoaZGlzYWJsZUNvbXBvc2VRdWlja0FjdGlvbnMYByABKAgSEAoIdGFiTGltaXQYBiABKAUSLAoLdm9sdW1lc1BhZ2UYAiABKAsyFy5maWxlcy52MS5Wb2x1bWVzQ29uZmlnEiwKC25ldHdvcmtQYWdlGAMgASgLMhcuZmlsZXMudjEuTmV0d29ya0NvbmZpZxIoCglpbWFnZVBhZ2UYBCABKAsyFS5maWxlcy52MS5JbWFnZUNvbmZpZxIwCg1jb250YWluZXJQYWdlGAUgASgLMhkuZmlsZXMudjEuQ29udGFpbmVyQ29uZmlnIi0KDVZvbHVtZXNDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiLQoNTmV0d29ya0NvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCIrCgtJbWFnZUNvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCIvCg9Db250YWluZXJDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiLAoEU29ydBIRCglzb3J0T3JkZXIYASABKAkSEQoJc29ydEZpZWxkGAIgASgJMvUCCgtGaWxlU2VydmljZRIrCgZDcmVhdGUSDi5maWxlcy52MS5GaWxlGg8uZmlsZXMudjEuRW1wdHkiABIxCgRMaXN0Eg8uZmlsZXMudjEuRW1wdHkaFi5maWxlcy52MS5MaXN0UmVzcG9uc2UiABIrCgZEZWxldGUSDi5maWxlcy52MS5GaWxlGg8uZmlsZXMudjEuRW1wdHkiABIrCgZFeGlzdHMSDi5maWxlcy52MS5GaWxlGg8uZmlsZXMudjEuRW1wdHkiABIxCgZSZW5hbWUSFC5maWxlcy52MS5SZW5hbWVGaWxlGg8uZmlsZXMudjEuRW1wdHkiABI6Cg5HZXREb2NrbWFuWWFtbBIPLmZpbGVzLnYxLkVtcHR5GhUuZmlsZXMudjEuRG9ja21hbllhbWwiABI9CgZGb3JtYXQSFy5maWxlcy52MS5Gb3JtYXRSZXF1ZXN0GhguZmlsZXMudjEuRm9ybWF0UmVzcG9uc2UiAEKIAQoMY29tLmZpbGVzLnYxQgpGaWxlc1Byb3RvUAFaK2dpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvZmlsZXMvdjGiAgNGWFiqAghGaWxlcy5WMcoCCEZpbGVzXFYx4gIURmlsZXNcVjFcR1BCTWV0YWRhdGHqAglGaWxlczo6VjFiBnByb3RvMw");
+  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiGwoLTGlzdFJlcXVlc3QSDAoEcGF0aBgBIAEoCSIyCgxMaXN0UmVzcG9uc2USIgoHZW50cmllcxgBIAMoCzIRLmZpbGVzLnYxLkZzRW50cnkiIQoNRm9ybWF0UmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSIiCg5Gb3JtYXRSZXNwb25zZRIQCghjb250ZW50cxgBIAEoCSJiCgdGc0VudHJ5EhAKCGZpbGVuYW1lGAIgASgJEg0KBWlzRGlyGAMgASgIEiMKCHN1YkZpbGVzGAQgAygLMhEuZmlsZXMudjEuRnNFbnRyeRIRCglpc0ZldGNoZWQYBSABKAgiNgoKUmVuYW1lRmlsZRITCgtvbGRGaWxlUGF0aBgBIAEoCRITCgtuZXdGaWxlUGF0aBgCIAEoCSInCgRGaWxlEhAKCGZpbGVuYW1lGAEgASgJEg0KBWlzRGlyGAIgASgIIgcKBUVtcHR5IpYCCgtEb2NrbWFuWWFtbBIZChF1c2VDb21wb3NlRm9sZGVycxgBIAEoCBIiChpkaXNhYmxlQ29tcG9zZVF1aWNrQWN0aW9ucxgHIAEoCBIQCgh0YWJMaW1pdBgGIAEoBRIsCgt2b2x1bWVzUGFnZRgCIAEoCzIXLmZpbGVzLnYxLlZvbHVtZXNDb25maWcSLAoLbmV0d29ya1BhZ2UYAyABKAsyFy5maWxlcy52MS5OZXR3b3JrQ29uZmlnEigKCWltYWdlUGFnZRgEIAEoCzIVLmZpbGVzLnYxLkltYWdlQ29uZmlnEjAKDWNvbnRhaW5lclBhZ2UYBSABKAsyGS5maWxlcy52MS5Db250YWluZXJDb25maWciLQoNVm9sdW1lc0NvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCItCg1OZXR3b3JrQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0IisKC0ltYWdlQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0Ii8KD0NvbnRhaW5lckNvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCIsCgRTb3J0EhEKCXNvcnRPcmRlchgBIAEoCRIRCglzb3J0RmllbGQYAiABKAky+wIKC0ZpbGVTZXJ2aWNlEjcKBExpc3QSFS5maWxlcy52MS5MaXN0UmVxdWVzdBoWLmZpbGVzLnYxLkxpc3RSZXNwb25zZSIAEisKBkNyZWF0ZRIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEisKBkRlbGV0ZRIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEisKBkV4aXN0cxIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjEKBlJlbmFtZRIULmZpbGVzLnYxLlJlbmFtZUZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjoKDkdldERvY2ttYW5ZYW1sEg8uZmlsZXMudjEuRW1wdHkaFS5maWxlcy52MS5Eb2NrbWFuWWFtbCIAEj0KBkZvcm1hdBIXLmZpbGVzLnYxLkZvcm1hdFJlcXVlc3QaGC5maWxlcy52MS5Gb3JtYXRSZXNwb25zZSIAQogBCgxjb20uZmlsZXMudjFCCkZpbGVzUHJvdG9QAVorZ2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9maWxlcy92MaICA0ZYWKoCCEZpbGVzLlYxygIIRmlsZXNcVjHiAhRGaWxlc1xWMVxHUEJNZXRhZGF0YeoCCUZpbGVzOjpWMWIGcHJvdG8z");
+
+/**
+ * @generated from message files.v1.ListRequest
+ */
+export type ListRequest = Message<"files.v1.ListRequest"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+};
+
+/**
+ * Describes the message files.v1.ListRequest.
+ * Use `create(ListRequestSchema)` to create a new message.
+ */
+export const ListRequestSchema: GenMessage<ListRequest> = /*@__PURE__*/
+  messageDesc(file_files_v1_files, 0);
+
+/**
+ * @generated from message files.v1.ListResponse
+ */
+export type ListResponse = Message<"files.v1.ListResponse"> & {
+  /**
+   * @generated from field: repeated files.v1.FsEntry entries = 1;
+   */
+  entries: FsEntry[];
+};
+
+/**
+ * Describes the message files.v1.ListResponse.
+ * Use `create(ListResponseSchema)` to create a new message.
+ */
+export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
+  messageDesc(file_files_v1_files, 1);
 
 /**
  * @generated from message files.v1.FormatRequest
@@ -27,7 +61,7 @@ export type FormatRequest = Message<"files.v1.FormatRequest"> & {
  * Use `create(FormatRequestSchema)` to create a new message.
  */
 export const FormatRequestSchema: GenMessage<FormatRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 0);
+  messageDesc(file_files_v1_files, 2);
 
 /**
  * @generated from message files.v1.FormatResponse
@@ -44,46 +78,41 @@ export type FormatResponse = Message<"files.v1.FormatResponse"> & {
  * Use `create(FormatResponseSchema)` to create a new message.
  */
 export const FormatResponseSchema: GenMessage<FormatResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 1);
-
-/**
- * @generated from message files.v1.ListResponse
- */
-export type ListResponse = Message<"files.v1.ListResponse"> & {
-  /**
-   * @generated from field: repeated files.v1.FileGroup groups = 1;
-   */
-  groups: FileGroup[];
-};
-
-/**
- * Describes the message files.v1.ListResponse.
- * Use `create(ListResponseSchema)` to create a new message.
- */
-export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 2);
-
-/**
- * @generated from message files.v1.FileGroup
- */
-export type FileGroup = Message<"files.v1.FileGroup"> & {
-  /**
-   * @generated from field: string root = 1;
-   */
-  root: string;
-
-  /**
-   * @generated from field: repeated string subFiles = 2;
-   */
-  subFiles: string[];
-};
-
-/**
- * Describes the message files.v1.FileGroup.
- * Use `create(FileGroupSchema)` to create a new message.
- */
-export const FileGroupSchema: GenMessage<FileGroup> = /*@__PURE__*/
   messageDesc(file_files_v1_files, 3);
+
+/**
+ * @generated from message files.v1.FsEntry
+ */
+export type FsEntry = Message<"files.v1.FsEntry"> & {
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: bool isDir = 3;
+   */
+  isDir: boolean;
+
+  /**
+   * @generated from field: repeated files.v1.FsEntry subFiles = 4;
+   */
+  subFiles: FsEntry[];
+
+  /**
+   * flag for lazy loading
+   *
+   * @generated from field: bool isFetched = 5;
+   */
+  isFetched: boolean;
+};
+
+/**
+ * Describes the message files.v1.FsEntry.
+ * Use `create(FsEntrySchema)` to create a new message.
+ */
+export const FsEntrySchema: GenMessage<FsEntry> = /*@__PURE__*/
+  messageDesc(file_files_v1_files, 4);
 
 /**
  * @generated from message files.v1.RenameFile
@@ -105,7 +134,7 @@ export type RenameFile = Message<"files.v1.RenameFile"> & {
  * Use `create(RenameFileSchema)` to create a new message.
  */
 export const RenameFileSchema: GenMessage<RenameFile> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 4);
+  messageDesc(file_files_v1_files, 5);
 
 /**
  * @generated from message files.v1.File
@@ -115,6 +144,11 @@ export type File = Message<"files.v1.File"> & {
    * @generated from field: string filename = 1;
    */
   filename: string;
+
+  /**
+   * @generated from field: bool isDir = 2;
+   */
+  isDir: boolean;
 };
 
 /**
@@ -122,7 +156,7 @@ export type File = Message<"files.v1.File"> & {
  * Use `create(FileSchema)` to create a new message.
  */
 export const FileSchema: GenMessage<File> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 5);
+  messageDesc(file_files_v1_files, 6);
 
 /**
  * @generated from message files.v1.Empty
@@ -135,7 +169,7 @@ export type Empty = Message<"files.v1.Empty"> & {
  * Use `create(EmptySchema)` to create a new message.
  */
 export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 6);
+  messageDesc(file_files_v1_files, 7);
 
 /**
  * @generated from message files.v1.DockmanYaml
@@ -182,7 +216,7 @@ export type DockmanYaml = Message<"files.v1.DockmanYaml"> & {
  * Use `create(DockmanYamlSchema)` to create a new message.
  */
 export const DockmanYamlSchema: GenMessage<DockmanYaml> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 7);
+  messageDesc(file_files_v1_files, 8);
 
 /**
  * @generated from message files.v1.VolumesConfig
@@ -199,7 +233,7 @@ export type VolumesConfig = Message<"files.v1.VolumesConfig"> & {
  * Use `create(VolumesConfigSchema)` to create a new message.
  */
 export const VolumesConfigSchema: GenMessage<VolumesConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 8);
+  messageDesc(file_files_v1_files, 9);
 
 /**
  * @generated from message files.v1.NetworkConfig
@@ -216,7 +250,7 @@ export type NetworkConfig = Message<"files.v1.NetworkConfig"> & {
  * Use `create(NetworkConfigSchema)` to create a new message.
  */
 export const NetworkConfigSchema: GenMessage<NetworkConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 9);
+  messageDesc(file_files_v1_files, 10);
 
 /**
  * @generated from message files.v1.ImageConfig
@@ -233,7 +267,7 @@ export type ImageConfig = Message<"files.v1.ImageConfig"> & {
  * Use `create(ImageConfigSchema)` to create a new message.
  */
 export const ImageConfigSchema: GenMessage<ImageConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 10);
+  messageDesc(file_files_v1_files, 11);
 
 /**
  * @generated from message files.v1.ContainerConfig
@@ -250,7 +284,7 @@ export type ContainerConfig = Message<"files.v1.ContainerConfig"> & {
  * Use `create(ContainerConfigSchema)` to create a new message.
  */
 export const ContainerConfigSchema: GenMessage<ContainerConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 11);
+  messageDesc(file_files_v1_files, 12);
 
 /**
  * @generated from message files.v1.Sort
@@ -272,29 +306,27 @@ export type Sort = Message<"files.v1.Sort"> & {
  * Use `create(SortSchema)` to create a new message.
  */
 export const SortSchema: GenMessage<Sort> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 12);
+  messageDesc(file_files_v1_files, 13);
 
 /**
  * @generated from service files.v1.FileService
  */
 export const FileService: GenService<{
   /**
-   * root file management
-   *
+   * @generated from rpc files.v1.FileService.List
+   */
+  list: {
+    methodKind: "unary";
+    input: typeof ListRequestSchema;
+    output: typeof ListResponseSchema;
+  },
+  /**
    * @generated from rpc files.v1.FileService.Create
    */
   create: {
     methodKind: "unary";
     input: typeof FileSchema;
     output: typeof EmptySchema;
-  },
-  /**
-   * @generated from rpc files.v1.FileService.List
-   */
-  list: {
-    methodKind: "unary";
-    input: typeof EmptySchema;
-    output: typeof ListResponseSchema;
   },
   /**
    * @generated from rpc files.v1.FileService.Delete

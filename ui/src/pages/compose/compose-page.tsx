@@ -13,14 +13,13 @@ import {FilesProvider} from "../../context/file-context.tsx";
 import {AddFilesProvider} from "./dialogs/add/add-context.tsx";
 import {TelescopeProvider} from "./dialogs/search/search-context.tsx";
 import {DeleteFileProvider} from "./dialogs/delete/delete-context.tsx";
-import {GitImportProvider} from "./dialogs/import/import-context.tsx";
 import {isComposeFile} from "../../lib/editor.ts";
 import {useTabs} from "../../hooks/tabs.ts";
 import {type SaveState, useSaveStatus} from "./hooks/status-hook.ts";
 import ActionBar from "./components/action-bar.tsx";
 import CoreComposeEmpty from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
-import {useActiveComposeFile} from "./state/state.tsx";
+import {useActiveComposeFile, useOpenFiles} from "./state/state.tsx";
 import CenteredMessage from "../../components/centered-message.tsx";
 
 export const ComposePage = () => {
@@ -29,9 +28,7 @@ export const ComposePage = () => {
             <TelescopeProvider>
                 <AddFilesProvider>
                     <DeleteFileProvider>
-                        <GitImportProvider>
-                            <ComposePageInner/>
-                        </GitImportProvider>
+                        <ComposePageInner/>
                     </DeleteFileProvider>
                 </AddFilesProvider>
             </TelescopeProvider>
@@ -40,9 +37,8 @@ export const ComposePage = () => {
 }
 
 export const ComposePageInner = () => {
-    const {file, child} = useParams<{ file: string; child?: string }>();
-    const filename = child ? `${file}/${child}` : file ?? "";
-
+    const params = useParams();
+    const filename = params['*'] ?? "";
     const setFile = useActiveComposeFile((state) => state.setFile)
     setFile(filename)
 
@@ -236,6 +232,8 @@ function CoreCompose() {
     const [isLoading, setIsLoading] = useState(true);
     const [fileError, setFileError] = useState("");
 
+    const recursiveOpen = useOpenFiles(state => state.recursiveOpen)
+
     useEffect(() => {
         setIsLoading(true);
         setFileError("");
@@ -249,6 +247,7 @@ function CoreCompose() {
             })
             .finally(() => {
                 setIsLoading(false);
+                recursiveOpen(filename)
             });
     }, [filename, fileService]);
 

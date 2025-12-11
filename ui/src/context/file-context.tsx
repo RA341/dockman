@@ -1,82 +1,137 @@
 import {type ReactNode, useCallback, useEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 import {callRPC, useClient} from "../lib/api.ts";
-import {type FileGroup, FilesContext, type FilesContextType} from "../hooks/files.ts";
+import {FilesContext, type FilesContextType} from "../hooks/files.ts";
 import {useHost} from "../hooks/host.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
-import {FileService} from '../gen/files/v1/files_pb.ts';
+import {FileService, type FsEntry} from '../gen/files/v1/files_pb.ts';
+import {useTabs} from "../hooks/tabs.ts";
+import {useOpenFiles} from "../pages/compose/state/state.tsx";
+
+function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[]): void {
+    if (indices.length === 0) return;
+
+    let current: FsEntry[] | null = list;
+
+    // Navigate to the parent using all indices except the last one
+    for (let i = 0; i < indices.length - 1; i++) {
+        const index = indices[i];
+        if (!current || !current[index] || !current[index].subFiles) {
+            console.error('Invalid path at index', i);
+            return;
+        }
+        current = current[index].subFiles;
+    }
+
+    // Set the value at the final index
+    const lastIndex = indices[indices.length - 1];
+    if (!current || !current[lastIndex]) {
+        console.error('Invalid final index', lastIndex);
+        return;
+    }
+
+    current[lastIndex].isFetched = true;
+    current[lastIndex].subFiles = value;
+}
+
+function getDir(filePath: string): string {
+    const lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash === -1) return '.';
+    if (lastSlash === 0) return '/';
+    return filePath.substring(0, lastSlash);
+}
 
 export function FilesProvider({children}: { children: ReactNode }) {
-    const navigate = useNavigate()
     const client = useClient(FileService)
+
     const {showError, showSuccess} = useSnackbar()
+    const {closeTab} = useTabs()
+
+    const navigate = useNavigate()
     const {selectedHost} = useHost()
     const location = useLocation()
 
-    const [files, setFiles] = useState<FileGroup[]>([])
+    const [files, setFiles] = useState<FsEntry[]>([])
+
     const [isLoading, setIsLoading] = useState(true)
 
-    const fetchFiles = useCallback(async () => {
-        setIsLoading(true)
+    const fetchFiles = useCallback(async (
+            path: string = "",
+            entryInsertIndex: number[] = [],
+        ) => {
+            if (!path) {
+                // first load empty filelist
+                setIsLoading(true)
+            }
 
-        const {val, err} = await callRPC(() => client.list({}))
+            const {val, err} = await callRPC(() => client.list({path: path}))
+            if (err) {
+                showError(err)
+                setFiles([])
+            } else if (val) {
+                if (entryInsertIndex.length < 1) {
+                    setFiles(val.entries)
+                } else {
+                    // sub index
+                    setFiles(prevState => {
+                        const newList = [...prevState]
+                        insertAtNestedIndex(newList, entryInsertIndex, val.entries)
+                        return newList
+                    })
+                }
+            }
+
+            setIsLoading(false)
+        },
+        [client, selectedHost, showError]);
+
+    const closeFolder = useOpenFiles(state => state.delete)
+
+    const addFile = useCallback(async (
+        filename: string,
+        isDir: boolean,
+        entryInsertIndex?: number[]
+    ) => {
+        const {err} = await callRPC(() => client.create({filename, isDir}))
         if (err) {
             showError(err)
-            setFiles([])
-        } else if (val) {
-            const res = val.groups.map<FileGroup>(group => ({
-                name: group.root,
-                children: [...group.subFiles]
-            }))
-            setFiles([...res])
-        }
-
-        setIsLoading(false)
-    }, [client, selectedHost])
-
-    const addFile = useCallback(async (filename: string, parent: string) => {
-        if (parent) {
-            filename = `${parent}/${filename}`
-        }
-        console.log("Creating new file...", filename)
-
-        const {err} = await callRPC(() => client.create({filename}))
-        if (err) {
-            showError(`Error saving file: ${err}`)
             return
         } else {
-            showSuccess(`${filename} created.`)
-            navigate(`/stacks/${filename}`)
+            if (!isDir) {
+                navigate(`/stacks/${filename}`)
+            }
+            showSuccess(`Created ${filename}`)
         }
-
-        await fetchFiles()
+        await fetchFiles(getDir(filename), entryInsertIndex)
     }, [client, fetchFiles, navigate])
 
-    const deleteFile = useCallback(async (filename: string) => {
+    const deleteFile = useCallback(async (
+        filename: string,
+        entryInsertIndex?: number[]
+    ) => {
         const {err} = await callRPC(() => client.delete({filename}))
         if (err) {
-            showError(`Error deleting file: ${err}`)
+            showError(err)
         } else {
-            showSuccess(`${filename} deleted.`)
-            const currentPath = location.pathname
-            if (currentPath === `/stacks/${filename}`) {
-                // If the user is currently viewing the deleted file, navigate away
-                navigate('/stacks')
-            }
+            showSuccess(`Deleted ${filename}`)
+            closeFolder(filename)
+            closeTab(filename)
         }
 
-        await fetchFiles()
+        await fetchFiles(getDir(filename), entryInsertIndex)
     }, [client, fetchFiles, location.pathname, navigate])
 
-    const renameFile = async (oldFilename: string, newFileName: string) => {
-        const {err} = await callRPC(() => client.rename({
-            oldFilePath: oldFilename,
-            newFilePath: newFileName
-        }))
+    const renameFile = async (
+        oldFilename: string,
+        newFileName: string,
+        entryInsertIndex?: number[],
+    ) => {
+        const {err} = await callRPC(() => client.rename({newFilePath: newFileName, oldFilePath: oldFilename}))
         if (err) {
-            showError(`Error renaming file: ${err}`)
+            showError(err)
         } else {
             showSuccess(`${oldFilename} renamed to ${newFileName}`)
+            closeTab(oldFilename)
             const currentPath = location.pathname
             if (currentPath === `/stacks/${oldFilename}`) {
                 // If the user is currently viewing the renamed file, navigate to renamed file
@@ -84,7 +139,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
             }
         }
 
-        await fetchFiles()
+        await fetchFiles(getDir(newFileName), entryInsertIndex)
     }
 
     useEffect(() => {
@@ -97,7 +152,8 @@ export function FilesProvider({children}: { children: ReactNode }) {
         addFile,
         deleteFile,
         renameFile,
-        refetch: fetchFiles,
+        listFiles: fetchFiles,
+        refetch: async () => fetchFiles(),
     }
 
     return (

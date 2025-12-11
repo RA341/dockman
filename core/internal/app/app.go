@@ -73,7 +73,7 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		},
 	)
 
-	fileSrv := files.NewService(
+	fileSrv := files.New(
 		cr, conf.DockYaml,
 		conf.Perms.PUID, conf.Perms.GID,
 		dockerManagerSrv.GetActiveClient,

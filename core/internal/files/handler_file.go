@@ -3,7 +3,6 @@ package files
 import (
 	b64 "encoding/base64"
 	"net/http"
-	"path/filepath"
 
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/rs/zerolog/log"
@@ -29,21 +28,20 @@ func (h *FileHandler) register() http.Handler {
 }
 
 func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
-	fileName := r.PathValue("filename")
-	if fileName == "" {
+	filename := r.PathValue("filename")
+	if filename == "" {
 		http.Error(w, "Filename not provided", http.StatusBadRequest)
 		return
 	}
-	cleanPath := filepath.Clean(fileName)
 
-	fullPath, err := h.srv.LoadFilePath(cleanPath)
+	fullpath, err := h.srv.LoadFilePath(filename)
 	if err != nil {
-		log.Error().Err(err).Str("path", cleanPath).Msg("Error loading file")
+		log.Error().Err(err).Str("path", fullpath).Msg("Error loading file")
 		http.Error(w, "Filename not found", http.StatusBadRequest)
 		return
 	}
 
-	http.ServeFile(w, r, fullPath)
+	http.ServeFile(w, r, fullpath)
 }
 
 func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {

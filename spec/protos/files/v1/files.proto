@@ -5,14 +5,22 @@ package files.v1;
 option go_package = "github.com/RA341/dockman/generated/files/v1";
 
 service FileService {
-  // root file management
+  rpc List(ListRequest) returns (ListResponse) {}
   rpc Create(File) returns (Empty) {}
-  rpc List(Empty) returns (ListResponse) {}
   rpc Delete(File) returns (Empty) {}
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
+
   rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
   rpc Format(FormatRequest) returns (FormatResponse) {}
+}
+
+message ListRequest {
+  string path = 1;
+}
+
+message ListResponse {
+  repeated FsEntry entries = 1;
 }
 
 message FormatRequest {
@@ -23,14 +31,12 @@ message FormatResponse {
   string contents = 1;
 }
 
-
-message ListResponse {
-  repeated FileGroup groups = 1;
-}
-
-message FileGroup {
-  string root = 1;
-  repeated string subFiles = 2;
+message FsEntry {
+  string filename = 2;
+  bool isDir = 3;
+  repeated FsEntry subFiles = 4;
+  // flag for lazy loading
+  bool isFetched = 5;
 }
 
 message RenameFile {
@@ -40,6 +46,7 @@ message RenameFile {
 
 message File {
   string filename = 1;
+  bool isDir = 2;
 }
 
 message Empty {}

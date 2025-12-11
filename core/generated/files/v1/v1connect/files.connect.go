@@ -33,10 +33,10 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// FileServiceCreateProcedure is the fully-qualified name of the FileService's Create RPC.
-	FileServiceCreateProcedure = "/files.v1.FileService/Create"
 	// FileServiceListProcedure is the fully-qualified name of the FileService's List RPC.
 	FileServiceListProcedure = "/files.v1.FileService/List"
+	// FileServiceCreateProcedure is the fully-qualified name of the FileService's Create RPC.
+	FileServiceCreateProcedure = "/files.v1.FileService/Create"
 	// FileServiceDeleteProcedure is the fully-qualified name of the FileService's Delete RPC.
 	FileServiceDeleteProcedure = "/files.v1.FileService/Delete"
 	// FileServiceExistsProcedure is the fully-qualified name of the FileService's Exists RPC.
@@ -52,9 +52,8 @@ const (
 
 // FileServiceClient is a client for the files.v1.FileService service.
 type FileServiceClient interface {
-	// root file management
+	List(context.Context, *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error)
 	Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
-	List(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error)
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
@@ -73,16 +72,16 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	fileServiceMethods := v1.File_files_v1_files_proto.Services().ByName("FileService").Methods()
 	return &fileServiceClient{
+		list: connect.NewClient[v1.ListRequest, v1.ListResponse](
+			httpClient,
+			baseURL+FileServiceListProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("List")),
+			connect.WithClientOptions(opts...),
+		),
 		create: connect.NewClient[v1.File, v1.Empty](
 			httpClient,
 			baseURL+FileServiceCreateProcedure,
 			connect.WithSchema(fileServiceMethods.ByName("Create")),
-			connect.WithClientOptions(opts...),
-		),
-		list: connect.NewClient[v1.Empty, v1.ListResponse](
-			httpClient,
-			baseURL+FileServiceListProcedure,
-			connect.WithSchema(fileServiceMethods.ByName("List")),
 			connect.WithClientOptions(opts...),
 		),
 		delete: connect.NewClient[v1.File, v1.Empty](
@@ -120,8 +119,8 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // fileServiceClient implements FileServiceClient.
 type fileServiceClient struct {
+	list           *connect.Client[v1.ListRequest, v1.ListResponse]
 	create         *connect.Client[v1.File, v1.Empty]
-	list           *connect.Client[v1.Empty, v1.ListResponse]
 	delete         *connect.Client[v1.File, v1.Empty]
 	exists         *connect.Client[v1.File, v1.Empty]
 	rename         *connect.Client[v1.RenameFile, v1.Empty]
@@ -129,14 +128,14 @@ type fileServiceClient struct {
 	format         *connect.Client[v1.FormatRequest, v1.FormatResponse]
 }
 
+// List calls files.v1.FileService.List.
+func (c *fileServiceClient) List(ctx context.Context, req *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {
+	return c.list.CallUnary(ctx, req)
+}
+
 // Create calls files.v1.FileService.Create.
 func (c *fileServiceClient) Create(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
 	return c.create.CallUnary(ctx, req)
-}
-
-// List calls files.v1.FileService.List.
-func (c *fileServiceClient) List(ctx context.Context, req *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error) {
-	return c.list.CallUnary(ctx, req)
 }
 
 // Delete calls files.v1.FileService.Delete.
@@ -166,9 +165,8 @@ func (c *fileServiceClient) Format(ctx context.Context, req *connect.Request[v1.
 
 // FileServiceHandler is an implementation of the files.v1.FileService service.
 type FileServiceHandler interface {
-	// root file management
+	List(context.Context, *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error)
 	Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
-	List(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error)
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
@@ -183,16 +181,16 @@ type FileServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	fileServiceMethods := v1.File_files_v1_files_proto.Services().ByName("FileService").Methods()
-	fileServiceCreateHandler := connect.NewUnaryHandler(
-		FileServiceCreateProcedure,
-		svc.Create,
-		connect.WithSchema(fileServiceMethods.ByName("Create")),
-		connect.WithHandlerOptions(opts...),
-	)
 	fileServiceListHandler := connect.NewUnaryHandler(
 		FileServiceListProcedure,
 		svc.List,
 		connect.WithSchema(fileServiceMethods.ByName("List")),
+		connect.WithHandlerOptions(opts...),
+	)
+	fileServiceCreateHandler := connect.NewUnaryHandler(
+		FileServiceCreateProcedure,
+		svc.Create,
+		connect.WithSchema(fileServiceMethods.ByName("Create")),
 		connect.WithHandlerOptions(opts...),
 	)
 	fileServiceDeleteHandler := connect.NewUnaryHandler(
@@ -227,10 +225,10 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/files.v1.FileService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case FileServiceCreateProcedure:
-			fileServiceCreateHandler.ServeHTTP(w, r)
 		case FileServiceListProcedure:
 			fileServiceListHandler.ServeHTTP(w, r)
+		case FileServiceCreateProcedure:
+			fileServiceCreateHandler.ServeHTTP(w, r)
 		case FileServiceDeleteProcedure:
 			fileServiceDeleteHandler.ServeHTTP(w, r)
 		case FileServiceExistsProcedure:
@@ -250,12 +248,12 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 // UnimplementedFileServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedFileServiceHandler struct{}
 
-func (UnimplementedFileServiceHandler) Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Create is not implemented"))
+func (UnimplementedFileServiceHandler) List(context.Context, *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.List is not implemented"))
 }
 
-func (UnimplementedFileServiceHandler) List(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.List is not implemented"))
+func (UnimplementedFileServiceHandler) Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Create is not implemented"))
 }
 
 func (UnimplementedFileServiceHandler) Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {

@@ -3,7 +3,7 @@ import {createContext, useContext} from "react";
 export interface AddFileContextType {
     isVisible: boolean
     closeDialog: () => void
-    showDialog: (parent?: string) => void
+    showDialog: (parent?: string, depthIndex?: number[]) => void
 }
 
 export const AddFileContext = createContext<AddFileContextType | undefined>(undefined)

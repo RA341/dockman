@@ -1,5 +1,5 @@
 import {type ReactNode, useState} from 'react'
-import {TelescopeContext} from "./delete-hook.ts";
+import {DeleteFileContext} from "./delete-hook.ts";
 import FileDialogDelete from "./delete-ui.tsx";
 import {useFiles} from "../../../../hooks/files.ts";
 
@@ -11,10 +11,16 @@ export function DeleteFileProvider({children}: DeleteFileProviderProps) {
     const [isVisible, setIsVisible] = useState(false)
     const {deleteFile} = useFiles()
     const [fileToDelete, setFileToDelete] = useState("")
+    const [depth, setDepth] = useState<number[]>([])
 
-    const showDialog = (file: string) => {
+    const showDialog = (file: string, depthIndex: number[]) => {
         setIsVisible(true)
         setFileToDelete(file)
+        setDepth(depthIndex)
+    }
+
+    const deleteFileConfirm = (file: string) => {
+        deleteFile(file, depth).then()
     }
 
     const closeDialog = () => {
@@ -29,13 +35,13 @@ export function DeleteFileProvider({children}: DeleteFileProviderProps) {
     }
 
     return (
-        <TelescopeContext.Provider value={value}>
+        <DeleteFileContext.Provider value={value}>
             {children}
             <FileDialogDelete
                 fileToDelete={fileToDelete}
                 onClose={closeDialog}
-                handleDelete={deleteFile}
+                handleDelete={deleteFileConfirm}
             />
-        </TelescopeContext.Provider>
+        </DeleteFileContext.Provider>
     )
 }

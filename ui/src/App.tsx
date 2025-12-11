@@ -38,7 +38,7 @@ export function App() {
                                     {/*<Route path="/" element={<Navigate to="/stacks" replace/>}/>*/}
                                     <Route path="stacks">
                                         <Route index element={<ComposePage/>}/>
-                                        <Route path=":file/:child?" element={<ComposePage/>}/>
+                                        <Route path="*" element={<ComposePage/>}/>
                                     </Route>
 
                                     <Route path="stats">

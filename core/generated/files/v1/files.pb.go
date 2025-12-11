@@ -21,6 +21,94 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ListRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRequest) Reset() {
+	*x = ListRequest{}
+	mi := &file_files_v1_files_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRequest) ProtoMessage() {}
+
+func (x *ListRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRequest.ProtoReflect.Descriptor instead.
+func (*ListRequest) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ListRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type ListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*FsEntry             `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListResponse) Reset() {
+	*x = ListResponse{}
+	mi := &file_files_v1_files_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListResponse) ProtoMessage() {}
+
+func (x *ListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListResponse.ProtoReflect.Descriptor instead.
+func (*ListResponse) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListResponse) GetEntries() []*FsEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
 type FormatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
@@ -30,7 +118,7 @@ type FormatRequest struct {
 
 func (x *FormatRequest) Reset() {
 	*x = FormatRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[0]
+	mi := &file_files_v1_files_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +130,7 @@ func (x *FormatRequest) String() string {
 func (*FormatRequest) ProtoMessage() {}
 
 func (x *FormatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[0]
+	mi := &file_files_v1_files_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +143,7 @@ func (x *FormatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FormatRequest.ProtoReflect.Descriptor instead.
 func (*FormatRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{0}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FormatRequest) GetFilename() string {
@@ -74,7 +162,7 @@ type FormatResponse struct {
 
 func (x *FormatResponse) Reset() {
 	*x = FormatResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[1]
+	mi := &file_files_v1_files_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -86,7 +174,7 @@ func (x *FormatResponse) String() string {
 func (*FormatResponse) ProtoMessage() {}
 
 func (x *FormatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[1]
+	mi := &file_files_v1_files_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -99,7 +187,7 @@ func (x *FormatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FormatResponse.ProtoReflect.Descriptor instead.
 func (*FormatResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{1}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FormatResponse) GetContents() string {
@@ -109,28 +197,32 @@ func (x *FormatResponse) GetContents() string {
 	return ""
 }
 
-type ListResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Groups        []*FileGroup           `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+type FsEntry struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Filename string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	IsDir    bool                   `protobuf:"varint,3,opt,name=isDir,proto3" json:"isDir,omitempty"`
+	SubFiles []*FsEntry             `protobuf:"bytes,4,rep,name=subFiles,proto3" json:"subFiles,omitempty"`
+	// flag for lazy loading
+	IsFetched     bool `protobuf:"varint,5,opt,name=isFetched,proto3" json:"isFetched,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListResponse) Reset() {
-	*x = ListResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[2]
+func (x *FsEntry) Reset() {
+	*x = FsEntry{}
+	mi := &file_files_v1_files_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListResponse) String() string {
+func (x *FsEntry) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListResponse) ProtoMessage() {}
+func (*FsEntry) ProtoMessage() {}
 
-func (x *ListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[2]
+func (x *FsEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_files_v1_files_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -141,68 +233,37 @@ func (x *ListResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListResponse.ProtoReflect.Descriptor instead.
-func (*ListResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{2}
+// Deprecated: Use FsEntry.ProtoReflect.Descriptor instead.
+func (*FsEntry) Descriptor() ([]byte, []int) {
+	return file_files_v1_files_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ListResponse) GetGroups() []*FileGroup {
+func (x *FsEntry) GetFilename() string {
 	if x != nil {
-		return x.Groups
-	}
-	return nil
-}
-
-type FileGroup struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Root          string                 `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty"`
-	SubFiles      []string               `protobuf:"bytes,2,rep,name=subFiles,proto3" json:"subFiles,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *FileGroup) Reset() {
-	*x = FileGroup{}
-	mi := &file_files_v1_files_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FileGroup) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FileGroup) ProtoMessage() {}
-
-func (x *FileGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FileGroup.ProtoReflect.Descriptor instead.
-func (*FileGroup) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *FileGroup) GetRoot() string {
-	if x != nil {
-		return x.Root
+		return x.Filename
 	}
 	return ""
 }
 
-func (x *FileGroup) GetSubFiles() []string {
+func (x *FsEntry) GetIsDir() bool {
+	if x != nil {
+		return x.IsDir
+	}
+	return false
+}
+
+func (x *FsEntry) GetSubFiles() []*FsEntry {
 	if x != nil {
 		return x.SubFiles
 	}
 	return nil
+}
+
+func (x *FsEntry) GetIsFetched() bool {
+	if x != nil {
+		return x.IsFetched
+	}
+	return false
 }
 
 type RenameFile struct {
@@ -215,7 +276,7 @@ type RenameFile struct {
 
 func (x *RenameFile) Reset() {
 	*x = RenameFile{}
-	mi := &file_files_v1_files_proto_msgTypes[4]
+	mi := &file_files_v1_files_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -227,7 +288,7 @@ func (x *RenameFile) String() string {
 func (*RenameFile) ProtoMessage() {}
 
 func (x *RenameFile) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[4]
+	mi := &file_files_v1_files_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -240,7 +301,7 @@ func (x *RenameFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameFile.ProtoReflect.Descriptor instead.
 func (*RenameFile) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{4}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RenameFile) GetOldFilePath() string {
@@ -260,13 +321,14 @@ func (x *RenameFile) GetNewFilePath() string {
 type File struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
+	IsDir         bool                   `protobuf:"varint,2,opt,name=isDir,proto3" json:"isDir,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *File) Reset() {
 	*x = File{}
-	mi := &file_files_v1_files_proto_msgTypes[5]
+	mi := &file_files_v1_files_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +340,7 @@ func (x *File) String() string {
 func (*File) ProtoMessage() {}
 
 func (x *File) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[5]
+	mi := &file_files_v1_files_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +353,7 @@ func (x *File) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use File.ProtoReflect.Descriptor instead.
 func (*File) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{5}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *File) GetFilename() string {
@@ -299,6 +361,13 @@ func (x *File) GetFilename() string {
 		return x.Filename
 	}
 	return ""
+}
+
+func (x *File) GetIsDir() bool {
+	if x != nil {
+		return x.IsDir
+	}
+	return false
 }
 
 type Empty struct {
@@ -309,7 +378,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_files_v1_files_proto_msgTypes[6]
+	mi := &file_files_v1_files_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -321,7 +390,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[6]
+	mi := &file_files_v1_files_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -334,7 +403,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{6}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{7}
 }
 
 type DockmanYaml struct {
@@ -352,7 +421,7 @@ type DockmanYaml struct {
 
 func (x *DockmanYaml) Reset() {
 	*x = DockmanYaml{}
-	mi := &file_files_v1_files_proto_msgTypes[7]
+	mi := &file_files_v1_files_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -364,7 +433,7 @@ func (x *DockmanYaml) String() string {
 func (*DockmanYaml) ProtoMessage() {}
 
 func (x *DockmanYaml) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[7]
+	mi := &file_files_v1_files_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -377,7 +446,7 @@ func (x *DockmanYaml) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DockmanYaml.ProtoReflect.Descriptor instead.
 func (*DockmanYaml) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{7}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DockmanYaml) GetUseComposeFolders() bool {
@@ -438,7 +507,7 @@ type VolumesConfig struct {
 
 func (x *VolumesConfig) Reset() {
 	*x = VolumesConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[8]
+	mi := &file_files_v1_files_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -450,7 +519,7 @@ func (x *VolumesConfig) String() string {
 func (*VolumesConfig) ProtoMessage() {}
 
 func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[8]
+	mi := &file_files_v1_files_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -463,7 +532,7 @@ func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumesConfig.ProtoReflect.Descriptor instead.
 func (*VolumesConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{8}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *VolumesConfig) GetSort() *Sort {
@@ -482,7 +551,7 @@ type NetworkConfig struct {
 
 func (x *NetworkConfig) Reset() {
 	*x = NetworkConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[9]
+	mi := &file_files_v1_files_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -494,7 +563,7 @@ func (x *NetworkConfig) String() string {
 func (*NetworkConfig) ProtoMessage() {}
 
 func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[9]
+	mi := &file_files_v1_files_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -507,7 +576,7 @@ func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkConfig.ProtoReflect.Descriptor instead.
 func (*NetworkConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{9}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *NetworkConfig) GetSort() *Sort {
@@ -526,7 +595,7 @@ type ImageConfig struct {
 
 func (x *ImageConfig) Reset() {
 	*x = ImageConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[10]
+	mi := &file_files_v1_files_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +607,7 @@ func (x *ImageConfig) String() string {
 func (*ImageConfig) ProtoMessage() {}
 
 func (x *ImageConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[10]
+	mi := &file_files_v1_files_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +620,7 @@ func (x *ImageConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageConfig.ProtoReflect.Descriptor instead.
 func (*ImageConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{10}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ImageConfig) GetSort() *Sort {
@@ -570,7 +639,7 @@ type ContainerConfig struct {
 
 func (x *ContainerConfig) Reset() {
 	*x = ContainerConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[11]
+	mi := &file_files_v1_files_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +651,7 @@ func (x *ContainerConfig) String() string {
 func (*ContainerConfig) ProtoMessage() {}
 
 func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[11]
+	mi := &file_files_v1_files_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +664,7 @@ func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerConfig.ProtoReflect.Descriptor instead.
 func (*ContainerConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{11}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ContainerConfig) GetSort() *Sort {
@@ -615,7 +684,7 @@ type Sort struct {
 
 func (x *Sort) Reset() {
 	*x = Sort{}
-	mi := &file_files_v1_files_proto_msgTypes[12]
+	mi := &file_files_v1_files_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -627,7 +696,7 @@ func (x *Sort) String() string {
 func (*Sort) ProtoMessage() {}
 
 func (x *Sort) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[12]
+	mi := &file_files_v1_files_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -640,7 +709,7 @@ func (x *Sort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sort.ProtoReflect.Descriptor instead.
 func (*Sort) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{12}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Sort) GetSortOrder() string {
@@ -661,22 +730,27 @@ var File_files_v1_files_proto protoreflect.FileDescriptor
 
 const file_files_v1_files_proto_rawDesc = "" +
 	"\n" +
-	"\x14files/v1/files.proto\x12\bfiles.v1\"+\n" +
+	"\x14files/v1/files.proto\x12\bfiles.v1\"!\n" +
+	"\vListRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\";\n" +
+	"\fListResponse\x12+\n" +
+	"\aentries\x18\x01 \x03(\v2\x11.files.v1.FsEntryR\aentries\"+\n" +
 	"\rFormatRequest\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\",\n" +
 	"\x0eFormatResponse\x12\x1a\n" +
-	"\bcontents\x18\x01 \x01(\tR\bcontents\";\n" +
-	"\fListResponse\x12+\n" +
-	"\x06groups\x18\x01 \x03(\v2\x13.files.v1.FileGroupR\x06groups\";\n" +
-	"\tFileGroup\x12\x12\n" +
-	"\x04root\x18\x01 \x01(\tR\x04root\x12\x1a\n" +
-	"\bsubFiles\x18\x02 \x03(\tR\bsubFiles\"P\n" +
+	"\bcontents\x18\x01 \x01(\tR\bcontents\"\x88\x01\n" +
+	"\aFsEntry\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x14\n" +
+	"\x05isDir\x18\x03 \x01(\bR\x05isDir\x12-\n" +
+	"\bsubFiles\x18\x04 \x03(\v2\x11.files.v1.FsEntryR\bsubFiles\x12\x1c\n" +
+	"\tisFetched\x18\x05 \x01(\bR\tisFetched\"P\n" +
 	"\n" +
 	"RenameFile\x12 \n" +
 	"\voldFilePath\x18\x01 \x01(\tR\voldFilePath\x12 \n" +
-	"\vnewFilePath\x18\x02 \x01(\tR\vnewFilePath\"\"\n" +
+	"\vnewFilePath\x18\x02 \x01(\tR\vnewFilePath\"8\n" +
 	"\x04File\x12\x1a\n" +
-	"\bfilename\x18\x01 \x01(\tR\bfilename\"\a\n" +
+	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
+	"\x05isDir\x18\x02 \x01(\bR\x05isDir\"\a\n" +
 	"\x05Empty\"\x83\x03\n" +
 	"\vDockmanYaml\x12,\n" +
 	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +
@@ -696,10 +770,10 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"B\n" +
 	"\x04Sort\x12\x1c\n" +
 	"\tsortOrder\x18\x01 \x01(\tR\tsortOrder\x12\x1c\n" +
-	"\tsortField\x18\x02 \x01(\tR\tsortField2\xf5\x02\n" +
-	"\vFileService\x12+\n" +
-	"\x06Create\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x121\n" +
-	"\x04List\x12\x0f.files.v1.Empty\x1a\x16.files.v1.ListResponse\"\x00\x12+\n" +
+	"\tsortField\x18\x02 \x01(\tR\tsortField2\xfb\x02\n" +
+	"\vFileService\x127\n" +
+	"\x04List\x12\x15.files.v1.ListRequest\x1a\x16.files.v1.ListResponse\"\x00\x12+\n" +
+	"\x06Create\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x12+\n" +
 	"\x06Delete\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x12+\n" +
 	"\x06Exists\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x121\n" +
 	"\x06Rename\x12\x14.files.v1.RenameFile\x1a\x0f.files.v1.Empty\"\x00\x12:\n" +
@@ -720,51 +794,53 @@ func file_files_v1_files_proto_rawDescGZIP() []byte {
 	return file_files_v1_files_proto_rawDescData
 }
 
-var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_files_v1_files_proto_goTypes = []any{
-	(*FormatRequest)(nil),   // 0: files.v1.FormatRequest
-	(*FormatResponse)(nil),  // 1: files.v1.FormatResponse
-	(*ListResponse)(nil),    // 2: files.v1.ListResponse
-	(*FileGroup)(nil),       // 3: files.v1.FileGroup
-	(*RenameFile)(nil),      // 4: files.v1.RenameFile
-	(*File)(nil),            // 5: files.v1.File
-	(*Empty)(nil),           // 6: files.v1.Empty
-	(*DockmanYaml)(nil),     // 7: files.v1.DockmanYaml
-	(*VolumesConfig)(nil),   // 8: files.v1.VolumesConfig
-	(*NetworkConfig)(nil),   // 9: files.v1.NetworkConfig
-	(*ImageConfig)(nil),     // 10: files.v1.ImageConfig
-	(*ContainerConfig)(nil), // 11: files.v1.ContainerConfig
-	(*Sort)(nil),            // 12: files.v1.Sort
+	(*ListRequest)(nil),     // 0: files.v1.ListRequest
+	(*ListResponse)(nil),    // 1: files.v1.ListResponse
+	(*FormatRequest)(nil),   // 2: files.v1.FormatRequest
+	(*FormatResponse)(nil),  // 3: files.v1.FormatResponse
+	(*FsEntry)(nil),         // 4: files.v1.FsEntry
+	(*RenameFile)(nil),      // 5: files.v1.RenameFile
+	(*File)(nil),            // 6: files.v1.File
+	(*Empty)(nil),           // 7: files.v1.Empty
+	(*DockmanYaml)(nil),     // 8: files.v1.DockmanYaml
+	(*VolumesConfig)(nil),   // 9: files.v1.VolumesConfig
+	(*NetworkConfig)(nil),   // 10: files.v1.NetworkConfig
+	(*ImageConfig)(nil),     // 11: files.v1.ImageConfig
+	(*ContainerConfig)(nil), // 12: files.v1.ContainerConfig
+	(*Sort)(nil),            // 13: files.v1.Sort
 }
 var file_files_v1_files_proto_depIdxs = []int32{
-	3,  // 0: files.v1.ListResponse.groups:type_name -> files.v1.FileGroup
-	8,  // 1: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
-	9,  // 2: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
-	10, // 3: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
-	11, // 4: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
-	12, // 5: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
-	12, // 6: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
-	12, // 7: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
-	12, // 8: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
-	5,  // 9: files.v1.FileService.Create:input_type -> files.v1.File
-	6,  // 10: files.v1.FileService.List:input_type -> files.v1.Empty
-	5,  // 11: files.v1.FileService.Delete:input_type -> files.v1.File
-	5,  // 12: files.v1.FileService.Exists:input_type -> files.v1.File
-	4,  // 13: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
-	6,  // 14: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
-	0,  // 15: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
-	6,  // 16: files.v1.FileService.Create:output_type -> files.v1.Empty
-	2,  // 17: files.v1.FileService.List:output_type -> files.v1.ListResponse
-	6,  // 18: files.v1.FileService.Delete:output_type -> files.v1.Empty
-	6,  // 19: files.v1.FileService.Exists:output_type -> files.v1.Empty
-	6,  // 20: files.v1.FileService.Rename:output_type -> files.v1.Empty
-	7,  // 21: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
-	1,  // 22: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
-	16, // [16:23] is the sub-list for method output_type
-	9,  // [9:16] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	4,  // 0: files.v1.ListResponse.entries:type_name -> files.v1.FsEntry
+	4,  // 1: files.v1.FsEntry.subFiles:type_name -> files.v1.FsEntry
+	9,  // 2: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
+	10, // 3: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
+	11, // 4: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
+	12, // 5: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
+	13, // 6: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
+	13, // 7: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
+	13, // 8: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
+	13, // 9: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
+	0,  // 10: files.v1.FileService.List:input_type -> files.v1.ListRequest
+	6,  // 11: files.v1.FileService.Create:input_type -> files.v1.File
+	6,  // 12: files.v1.FileService.Delete:input_type -> files.v1.File
+	6,  // 13: files.v1.FileService.Exists:input_type -> files.v1.File
+	5,  // 14: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
+	7,  // 15: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
+	2,  // 16: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
+	1,  // 17: files.v1.FileService.List:output_type -> files.v1.ListResponse
+	7,  // 18: files.v1.FileService.Create:output_type -> files.v1.Empty
+	7,  // 19: files.v1.FileService.Delete:output_type -> files.v1.Empty
+	7,  // 20: files.v1.FileService.Exists:output_type -> files.v1.Empty
+	7,  // 21: files.v1.FileService.Rename:output_type -> files.v1.Empty
+	8,  // 22: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
+	3,  // 23: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
+	17, // [17:24] is the sub-list for method output_type
+	10, // [10:17] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }
@@ -778,7 +854,7 @@ func file_files_v1_files_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_files_v1_files_proto_rawDesc), len(file_files_v1_files_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
