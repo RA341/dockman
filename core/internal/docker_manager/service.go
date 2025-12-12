@@ -66,7 +66,8 @@ func NewService(
 		log.Fatal().Err(err).Str("name", defaultHost).Msg("unable to switch client")
 	}
 
-	go srv.StartContainerUpdater()
+	// todo
+	//go srv.StartContainerUpdater()
 
 	log.Debug().Msg("Docker manager service loaded successfully")
 	return srv

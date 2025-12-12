@@ -2,7 +2,6 @@ import React from 'react';
 import {Box, Tab, Tabs} from "@mui/material";
 import {useSearchParams} from 'react-router-dom';
 import {TabDockerHosts} from "./tab-host.tsx";
-import {TabContainerUpdater} from "./tab-updater.tsx";
 import TabAliases from "./tab-aliases.tsx";
 
 interface TabConfig {
@@ -15,11 +14,12 @@ const tabConfigurations: TabConfig[] = [
         label: "Docker Hosts",
         component: <TabDockerHosts/>
     },
-    {
-
-        label: "Container Updater",
-        component: <TabContainerUpdater/>
-    },
+    // todo
+    // {
+    //
+    //     label: "Container Updater",
+    //     component: <TabContainerUpdater/>
+    // },
     {
         label: "Location Aliases",
         component: <TabAliases/>
