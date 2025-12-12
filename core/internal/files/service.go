@@ -216,7 +216,7 @@ func (s *Service) Save(filename string, alias string, source io.Reader) error {
 		return err
 	}
 
-	dest, err := os.OpenFile(filename, os.O_RDWR, os.ModePerm)
+	dest, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return err
 	}
