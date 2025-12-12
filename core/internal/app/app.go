@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -39,13 +41,12 @@ type App struct {
 	CleanerSrv    *cleaner.Service
 }
 
-func NewApp(conf *config.AppConfig) (*App, error) {
-	cr := conf.ComposeRoot
-
+func NewApp(conf *config.AppConfig) (app *App, err error) {
+	// db and info setup
 	gormDB, dbSrv := database.NewService(conf.ConfigDir)
-
 	infoSrv := info.NewService(dbSrv.InfoDB)
 
+	// auth setup
 	sessionsDB := auth.NewSessionGormDB(gormDB, uint(conf.Auth.MaxSessions))
 	authDB := auth.NewUserGormDB(gormDB)
 	authSrv := auth.NewService(
@@ -56,8 +57,8 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		sessionsDB,
 	)
 
+	// docker manager setup
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
-
 	dockerManagerSrv := dm.NewService(
 		sshSrv,
 		dbSrv.ImageUpdateDB,
@@ -73,12 +74,26 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		},
 	)
 
+	composeRoot := setupComposeRoot(conf.ComposeRoot)
+	composeRootProvider := func() string {
+		mach := dockerManagerSrv.GetActiveClient()
+		if mach == docker.LocalClient {
+			// return normal compose root for local client
+			return composeRoot
+		}
+		return filepath.Join(composeRoot, git.DockmanRemoteFolder, mach)
+	}
+
+	fileStore := files.NewGormStore(gormDB)
+	dockYamlSrv := files.NewDockmanYaml(conf.DockYaml, composeRootProvider)
 	fileSrv := files.New(
-		cr, conf.DockYaml,
-		conf.Perms.PUID, conf.Perms.GID,
-		dockerManagerSrv.GetActiveClient,
+		fileStore,
+		composeRootProvider,
+		dockYamlSrv,
+		&conf.Perms,
 	)
-	err := git.NewMigrator(cr)
+
+	err = git.NewMigrator(composeRoot)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to complete git migration")
 	}
@@ -112,6 +127,39 @@ func NewApp(conf *config.AppConfig) (*App, error) {
 		UserConfigSrv: userConfigSrv,
 		CleanerSrv:    cleanerSrv,
 	}, nil
+}
+
+func setupComposeRoot(composeRoot string) (cr string) {
+	var err error
+	if !filepath.IsAbs(composeRoot) {
+		composeRoot, err = filepath.Abs(composeRoot)
+		if err != nil {
+			log.Fatal().
+				Str("path", composeRoot).
+				Msg("Err getting abs path for composeRoot")
+		}
+	}
+
+	err = os.MkdirAll(composeRoot, 0755)
+	if err != nil {
+		log.Fatal().Err(err).
+			Str("compose-root", composeRoot).
+			Msg("failed to create compose root folder")
+	}
+
+	return composeRoot
+}
+
+func (a *App) Close() error {
+	if err := a.File.Close(); err != nil {
+		return fmt.Errorf("failed to close file service: %w", err)
+	}
+
+	if err := a.DB.Close(); err != nil {
+		return fmt.Errorf("failed to close database service: %w", err)
+	}
+
+	return nil
 }
 
 func (a *App) registerApiRoutes(mux *http.ServeMux) {

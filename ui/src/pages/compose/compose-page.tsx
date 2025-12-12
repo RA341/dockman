@@ -21,6 +21,7 @@ import CoreComposeEmpty from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
 import {useActiveComposeFile, useOpenFiles} from "./state/state.tsx";
 import CenteredMessage from "../../components/centered-message.tsx";
+import {useAlias} from "../../context/alias-context.tsx";
 
 export const ComposePage = () => {
     return (
@@ -233,12 +234,13 @@ function CoreCompose() {
     const [fileError, setFileError] = useState("");
 
     const recursiveOpen = useOpenFiles(state => state.recursiveOpen)
+    const {activeAlias} = useAlias()
 
     useEffect(() => {
         setIsLoading(true);
         setFileError("");
 
-        callRPC(() => fileService.exists({filename: filename}))
+        callRPC(() => fileService.exists({filename: filename, alias: activeAlias}))
             .then(value => {
                 if (value.err) {
                     console.error("API error checking file existence:", value.err);
@@ -249,7 +251,7 @@ function CoreCompose() {
                 setIsLoading(false);
                 recursiveOpen(filename)
             });
-    }, [filename, fileService]);
+    }, [filename, fileService, activeAlias]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

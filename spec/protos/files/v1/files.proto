@@ -13,10 +13,41 @@ service FileService {
 
   rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
   rpc Format(FormatRequest) returns (FormatResponse) {}
+
+  rpc ListAlias(ListAliasRequest) returns (ListAliasResponse) {}
+  rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
+  rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
 }
+
+message DeleteAliasRequest {
+  Alias alias = 1;
+}
+
+message DeleteAliasResponse {}
+
+
+message AddAliasRequest {
+  Alias alias = 1;
+}
+
+message AddAliasResponse {}
+
+
+message ListAliasRequest {}
+
+message Alias {
+  string alias = 1;
+  string fullpath = 2;
+}
+
+message ListAliasResponse {
+  repeated Alias aliases = 1;
+}
+
 
 message ListRequest {
   string path = 1;
+  string alias = 2;
 }
 
 message ListResponse {
@@ -25,6 +56,7 @@ message ListResponse {
 
 message FormatRequest {
   string filename = 1;
+  string alias = 2;
 }
 
 message FormatResponse {
@@ -42,11 +74,13 @@ message FsEntry {
 message RenameFile {
   string oldFilePath = 1;
   string newFilePath = 2;
+  string alias = 3;
 }
 
 message File {
   string filename = 1;
   bool isDir = 2;
+  string alias = 3;
 }
 
 message Empty {}

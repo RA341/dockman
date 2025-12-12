@@ -7,52 +7,19 @@ import {useSnackbar} from "../hooks/snackbar.ts";
 import {FileService, type FsEntry} from '../gen/files/v1/files_pb.ts';
 import {useTabs} from "../hooks/tabs.ts";
 import {useOpenFiles} from "../pages/compose/state/state.tsx";
-
-function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[]): void {
-    if (indices.length === 0) return;
-
-    let current: FsEntry[] | null = list;
-
-    // Navigate to the parent using all indices except the last one
-    for (let i = 0; i < indices.length - 1; i++) {
-        const index = indices[i];
-        if (!current || !current[index] || !current[index].subFiles) {
-            console.error('Invalid path at index', i);
-            return;
-        }
-        current = current[index].subFiles;
-    }
-
-    // Set the value at the final index
-    const lastIndex = indices[indices.length - 1];
-    if (!current || !current[lastIndex]) {
-        console.error('Invalid final index', lastIndex);
-        return;
-    }
-
-    current[lastIndex].isFetched = true;
-    current[lastIndex].subFiles = value;
-}
-
-function getDir(filePath: string): string {
-    const lastSlash = filePath.lastIndexOf('/');
-    if (lastSlash === -1) return '.';
-    if (lastSlash === 0) return '/';
-    return filePath.substring(0, lastSlash);
-}
+import {useAlias} from "./alias-context.tsx";
 
 export function FilesProvider({children}: { children: ReactNode }) {
     const client = useClient(FileService)
-
     const {showError, showSuccess} = useSnackbar()
-    const {closeTab} = useTabs()
-
     const navigate = useNavigate()
     const {selectedHost} = useHost()
     const location = useLocation()
 
-    const [files, setFiles] = useState<FsEntry[]>([])
+    const {closeTab} = useTabs()
+    const {activeAlias} = useAlias()
 
+    const [files, setFiles] = useState<FsEntry[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     const fetchFiles = useCallback(async (
@@ -64,7 +31,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
                 setIsLoading(true)
             }
 
-            const {val, err} = await callRPC(() => client.list({path: path}))
+            const {val, err} = await callRPC(() => client.list({path: path, alias: activeAlias}))
             if (err) {
                 showError(err)
                 setFiles([])
@@ -83,7 +50,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
 
             setIsLoading(false)
         },
-        [client, selectedHost, showError]);
+        [client, selectedHost, activeAlias, showError]);
 
     const closeFolder = useOpenFiles(state => state.delete)
 
@@ -92,7 +59,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
         isDir: boolean,
         entryInsertIndex?: number[]
     ) => {
-        const {err} = await callRPC(() => client.create({filename, isDir}))
+        const {err} = await callRPC(() => client.create({filename, isDir, alias: activeAlias}))
         if (err) {
             showError(err)
             return
@@ -109,7 +76,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
         filename: string,
         entryInsertIndex?: number[]
     ) => {
-        const {err} = await callRPC(() => client.delete({filename}))
+        const {err} = await callRPC(() => client.delete({filename, alias: activeAlias}))
         if (err) {
             showError(err)
         } else {
@@ -126,7 +93,11 @@ export function FilesProvider({children}: { children: ReactNode }) {
         newFileName: string,
         entryInsertIndex?: number[],
     ) => {
-        const {err} = await callRPC(() => client.rename({newFilePath: newFileName, oldFilePath: oldFilename}))
+        const {err} = await callRPC(() => client.rename({
+            newFilePath: newFileName,
+            oldFilePath: oldFilename,
+            alias: activeAlias
+        }))
         if (err) {
             showError(err)
         } else {
@@ -161,4 +132,38 @@ export function FilesProvider({children}: { children: ReactNode }) {
             {children}
         </FilesContext.Provider>
     )
+}
+
+
+function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[]): void {
+    if (indices.length === 0) return;
+
+    let current: FsEntry[] | null = list;
+
+    // Navigate to the parent using all indices except the last one
+    for (let i = 0; i < indices.length - 1; i++) {
+        const index = indices[i];
+        if (!current || !current[index] || !current[index].subFiles) {
+            console.error('Invalid path at index', i);
+            return;
+        }
+        current = current[index].subFiles;
+    }
+
+    // Set the value at the final index
+    const lastIndex = indices[indices.length - 1];
+    if (!current || !current[lastIndex]) {
+        console.error('Invalid final index', lastIndex);
+        return;
+    }
+
+    current[lastIndex].isFetched = true;
+    current[lastIndex].subFiles = value;
+}
+
+function getDir(filePath: string): string {
+    const lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash === -1) return '.';
+    if (lastSlash === 0) return '/';
+    return filePath.substring(0, lastSlash);
 }

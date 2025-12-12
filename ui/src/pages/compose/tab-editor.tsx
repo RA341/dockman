@@ -10,6 +10,7 @@ import {isComposeFile} from "../../lib/editor.ts";
 import EditorErrorWidget from "./editor-widget-errors.tsx";
 import EditorDeployWidget from "./editor-widget-deploy.tsx";
 import useResizeBar from "./hooks/resize-hook.ts";
+import {useAlias} from "../../context/alias-context.tsx";
 
 interface EditorProps {
     selectedPage: string;
@@ -30,9 +31,11 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
     const [errors, setErrors] = useState<string[]>([])
 
     const [fileContent, setFileContent] = useState("")
+    const {activeAlias} = useAlias()
+
     const fetchDataCallback = useCallback(async () => {
         if (selectedPage !== "") {
-            const {file, err} = await downloadFile(selectedPage)
+            const {file, err} = await downloadFile(selectedPage, activeAlias)
             if (err) {
                 showError(`Error downloading file ${err}`)
             } else {
@@ -40,7 +43,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
             }
         }
         // eslint-disable-next-line
-    }, [selectedPage]);
+    }, [selectedPage, activeAlias]);
 
     const actions: Record<string, ActionItem> = useMemo(() => {
         const baseActions: Record<string, ActionItem> = {
@@ -69,7 +72,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
     const [activeAction, setActiveAction] = useState<keyof typeof actions | null>(null);
 
     const saveFile = useCallback(async (val: string) => {
-        const err = await uploadFile(selectedPage, val);
+        const err = await uploadFile(selectedPage, val, activeAlias);
         if (err) {
             setStatus('error');
             showError(`Autosave failed: ${err}`);
@@ -96,7 +99,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
             }
         }
         // eslint-disable-next-line
-    }, [selectedPage, setStatus]);
+    }, [selectedPage, activeAlias, setStatus]);
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left')
 

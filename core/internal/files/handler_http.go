@@ -27,6 +27,8 @@ func (h *FileHandler) register() http.Handler {
 	return subMux
 }
 
+const QueryKeyAlias = "alias"
+
 func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 	filename := r.PathValue("filename")
 	if filename == "" {
@@ -34,7 +36,8 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullpath, err := h.srv.LoadFilePath(filename)
+	alias := r.URL.Query().Get(QueryKeyAlias)
+	fullpath, err := h.srv.LoadFilePath(filename, alias)
 	if err != nil {
 		log.Error().Err(err).Str("path", fullpath).Msg("Error loading file")
 		http.Error(w, "Filename not found", http.StatusBadRequest)
@@ -66,7 +69,9 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.srv.Save(string(decodedFileName), file)
+	alias := r.URL.Query().Get(QueryKeyAlias)
+
+	err = h.srv.Save(string(decodedFileName), alias, file)
 	if err != nil {
 		log.Error().Err(err).Msg("Error saving file")
 		http.Error(w, "Error saving file", http.StatusInternalServerError)

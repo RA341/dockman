@@ -20,6 +20,7 @@ import {UserConfigProvider} from "./context/config-context.tsx";
 import {TabsProvider} from "./context/tab-context.tsx";
 import {useTabs} from "./hooks/tabs.ts";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
+import AliasProvider from "./context/alias-context.tsx";
 
 export function App() {
     return (
@@ -66,7 +67,6 @@ export function App() {
                                     </Route>
 
                                     <Route path="settings" element={<SettingsPage/>}/>
-
                                 </Route>
                             </Route>
                             <Route path="/not-found" element={<NotFoundPage/>}/>
@@ -109,13 +109,15 @@ const PrivateRoute = () => {
     // Once authenticated, render with providers that need auth
     return (
         <HostProvider>
-            <UserConfigProvider>
-                <ChangelogProvider>
-                    <TabsProvider>
-                        <Outlet/>
-                    </TabsProvider>
-                </ChangelogProvider>
-            </UserConfigProvider>
+            <AliasProvider>
+                <UserConfigProvider>
+                    <ChangelogProvider>
+                        <TabsProvider>
+                            <Outlet/>
+                        </TabsProvider>
+                    </ChangelogProvider>
+                </UserConfigProvider>
+            </AliasProvider>
         </HostProvider>
     );
 };

@@ -1,5 +1,5 @@
 import {useEffect} from 'react'
-import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip, Typography} from '@mui/material'
+import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
 import {Add as AddIcon, Search as SearchIcon} from '@mui/icons-material'
 import {useHost} from "../../../hooks/host.ts"
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
@@ -9,6 +9,7 @@ import {useSideBarAction} from "../state/state.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
 import {useFiles} from "../../../hooks/files.ts";
 import {FileBarItem} from "./file-bar-item.tsx";
+import AliasSelector from "./file-bar-alias-selector.tsx";
 
 export function FileList() {
     const {selectedHost} = useHost()
@@ -71,9 +72,7 @@ export function FileList() {
                  }}
             >
                 <Toolbar>
-                    <Typography variant={"h6"}>
-                        Files
-                    </Typography>
+                    <AliasSelector/>
 
                     <Box sx={{flexGrow: 1}}/>
 

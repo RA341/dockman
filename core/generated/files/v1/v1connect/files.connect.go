@@ -48,6 +48,12 @@ const (
 	FileServiceGetDockmanYamlProcedure = "/files.v1.FileService/GetDockmanYaml"
 	// FileServiceFormatProcedure is the fully-qualified name of the FileService's Format RPC.
 	FileServiceFormatProcedure = "/files.v1.FileService/Format"
+	// FileServiceListAliasProcedure is the fully-qualified name of the FileService's ListAlias RPC.
+	FileServiceListAliasProcedure = "/files.v1.FileService/ListAlias"
+	// FileServiceAddAliasProcedure is the fully-qualified name of the FileService's AddAlias RPC.
+	FileServiceAddAliasProcedure = "/files.v1.FileService/AddAlias"
+	// FileServiceDeleteAliasProcedure is the fully-qualified name of the FileService's DeleteAlias RPC.
+	FileServiceDeleteAliasProcedure = "/files.v1.FileService/DeleteAlias"
 )
 
 // FileServiceClient is a client for the files.v1.FileService service.
@@ -59,6 +65,9 @@ type FileServiceClient interface {
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
 	GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error)
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
+	ListAlias(context.Context, *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error)
+	AddAlias(context.Context, *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error)
+	DeleteAlias(context.Context, *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error)
 }
 
 // NewFileServiceClient constructs a client for the files.v1.FileService service. By default, it
@@ -114,6 +123,24 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(fileServiceMethods.ByName("Format")),
 			connect.WithClientOptions(opts...),
 		),
+		listAlias: connect.NewClient[v1.ListAliasRequest, v1.ListAliasResponse](
+			httpClient,
+			baseURL+FileServiceListAliasProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("ListAlias")),
+			connect.WithClientOptions(opts...),
+		),
+		addAlias: connect.NewClient[v1.AddAliasRequest, v1.AddAliasResponse](
+			httpClient,
+			baseURL+FileServiceAddAliasProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("AddAlias")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteAlias: connect.NewClient[v1.DeleteAliasRequest, v1.DeleteAliasResponse](
+			httpClient,
+			baseURL+FileServiceDeleteAliasProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("DeleteAlias")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -126,6 +153,9 @@ type fileServiceClient struct {
 	rename         *connect.Client[v1.RenameFile, v1.Empty]
 	getDockmanYaml *connect.Client[v1.Empty, v1.DockmanYaml]
 	format         *connect.Client[v1.FormatRequest, v1.FormatResponse]
+	listAlias      *connect.Client[v1.ListAliasRequest, v1.ListAliasResponse]
+	addAlias       *connect.Client[v1.AddAliasRequest, v1.AddAliasResponse]
+	deleteAlias    *connect.Client[v1.DeleteAliasRequest, v1.DeleteAliasResponse]
 }
 
 // List calls files.v1.FileService.List.
@@ -163,6 +193,21 @@ func (c *fileServiceClient) Format(ctx context.Context, req *connect.Request[v1.
 	return c.format.CallUnary(ctx, req)
 }
 
+// ListAlias calls files.v1.FileService.ListAlias.
+func (c *fileServiceClient) ListAlias(ctx context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
+	return c.listAlias.CallUnary(ctx, req)
+}
+
+// AddAlias calls files.v1.FileService.AddAlias.
+func (c *fileServiceClient) AddAlias(ctx context.Context, req *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
+	return c.addAlias.CallUnary(ctx, req)
+}
+
+// DeleteAlias calls files.v1.FileService.DeleteAlias.
+func (c *fileServiceClient) DeleteAlias(ctx context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
+	return c.deleteAlias.CallUnary(ctx, req)
+}
+
 // FileServiceHandler is an implementation of the files.v1.FileService service.
 type FileServiceHandler interface {
 	List(context.Context, *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error)
@@ -172,6 +217,9 @@ type FileServiceHandler interface {
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
 	GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error)
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
+	ListAlias(context.Context, *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error)
+	AddAlias(context.Context, *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error)
+	DeleteAlias(context.Context, *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error)
 }
 
 // NewFileServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -223,6 +271,24 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(fileServiceMethods.ByName("Format")),
 		connect.WithHandlerOptions(opts...),
 	)
+	fileServiceListAliasHandler := connect.NewUnaryHandler(
+		FileServiceListAliasProcedure,
+		svc.ListAlias,
+		connect.WithSchema(fileServiceMethods.ByName("ListAlias")),
+		connect.WithHandlerOptions(opts...),
+	)
+	fileServiceAddAliasHandler := connect.NewUnaryHandler(
+		FileServiceAddAliasProcedure,
+		svc.AddAlias,
+		connect.WithSchema(fileServiceMethods.ByName("AddAlias")),
+		connect.WithHandlerOptions(opts...),
+	)
+	fileServiceDeleteAliasHandler := connect.NewUnaryHandler(
+		FileServiceDeleteAliasProcedure,
+		svc.DeleteAlias,
+		connect.WithSchema(fileServiceMethods.ByName("DeleteAlias")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/files.v1.FileService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case FileServiceListProcedure:
@@ -239,6 +305,12 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 			fileServiceGetDockmanYamlHandler.ServeHTTP(w, r)
 		case FileServiceFormatProcedure:
 			fileServiceFormatHandler.ServeHTTP(w, r)
+		case FileServiceListAliasProcedure:
+			fileServiceListAliasHandler.ServeHTTP(w, r)
+		case FileServiceAddAliasProcedure:
+			fileServiceAddAliasHandler.ServeHTTP(w, r)
+		case FileServiceDeleteAliasProcedure:
+			fileServiceDeleteAliasHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -274,4 +346,16 @@ func (UnimplementedFileServiceHandler) GetDockmanYaml(context.Context, *connect.
 
 func (UnimplementedFileServiceHandler) Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Format is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) ListAlias(context.Context, *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.ListAlias is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) AddAlias(context.Context, *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.AddAlias is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) DeleteAlias(context.Context, *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.DeleteAlias is not implemented"))
 }
