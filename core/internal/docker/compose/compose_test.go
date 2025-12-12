@@ -1,4 +1,4 @@
-package docker
+package compose
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ func init() {
 }
 
 func TestTrimDockman(t *testing.T) {
-	comp := NewComposeService(nil, nil)
+	comp := New(nil, nil, "", nil)
 
 	proj := types.Project{
 		Services: map[string]types.ServiceConfig{

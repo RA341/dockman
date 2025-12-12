@@ -51,7 +51,7 @@ tasks:
 
   init:build:
     desc: "Creates the build dir"
-    cmd: coreutils mkdir -p {{.BUILD_DIR}}
+    cmd: mkdir -p {{.BUILD_DIR}}
     status:
       # This command checks if the directory exists. If it does, the task is considered "up-to-date" and won't run.
       - test -d {{.BUILD_DIR}}
@@ -74,8 +74,8 @@ tasks:
       NATIVE_DIR: "{{.UI_DIR}}src/pages"
       CMD_NAME: "{{index .MATCH 0}}"
     cmds:
-      - coreutils mkdir -p {{ .NATIVE_DIR }}/{{ .CMD_NAME }}
-      - coreutils touch {{ .NATIVE_DIR }}/{{ .CMD_NAME }}/{{ .CMD_NAME }}.tsx
+      - mkdir -p {{ .NATIVE_DIR }}/{{ .CMD_NAME }}
+      - touch {{ .NATIVE_DIR }}/{{ .CMD_NAME }}/{{ .CMD_NAME }}.tsx
 
   ui:dev:
     desc: "npm run dev in {{.UI_DIR}}"
@@ -110,7 +110,7 @@ tasks:
   clean:
     desc: "Removes all files in {{.BUILD_DIR}}"
     cmds:
-      - coreutils rm -rf {{.BUILD_DIR}}/*
+      - rm -rf {{.BUILD_DIR}}/*
 
   tidy:
     desc: "Calls go mod tidy in {{.CORE_DIR}}"
@@ -135,7 +135,7 @@ tasks:
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
     cmds:
       - mkdir -p ../{{.BUILD_DIR}}/{{.CMD_NAME}}
-      - go build -v
+      - go build -v -tags desktop,production,webkit2_41
         -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}
         ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 

@@ -6,10 +6,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/RA341/dockman/internal/docker/debug"
+	fu "github.com/RA341/dockman/pkg/fileutil"
 	"github.com/gorilla/websocket"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,136 +19,182 @@ var upgrader = websocket.Upgrader{
 }
 
 func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		ExecWSHandler(srv, writer, request)
-	}
-}
+	return func(w http.ResponseWriter, r *http.Request) {
+		contId := r.PathValue("contID")
+		log.Debug().Str("container", contId).Msg("Entering container")
+		if contId == "" {
+			http.Error(w, "No container ID found in path", http.StatusBadRequest)
+			return
+		}
 
-// ExecWSHandler in router setup
-func ExecWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) {
-	contId := r.PathValue("contID")
-	log.Debug().Str("container", contId).Msg("Entering container")
-	if contId == "" {
-		http.Error(w, "No container ID found in path", http.StatusBadRequest)
-		return
-	}
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer fu.Close(ws)
 
-	execCmd := "/bin/sh"
-	queryCmd := r.URL.Query().Get("cmd")
-	if queryCmd != "" {
-		execCmd = queryCmd
-	}
+		execCmd := "/bin/sh"
+		query := r.URL.Query()
 
-	ctx := context.Background()
-	execConfig := container.ExecOptions{
-		AttachStdin:  true,
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty:          true,
-		Cmd:          []string{execCmd},
-	}
+		queryCmd := query.Get("cmd")
+		if queryCmd != "" {
+			execCmd = queryCmd
+		} else {
+			wsMustWrite(ws, "unknown cmd passed defaulting to "+execCmd)
+		}
 
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer fileutil.Close(ws)
+		readerCtx := r.Context()
+		var resp client.HijackedResponse
 
-	daemon := srv().Container.daemon
-	execResp, err := daemon.ContainerExecCreate(ctx, contId, execConfig)
-	if err != nil {
-		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
-		return
-	}
-
-	resp, err := daemon.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{Tty: true})
-	if err != nil {
-		wsErr(ws, fmt.Errorf("Error creating shell into container "+err.Error()))
-		return
-	}
-	defer resp.Close()
-
-	go func() {
-		buf := make([]byte, 1024)
-		for {
-			n, err := resp.Reader.Read(buf)
-			if err != nil {
-				log.Debug().Err(err).Msg("Unable to read from container " + err.Error())
-				break
+		val := query.Get("debug")
+		if val != "" {
+			debuggerImage := query.Get("image")
+			if debuggerImage == "" {
+				wsErr(ws, fmt.Errorf("empty image found, check you request"))
+				return
 			}
-			err = ws.WriteMessage(websocket.TextMessage, buf[:n])
+
+			wsWriter := NewWsWriter(ws)
+			var cleanup debug.CleanupFn
+
+			resp, cleanup, err = srv().Debugger.ExecDebugContainer(
+				readerCtx,
+				contId,
+				debuggerImage, wsWriter,
+				queryCmd,
+			)
 			if err != nil {
-				log.Warn().Str("cont", contId).Err(err).Msg("Unable to write to container " + err.Error())
+				wsErr(ws, fmt.Errorf("error executing debug container: %w", err))
+				return
+			}
+			defer cleanup()
+
+		} else {
+			resp, err = srv().Container.ContainerExec(readerCtx, contId, execCmd)
+			if err != nil {
+				wsErr(ws, err)
 				return
 			}
 		}
-	}()
+		defer resp.Close()
 
-	for {
-		_, msg, err := ws.ReadMessage()
-		if err != nil {
-			log.Debug().Str("cont", contId).Err(err).Msg("Unable to read from socket " + err.Error())
-			break
+		wsInf(ws, "Connected to Container")
+		wsInf(ws, fmt.Sprintf("Entrypoint: %s", execCmd))
+
+		readerCtx, cancel := context.WithCancel(readerCtx)
+		defer cancel()
+
+		go func() {
+			// read from container and send to ws
+			buf := make([]byte, 1024)
+			for {
+				n, err := resp.Reader.Read(buf)
+				if err != nil {
+					wsErr(ws, fmt.Errorf("error reading from container: %w", err))
+					break
+				}
+
+				wsMustWrite(ws, string(buf[:n]))
+			}
+
+			cancel()
+		}()
+
+		for {
+			if readerCtx.Err() != nil {
+				wsErr(ws, fmt.Errorf("container stream was closed, exiting"))
+				break
+			}
+
+			// read from ws to container
+			_, msg, err := ws.ReadMessage()
+			if err != nil {
+				log.Debug().Str("cont", contId).Err(err).Msg("Unable to read from socket " + err.Error())
+				break
+			}
+
+			_, err = resp.Conn.Write(msg)
+			if err != nil {
+				log.Warn().Err(err).Msg("Unable to write to container " + err.Error())
+				break
+			}
 		}
 
-		_, err = resp.Conn.Write(msg)
-		if err != nil {
-			log.Warn().Err(err).Msg("Unable to write to container " + err.Error())
-			return
-		}
+		log.Debug().Str("container", contId).Msg("exec done")
 	}
 }
 
 func NewLogWSHandler(srv ServiceProvider) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		LogWSHandler(srv, writer, request)
+	return func(w http.ResponseWriter, r *http.Request) {
+		contId := r.PathValue("contID")
+		if contId == "" {
+			http.Error(w, "No container ID found in path", http.StatusBadRequest)
+			return
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		logsReader, tty, err := srv().Container.ContainerLogs(ctx, contId)
+		if err != nil {
+			http.Error(w, "unable to stream container logs: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer fu.Close(logsReader)
+
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer fu.Close(ws)
+
+		writer := NewWsWriter(ws)
+		if tty {
+			// tty streams dont need docker demultiplexing
+			_, err = io.Copy(writer, logsReader)
+		} else {
+			// docker multiplexed stream
+			_, err = stdcopy.StdCopy(writer, writer, logsReader)
+		}
+		if err != nil {
+			wsErr(ws, fmt.Errorf("error: copying container stream: %w", err))
+			return
+		}
+
+		log.Debug().Str("container", contId).Msg("closing container log stream")
 	}
 }
 
-// LogWSHandler in router setup
-func LogWSHandler(srv ServiceProvider, w http.ResponseWriter, r *http.Request) {
-	contId := r.PathValue("contID")
-	if contId == "" {
-		http.Error(w, "No container ID found in path", http.StatusBadRequest)
-		return
-	}
+const (
+	AnsiGreen = "\x1b[32m"
+	AnsiRed   = "\x1b[31m"
+	AnsiReset = "\x1b[0m"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	newLine = "\r\n"
+)
 
-	logsReader, tty, err := srv().Container.ContainerLogs(ctx, contId)
-	if err != nil {
-		http.Error(w, "unable to stream container logs: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer fileutil.Close(logsReader)
-
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer fileutil.Close(ws)
-
-	writer := NewWsWriter(ws)
-	if tty {
-		// tty streams dont need docker demultiplexing
-		_, err = io.Copy(writer, logsReader)
-	} else {
-		// docker multiplexed stream
-		_, err = stdcopy.StdCopy(writer, writer, logsReader)
-	}
-	if err != nil {
-		wsErr(ws, fmt.Errorf("error: copying container stream: %w", err))
-		return
-	}
+func wsInf(ws *websocket.Conn, message string) {
+	message = formatTermMessage(message, AnsiGreen)
+	wsMustWrite(ws, message)
 }
 
-func wsErr(ws *websocket.Conn, err error) {
-	err2 := ws.WriteMessage(websocket.TextMessage, []byte(err.Error()))
-	if err2 != nil {
-		log.Warn().Err(err2).Msg("Unable to write to stream")
+func wsErr(ws *websocket.Conn, errMessage error) {
+	message := formatTermMessage(errMessage.Error(), AnsiRed)
+	wsMustWrite(ws, message)
+}
+
+func formatTermMessage(message string, color string) string {
+	message = color + message + AnsiReset + newLine
+	return message
+}
+
+func wsMustWrite(ws *websocket.Conn, message string) {
+	err := ws.WriteMessage(websocket.TextMessage, []byte(message))
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to write to socket")
+		return
 	}
 }
 

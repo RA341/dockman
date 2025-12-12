@@ -63,10 +63,10 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
 
     useEffect(() => {
         const list = files.flatMap(value => {
-            if (value.children.length === 0) {
-                return [value.name]
+            if (value.subFiles.length === 0) {
+                return [value.filename]
             } else {
-                return value.children.map(subFile => `${value.name}/${subFile}`)
+                return value.subFiles.map(subFile => `${value.filename}/${subFile}`)
             }
         })
         setSearchList(list)
@@ -76,8 +76,8 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
     useEffect(() => {
         if (!searchQuery) {
             const fullList = files.flatMap(value => {
-                if (value.children.length === 0) return [value.name]
-                return value.children.map(subFile => `${value.name}/${subFile}`)
+                if (value.subFiles.length === 0) return [value.filename]
+                return value.subFiles.map(subFile => `${value.filename}/${subFile}`)
             })
             setFilteredFiles(fullList)
         } else {

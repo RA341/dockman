@@ -5,41 +5,82 @@ package files.v1;
 option go_package = "github.com/RA341/dockman/generated/files/v1";
 
 service FileService {
-  // root file management
+  rpc List(ListRequest) returns (ListResponse) {}
   rpc Create(File) returns (Empty) {}
-  rpc List(Empty) returns (ListResponse) {}
   rpc Delete(File) returns (Empty) {}
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
+
   rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
   rpc Format(FormatRequest) returns (FormatResponse) {}
+
+  rpc ListAlias(ListAliasRequest) returns (ListAliasResponse) {}
+  rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
+  rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
+}
+
+message DeleteAliasRequest {
+  Alias alias = 1;
+}
+
+message DeleteAliasResponse {}
+
+
+message AddAliasRequest {
+  Alias alias = 1;
+}
+
+message AddAliasResponse {}
+
+
+message ListAliasRequest {}
+
+message Alias {
+  string alias = 1;
+  string fullpath = 2;
+}
+
+message ListAliasResponse {
+  repeated Alias aliases = 1;
+}
+
+
+message ListRequest {
+  string path = 1;
+  string alias = 2;
+}
+
+message ListResponse {
+  repeated FsEntry entries = 1;
 }
 
 message FormatRequest {
   string filename = 1;
+  string alias = 2;
 }
 
 message FormatResponse {
   string contents = 1;
 }
 
-
-message ListResponse {
-  repeated FileGroup groups = 1;
-}
-
-message FileGroup {
-  string root = 1;
-  repeated string subFiles = 2;
+message FsEntry {
+  string filename = 2;
+  bool isDir = 3;
+  repeated FsEntry subFiles = 4;
+  // flag for lazy loading
+  bool isFetched = 5;
 }
 
 message RenameFile {
   string oldFilePath = 1;
   string newFilePath = 2;
+  string alias = 3;
 }
 
 message File {
   string filename = 1;
+  bool isDir = 2;
+  string alias = 3;
 }
 
 message Empty {}

@@ -1,5 +1,4 @@
 import {ArrowDownward, ArrowUpward, PlayArrow, RestartAlt, Stop, Update} from "@mui/icons-material";
-import {atom} from "jotai";
 import {create} from 'zustand'
 import {type ComposeFile, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
 import type {CallOptions} from "@connectrpc/connect";
@@ -70,7 +69,6 @@ export function createTab(wsUrl: string, title: string, interactive: boolean) {
                 ws.binaryType = "arraybuffer";
 
                 ws.onopen = () => {
-                    term.write('\x1b[32m*** Connected to Container ***\x1b[0m\r\n');
                     term.focus();
                 };
 
@@ -296,27 +294,48 @@ export const useSideBarAction = create<{ isSidebarOpen: boolean; toggle: () => v
     })),
 }));
 
-export const openFiles = atom(new Set<string>())
-
-// todo refactor sidebar
 export const useOpenFiles = create<{
     openFiles: Set<string>;
-    add: (file: string) => void,
-    del: (file: string) => void
-}>((set) => ({
+    toggle: (dir: string) => void
+    delete: (dir: string) => void
+    recursiveOpen: (dir: string) => void
+    isOpen: (dir: string) => boolean;
+
+}>((set, get) => ({
     openFiles: new Set<string>(),
-    add: (file: string) => {
-        set((state) => {
+    isOpen: dir => get().openFiles.has(dir),
+    delete: (dir: string) => get().openFiles.delete(dir),
+    recursiveOpen: dir => {
+        set(state => {
+            let acc = ""
             const newOpenFiles = new Set(state.openFiles);
-            newOpenFiles.add(file);
-            return {openFiles: newOpenFiles};
-        });
+
+            for (const ele of dir.split("/")) {
+                const hasExt = ele.split(".").length
+                if (hasExt < 2) {
+                    // only add dirs not files
+                    acc += ele
+                    newOpenFiles.add(acc)
+                    acc += "/"
+                }
+            }
+            return {
+                openFiles: newOpenFiles
+            }
+        })
     },
-    del: (file: string) => {
-        set((state) => {
+    toggle: (dir) => {
+        set(state => {
             const newOpenFiles = new Set(state.openFiles);
-            newOpenFiles.delete(file);
-            return {openFiles: newOpenFiles};
-        });
-    }
+            if (newOpenFiles.has(dir)) {
+                newOpenFiles.delete(dir);
+            } else {
+                newOpenFiles.add(dir);
+            }
+
+            return {
+                openFiles: newOpenFiles,
+            }
+        })
+    },
 }));

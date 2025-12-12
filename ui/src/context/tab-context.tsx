@@ -4,29 +4,29 @@ import {type TabDetails, TabsContext} from "../hooks/tabs.ts";
 import {useHost} from "../hooks/host.ts";
 import {useConfig} from "../hooks/config.ts";
 import {getEditorUrl} from "../lib/editor.ts";
+import {useAlias} from "./alias-context.tsx";
 
-interface TabsProviderProps {
-    children: ReactNode
-}
-
-export function TabsProvider({children}: TabsProviderProps) {
+export function TabsProvider({children}: { children: ReactNode }) {
     const {selectedHost} = useHost()
     const {dockYaml} = useConfig()
     const tabLimit = dockYaml?.tabLimit ?? 5
 
-    const navigate = useNavigate();
+
     const location = useLocation(); // current location
-    const {file, child} = useParams<{ file: string; child?: string }>();
-    const filename = child ? `${file}/${child}` : file;
+    const navigate = useNavigate();
+    const params = useParams();
+    const filename = params['*'] ?? "";
 
     const [curTab, setCurTab] = useState("")
     const [openTabs, setOpenTabs] = useState<Record<string, TabDetails>>({})
+
+    const {activeAlias} = useAlias()
 
     useEffect(() => {
         // reset tabs on changing host
         setOpenTabs({})
         setCurTab("")
-    }, [selectedHost])
+    }, [selectedHost, activeAlias])
 
     // handler for when someone clicks on a tab
     const handleTabClick = useCallback((filename: string) => {

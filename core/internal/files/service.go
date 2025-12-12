@@ -6,106 +6,64 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
-	"time"
 
-	"dario.cat/mergo"
-	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog/log"
 )
 
 type ActiveMachineFolderProvider func() string
 
 type Service struct {
-	machineFolder ActiveMachineFolderProvider
-	composeRoot   func() string
-	dockYamlPath  string
-	guid          int
-	puid          int
+	config *config.FilePerms
+	store  Store
 
-	lastModTime time.Time
-	cachedYaml  *DockmanYaml
+	// for compose files
+	composeRoot ActiveMachineFolderProvider
+	dy          *ServiceDockmanYaml
 }
 
-func NewService(
-	composeRoot, dockYaml string,
-	puid, guid int,
-	machineFolder ActiveMachineFolderProvider,
+func New(
+	store Store,
+	composeRootProvider ActiveMachineFolderProvider,
+	dy *ServiceDockmanYaml,
+	config *config.FilePerms,
 ) *Service {
-	if !filepath.IsAbs(composeRoot) {
-		var err error
-		composeRoot, err = filepath.Abs(composeRoot)
-		if err != nil {
-			log.Fatal().Str("path", composeRoot).Msg("Err getting abs path for composeRoot")
-		}
-	}
-
-	if err := os.MkdirAll(composeRoot, 0755); err != nil {
-		log.Fatal().Err(err).Str("compose-root", composeRoot).Msg("failed to create compose root folder")
-	}
-
-	prov := func() string {
-		mach := machineFolder()
-		if mach == docker.LocalClient {
-			// return normal compose root for local client
-			return composeRoot
-		}
-		return filepath.Join(composeRoot, git.DockmanRemoteFolder, mach)
-	}
-
 	srv := &Service{
-		composeRoot:   prov,
-		guid:          guid,
-		puid:          puid,
-		machineFolder: machineFolder,
-	}
-
-	if dockYaml != "" {
-		if strings.HasPrefix(dockYaml, "/") {
-			// Absolute path provided
-			// e.g /home/zaphodb/conf/.dockman.db
-			srv.dockYamlPath = dockYaml
-		} else {
-			// Relative path; attach compose root
-			// e.g. dockman/.dockman.yml
-			srv.dockYamlPath = srv.WithRoot(dockYaml)
-		}
+		config:      config,
+		store:       store,
+		composeRoot: composeRootProvider,
+		dy:          dy,
 	}
 
 	log.Debug().Msg("File service loaded successfully")
 	return srv
 }
 
-func (s *Service) Close() error {
-	return nil
+type Entry struct {
+	fullpath string
+	isDir    bool
+	children []Entry
 }
 
-type dirResult struct {
-	fileList []string
-	dirname  string
-}
+var ignoredFiles = []string{git.DockmanRemoteFolder}
 
-func (s *Service) List() (map[string][]string, error) {
-	err := os.MkdirAll(s.composeRoot(), os.ModePerm)
+func (s *Service) List(relpath string, alias string) ([]Entry, error) {
+	pathWithRoot, err := s.WithRoot(relpath, alias)
 	if err != nil {
 		return nil, err
 	}
 
-	topLevelEntries, err := os.ReadDir(s.composeRoot())
+	topLevelEntries, err := os.ReadDir(pathWithRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in compose root: %v", err)
 	}
-	result := make(map[string][]string, len(topLevelEntries))
 
 	eg := sync.WaitGroup{}
-
-	subDirChan := make(chan dirResult, len(topLevelEntries))
-
-	var ignoredFiles = []string{".git", git.DockmanRemoteFolder}
+	entriesLen := len(topLevelEntries)
+	subDirChan := make(chan Entry, entriesLen)
 
 	for _, entry := range topLevelEntries {
 		entryName := entry.Name()
@@ -113,23 +71,27 @@ func (s *Service) List() (map[string][]string, error) {
 			continue
 		}
 
-		if !entry.IsDir() {
-			result[entryName] = []string{}
-			continue
-		}
-
+		isDir := entry.IsDir()
 		eg.Go(func() {
-			fullPath := s.WithRoot(entryName)
-			files, err := listFiles(fullPath)
-			if err != nil {
-				log.Warn().Err(err).Str("path", fullPath).Msg("error listing subdir")
-				return
+			fullPath := filepath.Join(pathWithRoot, entryName)
+			relFullPath := filepath.Join(relpath, entryName)
+
+			e := Entry{
+				fullpath: relFullPath,
+				isDir:    isDir,
 			}
 
-			subDirChan <- dirResult{
-				fileList: files,
-				dirname:  entryName,
+			if isDir {
+				files, err := s.listFiles(fullPath, relFullPath)
+				if err != nil {
+					log.Warn().Err(err).Str("path", fullPath).Msg("error listing subdir")
+					return
+				}
+
+				e.children = files
 			}
+
+			subDirChan <- e
 		})
 	}
 
@@ -138,91 +100,74 @@ func (s *Service) List() (map[string][]string, error) {
 		close(subDirChan)
 	}()
 
+	result := make([]Entry, 0, entriesLen)
 	for item := range subDirChan {
-		if len(item.fileList) == 0 {
-			// do not send empty dirs
-			continue
-		}
-
-		result[item.dirname] = item.fileList
+		result = append(result, item)
 	}
+
+	conf := s.dy.GetDockmanYaml()
+	slices.SortFunc(result, func(a, b Entry) int {
+		return conf.sortFiles(&a, &b)
+	})
 
 	return result, nil
 }
 
-func (s *Service) Create(fileName string) error {
-	if err := s.createFile(fileName); err != nil {
+func (s *Service) listFiles(fullPath string, relPath string) ([]Entry, error) {
+	subEntries, err := os.ReadDir(fullPath)
+	if err != nil {
+		return nil, err
+	}
+
+	filesInSubDir := make([]Entry, 0, len(subEntries))
+	for _, subEntry := range subEntries {
+		filesInSubDir = append(filesInSubDir, Entry{
+			fullpath: filepath.Join(relPath, subEntry.Name()),
+			isDir:    subEntry.IsDir(),
+			children: []Entry{},
+		})
+	}
+
+	// sort subfiles
+	conf := s.dy.GetDockmanYaml()
+	slices.SortFunc(filesInSubDir, func(a, b Entry) int {
+		return conf.sortFiles(&a, &b)
+	})
+
+	return filesInSubDir, nil
+}
+
+func (s *Service) Create(filename string, alias string, dir bool) error {
+	filename, err := s.WithRoot(filename, alias)
+	if err != nil {
 		return err
 	}
+
+	if dir {
+		return os.MkdirAll(filename, os.ModePerm)
+	}
+
+	baseDir := filepath.Dir(filename)
+	if err = os.MkdirAll(baseDir, 0755); err != nil {
+		return err
+	}
+
+	f, err := openFile(filename)
+	if err != nil {
+		return err
+	}
+	fileutil.Close(f)
 
 	return nil
 }
 
-func (s *Service) GetDockmanYaml() *DockmanYaml {
-	filenames := []string{dockmanYamlFileYml, dockmanYamlFileYaml}
-	var finalPath string
-	var stat os.FileInfo
-
-	// Determine which file to use
-	if s.dockYamlPath != "" {
-		stat = fileutil.StatFileIfExists(s.dockYamlPath)
-		if stat != nil {
-			finalPath = s.dockYamlPath
-		}
-	} else {
-		for _, filename := range filenames {
-			path := s.WithRoot(filename)
-			stat = fileutil.StatFileIfExists(path)
-			if stat != nil {
-				finalPath = path
-				break
-			}
-		}
-	}
-
-	// If no file is found, return a default config
-	if stat == nil {
-		// log.Warn().Msg("unable to find a dockman yaml file, using defaults")
-		return &defaultDockmanYaml
-	}
-
-	// Check if the file has been modified since last read
-	if !stat.ModTime().After(s.lastModTime) && s.cachedYaml != nil {
-		//log.Debug().Msg("Returning cached version")
-		return s.cachedYaml // Return cached version
-	}
-
-	// File is new or has been modified, load it
-	file, err := os.ReadFile(finalPath)
+func (s *Service) Exists(filename string, alias string) error {
+	root, err := s.WithRoot(filename, alias)
 	if err != nil {
-		// log.Warn().Err(err).Str("path", finalPath).Msg("failed to read dockman yaml")
-		return &defaultDockmanYaml
+		return err
 	}
 
-	// Start with defaults, then merge the loaded config
-	config := defaultDockmanYaml
-	var override DockmanYaml
-	if err := yaml.Unmarshal(file, &override); err != nil {
-		// log.Warn().Err(err).Msg("failed to parse dockman yaml")
-		return &config
-	}
-
-	// Merge override into config
-	if err := mergo.Merge(&config, &override, mergo.WithOverride); err != nil {
-		// log.Warn().Err(err).Msg("failed to merge dockman yaml configs")
-		return &defaultDockmanYaml
-	}
-
-	// Update cache with new data and modification time
-	s.lastModTime = stat.ModTime()
-	s.cachedYaml = &config
-
-	//log.Debug().Msg("Returning fresh version")
-	return s.cachedYaml
-}
-
-func (s *Service) Exists(filename string) error {
-	stat, err := os.Stat(s.WithRoot(filename))
+	stat, err := os.Stat(root)
 	if err != nil {
 		return err
 	}
@@ -233,20 +178,31 @@ func (s *Service) Exists(filename string) error {
 	return nil
 }
 
-func (s *Service) Delete(fileName string) error {
-	fullpath := s.WithRoot(fileName)
-	if err := os.RemoveAll(fullpath); err != nil {
+func (s *Service) Delete(fileName string, alias string) error {
+	fullpath, err := s.WithRoot(fileName, alias)
+	if err != nil {
+		return err
+	}
+
+	if err = os.RemoveAll(fullpath); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Service) Rename(oldFileName, newFilename string) error {
-	oldFullPath := s.WithRoot(filepath.ToSlash(filepath.Clean(oldFileName)))
-	newFullPath := s.WithRoot(filepath.ToSlash(filepath.Clean(newFilename)))
+func (s *Service) Rename(oldFileName, newFilename string, alias string) error {
+	oldFullPath, err := s.rootWithSlash(oldFileName, alias)
+	if err != nil {
+		return err
+	}
 
-	err := os.Rename(oldFullPath, newFullPath)
+	newFullPath, err := s.rootWithSlash(newFilename, alias)
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(oldFullPath, newFullPath)
 	if err != nil {
 		return err
 	}
@@ -254,54 +210,74 @@ func (s *Service) Rename(oldFileName, newFilename string) error {
 	return nil
 }
 
-func (s *Service) Save(filename string, destWriter io.Reader) error {
-	filename = s.WithRoot(filename)
-	read, err := io.ReadAll(destWriter)
+func (s *Service) Save(filename string, alias string, source io.Reader) error {
+	filename, err := s.WithRoot(filename, alias)
 	if err != nil {
 		return err
 	}
 
-	if err = os.WriteFile(filename, read, os.ModePerm); err != nil {
+	dest, err := os.OpenFile(filename, os.O_RDWR, os.ModePerm)
+	if err != nil {
 		return err
 	}
-	return nil
+	defer fileutil.Close(dest)
+
+	_, err = io.Copy(dest, source)
+	return err
 }
 
-func (s *Service) getFileContents(filename string) ([]byte, error) {
-	file, err := os.ReadFile(s.WithRoot(filepath.ToSlash(filename)))
+func (s *Service) getFileContents(filename string, alias string) ([]byte, error) {
+	root, err := s.rootWithSlash(filename, alias)
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.ReadFile(root)
 	if err != nil {
 		return nil, err
 	}
 	return file, nil
 }
 
-func (s *Service) LoadFilePath(filename string) (string, error) {
-	return s.WithRoot(filename), nil
+func (s *Service) rootWithSlash(filename string, alias string) (string, error) {
+	root, err := s.WithRoot(filepath.ToSlash(filename), alias)
+	if err != nil {
+		return "", nil
+	}
+	return root, err
 }
 
-func (s *Service) createFile(filename string) error {
-	filename = s.WithRoot(filename)
-	baseDir := filepath.Dir(filename)
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		return err
-	}
-
-	f, err := openFile(filename)
-	if err != nil {
-		return err
-	}
-
-	fileutil.Close(f)
-	return nil
+func (s *Service) LoadFilePath(filename string, alias string) (string, error) {
+	filename = filepath.Clean(filename)
+	return s.WithRoot(filename, alias)
 }
 
 // WithRoot joins s.composeRoot() with filename
-func (s *Service) WithRoot(filename string) string {
-	return filepath.Join(s.composeRoot(), filename)
+func (s *Service) WithRoot(filename, rootAlias string) (string, error) {
+	filename = filepath.Clean(filename)
+	if rootAlias == "" {
+		// use compose locations
+		return filepath.Join(s.composeRoot(), filename), nil
+	}
+
+	// use other dir
+	root, err := s.getOtherRoot(rootAlias)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, filename), nil
 }
 
-func (s *Service) Format(filename string) ([]byte, error) {
-	path := s.WithRoot(filename)
+// for other locations
+func (s *Service) getOtherRoot(alias string) (string, error) {
+	return s.store.Get(alias)
+}
+
+func (s *Service) Format(filename string, alias string) ([]byte, error) {
+	path, err := s.WithRoot(filename, alias)
+	if err != nil {
+		return nil, err
+	}
+
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read file %w", err)
@@ -320,18 +296,6 @@ func openFile(filename string) (*os.File, error) {
 	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, os.ModePerm)
 }
 
-func listFiles(path string) ([]string, error) {
-	subEntries, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
-
-	filesInSubDir := make([]string, 0, len(subEntries))
-	for _, subEntry := range subEntries {
-		if !subEntry.IsDir() {
-			filesInSubDir = append(filesInSubDir, subEntry.Name())
-		}
-	}
-
-	return filesInSubDir, nil
+func (s *Service) Close() error {
+	return nil
 }

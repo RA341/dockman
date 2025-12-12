@@ -1,7 +1,6 @@
-package impl
+package updater
 
 import (
-	"github.com/RA341/dockman/internal/docker"
 	"gorm.io/gorm"
 )
 
@@ -14,14 +13,14 @@ func NewImageUpdateDB(db *gorm.DB) *ImageUpdateDB {
 	return &ImageUpdateDB{db: db}
 }
 
-func (i ImageUpdateDB) GetUpdateAvailable(host string, imageIds ...string) (map[string]docker.ImageUpdate, error) {
-	result := make(map[string]docker.ImageUpdate)
+func (i ImageUpdateDB) GetUpdateAvailable(host string, imageIds ...string) (map[string]ImageUpdate, error) {
+	result := make(map[string]ImageUpdate)
 
 	if len(imageIds) == 0 {
 		return result, nil
 	}
 
-	var updates []docker.ImageUpdate
+	var updates []ImageUpdate
 	err := i.db.Where("image_id IN ?", imageIds).Where("host = ?", host).Find(&updates).Error
 	if err != nil {
 		return nil, err
@@ -34,10 +33,10 @@ func (i ImageUpdateDB) GetUpdateAvailable(host string, imageIds ...string) (map[
 	return result, nil
 }
 
-func (i ImageUpdateDB) Save(image *docker.ImageUpdate) error {
+func (i ImageUpdateDB) Save(image *ImageUpdate) error {
 	return i.db.Save(image).Error
 }
 
 func (i ImageUpdateDB) Delete(imageIds ...string) error {
-	return i.db.Where("image_id IN ?", imageIds).Delete(&docker.ImageUpdate{}).Error
+	return i.db.Where("image_id IN ?", imageIds).Delete(&ImageUpdate{}).Error
 }

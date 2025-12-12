@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"path/filepath"
 	"slices"
@@ -18,13 +18,19 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
+	"github.com/RA341/dockman/internal/docker/compose"
+	contSrv "github.com/RA341/dockman/internal/docker/container"
+	"github.com/RA341/dockman/internal/docker/updater"
+
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/RA341/dockman/pkg/listutils"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v2/pkg/api"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,23 +38,25 @@ import (
 type ServiceProvider func() *Service
 
 type Handler struct {
-	srv  ServiceProvider
-	addr string
+	srv ServiceProvider
 }
 
 func NewConnectHandler(srv ServiceProvider, host string) *Handler {
 	return &Handler{
-		srv:  srv,
-		addr: host,
+		srv: srv,
 	}
 }
 
-func (h *Handler) compose() *ComposeService {
+func (h *Handler) compose() *compose.Service {
 	return h.srv().Compose
 }
 
-func (h *Handler) container() *ContainerService {
+func (h *Handler) container() *contSrv.Service {
 	return h.srv().Container
+}
+
+func (h *Handler) updater() *updater.Service {
+	return h.srv().Updater
 }
 
 ////////////////////////////////////////////
@@ -124,7 +132,7 @@ func (h *Handler) ComposeUpdate(ctx context.Context, req *connect.Request[v1.Com
 
 func (h *Handler) ComposeValidate(ctx context.Context, req *connect.Request[v1.ComposeFile]) (*connect.Response[v1.ComposeValidateResponse], error) {
 	errs := h.compose().ComposeValidate(ctx, req.Msg.Filename)
-	toMap := ToMap(errs, func(t error) string {
+	toMap := listutils.ToMap(errs, func(t error) string {
 		return t.Error()
 	})
 	return connect.NewResponse(&v1.ComposeValidateResponse{
@@ -150,18 +158,22 @@ func (h *Handler) ComposeList(ctx context.Context, req *connect.Request[v1.Compo
 func (h *Handler) containersToRpc(result []container.Summary) []*v1.ContainerList {
 	var dockerResult []*v1.ContainerList
 	for _, stack := range result {
-		available, err := h.container().imageUpdateStore.GetUpdateAvailable(
-			h.container().hostname,
-			stack.ImageID,
-		)
-		if err != nil {
-			log.Warn().Msg("Failed to get image update info")
-		}
+		//available, err := h.container().imageUpdateStore.GetUpdateAvailable(
+		//	h.container().hostname,
+		//	stack.ImageID,
+		//)
+		//if err != nil {
+		//	log.Warn().Msg("Failed to get image update info")
+		//}
 
 		var portSlice []*v1.Port
 		for _, p := range stack.Ports {
-			if isIPV4(p.IP) {
-				p.IP = h.container().daemonAddr
+			if p.IP.Is4() {
+				addr, err := netip.ParseAddr(h.srv().DaemonAddr)
+				if err == nil {
+					p.IP = addr
+				}
+
 				// ignore ipv6 ports no one uses it anyway
 				portSlice = append(portSlice, toRPCPort(p))
 			}
@@ -178,7 +190,7 @@ func (h *Handler) containersToRpc(result []container.Summary) []*v1.ContainerLis
 		dockerResult = append(dockerResult, h.toRPContainer(
 			stack,
 			portSlice,
-			available[stack.ImageID],
+			updater.ImageUpdate{},
 		))
 	}
 	return dockerResult
@@ -225,7 +237,7 @@ func (h *Handler) ContainerRestart(ctx context.Context, req *connect.Request[v1.
 }
 
 func (h *Handler) ContainerUpdate(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error) {
-	err := h.container().ContainersUpdateByContainerID(ctx, req.Msg.ContainerIds...)
+	err := h.updater().ContainersUpdateByContainerID(ctx, req.Msg.ContainerIds...)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +257,7 @@ func (h *Handler) ContainerList(ctx context.Context, _ *connect.Request[v1.Empty
 func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error) {
 	file := req.Msg.GetFile()
 
-	var containers []ContainerStats
+	var containers []contSrv.Stats
 	var err error
 	if file != nil {
 		// file was passed load it from context
@@ -255,7 +267,7 @@ func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.St
 		}
 		containers, err = h.compose().ComposeStats(ctx, project)
 	} else {
-		containers, err = h.container().ContainerStats(ctx, container.ListOptions{})
+		containers, err = h.container().ContainerStats(ctx, client.ContainerListOptions{})
 	}
 	if err != nil {
 		return nil, err
@@ -269,7 +281,7 @@ func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.St
 	orderby := *req.Msg.Order.Enum()
 
 	// returns in desc order
-	slices.SortFunc(containers, func(a, b ContainerStats) int {
+	slices.SortFunc(containers, func(a, b contSrv.Stats) int {
 		res := sortFn(a, b)
 		if orderby == v1.ORDER_ASC {
 			return -res // Reverse the comparison for descending order
@@ -321,20 +333,12 @@ func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.Con
 // 				Image Actions 			  //
 ////////////////////////////////////////////
 
-func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
-	var result []Q
-	for _, t := range input {
-		result = append(result, mapper(t))
-	}
-	return result
-}
-
 func (h *Handler) ImageList(ctx context.Context, _ *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error) {
 	images, err := h.container().ImageList(ctx)
 
-	imageUpdates, err := h.container().imageUpdateStore.GetUpdateAvailable(
+	imageUpdates, err := h.updater().Store.GetUpdateAvailable(
 		"",
-		ToMap(images, func(t image.Summary) string {
+		listutils.ToMap(images, func(t image.Summary) string {
 			return t.ID
 		})...,
 	)
@@ -431,7 +435,6 @@ func (h *Handler) VolumeList(ctx context.Context, _ *connect.Request[v1.ListVolu
 
 	var rpcVolumes []*v1.Volume
 	for _, vol := range volumes {
-
 		rpcVolumes = append(rpcVolumes, &v1.Volume{
 			Name:               vol.Name,
 			ContainerID:        vol.ContainerID,
@@ -447,7 +450,7 @@ func (h *Handler) VolumeList(ctx context.Context, _ *connect.Request[v1.ListVolu
 	return connect.NewResponse(&v1.ListVolumesResponse{Volumes: rpcVolumes}), nil
 }
 
-func safeGetSize(vol VolumeInfo) int64 {
+func safeGetSize(vol contSrv.VolumeInfo) int64 {
 	if vol.UsageData == nil {
 		return 0
 	}
@@ -525,7 +528,7 @@ func getSubnet(netI network.Inspect) string {
 	if len(netI.IPAM.Config) == 0 {
 		return "-----"
 	}
-	return netI.IPAM.Config[0].Subnet
+	return netI.IPAM.Config[0].Subnet.String()
 }
 
 func (h *Handler) NetworkCreate(_ context.Context, _ *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error) {
@@ -536,7 +539,7 @@ func (h *Handler) NetworkCreate(_ context.Context, _ *connect.Request[v1.CreateN
 func (h *Handler) NetworkDelete(ctx context.Context, req *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error) {
 	var err error
 	if req.Msg.Prune {
-		_, err = h.container().NetworksPrune(ctx)
+		err = h.container().NetworksPrune(ctx)
 	} else {
 		for _, nid := range req.Msg.NetworkIds {
 			err = h.container().NetworksDelete(ctx, nid)
@@ -571,7 +574,10 @@ func (h *Handler) executeComposeStreamCommand(
 	//log.Debug().Strs("ssdd", services).Msg("compose stream")
 
 	pipeWriter, wg := streamManager(func(val string) error {
-		if err = responseStream.Send(&v1.LogsMessage{Message: val}); err != nil {
+		err = responseStream.Send(
+			&v1.LogsMessage{Message: val},
+		)
+		if err != nil {
 			return err
 		}
 		return nil
@@ -584,7 +590,8 @@ func (h *Handler) executeComposeStreamCommand(
 
 	// incase the stream connection is lost context.Background
 	// will allow the service to continue executing, instead of stopping mid-operation
-	if err = action(context.Background(), project, composeClient, services...); err != nil {
+	err = action(context.Background(), project, composeClient, services...)
+	if err != nil {
 		fileutil.Close(pipeWriter)
 		return err
 	}
@@ -607,7 +614,7 @@ func (l *LogStreamWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func ToRPCStat(cont ContainerStats) *v1.ContainerStats {
+func ToRPCStat(cont contSrv.Stats) *v1.ContainerStats {
 	return &v1.ContainerStats{
 		Id:          cont.ID,
 		Name:        strings.TrimPrefix(cont.Name, "/"),
@@ -621,41 +628,36 @@ func ToRPCStat(cont ContainerStats) *v1.ContainerStats {
 	}
 }
 
-func isIPV4(ip string) bool {
-	parsedIP := net.ParseIP(ip)
-	return parsedIP != nil && parsedIP.To4() != nil
-}
-
-func getSortFn(field v1.SORT_FIELD) func(a, b ContainerStats) int {
+func getSortFn(field v1.SORT_FIELD) func(a, b contSrv.Stats) int {
 	switch field {
 	case v1.SORT_FIELD_CPU:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.CPUUsage, a.CPUUsage)
 		}
 	case v1.SORT_FIELD_MEM:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.MemoryUsage, a.MemoryUsage)
 		}
 	case v1.SORT_FIELD_NETWORK_RX:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.NetworkRx, a.NetworkRx)
 		}
 	case v1.SORT_FIELD_NETWORK_TX:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.NetworkTx, a.NetworkTx)
 		}
 	case v1.SORT_FIELD_DISK_W:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.BlockWrite, a.BlockWrite)
 		}
 	case v1.SORT_FIELD_DISK_R:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.BlockRead, a.BlockRead)
 		}
 	case v1.SORT_FIELD_NAME:
 		fallthrough
 	default:
-		return func(a, b ContainerStats) int {
+		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.Name, a.Name)
 		}
 	}
@@ -713,19 +715,19 @@ func streamManager(streamFn func(val string) error) (*io.PipeWriter, *sync.WaitG
 	return pipeWriter, &wg
 }
 
-func toRPCPort(p container.Port) *v1.Port {
+func toRPCPort(p container.PortSummary) *v1.Port {
 	return &v1.Port{
 		Public:  int32(p.PublicPort),
 		Private: int32(p.PrivatePort),
-		Host:    p.IP,
+		Host:    p.IP.String(),
 		Type:    p.Type,
 	}
 }
 
-func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, update ImageUpdate) *v1.ContainerList {
+func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
 	var ipAddr string
 	for _, netConf := range stack.NetworkSettings.Networks {
-		ipAddr = netConf.IPAddress
+		ipAddr = netConf.IPAddress.String()
 	}
 
 	return &v1.ContainerList{
@@ -747,7 +749,7 @@ func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, u
 func (h *Handler) getComposeFilePath(fullPath string) string {
 	composePath := filepath.ToSlash(
 		strings.TrimPrefix(
-			fullPath, h.compose().composeRoot,
+			fullPath, h.compose().ComposeRoot,
 		),
 	)
 	return strings.TrimPrefix(composePath, "/")

@@ -1,16 +1,13 @@
 import {createContext, useContext} from "react";
-
-export interface FileGroup {
-    name: string
-    children: string[]
-}
+import type {FsEntry} from "../gen/files/v1/files_pb.ts";
 
 export interface FilesContextType {
-    files: FileGroup[]
+    files: FsEntry[]
     isLoading: boolean
-    addFile: (filename: string, parent: string) => Promise<void>
-    deleteFile: (filename: string) => Promise<void>
-    renameFile: (olfFilename: string, newFile: string) => Promise<void>
+    addFile: (filename: string, isDir: boolean, entryInsertIndex?: number[]) => Promise<void>
+    deleteFile: (filename: string, entryInsertIndex?: number[]) => Promise<void>
+    renameFile: (olfFilename: string, newFile: string, entryInsertIndex?: number[]) => Promise<void>
+    listFiles: (path?: string, entryInsertIndex?: number[]) => Promise<void>
     refetch: () => Promise<void>
 }
 

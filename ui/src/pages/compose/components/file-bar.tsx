@@ -1,34 +1,22 @@
-import {useCallback, useEffect} from 'react'
-import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip, Typography} from '@mui/material'
-import {Add as AddIcon, Search as SearchIcon, Sync} from '@mui/icons-material'
-import {useParams} from 'react-router-dom'
-import FileBarItem from './file-bar-item.tsx'
-import {useFiles} from "../../../hooks/files.ts"
+import {useEffect} from 'react'
+import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
+import {Add as AddIcon, Search as SearchIcon} from '@mui/icons-material'
 import {useHost} from "../../../hooks/host.ts"
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
 import {useTelescope} from "../dialogs/search/search-hook.ts";
-import {useGitImport} from "../dialogs/import/import-hook.ts";
 import {useAddFile} from "../dialogs/add/add-hook.ts";
-import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
-import {useAtom} from "jotai";
-import {openFiles, useSideBarAction} from "../state/state.tsx";
-import {useTabs} from "../../../hooks/tabs.ts";
+import {useSideBarAction} from "../state/state.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
+import {useFiles} from "../../../hooks/files.ts";
+import {FileBarItem} from "./file-bar-item.tsx";
+import AliasSelector from "./file-bar-alias-selector.tsx";
 
 export function FileList() {
-    const {file: currentDir} = useParams<{ file: string }>()
-
-    const {closeTab} = useTabs();
-
     const {selectedHost} = useHost()
-    const {files, isLoading, renameFile} = useFiles()
 
     const {showTelescope} = useTelescope()
-    const {showDialog: showGitImport} = useGitImport()
+    // const {showDialog: showGitImport} = useGitImport()
     const {showDialog: showAddFile} = useAddFile()
-    const {showDialog: showDeleteFile} = useFileDelete()
-
-    const [openDirs, setOpenDirs] = useAtom(openFiles)
 
     const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
 
@@ -42,10 +30,6 @@ export function FileList() {
                 event.preventDefault()
                 showAddFile("")
             }
-            if ((event.altKey) && event.key === 'i') {
-                event.preventDefault()
-                showGitImport()
-            }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => {
@@ -54,29 +38,17 @@ export function FileList() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedHost])
 
-    const handleDelete = (file: string) => {
-        closeTab(file)
-        showDeleteFile(file)
-    }
-
-    useEffect(() => {
-        if (currentDir) {
-            setOpenDirs(prevOpenDirs => new Set(prevOpenDirs).add(currentDir))
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentDir, selectedHost])
-
-    const handleToggle = useCallback((dirName: string) => {
-        setOpenDirs(prevOpenDirs => {
-            const newOpenDirs = new Set(prevOpenDirs)
-            if (newOpenDirs.has(dirName)) {
-                newOpenDirs.delete(dirName)
-            } else {
-                newOpenDirs.add(dirName)
-            }
-            return newOpenDirs
-        })
-    }, [setOpenDirs])
+    // const handleToggle = useCallback((dirName: string) => {
+    //     setOpenDirs(prevOpenDirs => {
+    //         const newOpenDirs = new Set(prevOpenDirs)
+    //         if (newOpenDirs.has(dirName)) {
+    //             newOpenDirs.delete(dirName)
+    //         } else {
+    //             newOpenDirs.add(dirName)
+    //         }
+    //         return newOpenDirs
+    //     })
+    // }, [setOpenDirs])
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
 
@@ -100,9 +72,7 @@ export function FileList() {
                  }}
             >
                 <Toolbar>
-                    <Typography variant={"h6"}>
-                        Files
-                    </Typography>
+                    <AliasSelector/>
 
                     <Box sx={{flexGrow: 1}}/>
 
@@ -138,48 +108,11 @@ export function FileList() {
                             <AddIcon fontSize="small"/>
                         </IconButton>
                     </Tooltip>
-
-                    <Tooltip arrow title={
-                        <ShortcutFormatter
-                            title="Import"
-                            keyCombo={["ALT", "I"]}
-                        />
-                    }>
-                        <IconButton
-                            size="small"
-                            onClick={() => showGitImport()}
-                            color="info"
-                            sx={{ml: 1}}
-                            aria-label="Import"
-                        >
-                            <Sync fontSize="small"/>
-                        </IconButton>
-                    </Tooltip>
                 </Toolbar>
 
                 <Divider/>
 
-                <StyledScrollbarBox sx={{flexGrow: 1}}>
-                    {files.length === 0 && isLoading ? (
-                        <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                            <CircularProgress/>
-                        </Box>
-                    ) : (
-                        <List>
-                            {files.map((group) => (
-                                <FileBarItem
-                                    key={group.name}
-                                    group={group}
-                                    onAdd={showAddFile}
-                                    onDelete={handleDelete}
-                                    isOpen={openDirs.has(group.name)}
-                                    onRename={renameFile}
-                                    onToggle={handleToggle}
-                                />
-                            ))}
-                        </List>
-                    )}
-                </StyledScrollbarBox>
+                <FileListInner/>
 
                 {/* Resize Handle */}
                 {!isSidebarCollapsed && (
@@ -204,6 +137,30 @@ export function FileList() {
         </>
     )
 }
+
+const FileListInner = () => {
+    const {files, isLoading} = useFiles()
+
+    return (
+        <StyledScrollbarBox sx={{flexGrow: 1}}>
+            {files.length === 0 && isLoading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                    <CircularProgress/>
+                </Box>
+            ) : (
+                <List>
+                    {files.map((ele, inde) =>
+                        <FileBarItem
+                            key={ele.filename}
+                            entry={ele}
+                            index={inde}/>
+                    )}
+                </List>
+            )}
+        </StyledScrollbarBox>
+    );
+};
+
 
 const StyledScrollbarBox = styled(Box)(({theme}) => ({
     overflowY: 'auto',

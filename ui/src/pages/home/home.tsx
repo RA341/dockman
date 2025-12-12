@@ -10,7 +10,7 @@ import {
     Tooltip,
     Typography
 } from '@mui/material';
-import {AddOutlined, Logout, Settings} from '@mui/icons-material';
+import {AddOutlined, FolderDelete, Logout, Settings} from '@mui/icons-material';
 import {Link as RouterLink, useLocation, useNavigate} from 'react-router-dom';
 
 import HostSelectDropdown from "./host-selector.tsx";
@@ -93,9 +93,17 @@ export function RootLayout() {
             title: 'Networks',
             path: '/networks',
             icon: NetworkIcon,
-            exact: false, // for startsWith matching
+            exact: false,
             onClick: () => navigate('/networks'),
-        }
+        },
+        {
+            id: 'cleaner',
+            title: 'Cleaner',
+            path: '/cleaner',
+            icon: () => <FolderDelete sx={{color: 'greenyellow'}}/>,
+            exact: false, // for startsWith matching
+            onClick: () => navigate('/cleaner'),
+        },
     ], [activeTab, navigate]);
 
     useEffect(() => {

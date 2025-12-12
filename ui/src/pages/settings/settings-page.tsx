@@ -3,6 +3,7 @@ import {Box, Tab, Tabs} from "@mui/material";
 import {useSearchParams} from 'react-router-dom';
 import {TabDockerHosts} from "./tab-host.tsx";
 import {TabContainerUpdater} from "./tab-updater.tsx";
+import TabAliases from "./tab-aliases.tsx";
 
 interface TabConfig {
     label: string;
@@ -15,8 +16,13 @@ const tabConfigurations: TabConfig[] = [
         component: <TabDockerHosts/>
     },
     {
+
         label: "Container Updater",
         component: <TabContainerUpdater/>
+    },
+    {
+        label: "Location Aliases",
+        component: <TabAliases/>
     },
 ];
 
@@ -38,7 +44,7 @@ function TabPanel(props: TabPanelProps) {
             {...other}
         >
             {value === index && (
-                <Box sx={{p: 3}}>
+                <Box sx={{p: 1}}>
                     {children}
                 </Box>
             )}

@@ -34,8 +34,11 @@
     const ws = new WebSocket("ws://localhost:8080/exec");
 
     ws.onopen = () => {
-        term.write('\r\n*** Connected to Docker ***\r\n');
+        term.write('\r\n*** Dockman Debug ***\r\n');
     };
+    ws.onclose = ev => {
+        term.write(`\r\n *** Connection closed ${ev.code} ${ev.reason} ***\r\n`);
+    }
 
     // 4. Browser Terminal -> WebSocket -> Docker
     // (Capture keystrokes and send them to Go)

@@ -45,32 +45,6 @@ export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | nul
     }
 }
 
-
-export async function uploadFile(filename: string, contents: string): Promise<string> {
-    try {
-        const formData = new FormData();
-        const file = new File([contents], filename);
-
-        formData.append('contents', file, btoa(filename));
-
-        const response = await fetch(`${API_URL}/api/file/save`, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            return `Server error: ${response.status} ${response.statusText} - ${errorText}`
-        }
-
-        console.log(`Uploaded ${file}, response status: ${response.status}`);
-        return "";
-    } catch (error: any) {
-        console.error(`Error: ${error.message}`);
-        return `Server error: ${error.message}`;
-    }
-}
-
 export async function pingWithAuth() {
     try {
         console.log("Checking authentication status with server...");
@@ -94,12 +68,33 @@ export async function pingWithAuth() {
     }
 }
 
-export async function downloadFileAtCommit(filename: string, commitId: string): Promise<{ file: string; err: string }> {
-    return download(`api/git/load/${encodeURIComponent(filename)}/${encodeURIComponent(commitId)}`);
+export async function uploadFile(filename: string, contents: string, alias: string): Promise<string> {
+    try {
+        const formData = new FormData();
+        const file = new File([contents], filename);
+
+        formData.append('contents', file, btoa(filename));
+
+        const response = await fetch(`${API_URL}/api/file/save?alias=${alias}`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            return `Server error: ${response.status} ${response.statusText} - ${errorText}`
+        }
+
+        console.log(`Uploaded ${file}, response status: ${response.status}`);
+        return "";
+    } catch (error: any) {
+        console.error(`Error: ${error.message}`);
+        return `Server error: ${error.message}`;
+    }
 }
 
-export async function downloadFile(filename: string): Promise<{ file: string; err: string }> {
-    return download(`api/file/load/${encodeURIComponent(filename)}`)
+export async function downloadFile(filename: string, alias: string): Promise<{ file: string; err: string }> {
+    return download(`api/file/load/${encodeURIComponent(filename)}?alias=${alias}`)
 }
 
 async function download(subPath: string) {

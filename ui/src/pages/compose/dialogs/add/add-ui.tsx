@@ -7,24 +7,22 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    List,
-    ListItemButton,
-    ListItemText,
     Paper,
     TextField,
     Typography
 } from "@mui/material"
-import {Add, AddCircleOutline, ArrowBack, Cancel, ErrorOutline, InsertDriveFile} from "@mui/icons-material"
+import {Add, AddCircleOutline, ArrowBack, Cancel, ErrorOutline, Folder, InsertDriveFile} from "@mui/icons-material"
 import {DockerFolderIcon} from "../../components/file-bar-icon.tsx";
+import {amber} from "@mui/material/colors";
 
 interface AddFileDialogProps {
     open: boolean
     onClose: () => void
-    onConfirm: (name: string) => void
+    onConfirm: (name: string, isDir: boolean) => void
     parentName: string
 }
 
-type PresetType = 'file' | 'compose-directory'
+type PresetType = 'file' | 'folder' | 'compose-directory'
 type CreationStep = 'preset-selection' | 'name-input'
 
 interface FilePreset {
@@ -38,10 +36,17 @@ interface FilePreset {
 const FILE_PRESETS: FilePreset[] = [
     {
         type: 'file',
-        title: 'File or Directory',
-        description: 'Create files: somefile.txt, docs/readme.md',
+        title: 'File',
+        description: 'Create files: somefile.txt, docs/readme.md, directories are created automatically',
         icon: <InsertDriveFile color="primary" sx={{fontSize: '2rem'}}/>,
-        extensions: ['.env', '-compose.yaml', '-compose.yml', '.yaml', '.yml', '.txt', '.md', '.json', '.js']
+        extensions: []
+    },
+    {
+        type: 'folder',
+        title: 'Folder',
+        description: 'Create folder: somefolder/nestedfolder, directories are created automatically',
+        icon: <Folder sx={{fontSize: '2rem', color: amber[800]}}/>,
+        extensions: []
     },
     {
         type: 'compose-directory',
@@ -57,31 +62,17 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
     const [presetIndex, setPresetIndex] = useState(0)
     const [name, setName] = useState('')
     const [error, setError] = useState('')
-    const [suggestions, setSuggestions] = useState<string[]>([])
-    const [selectedSuggestion, setSelectedSuggestion] = useState(0)
-    const [showSuggestions, setShowSuggestions] = useState(false)
 
     const inputRef = useRef<HTMLInputElement>(null)
-    const suggestionsListRef = useRef<HTMLUListElement>(null)
 
-    // Reset state when dialog opens/closes
     useEffect(() => {
         if (open) {
-            if (parentName) {
-                setStep('name-input')
-                setSelectedPreset('file')
-                setPresetIndex(0)
-            } else {
-                setStep('preset-selection')
-                setSelectedPreset('file')
-                setPresetIndex(0)
-            }
+            setStep('preset-selection')
+            setSelectedPreset('file')
+            setPresetIndex(0)
 
             setName('')
             setError('')
-            setSuggestions([])
-            setSelectedSuggestion(0)
-            setShowSuggestions(false)
         }
     }, [open, parentName])
 
@@ -91,96 +82,6 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
             setTimeout(() => inputRef.current?.focus(), 100)
         }
     }, [step])
-
-    // Scroll selected suggestion into view
-    useEffect(() => {
-        if (showSuggestions && suggestionsListRef.current) {
-            const selectedElement = suggestionsListRef.current.children[selectedSuggestion] as HTMLElement
-            if (selectedElement) {
-                selectedElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest'
-                })
-            }
-        }
-    }, [selectedSuggestion, showSuggestions])
-
-    // Smart suggestion matching
-    const getSmartSuggestions = (input: string, extensions: string[]): string[] => {
-        if (!input.trim()) return []
-
-        // const inputLower = input.toLowerCase()
-
-        // If input already has an extension, find matching extensions
-        const lastDotIndex = input.lastIndexOf('.')
-        if (lastDotIndex > 0) {
-            const baseFileName = input.substring(0, lastDotIndex)
-            const partialExt = input.substring(lastDotIndex).toLowerCase()
-
-            return extensions
-                .filter(ext => ext.toLowerCase().startsWith(partialExt))
-                .map(ext => `${baseFileName}${ext}`)
-                .slice(0, 5) // Limit to 5 suggestions
-        }
-
-        // If input has a dash at the end, prioritize compose extensions
-        if (input.endsWith('-')) {
-            const composeExts = extensions.filter(ext => ext.includes('compose'))
-            if (composeExts.length > 0) {
-                return composeExts.map(ext => `${input.slice(0, -1)}${ext}`).slice(0, 3)
-            }
-        }
-
-        // Default: show most common extensions
-        const commonExts = ['.js', '.json', '.yaml', '.txt', '.md']
-        const availableCommon = extensions.filter(ext => commonExts.includes(ext))
-
-        return availableCommon
-            .map(ext => `${input}${ext}`)
-            .slice(0, 5)
-    }
-
-    // Generate suggestions based on preset and input
-    useEffect(() => {
-        if (step !== 'name-input' || selectedPreset !== 'file') {
-            setSuggestions([])
-            setShowSuggestions(false)
-            return
-        }
-
-        const preset = FILE_PRESETS.find(p => p.type === 'file')
-        if (preset?.extensions && name.trim()) {
-            const newSuggestions = getSmartSuggestions(name, preset.extensions)
-            setSuggestions(newSuggestions)
-            setShowSuggestions(newSuggestions.length > 0)
-            setSelectedSuggestion(0)
-        } else {
-            setSuggestions([])
-            setShowSuggestions(false)
-        }
-    }, [name, selectedPreset, step])
-
-    const validateInput = (input: string): string => {
-        if (!input.trim()) return ''
-
-        // Check for empty directories (path ending with /)
-        if (input.endsWith('/')) {
-            return 'Empty directories are not allowed. Please specify a filename.'
-        }
-
-        // Check for nested directories when parentName exists
-        if (parentName && input.includes('/')) {
-            return 'Subdirectories cannot be created here. Please enter a valid file name.'
-        }
-
-        // Check for multiple slashes (nested directories)
-        const slashCount = (input.match(/\//g) || []).length
-        if (slashCount > 1) {
-            return 'Nested directories are not allowed. Use only one directory level.'
-        }
-
-        return ''
-    }
 
     const handlePresetSelection = (preset: PresetType) => {
         setSelectedPreset(preset)
@@ -221,80 +122,28 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
                 setError('')
                 return
             }
-
-            switch (e.key) {
-                case 'ArrowUp':
-                    if (showSuggestions && suggestions.length > 0) {
-                        e.preventDefault()
-                        setSelectedSuggestion(prev => prev > 0 ? prev - 1 : suggestions.length - 1)
-                    }
-                    break
-                case 'ArrowDown':
-                    if (showSuggestions && suggestions.length > 0) {
-                        e.preventDefault()
-                        setSelectedSuggestion(prev => prev < suggestions.length - 1 ? prev + 1 : 0)
-                    }
-                    break
-                case 'Tab':
-                    e.preventDefault()
-                    if (showSuggestions && suggestions.length > 0) {
-                        setName(suggestions[selectedSuggestion])
-                        setShowSuggestions(false)
-                    }
-                    break
-                case 'Enter':
-                    e.preventDefault()
-                    handleConfirm()
-                    break
-                case 'Escape':
-                    if (showSuggestions) {
-                        setShowSuggestions(false)
-                    } else if (!parentName) {
-                        // Only go back to preset selection if there's no parent
-                        setStep('preset-selection')
-                        setName('')
-                        setError('')
-                    } else {
-                        // If there's a parent, close the dialog on Escape
-                        onClose()
-                    }
-                    break
-            }
         }
     }
 
     const handleConfirm = () => {
         let finalName = name.trim()
-
         if (!finalName) return
 
-        const validationError = validateInput(finalName)
-        if (validationError) {
-            setError(validationError)
-            return
-        }
-
-        // Apply preset-specific logic
         if (selectedPreset === 'compose-directory') {
             finalName = `${finalName}/${finalName}-compose.yaml`
         }
 
-        onConfirm(finalName)
+        if (parentName) {
+            finalName = `${parentName}/${finalName}`
+        }
+
+        onConfirm(finalName, selectedPreset === 'folder')
         onClose()
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
         setName(value)
-
-        const validationError = validateInput(value)
-        setError(validationError)
-    }
-
-    const handleSuggestionClick = (suggestion: string) => {
-        setName(suggestion)
-        setShowSuggestions(false)
-        inputRef.current?.focus()
     }
 
     const getDialogTitle = () => {
@@ -309,7 +158,7 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
 
     const getHelperText = () => {
         if (selectedPreset === 'file') {
-            return "Examples: file.js, config.yaml, docs/readme.md. Start typing for smart suggestions."
+            return "Examples: file.js, config.yaml, docs/readme.md."
         } else if (selectedPreset === 'compose-directory') {
             return "Enter name (e.g., 'router'). Will create: router/router-compose.yaml"
         }
@@ -319,22 +168,16 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
     const getPreviewText = () => {
         if (!name.trim()) return ""
 
-        const validationError = validateInput(name)
-        if (validationError) return ""
-
         switch (selectedPreset) {
             case 'compose-directory':
                 return `${name}/${name}-compose.yaml`
             default:
-                if (showSuggestions && suggestions.length > 0) {
-                    return suggestions[selectedSuggestion]
-                }
-                return name
+                return `${parentName}/${name}`
         }
     }
 
     const isCreateDisabled = () => {
-        return !name.trim() || !!error || !!validateInput(name)
+        return !name.trim() || !!error
     }
 
     return (
@@ -419,48 +262,6 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
                                     }
                                 }}
                             />
-
-                            {showSuggestions && suggestions.length > 0 && (
-                                <Paper
-                                    elevation={3}
-                                    sx={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        right: 0,
-                                        zIndex: 1000,
-                                        maxHeight: '150px',
-                                        overflow: 'auto',
-                                        mt: 0.5
-                                    }}
-                                >
-                                    <List
-                                        ref={suggestionsListRef}
-                                        dense
-                                        sx={{p: 0}}
-                                    >
-                                        {suggestions.map((suggestion, index) => (
-                                            <ListItemButton
-                                                key={suggestion}
-                                                selected={index === selectedSuggestion}
-                                                onClick={() => handleSuggestionClick(suggestion)}
-                                                sx={{py: 1}}
-                                            >
-                                                <ListItemText
-                                                    primary={`${suggestion} ${(index === selectedSuggestion) ? "Tab to select" : ""}`}
-                                                    slotProps={{
-                                                        primary: {
-                                                            variant: 'body1',
-                                                            fontFamily: 'monospace',
-                                                            fontSize: '1rem'
-                                                        }
-                                                    }}
-                                                />
-                                            </ListItemButton>
-                                        ))}
-                                    </List>
-                                </Paper>
-                            )}
                         </Box>
 
                         {/* Preview Section */}

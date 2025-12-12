@@ -9,6 +9,9 @@ import (
 
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/docker/compose"
+	"github.com/RA341/dockman/internal/docker/container"
+	"github.com/RA341/dockman/internal/docker/updater"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/rs/zerolog/log"
@@ -31,13 +34,13 @@ type Service struct {
 	userConfig config.Store
 	updaterCtx chan interface{}
 
-	imageUpdateStore docker.Store
+	imageUpdateStore updater.Store
 	updater          UpdaterConfigProvider
 }
 
 func NewService(
 	ssh *ssh.Service,
-	store docker.Store,
+	store updater.Store,
 	userConfig config.Store,
 	composeRoot ComposeRootProvider,
 	updaterUrl UpdaterConfigProvider,
@@ -101,10 +104,10 @@ func (srv *Service) StartContainerUpdater() {
 	tick := time.NewTicker(updateInterval)
 	defer tick.Stop()
 
-	var opts []docker.UpdateOption
+	var opts []updater.UpdateOption
 	if userConfig.ContainerUpdater.NotifyOnly {
 		log.Info().Msg("notify only mode enabled, only image update notifications will be sent")
-		opts = append(opts, docker.WithNotifyOnly())
+		opts = append(opts, updater.WithNotifyOnly())
 	}
 
 	for {
@@ -120,10 +123,12 @@ func (srv *Service) StartContainerUpdater() {
 	}
 }
 
-func (srv *Service) UpdateContainers(opts ...docker.UpdateOption) {
+// todo move to docker/updater
+
+func (srv *Service) UpdateContainers(opts ...updater.UpdateOption) {
 	updateHost := func(name string, dock *ConnectedDockerClient) error {
 		cli := srv.loadDockerService(name, dock)
-		err := cli.Container.ContainersUpdateAll(context.Background(), opts...)
+		err := cli.Updater.ContainersUpdateAll(context.Background(), opts...)
 		if err != nil {
 			return fmt.Errorf("error occured while updating containers for host: %s\n%w", name, err)
 		}
@@ -287,24 +292,25 @@ func (srv *Service) SwitchClient(name string) error {
 func (srv *Service) loadDockerService(name string, mach *ConnectedDockerClient) *docker.Service {
 	// to add direct links to services
 	composeRoot := srv.composeRoot()
-	if name != docker.LocalClient {
+	if name != container.LocalClient {
 		composeRoot = filepath.Join(composeRoot, git.DockmanRemoteFolder, name)
 	}
 	log.Debug().Str("host", name).Str("composeRoot", composeRoot).Msg("compose root for client")
 
 	var localAddr string
-	var syncer docker.Syncer
-	if name == docker.LocalClient {
+	var syncer compose.Syncer
+	if name == container.LocalClient {
 		// todo load from service
 		localAddr = srv.localAddr()
-		syncer = &docker.NoopSyncer{}
+		syncer = &compose.NoopSyncer{}
 	} else {
-		localAddr = mach.dockerClient.DaemonHost()
-		syncer = docker.NewSFTPSyncer(mach.ssh.SftpClient, composeRoot)
+		localAddr = mach.mobyClient.DaemonHost()
+		syncer = compose.NewSFTPSyncer(mach.ssh.SftpClient, composeRoot)
 	}
 
 	service := docker.NewService(
 		localAddr,
+		mach.mobyClient,
 		mach.dockerClient,
 		syncer,
 		srv.imageUpdateStore,
