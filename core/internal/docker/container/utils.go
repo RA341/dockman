@@ -13,7 +13,9 @@ import (
 
 func (s *Service) getAndFormatStats(ctx context.Context, info container.Summary) (Stats, error) {
 	contId := info.ID[:12]
-	stats, err := s.Client.ContainerStats(ctx, info.ID, client.ContainerStatsOptions{})
+	stats, err := s.Client.ContainerStats(ctx, info.ID, client.ContainerStatsOptions{
+		IncludePreviousSample: true,
+	})
 	if err != nil {
 		return Stats{}, fmt.Errorf("failed to get stats for cont %s: %w", contId, err)
 	}
