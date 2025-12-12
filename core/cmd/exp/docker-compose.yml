@@ -1,0 +1,13 @@
+services:
+  web-app-test:
+    image: nginx:alpine
+    container_name: test_web_app
+    ports:
+      - "8002:80"
+    restart: always
+
+  alpine:
+    image: alpine
+    container_name: test_api_service
+    command: [ "sh", "-c", "while true; do echo $(date) - Hello World; sleep 2; done" ]
+    restart: on-failure

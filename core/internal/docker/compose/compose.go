@@ -17,8 +17,9 @@ import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/compose/v2/pkg/api"
-	"github.com/docker/compose/v2/pkg/compose"
+	"github.com/docker/compose/v5/cmd/display"
+	"github.com/docker/compose/v5/pkg/api"
+	"github.com/docker/compose/v5/pkg/compose"
 	docker "github.com/docker/docker/client"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -253,7 +254,7 @@ func (s *Service) getProjectImageDigests(ctx context.Context, project *types.Pro
 func (s *Service) LoadComposeClient(outputStream io.Writer) (api.Compose, error) {
 	dockerCli, err := command.NewDockerCli(
 		command.WithAPIClient(s.DockClient),
-		command.WithCombinedStreams(outputStream),
+		command.WithOutputStream(outputStream),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cli client to docker for compose: %w", err)
@@ -270,7 +271,10 @@ func (s *Service) LoadComposeClient(outputStream io.Writer) (api.Compose, error)
 
 	return compose.NewComposeService(
 		dockerCli,
-	), nil
+		compose.WithOutputStream(outputStream),
+		compose.WithErrorStream(outputStream),
+		compose.WithEventProcessor(display.Plain(outputStream)),
+	)
 }
 
 func (s *Service) ComposeValidate(ctx context.Context, shortName string) []error {

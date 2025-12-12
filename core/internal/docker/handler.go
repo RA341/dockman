@@ -25,7 +25,7 @@ import (
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
 	"github.com/compose-spec/compose-go/v2/types"
-	"github.com/docker/compose/v2/pkg/api"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
@@ -574,14 +574,11 @@ func (h *Handler) executeComposeStreamCommand(
 	//log.Debug().Strs("ssdd", services).Msg("compose stream")
 
 	pipeWriter, wg := streamManager(func(val string) error {
-		err = responseStream.Send(
+		return responseStream.Send(
 			&v1.LogsMessage{Message: val},
 		)
-		if err != nil {
-			return err
-		}
-		return nil
 	})
+	defer fileutil.Close(pipeWriter)
 
 	composeClient, err := h.compose().LoadComposeClient(pipeWriter)
 	if err != nil {
@@ -701,7 +698,7 @@ func streamManager(streamFn func(val string) error) (*io.PipeWriter, *sync.WaitG
 
 		scanner := bufio.NewScanner(pipeReader)
 		for scanner.Scan() {
-			err := streamFn(fmt.Sprintf("%s\n", scanner.Text()))
+			err := streamFn(fmt.Sprintf("%s\r\n", scanner.Text()))
 			if err != nil {
 				log.Warn().Err(err).Msg("Failed to send message to stream")
 			}
