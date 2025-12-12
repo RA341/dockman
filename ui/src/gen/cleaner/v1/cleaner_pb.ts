@@ -28,25 +28,25 @@ export const SpaceStatusRequestSchema: GenMessage<SpaceStatusRequest> = /*@__PUR
  * @generated from message cleaner.v1.SpaceStatusResponse
  */
 export type SpaceStatusResponse = Message<"cleaner.v1.SpaceStatusResponse"> & {
-    /**
-     * @generated from field: cleaner.v1.SpaceStat Containers = 1;
-     */
-    Containers?: SpaceStat;
+  /**
+   * @generated from field: cleaner.v1.SpaceStat Containers = 1;
+   */
+  Containers?: SpaceStat;
 
-    /**
-     * @generated from field: cleaner.v1.SpaceStat Images = 2;
-     */
-    Images?: SpaceStat;
+  /**
+   * @generated from field: cleaner.v1.SpaceStat Images = 2;
+   */
+  Images?: SpaceStat;
 
-    /**
-     * @generated from field: cleaner.v1.SpaceStat Volumes = 3;
-     */
-    Volumes?: SpaceStat;
+  /**
+   * @generated from field: cleaner.v1.SpaceStat Volumes = 3;
+   */
+  Volumes?: SpaceStat;
 
-    /**
-     * @generated from field: cleaner.v1.SpaceStat BuildCache = 4;
-     */
-    BuildCache?: SpaceStat;
+  /**
+   * @generated from field: cleaner.v1.SpaceStat BuildCache = 4;
+   */
+  BuildCache?: SpaceStat;
 };
 
 /**
@@ -60,25 +60,25 @@ export const SpaceStatusResponseSchema: GenMessage<SpaceStatusResponse> = /*@__P
  * @generated from message cleaner.v1.SpaceStat
  */
 export type SpaceStat = Message<"cleaner.v1.SpaceStat"> & {
-    /**
-     * @generated from field: int64 ActiveCount = 1;
-     */
-    ActiveCount: bigint;
+  /**
+   * @generated from field: int64 ActiveCount = 1;
+   */
+  ActiveCount: bigint;
 
-    /**
-     * @generated from field: int64 TotalCount = 2;
-     */
-    TotalCount: bigint;
+  /**
+   * @generated from field: int64 TotalCount = 2;
+   */
+  TotalCount: bigint;
 
-    /**
-     * @generated from field: string Reclaimable = 3;
-     */
-    Reclaimable: string;
+  /**
+   * @generated from field: string Reclaimable = 3;
+   */
+  Reclaimable: string;
 
-    /**
-     * @generated from field: string TotalSize = 4;
-     */
-    TotalSize: string;
+  /**
+   * @generated from field: string TotalSize = 4;
+   */
+  TotalSize: string;
 };
 
 /**
@@ -109,10 +109,10 @@ export const EditConfigRequestSchema: GenMessage<EditConfigRequest> = /*@__PURE_
  * @generated from message cleaner.v1.EditConfigResponse
  */
 export type EditConfigResponse = Message<"cleaner.v1.EditConfigResponse"> & {
-    /**
-     * @generated from field: cleaner.v1.PruneConfig config = 1;
-     */
-    config?: PruneConfig;
+  /**
+   * @generated from field: cleaner.v1.PruneConfig config = 1;
+   */
+  config?: PruneConfig;
 };
 
 /**
@@ -156,40 +156,40 @@ export const GetConfigResponseSchema: GenMessage<GetConfigResponse> = /*@__PURE_
  * @generated from message cleaner.v1.PruneHistory
  */
 export type PruneHistory = Message<"cleaner.v1.PruneHistory"> & {
-    /**
-     * @generated from field: string TimeRan = 1;
-     */
-    TimeRan: string;
+  /**
+   * @generated from field: string TimeRan = 1;
+   */
+  TimeRan: string;
 
-    /**
-     * @generated from field: string status = 2;
-     */
-    status: string;
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
 
-    /**
-     * @generated from field: string Volumes = 3;
-     */
-    Volumes: string;
+  /**
+   * @generated from field: string Volumes = 3;
+   */
+  Volumes: string;
 
-    /**
-     * @generated from field: string Networks = 4;
-     */
-    Networks: string;
+  /**
+   * @generated from field: string Networks = 4;
+   */
+  Networks: string;
 
-    /**
-     * @generated from field: string Images = 5;
-     */
-    Images: string;
+  /**
+   * @generated from field: string Images = 5;
+   */
+  Images: string;
 
-    /**
-     * @generated from field: string Containers = 6;
-     */
-    Containers: string;
+  /**
+   * @generated from field: string Containers = 6;
+   */
+  Containers: string;
 
-    /**
-     * @generated from field: string BuildCache = 7;
-     */
-    BuildCache: string;
+  /**
+   * @generated from field: string BuildCache = 7;
+   */
+  BuildCache: string;
 };
 
 /**
@@ -216,10 +216,10 @@ export const ListHistoryRequestSchema: GenMessage<ListHistoryRequest> = /*@__PUR
  * @generated from message cleaner.v1.ListHistoryResponse
  */
 export type ListHistoryResponse = Message<"cleaner.v1.ListHistoryResponse"> & {
-    /**
-     * @generated from field: repeated cleaner.v1.PruneHistory history = 1;
-     */
-    history: PruneHistory[];
+  /**
+   * @generated from field: repeated cleaner.v1.PruneHistory history = 1;
+   */
+  history: PruneHistory[];
 };
 
 /**
@@ -339,11 +339,11 @@ export const CleanerService: GenService<{
    * @generated from rpc cleaner.v1.CleanerService.SpaceStatus
    */
   spaceStatus: {
-      methodKind: "unary";
-      input: typeof SpaceStatusRequestSchema;
-      output: typeof SpaceStatusResponseSchema;
+    methodKind: "unary";
+    input: typeof SpaceStatusRequestSchema;
+    output: typeof SpaceStatusResponseSchema;
   },
-    /**
+  /**
    * @generated from rpc cleaner.v1.CleanerService.GetConfig
    */
   getConfig: {

@@ -8,7 +8,6 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/pkg/fileutil"

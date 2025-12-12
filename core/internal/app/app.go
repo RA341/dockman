@@ -20,6 +20,7 @@ import (
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/database"
 	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/docker/container"
 	dm "github.com/RA341/dockman/internal/docker_manager"
 	"github.com/RA341/dockman/internal/files"
 	"github.com/RA341/dockman/internal/git"
@@ -77,7 +78,7 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 	composeRoot := setupComposeRoot(conf.ComposeRoot)
 	composeRootProvider := func() string {
 		mach := dockerManagerSrv.GetActiveClient()
-		if mach == docker.LocalClient {
+		if mach == container.LocalClient {
 			// return normal compose root for local client
 			return composeRoot
 		}
@@ -100,7 +101,10 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 
 	userConfigSrv := config.NewService(
 		dbSrv.UserConfigDB,
-		dockerManagerSrv.ResetContainerUpdater,
+		func() {
+			// todo container updater
+			//dockerManagerSrv.ResetContainerUpdater
+		},
 	)
 
 	cleanerStore := cleaner.NewStore(gormDB)
@@ -148,18 +152,6 @@ func setupComposeRoot(composeRoot string) (cr string) {
 	}
 
 	return composeRoot
-}
-
-func (a *App) Close() error {
-	if err := a.File.Close(); err != nil {
-		return fmt.Errorf("failed to close file service: %w", err)
-	}
-
-	if err := a.DB.Close(); err != nil {
-		return fmt.Errorf("failed to close database service: %w", err)
-	}
-
-	return nil
 }
 
 func (a *App) registerApiRoutes(mux *http.ServeMux) {
