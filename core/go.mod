@@ -11,6 +11,7 @@ require (
 	// todo move to v29 when docker/compose and docker/buildx is compatible
 	//github.com/docker/cli v29.1.2+incompatible
 	github.com/docker/cli v28.5.2+incompatible
+	github.com/docker/compose/v5 v5.0.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gliderlabs/ssh v0.3.8
@@ -33,12 +34,11 @@ require (
 	golang.org/x/net v0.48.0
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.19.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
 
-require github.com/docker/compose/v5 v5.0.0
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
