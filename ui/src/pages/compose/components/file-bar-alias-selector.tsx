@@ -1,13 +1,5 @@
 import React, {useState} from 'react';
-import {
-    Menu,
-    MenuItem,
-    Typography,
-    Box,
-    ListItemIcon,
-    ListItemText,
-    Chip
-} from '@mui/material';
+import {Box, ListItemIcon, ListItemText, Menu, MenuItem, Typography} from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
@@ -32,8 +24,7 @@ const AliasSelector = () => {
         handleClose();
     };
 
-    // Helper to determine display text
-    // const currentLabel = activeAlias === "" ? "Files" : activeAlias;
+    const currentLabel = activeAlias === "" ? "Files" : activeAlias;
 
     return (
         <>
@@ -50,7 +41,7 @@ const AliasSelector = () => {
                 }}
             >
                 <Typography variant="h6" fontWeight="bold">
-                    Files
+                    {currentLabel}
                 </Typography>
 
                 {/* Visual indicator that this is a dropdown */}
@@ -62,15 +53,6 @@ const AliasSelector = () => {
                 />
 
                 {/* Optional: Show active alias as a chip next to title if not empty */}
-                {activeAlias && (
-                    <Chip
-                        label={activeAlias}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        sx={{ml: 1, cursor: 'pointer'}}
-                    />
-                )}
             </Box>
 
             {/* Dropdown Menu */}

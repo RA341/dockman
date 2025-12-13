@@ -122,6 +122,12 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
                 setError('')
                 return
             }
+            switch (e.key) {
+                case 'Enter':
+                    e.preventDefault()
+                    handleConfirm()
+                    break
+            }
         }
     }
 

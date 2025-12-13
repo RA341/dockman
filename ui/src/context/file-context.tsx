@@ -39,9 +39,12 @@ export function FilesProvider({children}: { children: ReactNode }) {
                 showError(err)
                 setFiles([])
             } else if (val) {
+                // entryInsertIndex of 1 is at root
                 if (entryInsertIndex.length < 1) {
+                    // console.log("inserting at root")
                     setFiles(val.entries)
                 } else {
+                    // console.log(`inserting at ${entryInsertIndex}`)
                     // sub index
                     setFiles(prevState => {
                         const newList = [...prevState]
@@ -169,9 +172,9 @@ function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[
     current[lastIndex].subFiles = value;
 }
 
-function getDir(filePath: string): string {
+export function getDir(filePath: string): string {
     const lastSlash = filePath.lastIndexOf('/');
-    if (lastSlash === -1) return '.';
-    if (lastSlash === 0) return '/';
+    if (lastSlash === -1) return '';
+    if (lastSlash === 0) return '';
     return filePath.substring(0, lastSlash);
 }

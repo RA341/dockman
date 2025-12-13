@@ -101,6 +101,9 @@ tasks:
       CMD: "{{index .MATCH 0}}"
       OUT_DIR: ../{{.CORE_DIR}}{{.GO_CMD_DIR}}/{{.CMD}}
     desc: "Builds ui and copies for embed binary. Usage: task ui:<go cmd target>"
+    sources:
+    - "**/*.ts"
+    - "**/*.tsx"
     cmds:
       - task: ui
       - rm -rf {{.OUT_DIR}}/dist
@@ -152,6 +155,16 @@ tasks:
     cmds:
       - task: go:b:{{.CMD_NAME}}
       - ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
+
+  desk:
+    dir: "{{.BUILD_DIR}}"
+    desc: "Builds and runs a Go desktop target"
+    vars:
+      CMD_NAME: "desktop"
+      EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
+    cmds:
+      - task ui:b:{{.CMD_NAME}}
+      - task go:{{.CMD_NAME}}
 
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"

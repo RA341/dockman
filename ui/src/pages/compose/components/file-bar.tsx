@@ -1,6 +1,6 @@
 import {useEffect} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
-import {Add as AddIcon, Search as SearchIcon} from '@mui/icons-material'
+import {Add as AddIcon, Refresh, Search as SearchIcon} from '@mui/icons-material'
 import {useHost} from "../../../hooks/host.ts"
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
 import {useTelescope} from "../dialogs/search/search-hook.ts";
@@ -20,8 +20,11 @@ export function FileList() {
 
     const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
 
+    const {listFiles} = useFiles()
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+
             if ((event.altKey) && event.key === 's') {
                 event.preventDefault()
                 showTelescope()
@@ -37,18 +40,6 @@ export function FileList() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedHost])
-
-    // const handleToggle = useCallback((dirName: string) => {
-    //     setOpenDirs(prevOpenDirs => {
-    //         const newOpenDirs = new Set(prevOpenDirs)
-    //         if (newOpenDirs.has(dirName)) {
-    //             newOpenDirs.delete(dirName)
-    //         } else {
-    //             newOpenDirs.add(dirName)
-    //         }
-    //         return newOpenDirs
-    //     })
-    // }, [setOpenDirs])
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
 
@@ -75,6 +66,22 @@ export function FileList() {
                     <AliasSelector/>
 
                     <Box sx={{flexGrow: 1}}/>
+
+                    <Tooltip arrow title={
+                        <ShortcutFormatter
+                            title="Reload List"
+                            keyCombo={["ALT", "R"]}
+                        />
+                    }>
+                        <IconButton
+                            size="small"
+                            onClick={() => listFiles()}
+                            color="primary"
+                            aria-label="Search"
+                        >
+                            <Refresh fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
 
                     <Tooltip arrow title={
                         <ShortcutFormatter

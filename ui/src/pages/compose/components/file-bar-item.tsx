@@ -21,6 +21,7 @@ import {amber} from "@mui/material/colors";
 import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
 import {useFiles} from "../../../hooks/files.ts";
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
+import {getDir} from "../../../context/file-context.tsx";
 
 export const FileBarItem = ({entry, index}: { entry: FsEntry; index: number }) => {
     return (
@@ -76,9 +77,9 @@ const FolderItemDisplay = ({entry, depthIndex}: {
         if (folderOpen && !entry.isFetched && !isFetchingMore) {
             fetchMore().then()
         }
-    }, [folderOpen])
+    }, [folderOpen, entry.isFetched])
 
-    const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(true, depthIndex, name)
+    const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(entry, depthIndex)
 
     return (
         <>
@@ -157,7 +158,7 @@ const FileItemDisplay = (
     const isSelected = useIsSelected(filename);
     const displayName = getEntryDisplayName(filename);
 
-    const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(false, depthIndex, filename)
+    const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(entry, depthIndex)
 
     return (
         <>
@@ -200,7 +201,7 @@ const useIsSelected = (entryPath: string) => {
     return location.pathname === targetPath;
 };
 
-const useFileMenuCtx = (isDir: boolean, depthIndex: number[], filename: string) => {
+const useFileMenuCtx = (entry: FsEntry, depthIndex: number[]) => {
     const [contextMenu, setContextMenu] = useState<{
         mouseX: number;
         mouseY: number;
@@ -208,6 +209,7 @@ const useFileMenuCtx = (isDir: boolean, depthIndex: number[], filename: string) 
 
     const handleContextMenu = (event: MouseEvent) => {
         event.preventDefault();
+        event.stopPropagation()
         setContextMenu(
             contextMenu === null
                 ? {mouseX: event.clientX - 2, mouseY: event.clientY - 4}
@@ -222,7 +224,25 @@ const useFileMenuCtx = (isDir: boolean, depthIndex: number[], filename: string) 
     const {showDialog: showAdd} = useAddFile()
     const {showDialog: showDelete} = useFileDelete()
 
+    const filename = entry.filename
+
     const contextActions = [
+        (
+            <MenuItem onClick={() => {
+                closeCtxMenu()
+                showAdd(
+                    entry.isDir ?
+                        filename :
+                        getDir(filename),
+                    entry.isDir ?
+                        depthIndex :
+                        // remove last index since it would be of the actual file
+                        depthIndex.slice(0, -1)
+                )
+            }}>
+                Add
+            </MenuItem>
+        ),
         // todo
         // (
         //     <MenuItem onClick={() => {
@@ -233,7 +253,7 @@ const useFileMenuCtx = (isDir: boolean, depthIndex: number[], filename: string) 
         (
             <MenuItem onClick={() => {
             }}>
-                Edit
+                Rename
             </MenuItem>
         ),
         (
@@ -246,14 +266,9 @@ const useFileMenuCtx = (isDir: boolean, depthIndex: number[], filename: string) 
         )
     ]
 
-    if (isDir) {
+    if (entry.isDir) {
         contextActions.unshift(
-            <MenuItem onClick={() => {
-                closeCtxMenu()
-                showAdd(filename, depthIndex)
-            }}>
-                Add
-            </MenuItem>
+
         );
     }
 
