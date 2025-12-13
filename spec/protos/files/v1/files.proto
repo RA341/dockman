@@ -69,6 +69,7 @@ message FsEntry {
   repeated FsEntry subFiles = 4;
   // flag for lazy loading
   bool isFetched = 5;
+  string isComposeFolder = 6;
 }
 
 message RenameFile {

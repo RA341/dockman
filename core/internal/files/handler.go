@@ -3,6 +3,7 @@ package files
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/RA341/dockman/generated/files/v1"
@@ -30,22 +31,44 @@ func (h *Handler) List(_ context.Context, req *connect.Request[v1.ListRequest]) 
 		return nil, err
 	}
 
+	conf := h.srv.dy.GetDockmanYaml()
+
 	var rpcResult = make([]*v1.FsEntry, 0, len(result))
 	for _, entry := range result {
-		rpcResult = append(rpcResult, &v1.FsEntry{
+		var composeFileName = ""
+		multipleComposeFiles := false
+
+		ele := &v1.FsEntry{
 			Filename:  entry.fullpath,
 			IsDir:     entry.isDir,
 			IsFetched: true,
-			SubFiles: ToMap(entry.children, func(t Entry) *v1.FsEntry {
+			SubFiles: ToMap(entry.children, func(childEntry Entry) *v1.FsEntry {
+				hasComposeExt := strings.HasSuffix(childEntry.fullpath, "compose.yaml") ||
+					strings.HasSuffix(childEntry.fullpath, "compose.yml")
+
+				if !multipleComposeFiles && conf.UseComposeFolders && !childEntry.isDir && hasComposeExt {
+					if composeFileName != "" {
+						// previously set
+						multipleComposeFiles = true
+					}
+					composeFileName = childEntry.fullpath
+				}
+
 				return &v1.FsEntry{
-					Filename: t.fullpath,
-					IsDir:    t.isDir,
+					Filename: childEntry.fullpath,
+					IsDir:    childEntry.isDir,
 					// max depth is 2 so indicate that it is unfetched
 					IsFetched: false,
 					SubFiles:  []*v1.FsEntry{},
 				}
 			}),
-		})
+		}
+
+		if !multipleComposeFiles {
+			ele.IsComposeFolder = composeFileName
+		}
+
+		rpcResult = append(rpcResult, ele)
 	}
 
 	return connect.NewResponse(&v1.ListResponse{Entries: rpcResult}), nil

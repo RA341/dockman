@@ -511,9 +511,10 @@ type FsEntry struct {
 	IsDir    bool                   `protobuf:"varint,3,opt,name=isDir,proto3" json:"isDir,omitempty"`
 	SubFiles []*FsEntry             `protobuf:"bytes,4,rep,name=subFiles,proto3" json:"subFiles,omitempty"`
 	// flag for lazy loading
-	IsFetched     bool `protobuf:"varint,5,opt,name=isFetched,proto3" json:"isFetched,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	IsFetched       bool   `protobuf:"varint,5,opt,name=isFetched,proto3" json:"isFetched,omitempty"`
+	IsComposeFolder string `protobuf:"bytes,6,opt,name=isComposeFolder,proto3" json:"isComposeFolder,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *FsEntry) Reset() {
@@ -572,6 +573,13 @@ func (x *FsEntry) GetIsFetched() bool {
 		return x.IsFetched
 	}
 	return false
+}
+
+func (x *FsEntry) GetIsComposeFolder() string {
+	if x != nil {
+		return x.IsComposeFolder
+	}
+	return ""
 }
 
 type RenameFile struct {
@@ -1076,12 +1084,13 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05alias\x18\x02 \x01(\tR\x05alias\",\n" +
 	"\x0eFormatResponse\x12\x1a\n" +
-	"\bcontents\x18\x01 \x01(\tR\bcontents\"\x88\x01\n" +
+	"\bcontents\x18\x01 \x01(\tR\bcontents\"\xb2\x01\n" +
 	"\aFsEntry\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05isDir\x18\x03 \x01(\bR\x05isDir\x12-\n" +
 	"\bsubFiles\x18\x04 \x03(\v2\x11.files.v1.FsEntryR\bsubFiles\x12\x1c\n" +
-	"\tisFetched\x18\x05 \x01(\bR\tisFetched\"f\n" +
+	"\tisFetched\x18\x05 \x01(\bR\tisFetched\x12(\n" +
+	"\x0fisComposeFolder\x18\x06 \x01(\tR\x0fisComposeFolder\"f\n" +
 	"\n" +
 	"RenameFile\x12 \n" +
 	"\voldFilePath\x18\x01 \x01(\tR\voldFilePath\x12 \n" +
