@@ -22,15 +22,18 @@ import {LogsPanel} from "./components/logs-panel.tsx";
 import {useActiveComposeFile, useOpenFiles} from "./state/state.tsx";
 import CenteredMessage from "../../components/centered-message.tsx";
 import {useAlias} from "../../context/alias-context.tsx";
+import {RenameFilesProvider} from "./dialogs/rename/rename-context.tsx";
 
 export const ComposePage = () => {
     return (
         <FilesProvider>
             <TelescopeProvider>
                 <AddFilesProvider>
-                    <DeleteFileProvider>
-                        <ComposePageInner/>
-                    </DeleteFileProvider>
+                    <RenameFilesProvider>
+                        <DeleteFileProvider>
+                            <ComposePageInner/>
+                        </DeleteFileProvider>
+                    </RenameFilesProvider>
                 </AddFilesProvider>
             </TelescopeProvider>
         </FilesProvider>

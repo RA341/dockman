@@ -100,7 +100,6 @@ export function FilesProvider({children}: { children: ReactNode }) {
     const renameFile = async (
         oldFilename: string,
         newFileName: string,
-        entryInsertIndex?: number[],
     ) => {
         const {err} = await callRPC(() => client.rename({
             newFilePath: newFileName,
@@ -118,10 +117,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
             }
         }
 
-        // Slice off the last index to get the PARENT folder's index not needed on insert
-        const parentFolderIndex = entryInsertIndex ? entryInsertIndex.slice(0, -1) : [];
-
-        await fetchFiles(getDir(newFileName), parentFolderIndex)
+        await fetchFiles("", [])
     }
 
     useEffect(() => {

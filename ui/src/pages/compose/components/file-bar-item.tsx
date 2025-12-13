@@ -22,6 +22,7 @@ import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
 import {useFiles} from "../../../hooks/files.ts";
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
 import {getDir} from "../../../context/file-context.tsx";
+import {useRenameFile} from "../dialogs/rename/rename-hook.ts";
 
 export const FileBarItem = ({entry, index}: { entry: FsEntry; index: number }) => {
     return (
@@ -223,6 +224,7 @@ const useFileMenuCtx = (entry: FsEntry, depthIndex: number[]) => {
 
     const {showDialog: showAdd} = useAddFile()
     const {showDialog: showDelete} = useFileDelete()
+    const {showDialog: showRename} = useRenameFile()
 
     const filename = entry.filename
 
@@ -252,6 +254,8 @@ const useFileMenuCtx = (entry: FsEntry, depthIndex: number[]) => {
         // ),
         (
             <MenuItem onClick={() => {
+                closeCtxMenu()
+                showRename(filename, depthIndex)
             }}>
                 Rename
             </MenuItem>
@@ -265,12 +269,6 @@ const useFileMenuCtx = (entry: FsEntry, depthIndex: number[]) => {
             </MenuItem>
         )
     ]
-
-    if (entry.isDir) {
-        contextActions.unshift(
-
-        );
-    }
 
     return {closeCtxMenu, contextActions, contextMenu, handleContextMenu}
 }

@@ -6,7 +6,7 @@ export interface FilesContextType {
     isLoading: boolean
     addFile: (filename: string, isDir: boolean, entryInsertIndex?: number[]) => Promise<void>
     deleteFile: (filename: string, entryInsertIndex?: number[]) => Promise<void>
-    renameFile: (olfFilename: string, newFile: string, entryInsertIndex?: number[]) => Promise<void>
+    renameFile: (oldFilename: string, newFile: string) => Promise<void>
     listFiles: (path?: string, entryInsertIndex?: number[]) => Promise<void>
     refetch: () => Promise<void>
 }
