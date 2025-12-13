@@ -31,7 +31,10 @@ export function FilesProvider({children}: { children: ReactNode }) {
                 setIsLoading(true)
             }
 
-            const {val, err} = await callRPC(() => client.list({path: path, alias: activeAlias}))
+            const {val, err} = await callRPC(() => client.list({
+                path: path,
+                alias: activeAlias
+            }))
             if (err) {
                 showError(err)
                 setFiles([])
@@ -72,7 +75,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
         await fetchFiles(getDir(filename), entryInsertIndex)
     }, [client, fetchFiles, navigate])
 
-    const deleteFile = useCallback(async (
+    const deleteFile = async (
         filename: string,
         entryInsertIndex?: number[]
     ) => {
@@ -85,8 +88,11 @@ export function FilesProvider({children}: { children: ReactNode }) {
             closeTab(filename)
         }
 
-        await fetchFiles(getDir(filename), entryInsertIndex)
-    }, [client, fetchFiles, location.pathname, navigate])
+        // Slice off the last index to get the PARENT folder's index not needed on insert
+        const parentFolderIndex = entryInsertIndex ? entryInsertIndex.slice(0, -1) : [];
+
+        await fetchFiles(getDir(filename), parentFolderIndex)
+    }
 
     const renameFile = async (
         oldFilename: string,
@@ -105,12 +111,14 @@ export function FilesProvider({children}: { children: ReactNode }) {
             closeTab(oldFilename)
             const currentPath = location.pathname
             if (currentPath === `/stacks/${oldFilename}`) {
-                // If the user is currently viewing the renamed file, navigate to renamed file
                 navigate(`/stacks/${newFileName}`)
             }
         }
 
-        await fetchFiles(getDir(newFileName), entryInsertIndex)
+        // Slice off the last index to get the PARENT folder's index not needed on insert
+        const parentFolderIndex = entryInsertIndex ? entryInsertIndex.slice(0, -1) : [];
+
+        await fetchFiles(getDir(newFileName), parentFolderIndex)
     }
 
     useEffect(() => {
