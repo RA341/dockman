@@ -182,6 +182,7 @@ func (d *DockmanYaml) toProto() *v1.DockmanYaml {
 	return &v1.DockmanYaml{
 		DisableComposeQuickActions: d.DisableComposeQuickActions,
 		UseComposeFolders:          d.UseComposeFolders,
+		SearchLimit:                int32(d.SearchLimit),
 		VolumesPage:                d.VolumesPage.toProto(),
 		TabLimit:                   d.TabLimit,
 		NetworkPage:                d.NetworkPage.toProto(),

@@ -742,6 +742,7 @@ type DockmanYaml struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	UseComposeFolders          bool                   `protobuf:"varint,1,opt,name=useComposeFolders,proto3" json:"useComposeFolders,omitempty"`
 	DisableComposeQuickActions bool                   `protobuf:"varint,7,opt,name=disableComposeQuickActions,proto3" json:"disableComposeQuickActions,omitempty"`
+	SearchLimit                int32                  `protobuf:"varint,8,opt,name=searchLimit,proto3" json:"searchLimit,omitempty"`
 	TabLimit                   int32                  `protobuf:"varint,6,opt,name=tabLimit,proto3" json:"tabLimit,omitempty"`
 	VolumesPage                *VolumesConfig         `protobuf:"bytes,2,opt,name=volumesPage,proto3" json:"volumesPage,omitempty"`
 	NetworkPage                *NetworkConfig         `protobuf:"bytes,3,opt,name=networkPage,proto3" json:"networkPage,omitempty"`
@@ -793,6 +794,13 @@ func (x *DockmanYaml) GetDisableComposeQuickActions() bool {
 		return x.DisableComposeQuickActions
 	}
 	return false
+}
+
+func (x *DockmanYaml) GetSearchLimit() int32 {
+	if x != nil {
+		return x.SearchLimit
+	}
+	return 0
 }
 
 func (x *DockmanYaml) GetTabLimit() int32 {
@@ -1100,10 +1108,11 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05isDir\x18\x02 \x01(\bR\x05isDir\x12\x14\n" +
 	"\x05alias\x18\x03 \x01(\tR\x05alias\"\a\n" +
-	"\x05Empty\"\x83\x03\n" +
+	"\x05Empty\"\xa5\x03\n" +
 	"\vDockmanYaml\x12,\n" +
 	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +
-	"\x1adisableComposeQuickActions\x18\a \x01(\bR\x1adisableComposeQuickActions\x12\x1a\n" +
+	"\x1adisableComposeQuickActions\x18\a \x01(\bR\x1adisableComposeQuickActions\x12 \n" +
+	"\vsearchLimit\x18\b \x01(\x05R\vsearchLimit\x12\x1a\n" +
 	"\btabLimit\x18\x06 \x01(\x05R\btabLimit\x129\n" +
 	"\vvolumesPage\x18\x02 \x01(\v2\x17.files.v1.VolumesConfigR\vvolumesPage\x129\n" +
 	"\vnetworkPage\x18\x03 \x01(\v2\x17.files.v1.NetworkConfigR\vnetworkPage\x123\n" +

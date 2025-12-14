@@ -4,7 +4,8 @@ const dockmanYamlFileYml = ".dockman.yml"
 const dockmanYamlFileYaml = ".dockman.yaml"
 
 var defaultDockmanYaml = DockmanYaml{
-	TabLimit: 5,
+	TabLimit:    5,
+	SearchLimit: 10,
 	VolumesPage: VolumesConfig{
 		Sort: Sort{
 			Field: "Volume Name",
@@ -54,6 +55,7 @@ type DockmanYaml struct {
 	ImagePage ImageConfig `yaml:"images"`
 
 	ContainerPage ContainerConfig `yaml:"containers"`
+	SearchLimit   int             `yaml:"searchLimit"`
 }
 
 type VolumesConfig struct {

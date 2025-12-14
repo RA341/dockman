@@ -113,7 +113,7 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 		}
 		query := string(msg)
 
-		results := h.srv.search(query, all, 20)
+		results := h.srv.search(query, all)
 
 		err = ws.WriteJSON(results)
 		if err != nil {

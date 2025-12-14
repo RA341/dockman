@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -15,8 +14,8 @@ import (
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/pkg/fileutil"
 
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/rs/zerolog/log"
+	"github.com/sahilm/fuzzy"
 )
 
 type ActiveMachineFolderProvider func() string
@@ -306,22 +305,24 @@ func (s *Service) Close() error {
 }
 
 type SearchResult struct {
-	Matched string
+	Value   string
+	Indexes []int
 }
 
-func (s *Service) search(query string, allPaths []string, limit int) []SearchResult {
-	matches := fuzzy.RankFind(query, allPaths) // [{whl cartwheel 6 0} {whl wheel 2 2}]
-	sort.Sort(matches)                         // [{whl wheel 2 2} {whl cartwheel 6 0}]
+func (s *Service) search(query string, allPaths []string) []SearchResult {
+	limit := s.dy.GetDockmanYaml().SearchLimit
+
+	matches := fuzzy.Find(query, allPaths)
 
 	if len(matches) < limit {
 		limit = len(matches)
 	}
-
-	results := make([]SearchResult, 0, limit)
-	for _, ma := range matches {
-		results = append(results, SearchResult{
-			Matched: ma.Target,
-		})
+	results := make([]SearchResult, limit)
+	for i := 0; i < limit; i++ {
+		results[i] = SearchResult{
+			Value:   matches[i].Str,
+			Indexes: matches[i].MatchedIndexes,
+		}
 	}
 
 	return results

@@ -30,14 +30,8 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 interface SearchResult {
-    Matched: string
-    score: number
-    highlight: number[]
-}
-
-interface TelescopeProps {
-    isVisible: boolean
-    onDismiss: () => void
+    Value: string
+    Indexes: number[]
 }
 
 const HighlightedText = ({text, indices}: { text: string; indices: number[] }) => {
@@ -57,7 +51,7 @@ const HighlightedText = ({text, indices}: { text: string; indices: number[] }) =
     )
 }
 
-function SearchUi({isVisible, onDismiss}: TelescopeProps) {
+function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () => void }) {
     const navigate = useNavigate()
     const {activeAlias} = useAlias()
 
@@ -86,7 +80,8 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
 
         try {
             socket = new WebSocket(getWSUrl(`api/file/search?${params.toString()}`))
-        } catch (e) {
+        } catch (e: unknown) {
+            console.error(`unknown err ${e}`)
             setError("Invalid WebSocket URL")
             return
         }
@@ -160,7 +155,7 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
             case 'Enter':
                 event.preventDefault()
                 if (activeIndex >= 0) {
-                    handleOpen(filteredFiles[activeIndex].Matched)
+                    handleOpen(filteredFiles[activeIndex].Value)
                 }
                 break
         }
@@ -235,12 +230,12 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
                         </Box>
                     ) : filteredFiles.length > 0 ? (
                         filteredFiles.map((result, index) => (
-                            <ListItem disablePadding key={`${result.Matched}-${index}`} ref={(el) => {
+                            <ListItem disablePadding key={`${result.Value}-${index}`} ref={(el) => {
                                 itemRefs.current[index] = el
                             }}>
                                 <ListItemButton
                                     selected={index === activeIndex}
-                                    onClick={() => handleOpen(result.Matched)}
+                                    onClick={() => handleOpen(result.Value)}
                                     sx={{
                                         '&.Mui-selected': {backgroundColor: '#334155'},
                                         '&:hover': {backgroundColor: '#334155'},
@@ -248,7 +243,10 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
                                 >
                                     <ListItemText
                                         primary={
-                                            <HighlightedText text={result.Matched} indices={result.highlight}/>
+                                            <HighlightedText
+                                                text={result.Value}
+                                                indices={result.Indexes}
+                                            />
                                         }
                                     />
                                 </ListItemButton>
