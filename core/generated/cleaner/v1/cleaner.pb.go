@@ -63,6 +63,7 @@ type SpaceStatusResponse struct {
 	Images        *SpaceStat             `protobuf:"bytes,2,opt,name=Images,proto3" json:"Images,omitempty"`
 	Volumes       *SpaceStat             `protobuf:"bytes,3,opt,name=Volumes,proto3" json:"Volumes,omitempty"`
 	BuildCache    *SpaceStat             `protobuf:"bytes,4,opt,name=BuildCache,proto3" json:"BuildCache,omitempty"`
+	Network       *SpaceStat             `protobuf:"bytes,5,opt,name=Network,proto3" json:"Network,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -121,6 +122,13 @@ func (x *SpaceStatusResponse) GetVolumes() *SpaceStat {
 func (x *SpaceStatusResponse) GetBuildCache() *SpaceStat {
 	if x != nil {
 		return x.BuildCache
+	}
+	return nil
+}
+
+func (x *SpaceStatusResponse) GetNetwork() *SpaceStat {
+	if x != nil {
+		return x.Network
 	}
 	return nil
 }
@@ -739,7 +747,7 @@ const file_cleaner_v1_cleaner_proto_rawDesc = "" +
 	"\n" +
 	"\x18cleaner/v1/cleaner.proto\x12\n" +
 	"cleaner.v1\"\x14\n" +
-	"\x12SpaceStatusRequest\"\xe3\x01\n" +
+	"\x12SpaceStatusRequest\"\x94\x02\n" +
 	"\x13SpaceStatusResponse\x125\n" +
 	"\n" +
 	"Containers\x18\x01 \x01(\v2\x15.cleaner.v1.SpaceStatR\n" +
@@ -748,7 +756,8 @@ const file_cleaner_v1_cleaner_proto_rawDesc = "" +
 	"\aVolumes\x18\x03 \x01(\v2\x15.cleaner.v1.SpaceStatR\aVolumes\x125\n" +
 	"\n" +
 	"BuildCache\x18\x04 \x01(\v2\x15.cleaner.v1.SpaceStatR\n" +
-	"BuildCache\"\x8d\x01\n" +
+	"BuildCache\x12/\n" +
+	"\aNetwork\x18\x05 \x01(\v2\x15.cleaner.v1.SpaceStatR\aNetwork\"\x8d\x01\n" +
 	"\tSpaceStat\x12 \n" +
 	"\vActiveCount\x18\x01 \x01(\x03R\vActiveCount\x12\x1e\n" +
 	"\n" +
@@ -839,25 +848,26 @@ var file_cleaner_v1_cleaner_proto_depIdxs = []int32{
 	2,  // 1: cleaner.v1.SpaceStatusResponse.Images:type_name -> cleaner.v1.SpaceStat
 	2,  // 2: cleaner.v1.SpaceStatusResponse.Volumes:type_name -> cleaner.v1.SpaceStat
 	2,  // 3: cleaner.v1.SpaceStatusResponse.BuildCache:type_name -> cleaner.v1.SpaceStat
-	13, // 4: cleaner.v1.EditConfigRequest.config:type_name -> cleaner.v1.PruneConfig
-	13, // 5: cleaner.v1.EditConfigResponse.config:type_name -> cleaner.v1.PruneConfig
-	13, // 6: cleaner.v1.GetConfigResponse.config:type_name -> cleaner.v1.PruneConfig
-	7,  // 7: cleaner.v1.ListHistoryResponse.history:type_name -> cleaner.v1.PruneHistory
-	8,  // 8: cleaner.v1.CleanerService.ListHistory:input_type -> cleaner.v1.ListHistoryRequest
-	10, // 9: cleaner.v1.CleanerService.RunCleaner:input_type -> cleaner.v1.RunCleanerRequest
-	0,  // 10: cleaner.v1.CleanerService.SpaceStatus:input_type -> cleaner.v1.SpaceStatusRequest
-	5,  // 11: cleaner.v1.CleanerService.GetConfig:input_type -> cleaner.v1.GetConfigRequest
-	3,  // 12: cleaner.v1.CleanerService.EditConfig:input_type -> cleaner.v1.EditConfigRequest
-	9,  // 13: cleaner.v1.CleanerService.ListHistory:output_type -> cleaner.v1.ListHistoryResponse
-	11, // 14: cleaner.v1.CleanerService.RunCleaner:output_type -> cleaner.v1.RunCleanerResponse
-	1,  // 15: cleaner.v1.CleanerService.SpaceStatus:output_type -> cleaner.v1.SpaceStatusResponse
-	6,  // 16: cleaner.v1.CleanerService.GetConfig:output_type -> cleaner.v1.GetConfigResponse
-	4,  // 17: cleaner.v1.CleanerService.EditConfig:output_type -> cleaner.v1.EditConfigResponse
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 4: cleaner.v1.SpaceStatusResponse.Network:type_name -> cleaner.v1.SpaceStat
+	13, // 5: cleaner.v1.EditConfigRequest.config:type_name -> cleaner.v1.PruneConfig
+	13, // 6: cleaner.v1.EditConfigResponse.config:type_name -> cleaner.v1.PruneConfig
+	13, // 7: cleaner.v1.GetConfigResponse.config:type_name -> cleaner.v1.PruneConfig
+	7,  // 8: cleaner.v1.ListHistoryResponse.history:type_name -> cleaner.v1.PruneHistory
+	8,  // 9: cleaner.v1.CleanerService.ListHistory:input_type -> cleaner.v1.ListHistoryRequest
+	10, // 10: cleaner.v1.CleanerService.RunCleaner:input_type -> cleaner.v1.RunCleanerRequest
+	0,  // 11: cleaner.v1.CleanerService.SpaceStatus:input_type -> cleaner.v1.SpaceStatusRequest
+	5,  // 12: cleaner.v1.CleanerService.GetConfig:input_type -> cleaner.v1.GetConfigRequest
+	3,  // 13: cleaner.v1.CleanerService.EditConfig:input_type -> cleaner.v1.EditConfigRequest
+	9,  // 14: cleaner.v1.CleanerService.ListHistory:output_type -> cleaner.v1.ListHistoryResponse
+	11, // 15: cleaner.v1.CleanerService.RunCleaner:output_type -> cleaner.v1.RunCleanerResponse
+	1,  // 16: cleaner.v1.CleanerService.SpaceStatus:output_type -> cleaner.v1.SpaceStatusResponse
+	6,  // 17: cleaner.v1.CleanerService.GetConfig:output_type -> cleaner.v1.GetConfigResponse
+	4,  // 18: cleaner.v1.CleanerService.EditConfig:output_type -> cleaner.v1.EditConfigResponse
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_cleaner_v1_cleaner_proto_init() }

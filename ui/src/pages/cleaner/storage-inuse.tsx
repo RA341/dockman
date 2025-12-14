@@ -52,20 +52,21 @@ function StorageInuse({refetch}: { refetch: boolean }) {
                 </Box>
             ) : storage ? (
                 <Fade in={true} timeout={200}>
-                    <Grid container spacing={3}>
-                        <Grid container spacing={3}>
-                            <Grid size={{xs: 12, sm: 6, md: 3}}>
-                                <SpaceStateDisplay title="Containers" stat={storage.Containers}/>
-                            </Grid>
-                            <Grid size={{xs: 12, sm: 6, md: 3}}>
-                                <SpaceStateDisplay title="Images" stat={storage.Images}/>
-                            </Grid>
-                            <Grid size={{xs: 12, sm: 6, md: 3}}>
-                                <SpaceStateDisplay title="Volumes" stat={storage.Volumes}/>
-                            </Grid>
-                            <Grid size={{xs: 12, sm: 6, md: 3}}>
-                                <SpaceStateDisplay title="BuildCache" stat={storage.BuildCache}/>
-                            </Grid>
+                    <Grid container spacing={2}>
+                        <Grid size={{xs: 12, sm: 6, md: 2.4}}>
+                            <SpaceStateDisplay title="Containers" stat={storage.Containers}/>
+                        </Grid>
+                        <Grid size={{xs: 12, sm: 6, md: 2.4}}>
+                            <SpaceStateDisplay title="Images" stat={storage.Images}/>
+                        </Grid>
+                        <Grid size={{xs: 12, sm: 6, md: 2.4}}>
+                            <SpaceStateDisplay title="Volumes" stat={storage.Volumes}/>
+                        </Grid>
+                        <Grid size={{xs: 12, sm: 6, md: 2.4}}>
+                            <SpaceStateDisplay title="BuildCache" stat={storage.BuildCache}/>
+                        </Grid>
+                        <Grid size={{xs: 12, sm: 6, md: 2.4}}>
+                            <SpaceStateDisplay title="Networks" stat={storage.Network}/>
                         </Grid>
                     </Grid>
                 </Fade>

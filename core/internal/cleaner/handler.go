@@ -3,6 +3,7 @@ package cleaner
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"connectrpc.com/connect"
@@ -44,10 +45,26 @@ func (h *Handler) ListHistory(context.Context, *connect.Request[v1.ListHistoryRe
 	}), nil
 }
 
-func (h *Handler) SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
-	sys, err := h.srv.SystemStorage()
+func (h *Handler) SpaceStatus(ctx context.Context, req *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
+	sys, net, err := h.srv.SystemStorage(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var inuse int
+	for _, ne := range net {
+		if len(ne.Containers) > 0 {
+			inuse++
+		}
+	}
+
+	inu := int64(inuse)
+	count := int64(len(net))
+	network := &v1.SpaceStat{
+		ActiveCount: inu,
+		TotalCount:  count,
+		Reclaimable: strconv.FormatInt(count-inu, 10),
+		TotalSize:   "N/A",
 	}
 
 	volumes := &v1.SpaceStat{
@@ -83,6 +100,7 @@ func (h *Handler) SpaceStatus(context.Context, *connect.Request[v1.SpaceStatusRe
 		Images:     images,
 		Volumes:    volumes,
 		BuildCache: buildCache,
+		Network:    network,
 	}), nil
 }
 

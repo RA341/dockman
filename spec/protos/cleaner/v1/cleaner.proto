@@ -21,6 +21,7 @@ message SpaceStatusResponse {
   SpaceStat Images = 2;
   SpaceStat Volumes = 3;
   SpaceStat BuildCache = 4;
+  SpaceStat Network = 5;
 }
 
 message SpaceStat {

@@ -6,17 +6,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/dustin/go-humanize"
+	"github.com/moby/moby/api/types/network"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/moby/moby/client"
 )
 
-type cliFn func() *client.Client
+type containerFn func() *container.Service
 
 type Service struct {
-	cli      cliFn
+	cont     containerFn
 	store    Store
 	log      zerolog.Logger
 	task     *Scheduler
@@ -25,9 +27,9 @@ type Service struct {
 	hostname func() string
 }
 
-func NewService(cli cliFn, hostname func() string, store Store) *Service {
+func NewService(cont containerFn, hostname func() string, store Store) *Service {
 	s := &Service{
-		cli:      cli,
+		cont:     cont,
 		hostname: hostname,
 		store:    store,
 		log:      log.With().Str("service", "docker cleaner").Logger(),
@@ -38,6 +40,10 @@ func NewService(cli cliFn, hostname func() string, store Store) *Service {
 	}
 
 	return s
+}
+
+func (s *Service) cli() *client.Client {
+	return s.cont().Cli()
 }
 
 func (s *Service) Run() error {
@@ -112,9 +118,7 @@ type DiskSpace struct {
 	BuildCache string
 }
 
-func (s *Service) SystemStorage() (client.DiskUsageResult, error) {
-	ctx := context.Background()
-
+func (s *Service) SystemStorage(ctx context.Context) (client.DiskUsageResult, []network.Inspect, error) {
 	usage, err := s.cli().DiskUsage(ctx, client.DiskUsageOptions{
 		Containers: true,
 		Images:     true,
@@ -123,10 +127,15 @@ func (s *Service) SystemStorage() (client.DiskUsageResult, error) {
 		Verbose:    true,
 	})
 	if err != nil {
-		return client.DiskUsageResult{}, err
+		return client.DiskUsageResult{}, nil, err
 	}
 
-	return usage, nil
+	list, err := s.cont().NetworksList(ctx)
+	if err != nil {
+		return client.DiskUsageResult{}, nil, err
+	}
+
+	return usage, list, nil
 }
 
 func (s *Service) Prune(

@@ -30,6 +30,7 @@ func (s *Service) VolumesList(ctx context.Context) ([]VolumeInfo, error) {
 
 	diskUsage, err := s.Client.DiskUsage(ctx, client.DiskUsageOptions{
 		Volumes: true,
+		Verbose: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get disk usage data: %w", err)

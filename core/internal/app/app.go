@@ -112,9 +112,9 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 
 	cleanerStore := cleaner.NewStore(gormDB)
 	cleanerSrv := cleaner.NewService(
-		func() *client.Client {
+		func() *container.Service {
 			// todo pass in and use service functions instead of direct client
-			return dockerManagerSrv.GetService().Container.Client
+			return dockerManagerSrv.GetService().Container
 		},
 		func() string {
 			return dockerManagerSrv.GetActiveClient()
