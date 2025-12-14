@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
@@ -42,6 +43,8 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		return "", nil, fmt.Errorf("could not get path for %s: %w", alias, err)
 	}
 
+	var netConf *network.NetworkingConfig
+
 	if info.IsDocker() {
 		//log.Debug().Msg("docker detected inspecting container")
 
@@ -66,7 +69,22 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 				if strings.HasPrefix(fullpath, m.Destination) {
 					fullpath = filepath.Join(m.Source, relPath)
 					done = true
-					log.Debug().Str("path", fullpath).Msg("found mounted path")
+
+					var netName string
+					for name := range cont.NetworkSettings.Networks {
+						netName = name
+						break
+					}
+
+					netConf = &network.NetworkingConfig{
+						EndpointsConfig: map[string]*network.EndpointSettings{
+							netName: {},
+						},
+					}
+
+					log.Debug().Str("path", fullpath).
+						Str("netname", netName).
+						Msg("found mounted path")
 					break
 				}
 			}
@@ -88,31 +106,30 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		return "", nil, err
 	}
 
-	create, err :=
-		s.cli().ContainerCreate(ctx, client.ContainerCreateOptions{
-			Name: fmt.Sprintf("dockman-sqlite-viewer-%s", sessionID[:12]),
-			Config: &container.Config{
-				Image: image,
-				// Listen on all internal interfaces, set prefix
-				Cmd: []string{
-					fullpath,
-					"--host=0.0.0.0", "--port=8080",
-					"--url-prefix=" + urlPrefix, "--no-browser",
-				},
+	create, err := s.cli().ContainerCreate(ctx, client.ContainerCreateOptions{
+		Name: fmt.Sprintf("dockman-sqlite-viewer-%s", sessionID[:12]),
+		Config: &container.Config{
+			Image: image,
+			// Listen on all internal interfaces, set prefix
+			Cmd: []string{
+				fullpath,
+				"--host=0.0.0.0", "--port=8080",
+				"--url-prefix=" + urlPrefix, "--no-browser",
 			},
+		},
 
-			HostConfig: &container.HostConfig{
-				Mounts: []mount.Mount{
-					{
-						Type:   mount.TypeBind,
-						Source: fullpath,
-						Target: fullpath,
-					},
+		HostConfig: &container.HostConfig{
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeBind,
+					Source: fullpath,
+					Target: fullpath,
 				},
 			},
-			NetworkingConfig: nil,
-			Platform:         nil,
-		})
+		},
+		NetworkingConfig: netConf,
+		Platform:         nil,
+	})
 	if err != nil {
 		return "", nil, err
 	}
