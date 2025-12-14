@@ -146,8 +146,8 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 
 	// Handle case where container is on a custom network
 	var containerIP string
-	for _, network := range inspect.Container.NetworkSettings.Networks {
-		containerIP = network.IPAddress.String()
+	for _, ne := range inspect.Container.NetworkSettings.Networks {
+		containerIP = ne.IPAddress.String()
 		break
 	}
 	if containerIP == "" {
