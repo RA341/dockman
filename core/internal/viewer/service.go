@@ -78,7 +78,12 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	}
 
 	image := "ghcr.io/coleifer/sqlite-web:latest"
-	_, err = s.cli().ImagePull(ctx, image, client.ImagePullOptions{})
+	progress, err := s.cli().ImagePull(ctx, image, client.ImagePullOptions{})
+	if err != nil {
+		return "", nil, err
+	}
+
+	err = progress.Wait(context.Background())
 	if err != nil {
 		return "", nil, err
 	}
