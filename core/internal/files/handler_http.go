@@ -2,9 +2,12 @@ package files
 
 import (
 	b64 "encoding/base64"
+	"fmt"
 	"net/http"
 
-	"github.com/RA341/dockman/pkg/fileutil"
+	fu "github.com/RA341/dockman/pkg/fileutil"
+	wsu "github.com/RA341/dockman/pkg/ws"
+	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,6 +26,7 @@ func (h *FileHandler) register() http.Handler {
 	subMux := http.NewServeMux()
 	subMux.HandleFunc("POST /save", h.saveFile)
 	subMux.HandleFunc("GET /load/{filename}", h.loadFile)
+	subMux.HandleFunc("GET /search", h.searchFile)
 
 	return subMux
 }
@@ -61,7 +65,7 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error retrieving file from form", http.StatusBadRequest)
 		return
 	}
-	defer fileutil.Close(file)
+	defer fu.Close(file)
 
 	decodedFileName, err := b64.StdEncoding.DecodeString(meta.Filename)
 	if err != nil {
@@ -79,4 +83,45 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//log.Debug().Str("filename", meta.Filename).Msg("Successfully saved File")
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
+	alias := r.URL.Query().Get(QueryKeyAlias)
+
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, "Error upgrading to websocket "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer fu.Close(ws)
+
+	all, err := h.srv.listAll(alias)
+	if err != nil {
+		wsu.WsErr(ws, fmt.Errorf("Unable to list files "+err.Error()))
+		return
+	}
+
+	for {
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
+			log.Debug().Err(err).Msg("Error reading message")
+			break
+		}
+		query := string(msg)
+
+		results := h.srv.search(query, all, 20)
+
+		err = ws.WriteJSON(results)
+		if err != nil {
+			err = ws.WriteJSON(map[string]string{"error": err.Error()})
+			if err != nil {
+				log.Warn().Err(err).Msg("Error writing results to websocket")
+			}
+			return
+		}
+	}
 }

@@ -3,14 +3,19 @@ package files
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/pkg/fileutil"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/rs/zerolog/log"
 )
 
@@ -298,4 +303,49 @@ func openFile(filename string) (*os.File, error) {
 
 func (s *Service) Close() error {
 	return nil
+}
+
+type SearchResult struct {
+	Matched string
+}
+
+func (s *Service) search(query string, allPaths []string, limit int) []SearchResult {
+	matches := fuzzy.RankFind(query, allPaths) // [{whl cartwheel 6 0} {whl wheel 2 2}]
+	sort.Sort(matches)                         // [{whl wheel 2 2} {whl cartwheel 6 0}]
+
+	if len(matches) < limit {
+		limit = len(matches)
+	}
+
+	results := make([]SearchResult, 0, limit)
+	for _, ma := range matches {
+		results = append(results, SearchResult{
+			Matched: ma.Target,
+		})
+	}
+
+	return results
+}
+
+func (s *Service) listAll(alias string) ([]string, error) {
+
+	root, err := s.WithRoot("", alias)
+	if err != nil {
+		return []string{}, err
+	}
+
+	var filez []string
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		left := strings.TrimPrefix(path, root)
+		left = strings.TrimPrefix(left, string(filepath.Separator))
+		if left != "" {
+			filez = append(filez, left)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return filez, nil
 }

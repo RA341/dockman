@@ -8,6 +8,8 @@ import (
 
 	"github.com/RA341/dockman/internal/docker/debug"
 	fu "github.com/RA341/dockman/pkg/fileutil"
+	wsu "github.com/RA341/dockman/pkg/ws"
+
 	"github.com/gorilla/websocket"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/client"
@@ -41,7 +43,7 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 		if queryCmd != "" {
 			execCmd = queryCmd
 		} else {
-			wsMustWrite(ws, "unknown cmd passed defaulting to "+execCmd)
+			wsu.WsMustWrite(ws, "unknown cmd passed defaulting to "+execCmd)
 		}
 
 		readerCtx := r.Context()
@@ -51,11 +53,11 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 		if val != "" {
 			debuggerImage := query.Get("image")
 			if debuggerImage == "" {
-				wsErr(ws, fmt.Errorf("empty image found, check you request"))
+				wsu.WsErr(ws, fmt.Errorf("empty image found, check you request"))
 				return
 			}
 
-			wsWriter := NewWsWriter(ws)
+			wsWriter := wsu.NewWsWriter(ws)
 			var cleanup debug.CleanupFn
 
 			resp, cleanup, err = srv().Debugger.ExecDebugContainer(
@@ -65,7 +67,7 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 				queryCmd,
 			)
 			if err != nil {
-				wsErr(ws, fmt.Errorf("error executing debug container: %w", err))
+				wsu.WsErr(ws, fmt.Errorf("error executing debug container: %w", err))
 				return
 			}
 			defer cleanup()
@@ -73,14 +75,14 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 		} else {
 			resp, err = srv().Container.ContainerExec(readerCtx, contId, execCmd)
 			if err != nil {
-				wsErr(ws, err)
+				wsu.WsErr(ws, err)
 				return
 			}
 		}
 		defer resp.Close()
 
-		wsInf(ws, "Connected to Container")
-		wsInf(ws, fmt.Sprintf("Entrypoint: %s", execCmd))
+		wsu.WsInf(ws, "Connected to Container")
+		wsu.WsInf(ws, fmt.Sprintf("Entrypoint: %s", execCmd))
 
 		readerCtx, cancel := context.WithCancel(readerCtx)
 		defer cancel()
@@ -91,11 +93,11 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 			for {
 				n, err := resp.Reader.Read(buf)
 				if err != nil {
-					wsErr(ws, fmt.Errorf("error reading from container: %w", err))
+					wsu.WsErr(ws, fmt.Errorf("error reading from container: %w", err))
 					break
 				}
 
-				wsMustWrite(ws, string(buf[:n]))
+				wsu.WsMustWrite(ws, string(buf[:n]))
 			}
 
 			cancel()
@@ -103,7 +105,7 @@ func NewExecWSHandler(srv ServiceProvider) http.HandlerFunc {
 
 		for {
 			if readerCtx.Err() != nil {
-				wsErr(ws, fmt.Errorf("container stream was closed, exiting"))
+				wsu.WsErr(ws, fmt.Errorf("container stream was closed, exiting"))
 				break
 			}
 
@@ -150,7 +152,7 @@ func NewLogWSHandler(srv ServiceProvider) http.HandlerFunc {
 		}
 		defer fu.Close(ws)
 
-		writer := NewWsWriter(ws)
+		writer := wsu.NewWsWriter(ws)
 		if tty {
 			// tty streams dont need docker demultiplexing
 			_, err = io.Copy(writer, logsReader)
@@ -159,61 +161,10 @@ func NewLogWSHandler(srv ServiceProvider) http.HandlerFunc {
 			_, err = stdcopy.StdCopy(writer, writer, logsReader)
 		}
 		if err != nil {
-			wsErr(ws, fmt.Errorf("error: copying container stream: %w", err))
+			wsu.WsErr(ws, fmt.Errorf("error: copying container stream: %w", err))
 			return
 		}
 
 		log.Debug().Str("container", contId).Msg("closing container log stream")
 	}
-}
-
-const (
-	AnsiGreen = "\x1b[32m"
-	AnsiRed   = "\x1b[31m"
-	AnsiReset = "\x1b[0m"
-
-	newLine = "\r\n"
-)
-
-func wsInf(ws *websocket.Conn, message string) {
-	message = formatTermMessage(message, AnsiGreen)
-	wsMustWrite(ws, message)
-}
-
-func wsErr(ws *websocket.Conn, errMessage error) {
-	message := formatTermMessage(errMessage.Error(), AnsiRed)
-	wsMustWrite(ws, message)
-}
-
-func formatTermMessage(message string, color string) string {
-	message = color + message + AnsiReset + newLine
-	return message
-}
-
-func wsMustWrite(ws *websocket.Conn, message string) {
-	err := ws.WriteMessage(websocket.TextMessage, []byte(message))
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to write to socket")
-		return
-	}
-}
-
-type WsWriter struct {
-	ws *websocket.Conn
-}
-
-func NewWsWriter(ws *websocket.Conn) *WsWriter {
-	return &WsWriter{
-		ws: ws,
-	}
-}
-
-func (w *WsWriter) Write(p []byte) (n int, err error) {
-	err = w.ws.WriteMessage(websocket.TextMessage, p)
-	if err != nil {
-		log.Warn().Err(err).Msg("Unable to write to websocket")
-		return len(p), err
-	}
-
-	return len(p), nil
 }

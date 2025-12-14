@@ -39,6 +39,7 @@ require (
 	gorm.io/gorm v1.31.1
 )
 
+require github.com/lithammer/fuzzysearch v1.1.8
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect

@@ -9,128 +9,159 @@ import {
     ListItemButton,
     ListItemText,
     TextField,
-    Typography
+    Typography,
 } from '@mui/material'
 import {Search} from '@mui/icons-material'
-import {useNavigate} from "react-router-dom";
-import {useFiles} from "../../../../hooks/files.ts";
+import {useNavigate} from 'react-router-dom'
+import {useAlias} from "../../../../context/alias-context.tsx";
+import {getWSUrl} from "../../../../lib/api.ts";
+
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+}
+
+interface SearchResult {
+    Matched: string
+    score: number
+    highlight: number[]
+}
 
 interface TelescopeProps {
     isVisible: boolean
     onDismiss: () => void
 }
 
-const highlightMatch = (text: string, query: string) => {
-    if (!query) {
-        return text
-    }
-    const escapedQuery = query.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
-    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'))
-
+const HighlightedText = ({text, indices}: { text: string; indices: number[] }) => {
+    if (!indices || indices.length === 0) return <>{text}</>
+    const indexSet = new Set(indices)
     return (
         <span>
-            {parts.map((part, index) =>
-                part.toLowerCase() === query.toLowerCase() ? (
-                    <Box component="span" key={index} sx={{fontWeight: 'bold', color: '#a78bfa'}}>
-                        {part}
-                    </Box>
-                ) : (
-                    part
-                )
-            )}
+            {text.split('').map((char, i) => (
+                <span key={i} style={{
+                    fontWeight: indexSet.has(i) ? 'bold' : 'normal',
+                    color: indexSet.has(i) ? '#818cf8' : 'inherit'
+                }}>
+                    {char}
+                </span>
+            ))}
         </span>
     )
 }
 
 function SearchUi({isVisible, onDismiss}: TelescopeProps) {
-    const {files} = useFiles()
     const navigate = useNavigate()
+    const {activeAlias} = useAlias()
 
-    const [searchList, setSearchList] = useState<string[]>([])
+    const [filteredFiles, setFilteredFiles] = useState<SearchResult[]>([])
+    const [error, setError] = useState<string | null>(null)
+
+    // Immediate state for the Input field (so typing feels fast)
     const [searchQuery, setSearchQuery] = useState('')
-    const [filteredFiles, setFilteredFiles] = useState<string[]>([])
 
-    // State to track the active item index for keyboard navigation
+    // --- 2. Create the Debounced State (300ms delay) ---
+    // This variable will only update 300ms after you stop typing
+    const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+    const ws = useRef<WebSocket | null>(null)
     const [activeIndex, setActiveIndex] = useState<number>(-1)
-
-    // Refs to hold list item elements for scrolling into view
     const itemRefs = useRef<(HTMLLIElement | null)[]>([])
+
+    // WebSocket Connection Logic
+    useEffect(() => {
+        if (!isVisible) return
+
+        const params = new URLSearchParams()
+        params.append('alias', activeAlias)
+
+        let socket: WebSocket | null = null;
+
+        try {
+            socket = new WebSocket(getWSUrl(`api/file/search?${params.toString()}`))
+        } catch (e) {
+            setError("Invalid WebSocket URL")
+            return
+        }
+
+        socket.onopen = () => {
+            setError(null)
+            // Send the current debounced query on connect
+            if (debouncedSearchQuery) socket.send(debouncedSearchQuery)
+        }
+
+        socket.onerror = (event) => {
+            console.error("WebSocket connection error:", event)
+            setError("Connection to search server failed")
+        }
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data)
+                setFilteredFiles((data as SearchResult[]) || [])
+            } catch (e) {
+                console.error("Failed to parse search results", e)
+            }
+        }
+
+        ws.current = socket
+
+        return () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close()
+            }
+            ws.current = null
+        }
+    }, [isVisible, activeAlias])
+
+    // --- 3. Send Message ONLY when 'debouncedSearchQuery' changes ---
+    useEffect(() => {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            // This sends the "full query" after the user paused typing
+            ws.current.send(debouncedSearchQuery)
+        }
+
+        // Reset navigation
+        setActiveIndex(-1)
+        itemRefs.current = []
+
+    }, [debouncedSearchQuery]) // <--- Dependency is now the debounced value, not raw input
 
     const handleOpen = (file: string) => {
         navigate(`/stacks/${file}`)
         handleClose()
     }
 
-    useEffect(() => {
-        const list = files.flatMap(value => {
-            if (value.subFiles.length === 0) {
-                return [value.filename]
-            } else {
-                return value.subFiles.map(subFile => `${value.filename}/${subFile}`)
-            }
-        })
-        setSearchList(list)
-        setFilteredFiles(list)
-    }, [files])
-
-    useEffect(() => {
-        if (!searchQuery) {
-            const fullList = files.flatMap(value => {
-                if (value.subFiles.length === 0) return [value.filename]
-                return value.subFiles.map(subFile => `${value.filename}/${subFile}`)
-            })
-            setFilteredFiles(fullList)
-        } else {
-            const lowercasedQuery = searchQuery.toLowerCase()
-            const filtered = searchList.filter(file =>
-                file.toLowerCase().includes(lowercasedQuery)
-            )
-            setFilteredFiles(filtered)
-        }
-        // Reset active index and refs whenever the search results change
-        setActiveIndex(-1)
-        itemRefs.current = []
-    }, [searchQuery, searchList, files])
-
-    // Effect to scroll the active item into view
-    useEffect(() => {
-        if (activeIndex >= 0 && itemRefs.current[activeIndex]) {
-            itemRefs.current[activeIndex]?.scrollIntoView({
-                block: 'nearest',
-                behavior: 'smooth',
-            })
-        }
-    }, [activeIndex])
-
     const handleClose = () => {
-        setSearchQuery('')
+        setSearchQuery('') // Clear input
         setActiveIndex(-1)
         onDismiss()
     }
 
-    // Keyboard event handler for ArrowUp, ArrowDown, and Enter
     const handleKeyDown = (event: React.KeyboardEvent) => {
         if (filteredFiles.length === 0) return
 
         switch (event.key) {
             case 'ArrowDown':
                 event.preventDefault()
-                setActiveIndex(prev => (prev < filteredFiles.length - 1 ? prev + 1 : prev))
+                setActiveIndex((prev) => (prev < filteredFiles.length - 1 ? prev + 1 : prev))
                 break
             case 'ArrowUp':
                 event.preventDefault()
-                // Prevent index from going below 0
-                setActiveIndex(prev => (prev > 0 ? prev - 1 : 0))
+                setActiveIndex((prev) => (prev > 0 ? prev - 1 : 0))
                 break
             case 'Enter':
                 event.preventDefault()
                 if (activeIndex >= 0) {
-                    const file = filteredFiles[activeIndex];
-                    console.log('Selected:', file)
-                    handleOpen(file)
+                    handleOpen(filteredFiles[activeIndex].Matched)
                 }
-                break
-            default:
                 break
         }
     }
@@ -198,41 +229,35 @@ function SearchUi({isVisible, onDismiss}: TelescopeProps) {
             <DialogContent
                 sx={{p: 0, '&::-webkit-scrollbar': {display: 'none'}, msOverflowStyle: 'none', scrollbarWidth: 'none'}}>
                 <List disablePadding>
-                    {filteredFiles.length > 0 ? (
-                        filteredFiles.map((file, index) => (
-                            <ListItem
-                                disablePadding
-                                key={index}
-                                ref={el => {
-                                    itemRefs.current[index] = el
-                                }}
-                                sx={{
-                                    borderBottom: '1px solid #334155',
-                                    '&:last-child': {borderBottom: 'none'},
-                                }}
-                            >
+                    {error ? (
+                        <Box sx={{p: 4, textAlign: 'center'}}>
+                            <Typography color="error">{error}</Typography>
+                        </Box>
+                    ) : filteredFiles.length > 0 ? (
+                        filteredFiles.map((result, index) => (
+                            <ListItem disablePadding key={`${result.Matched}-${index}`} ref={(el) => {
+                                itemRefs.current[index] = el
+                            }}>
                                 <ListItemButton
                                     selected={index === activeIndex}
-                                    onClick={() => handleOpen(file)}
+                                    onClick={() => handleOpen(result.Matched)}
                                     sx={{
+                                        '&.Mui-selected': {backgroundColor: '#334155'},
                                         '&:hover': {backgroundColor: '#334155'},
-                                        // Style for the keyboard-selected item
-                                        '&.Mui-selected': {
-                                            backgroundColor: '#334155',
-                                            '&:hover': {
-                                                backgroundColor: '#475569',
-                                            },
-                                        },
                                     }}
                                 >
-                                    <ListItemText primary={highlightMatch(file, searchQuery)}/>
+                                    <ListItemText
+                                        primary={
+                                            <HighlightedText text={result.Matched} indices={result.highlight}/>
+                                        }
+                                    />
                                 </ListItemButton>
                             </ListItem>
                         ))
                     ) : (
                         <Box sx={{p: 4, textAlign: 'center'}}>
                             <Typography variant="body1" sx={{color: '#94a3b8'}}>
-                                No results found for "{searchQuery}"
+                                {debouncedSearchQuery ? `No results for "${debouncedSearchQuery}"` : "Type to search..."}
                             </Typography>
                         </Box>
                     )}
