@@ -36,7 +36,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const url = getWSUrl(`docker/logs/${containerId}`)
+        const url = getWSUrl(`api/docker/logs/${containerId}`)
         execContainer(`${selectedPage}: logs-${containerName}`, url, false)
     };
 
@@ -62,7 +62,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
     const handleConnect = (containerId: string, containerName: string, cmd: string) => {
         const encodedCmd = encodeURIComponent(cmd);
-        const url = getWSUrl(`docker/exec/${containerId}?cmd=${encodedCmd}`)
+        const url = getWSUrl(`api/docker/exec/${containerId}?cmd=${encodedCmd}`)
         execContainer(`${selectedPage}: exec-${containerName}`, url, true)
         closeExecDialog()
     }

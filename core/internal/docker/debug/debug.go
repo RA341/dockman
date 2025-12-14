@@ -153,7 +153,9 @@ func (s *Service) ExecDebugContainer(
 		log.Debug().Str("name", debuggerContainer.ID).Msg("removing debug container")
 
 		_, err = s.Cli().ContainerRemove(ctx, debuggerContId, client.ContainerRemoveOptions{
-			Force: true,
+			RemoveVolumes: true,
+			RemoveLinks:   true,
+			Force:         true,
 		})
 		if err != nil {
 			log.Warn().Err(err).Str("id", debuggerContId).Msg("unable to remove debug container")

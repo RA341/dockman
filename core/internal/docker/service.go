@@ -17,29 +17,6 @@ type Service struct {
 	DaemonAddr string
 }
 
-// dependencies common info used by container and compose service
-// normally this would be in the service struct
-// but since the services are seperated we use this
-//type dependencies struct {
-//	// hostname of the machine used to identify which client is running on
-//	hostname   string
-//	MobyClient *client.Client
-//	// tmp workaround since moby isn't compatible with docker compose yet
-//	DockClient *docker.Client
-//	// address used to prefix container ports for direct links
-//	daemonAddr string
-//	// syncs local files to remote host
-//	syncer Syncer
-//
-//	// only used by compose service not needed by container
-//	composeRoot string
-//
-//	// to store updates about new images
-//	imageUpdateStore Store
-//	// external sidecar url to update a dockman container
-//	updaterUrl string
-//}
-
 func NewService(
 	daemonAddr string,
 	mobyClient *client.Client,

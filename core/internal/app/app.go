@@ -15,7 +15,7 @@ import (
 	dockermanagerrpc "github.com/RA341/dockman/generated/docker_manager/v1/v1connect"
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
-	v1connect2 "github.com/RA341/dockman/generated/viewer/v1/v1connect"
+	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
 	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/cleaner"
 	"github.com/RA341/dockman/internal/config"
@@ -189,6 +189,7 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		func() (string, http.Handler) {
 			return filesrpc.NewFileServiceHandler(files.NewConnectHandler(a.File), authInterceptor)
 		},
+		// files http
 		func() (string, http.Handler) {
 			return a.registerHttpHandler("/api/file", files.NewFileHandler(a.File))
 		},
@@ -198,6 +199,11 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 				authInterceptor,
 			)
 		},
+		// docker http
+		func() (string, http.Handler) {
+			return a.registerHttpHandler("/api/docker", docker.NewHandlerHttp(a.DockerManager.GetService))
+		},
+		// cleaner
 		func() (string, http.Handler) {
 			return v1connect.NewCleanerServiceHandler(cleaner.NewHandler(a.CleanerSrv))
 		},
@@ -208,6 +214,7 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		//func() (string, http.Handler) {
 		//	return a.registerHttpHandler("/api/git", git.NewFileHandler(a.Git))
 		//},l
+		// auth shit
 		func() (string, http.Handler) {
 			return a.registerHttpHandler("/auth/ping", http.HandlerFunc(
 				func(w http.ResponseWriter, r *http.Request) {
@@ -222,25 +229,18 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			return dockermanagerrpc.NewDockerManagerServiceHandler(dm.NewConnectHandler(a.DockerManager), authInterceptor)
 		},
 		func() (string, http.Handler) {
-			return v1connect2.NewViewerServiceHandler(viewer.NewHandler(a.Viewer))
+			return viewerrpc.NewViewerServiceHandler(viewer.NewHandler(a.Viewer))
 		},
 		func() (string, http.Handler) {
-			// 1. Define the full base path
 			basePath := "/api/viewer/"
-
-			// 2. Create the handler (it now expects the full path)
 			handler := viewer.NewHandlerHttp(a.Viewer)
-
-			// 3. Manually apply Auth Middleware (since we aren't using registerHttpHandler)
 			if a.Config.Auth.Enable {
 				authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
 				handler = authMiddleware(handler)
 			}
-
-			// 4. Return WITHOUT stripping prefix
+			// we need this because the reverse proxy expects a full path
 			// The router will match "/api/viewer/" and pass the full path to the handler
 			return basePath, handler
-			//return a.registerHttpHandler("/api/viewer", viewer.NewHandlerHttp(a.Viewer))
 		},
 		// lsp
 		//func() (string, http.Handler) {
@@ -259,17 +259,6 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		mux.HandleFunc("GET /auth/login/oidc", oidcHandlers.OIDCLogin)
 		mux.HandleFunc("GET /auth/login/oidc/callback", oidcHandlers.OIDCCallback)
 	}
-
-	var execHandler http.Handler = docker.NewExecWSHandler(a.DockerManager.GetService)
-	var logHandler http.Handler = docker.NewLogWSHandler(a.DockerManager.GetService)
-	if a.Config.Auth.Enable {
-		authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
-		execHandler = authMiddleware(execHandler)
-		logHandler = authMiddleware(logHandler)
-	}
-
-	mux.Handle("GET /docker/exec/{contID}", execHandler)
-	mux.Handle("GET /docker/logs/{contID}", logHandler)
 }
 
 func (a *App) registerHttpHandler(basePath string, subMux http.Handler) (string, http.Handler) {

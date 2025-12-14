@@ -35,7 +35,7 @@ export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => 
 
     const getLogTab = useCallback(() => {
         return createTab(
-            getWSUrl(`docker/logs/${containerID}`),
+            getWSUrl(`api/docker/logs/${containerID}`),
             `Logs: ${containerID}`,
             false)
     }, [containerID])

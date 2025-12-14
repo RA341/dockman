@@ -52,7 +52,7 @@ export const ExecDialog = ({show, hide, name, containerID}: {
 
     const setupExec = useCallback(() => {
         const encodedCmd = encodeURIComponent(selectedCmd);
-        let base = `docker/exec/${containerID}?cmd=${encodedCmd}`;
+        let base = `api/docker/exec/${containerID}?cmd=${encodedCmd}`;
 
         if (debuggerImage) {
             console.log("using dockman debug with debuggerImage", debuggerImage);
