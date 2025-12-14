@@ -119,6 +119,8 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		},
 
 		HostConfig: &container.HostConfig{
+			AutoRemove: true,
+
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
@@ -172,7 +174,11 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		if err != nil {
 			log.Warn().Err(err).Msg("unable to stop container")
 		}
-		_, err = s.cli().ContainerRemove(ctx, create.ID, client.ContainerRemoveOptions{})
+		_, err = s.cli().ContainerRemove(ctx, create.ID, client.ContainerRemoveOptions{
+			RemoveVolumes: true,
+			RemoveLinks:   true,
+			Force:         true,
+		})
 		if err != nil {
 			log.Warn().Err(err).Msg("unable to remove container")
 		}
