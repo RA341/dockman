@@ -181,7 +181,6 @@ const CoreCompose = () => {
 
     const specialFileSupport: Map<string, JSX.Element> = new Map([
         ["db", <ViewerSqlite/>],
-        ["sqlite", <ViewerSqlite/>],
     ])
 
     const viewer = specialFileSupport.get(ext)
