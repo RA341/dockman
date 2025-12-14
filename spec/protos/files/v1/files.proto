@@ -17,6 +17,8 @@ service FileService {
   rpc ListAlias(ListAliasRequest) returns (ListAliasResponse) {}
   rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
   rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
+
+
 }
 
 message DeleteAliasRequest {
@@ -43,7 +45,6 @@ message Alias {
 message ListAliasResponse {
   repeated Alias aliases = 1;
 }
-
 
 message ListRequest {
   string path = 1;

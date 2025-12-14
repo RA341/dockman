@@ -328,7 +328,6 @@ func (s *Service) search(query string, allPaths []string, limit int) []SearchRes
 }
 
 func (s *Service) listAll(alias string) ([]string, error) {
-
 	root, err := s.WithRoot("", alias)
 	if err != nil {
 		return []string{}, err

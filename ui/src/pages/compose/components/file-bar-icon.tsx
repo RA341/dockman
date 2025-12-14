@@ -19,6 +19,10 @@ const SvgFromUrl: React.FC<SvgFromUrlProps> = ({url, size = 25}) => {
     );
 };
 
+const SqliteIcon = () => (
+    <SvgFromUrl url={'/sqlite.svg'}/>
+)
+
 const DockerComposeIcon = () => (
     <SvgFromUrl url={'/docker.svg'}/>
 );
@@ -78,19 +82,30 @@ interface FileIconProps {
 }
 
 const FileBarIcon: React.FC<FileIconProps> = ({filename}) => {
+    // since we check before the dot as well
     if (filename.endsWith('compose.yaml') || filename.endsWith('compose.yml')) {
         return <DockerComposeIcon/>;
     }
-    if (filename.endsWith('.yaml') || filename.endsWith('.yml')) {
-        return <YamlIcon/>;
+
+    const ext = getExt(filename)
+
+    switch (ext) {
+        case "yaml":
+        case "yml":
+            return <YamlIcon/>;
+        case "env":
+            return <EnvIcon/>;
+        case "db":
+            return <SqliteIcon/>;
+        case "gitignore":
+            return <GitignoreIcon/>;
     }
-    if (filename.endsWith('.env')) {
-        return <EnvIcon/>;
-    }
-    if (filename.endsWith('.gitignore')) {
-        return <GitignoreIcon/>;
-    }
+
     return <DefaultFileIcon/>;
 };
+
+export function getExt(filename: string) {
+    return filename.split(".").pop() ?? "";
+}
 
 export default FileBarIcon;

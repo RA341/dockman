@@ -161,6 +161,7 @@ const FileItemDisplay = (
 
     const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(entry, depthIndex)
 
+
     return (
         <>
             <ListItemButton
@@ -170,7 +171,10 @@ const FileItemDisplay = (
                 component={RouterLink}
             >
                 <ListItemIcon sx={{minWidth: 32}}>
-                    <FileBarIcon filename={filename}/>
+                    {
+                        <FileBarIcon filename={filename}/>
+                    }
+
                 </ListItemIcon>
 
                 <ListItemText

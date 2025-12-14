@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package viewer.v1;
+
+option go_package = "github.com/RA341/dockman/generated/viewer/v1";
+
+service ViewerService {
+  rpc StartSqliteSession(StartSqliteSessionRequest) returns (stream StartSqliteSessionResponse) {}
+  rpc StopSqliteSession(StopSqliteSessionRequest) returns (StopSqliteSessionResponse) {}
+}
+
+message StopSqliteSessionRequest {}
+
+message StopSqliteSessionResponse {}
+
+message StartSqliteSessionRequest {
+  File path = 1;
+}
+
+message File {
+  string filename = 1;
+  string alias = 3;
+}
+
+message StartSqliteSessionResponse {
+  string url = 1;
+}

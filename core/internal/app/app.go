@@ -15,6 +15,7 @@ import (
 	dockermanagerrpc "github.com/RA341/dockman/generated/docker_manager/v1/v1connect"
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
+	v1connect2 "github.com/RA341/dockman/generated/viewer/v1/v1connect"
 	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/cleaner"
 	"github.com/RA341/dockman/internal/config"
@@ -26,6 +27,7 @@ import (
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
+	"github.com/RA341/dockman/internal/viewer"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 )
@@ -40,6 +42,7 @@ type App struct {
 	SSH           *ssh.Service
 	UserConfigSrv *config.Service
 	CleanerSrv    *cleaner.Service
+	Viewer        *viewer.Service
 }
 
 func NewApp(conf *config.AppConfig) (app *App, err error) {
@@ -119,6 +122,14 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 		cleanerStore,
 	)
 
+	viewerSrv := viewer.NewService(
+		func() *client.Client {
+			// todo pass in and use service functions instead of direct client
+			return dockerManagerSrv.GetService().Container.Client
+		},
+		fileSrv.WithRoot,
+	)
+
 	log.Info().Msg("Dockman initialized successfully")
 	return &App{
 		Config:        conf,
@@ -130,6 +141,7 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 		SSH:           sshSrv,
 		UserConfigSrv: userConfigSrv,
 		CleanerSrv:    cleanerSrv,
+		Viewer:        viewerSrv,
 	}, nil
 }
 
@@ -208,6 +220,27 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		// host_manager
 		func() (string, http.Handler) {
 			return dockermanagerrpc.NewDockerManagerServiceHandler(dm.NewConnectHandler(a.DockerManager), authInterceptor)
+		},
+		func() (string, http.Handler) {
+			return v1connect2.NewViewerServiceHandler(viewer.NewHandler(a.Viewer))
+		},
+		func() (string, http.Handler) {
+			// 1. Define the full base path
+			basePath := "/api/viewer/"
+
+			// 2. Create the handler (it now expects the full path)
+			handler := viewer.NewHandlerHttp(a.Viewer)
+
+			// 3. Manually apply Auth Middleware (since we aren't using registerHttpHandler)
+			if a.Config.Auth.Enable {
+				authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
+				handler = authMiddleware(handler)
+			}
+
+			// 4. Return WITHOUT stripping prefix
+			// The router will match "/api/viewer/" and pass the full path to the handler
+			return basePath, handler
+			//return a.registerHttpHandler("/api/viewer", viewer.NewHandlerHttp(a.Viewer))
 		},
 		// lsp
 		//func() (string, http.Handler) {

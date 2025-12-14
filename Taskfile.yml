@@ -196,9 +196,11 @@ tasks:
         -e DOCKMAN_AUTH_ENABLE=false
         -e DOCKMAN_AUTH_USERNAME=wow
         -e DOCKMAN_AUTH_PASSWORD=wow
-        -e DOCKMAN_COMPOSE_ROOT=/.build/develop/compose
+        -e DOCKMAN_COMPOSE_ROOT=/.build/docker/compose
         -v /var/run/docker.sock:/var/run/docker.sock
-        -v ./.build/develop/compose:/.build/develop/compose
+        -v ./.build/:/.build/
+        -v ./.build/docker/compose:/.build/docker/compose
+        -v ./.build/docker/config:/config
         -p 8221:8866
         {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}}
     preconditions:
