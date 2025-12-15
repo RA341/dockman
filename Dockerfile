@@ -25,8 +25,6 @@ RUN go mod download
 
 COPY core/ .
 
-# These ARGs are automatically populated by Docker Buildx for each platform.
-# e.g., for 'linux/arm64', TARGETOS becomes 'linux' and TARGETARCH becomes 'arm64'.
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -36,9 +34,6 @@ ARG COMMIT_INFO=unknown
 ARG BRANCH=unknown
 ARG INFO_PACKAGE=github.com/RA341/dockman/internal/info
 
-# We run the build on the native amd64 runner, but use GOOS and GOARCH
-# to tell the Go compiler to create a binary for the *target* platform.
-# This avoids slow emulation for the compilation step.
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w \
              -X ${INFO_PACKAGE}.Flavour=Docker \
              -X ${INFO_PACKAGE}.Version=${VERSION} \
