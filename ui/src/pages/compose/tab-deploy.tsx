@@ -174,7 +174,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                     <Typography>
                         Exec into any container using a custom image {' '}
                         <Link
-                            href={"gihub.com"}
+                            href={"https://dockman.radn.dev/docs/dockman-debug/overview"}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="Read more on GitHub (opens in a new tab)"

@@ -7,7 +7,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    IconButton,
+    IconButton, Link,
     TextField,
     Typography
 } from '@mui/material';
@@ -179,7 +179,22 @@ export const ExecDialog = ({show, hide, name, containerID}: {
                             />
                         </Box>
                         <Typography>
-                            Exec into any container even if the container does not have a shell
+                            Exec into any container using a custom image {' '}
+                            <Link
+                                href={"https://dockman.radn.dev/docs/dockman-debug/overview"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Read more on GitHub (opens in a new tab)"
+                                sx={{
+                                    color: '#60a5fa',
+                                    fontWeight: 'medium',
+                                    '&:hover': {
+                                        color: '#93c5fd',
+                                    }
+                                }}
+                            >
+                                more info
+                            </Link>
                         </Typography>
                     </Box>
                 ) : (
