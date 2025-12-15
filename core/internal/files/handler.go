@@ -99,7 +99,7 @@ func (h *Handler) Create(_ context.Context, req *connect.Request[v1.File]) (*con
 }
 
 func (h *Handler) Exists(_ context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	if err := h.srv.Exists(req.Msg.GetFilename(), req.Msg.Alias); err != nil {
+	if err := h.srv.Exists(req.Msg.Filename, req.Msg.Alias); err != nil {
 		return nil, err
 	}
 

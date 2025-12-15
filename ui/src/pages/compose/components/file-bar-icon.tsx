@@ -105,7 +105,7 @@ const FileBarIcon: React.FC<FileIconProps> = ({filename}) => {
 };
 
 export function getExt(filename: string) {
-    return filename.split(".").pop() ?? "";
+    return filename.split(".").pop() ?? filename;
 }
 
 export default FileBarIcon;

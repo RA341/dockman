@@ -73,20 +73,23 @@ function TextEditor() {
     const {activeAlias} = useAlias()
 
     useEffect(() => {
-        setIsLoading(true);
-        setFileError("");
+        const checkExists = async () => {
+            setIsLoading(true);
+            setFileError("");
 
-        callRPC(() => fileService.exists({filename: filename, alias: activeAlias}))
-            .then(value => {
-                if (value.err) {
-                    console.error("API error checking file existence:", value.err);
-                    setFileError(`An API error occurred: ${value.err}`);
-                }
-            })
-            .finally(() => {
-                setIsLoading(false);
-                recursiveOpen(filename)
-            });
+            const {err} = await callRPC(() => fileService.exists({
+                filename: filename,
+                alias: activeAlias,
+            }))
+            if (err) {
+                console.error("API error checking file existence:", err);
+                setFileError(`An API error occurred: ${err}`);
+            }
+            setIsLoading(false);
+            recursiveOpen(filename)
+        }
+
+        checkExists().then()
     }, [filename, fileService, activeAlias]);
 
     useEffect(() => {

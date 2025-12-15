@@ -37,10 +37,7 @@ export const ComposePageInner = () => {
     const params = useParams()
     const filename = params['*'] ?? ""
     const setFile = useActiveComposeFile((state) => state.setFile)
-
-    useEffect(() => {
-        setFile(filename)
-    }, [filename]);
+    setFile(filename)
 
     return (
         <Box sx={{
