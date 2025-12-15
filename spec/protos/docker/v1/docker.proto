@@ -29,6 +29,7 @@ service DockerService {
   rpc ImageList(ListImagesRequest) returns (ListImagesResponse) {}
   rpc ImageRemove(RemoveImageRequest) returns (RemoveImageResponse) {}
   rpc ImagePruneUnused(ImagePruneRequest) returns (ImagePruneResponse) {}
+  rpc ImageInspect(ImageInspectRequest) returns (ImageInspectResponse) {}
 
   // volumes
   rpc VolumeList(ListVolumesRequest) returns (ListVolumesResponse) {}
@@ -39,6 +40,29 @@ service DockerService {
   rpc NetworkList(ListNetworksRequest) returns (ListNetworksResponse) {}
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
+}
+
+message ImageInspectRequest {
+  string imageId = 1;
+}
+
+message ImageInspectResponse {
+  ImageInspect inspect = 1;
+}
+
+message ImageInspect {
+  string name = 1;
+  string id = 6;
+  string size = 3;
+  string arch = 5;
+  string createdIso = 4;
+  repeated ImageLayer layers = 2;
+}
+
+message ImageLayer {
+  string LayerId = 3;
+  string cmd = 1;
+  string size = 2;
 }
 
 message ComposeValidateResponse {

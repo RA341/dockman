@@ -88,6 +88,9 @@ const (
 	// DockerServiceImagePruneUnusedProcedure is the fully-qualified name of the DockerService's
 	// ImagePruneUnused RPC.
 	DockerServiceImagePruneUnusedProcedure = "/docker.v1.DockerService/ImagePruneUnused"
+	// DockerServiceImageInspectProcedure is the fully-qualified name of the DockerService's
+	// ImageInspect RPC.
+	DockerServiceImageInspectProcedure = "/docker.v1.DockerService/ImageInspect"
 	// DockerServiceVolumeListProcedure is the fully-qualified name of the DockerService's VolumeList
 	// RPC.
 	DockerServiceVolumeListProcedure = "/docker.v1.DockerService/VolumeList"
@@ -132,6 +135,7 @@ type DockerServiceClient interface {
 	ImageList(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	ImageRemove(context.Context, *connect.Request[v1.RemoveImageRequest]) (*connect.Response[v1.RemoveImageResponse], error)
 	ImagePruneUnused(context.Context, *connect.Request[v1.ImagePruneRequest]) (*connect.Response[v1.ImagePruneResponse], error)
+	ImageInspect(context.Context, *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error)
 	// volumes
 	VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	VolumeCreate(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
@@ -267,6 +271,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("ImagePruneUnused")),
 			connect.WithClientOptions(opts...),
 		),
+		imageInspect: connect.NewClient[v1.ImageInspectRequest, v1.ImageInspectResponse](
+			httpClient,
+			baseURL+DockerServiceImageInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("ImageInspect")),
+			connect.WithClientOptions(opts...),
+		),
 		volumeList: connect.NewClient[v1.ListVolumesRequest, v1.ListVolumesResponse](
 			httpClient,
 			baseURL+DockerServiceVolumeListProcedure,
@@ -327,6 +337,7 @@ type dockerServiceClient struct {
 	imageList        *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
 	imageRemove      *connect.Client[v1.RemoveImageRequest, v1.RemoveImageResponse]
 	imagePruneUnused *connect.Client[v1.ImagePruneRequest, v1.ImagePruneResponse]
+	imageInspect     *connect.Client[v1.ImageInspectRequest, v1.ImageInspectResponse]
 	volumeList       *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
 	volumeCreate     *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
 	volumeDelete     *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
@@ -430,6 +441,11 @@ func (c *dockerServiceClient) ImagePruneUnused(ctx context.Context, req *connect
 	return c.imagePruneUnused.CallUnary(ctx, req)
 }
 
+// ImageInspect calls docker.v1.DockerService.ImageInspect.
+func (c *dockerServiceClient) ImageInspect(ctx context.Context, req *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error) {
+	return c.imageInspect.CallUnary(ctx, req)
+}
+
 // VolumeList calls docker.v1.DockerService.VolumeList.
 func (c *dockerServiceClient) VolumeList(ctx context.Context, req *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
 	return c.volumeList.CallUnary(ctx, req)
@@ -484,6 +500,7 @@ type DockerServiceHandler interface {
 	ImageList(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	ImageRemove(context.Context, *connect.Request[v1.RemoveImageRequest]) (*connect.Response[v1.RemoveImageResponse], error)
 	ImagePruneUnused(context.Context, *connect.Request[v1.ImagePruneRequest]) (*connect.Response[v1.ImagePruneResponse], error)
+	ImageInspect(context.Context, *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error)
 	// volumes
 	VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	VolumeCreate(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
@@ -615,6 +632,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(dockerServiceMethods.ByName("ImagePruneUnused")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dockerServiceImageInspectHandler := connect.NewUnaryHandler(
+		DockerServiceImageInspectProcedure,
+		svc.ImageInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("ImageInspect")),
+		connect.WithHandlerOptions(opts...),
+	)
 	dockerServiceVolumeListHandler := connect.NewUnaryHandler(
 		DockerServiceVolumeListProcedure,
 		svc.VolumeList,
@@ -691,6 +714,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceImageRemoveHandler.ServeHTTP(w, r)
 		case DockerServiceImagePruneUnusedProcedure:
 			dockerServiceImagePruneUnusedHandler.ServeHTTP(w, r)
+		case DockerServiceImageInspectProcedure:
+			dockerServiceImageInspectHandler.ServeHTTP(w, r)
 		case DockerServiceVolumeListProcedure:
 			dockerServiceVolumeListHandler.ServeHTTP(w, r)
 		case DockerServiceVolumeCreateProcedure:
@@ -786,6 +811,10 @@ func (UnimplementedDockerServiceHandler) ImageRemove(context.Context, *connect.R
 
 func (UnimplementedDockerServiceHandler) ImagePruneUnused(context.Context, *connect.Request[v1.ImagePruneRequest]) (*connect.Response[v1.ImagePruneResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ImagePruneUnused is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) ImageInspect(context.Context, *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ImageInspect is not implemented"))
 }
 
 func (UnimplementedDockerServiceHandler) VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {

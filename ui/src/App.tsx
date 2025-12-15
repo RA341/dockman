@@ -21,6 +21,7 @@ import {TabsProvider} from "./context/tab-context.tsx";
 import {useTabs} from "./hooks/tabs.ts";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
 import AliasProvider from "./context/alias-context.tsx";
+import ImageInspect from "./pages/images/inspect.tsx";
 
 export function App() {
     return (
@@ -52,6 +53,7 @@ export function App() {
 
                                     <Route path="images">
                                         <Route index element={<ImagesPage/>}/>
+                                        <Route path="inspect/:id" element={<ImageInspect/>}/>
                                     </Route>
 
                                     <Route path="volumes">

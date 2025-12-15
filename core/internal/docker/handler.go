@@ -21,6 +21,7 @@ import (
 	"github.com/RA341/dockman/internal/docker/compose"
 	contSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/updater"
+	"github.com/dustin/go-humanize"
 
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
@@ -421,6 +422,42 @@ func (h *Handler) ImagePruneUnused(ctx context.Context, req *connect.Request[v1.
 	response.Deleted = deleted
 
 	return connect.NewResponse(&response), nil
+}
+
+func (h *Handler) ImageInspect(ctx context.Context, c *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error) {
+	inspect, history, err := h.srv().Container.ImageInspect(
+		ctx,
+		c.Msg.ImageId,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var layers = make([]*v1.ImageLayer, 0, len(history.Items))
+	for _, sd := range history.Items {
+		layers = append(layers, &v1.ImageLayer{
+			Cmd:  sd.CreatedBy,
+			Size: humanize.Bytes(uint64(sd.Size)),
+		})
+	}
+
+	var name string
+	for _, sd := range inspect.RepoDigests {
+		name = sd
+	}
+
+	var insp = &v1.ImageInspect{
+		Name:       name,
+		Id:         inspect.ID,
+		Arch:       inspect.Architecture,
+		Size:       humanize.Bytes(uint64(inspect.Size)),
+		CreatedIso: inspect.Created,
+		Layers:     layers,
+	}
+
+	return connect.NewResponse(&v1.ImageInspectResponse{
+		Inspect: insp,
+	}), nil
 }
 
 ////////////////////////////////////////////

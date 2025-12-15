@@ -23,6 +23,24 @@ func (s *Service) ImageList(ctx context.Context) ([]image.Summary, error) {
 	return list.Items, err
 }
 
+func (s *Service) ImageInspect(ctx context.Context, id string) (client.ImageInspectResult, client.ImageHistoryResult, error) {
+	hist, err := s.Cli().ImageHistory(ctx, id)
+	if err != nil {
+		return client.ImageInspectResult{}, client.ImageHistoryResult{}, err
+	}
+
+	inspect, err := s.Cli().ImageInspect(
+		ctx,
+		id,
+		client.ImageInspectWithManifests(true),
+	)
+	if err != nil {
+		return client.ImageInspectResult{}, client.ImageHistoryResult{}, err
+	}
+
+	return inspect, hist, nil
+}
+
 func (s *Service) ImagePull(ctx context.Context, imageTag string, writer io.Writer) error {
 	log.Info().Msg("Pulling latest image")
 

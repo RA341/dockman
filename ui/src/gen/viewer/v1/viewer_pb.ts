@@ -2,48 +2,50 @@
 // @generated from file viewer/v1/viewer.proto (package viewer.v1, syntax proto3)
 /* eslint-disable */
 
-import type {GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
-import {fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
-import type {Message} from "@bufbuild/protobuf";
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file viewer/v1/viewer.proto.
  */
 export const file_viewer_v1_viewer: GenFile = /*@__PURE__*/
-    fileDesc("ChZ2aWV3ZXIvdjEvdmlld2VyLnByb3RvEgl2aWV3ZXIudjEiGgoYU3RvcFNxbGl0ZVNlc3Npb25SZXF1ZXN0IhsKGVN0b3BTcWxpdGVTZXNzaW9uUmVzcG9uc2UiOgoZU3RhcnRTcWxpdGVTZXNzaW9uUmVxdWVzdBIdCgRwYXRoGAEgASgLMg8udmlld2VyLnYxLkZpbGUiJwoERmlsZRIQCghmaWxlbmFtZRgBIAEoCRINCgVhbGlhcxgDIAEoCSIpChpTdGFydFNxbGl0ZVNlc3Npb25SZXNwb25zZRILCgN1cmwYASABKAky2AEKDVZpZXdlclNlcnZpY2USZQoSU3RhcnRTcWxpdGVTZXNzaW9uEiQudmlld2VyLnYxLlN0YXJ0U3FsaXRlU2Vzc2lvblJlcXVlc3QaJS52aWV3ZXIudjEuU3RhcnRTcWxpdGVTZXNzaW9uUmVzcG9uc2UiADABEmAKEVN0b3BTcWxpdGVTZXNzaW9uEiMudmlld2VyLnYxLlN0b3BTcWxpdGVTZXNzaW9uUmVxdWVzdBokLnZpZXdlci52MS5TdG9wU3FsaXRlU2Vzc2lvblJlc3BvbnNlIgBCjwEKDWNvbS52aWV3ZXIudjFCC1ZpZXdlclByb3RvUAFaLGdpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvdmlld2VyL3YxogIDVlhYqgIJVmlld2VyLlYxygIJVmlld2VyXFYx4gIVVmlld2VyXFYxXEdQQk1ldGFkYXRh6gIKVmlld2VyOjpWMWIGcHJvdG8z");
+  fileDesc("ChZ2aWV3ZXIvdjEvdmlld2VyLnByb3RvEgl2aWV3ZXIudjEiGgoYU3RvcFNxbGl0ZVNlc3Npb25SZXF1ZXN0IhsKGVN0b3BTcWxpdGVTZXNzaW9uUmVzcG9uc2UiOgoZU3RhcnRTcWxpdGVTZXNzaW9uUmVxdWVzdBIdCgRwYXRoGAEgASgLMg8udmlld2VyLnYxLkZpbGUiJwoERmlsZRIQCghmaWxlbmFtZRgBIAEoCRINCgVhbGlhcxgDIAEoCSIpChpTdGFydFNxbGl0ZVNlc3Npb25SZXNwb25zZRILCgN1cmwYASABKAky2AEKDVZpZXdlclNlcnZpY2USZQoSU3RhcnRTcWxpdGVTZXNzaW9uEiQudmlld2VyLnYxLlN0YXJ0U3FsaXRlU2Vzc2lvblJlcXVlc3QaJS52aWV3ZXIudjEuU3RhcnRTcWxpdGVTZXNzaW9uUmVzcG9uc2UiADABEmAKEVN0b3BTcWxpdGVTZXNzaW9uEiMudmlld2VyLnYxLlN0b3BTcWxpdGVTZXNzaW9uUmVxdWVzdBokLnZpZXdlci52MS5TdG9wU3FsaXRlU2Vzc2lvblJlc3BvbnNlIgBCjwEKDWNvbS52aWV3ZXIudjFCC1ZpZXdlclByb3RvUAFaLGdpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvdmlld2VyL3YxogIDVlhYqgIJVmlld2VyLlYxygIJVmlld2VyXFYx4gIVVmlld2VyXFYxXEdQQk1ldGFkYXRh6gIKVmlld2VyOjpWMWIGcHJvdG8z");
 
 /**
  * @generated from message viewer.v1.StopSqliteSessionRequest
  */
-export type StopSqliteSessionRequest = Message<"viewer.v1.StopSqliteSessionRequest"> & {};
+export type StopSqliteSessionRequest = Message<"viewer.v1.StopSqliteSessionRequest"> & {
+};
 
 /**
  * Describes the message viewer.v1.StopSqliteSessionRequest.
  * Use `create(StopSqliteSessionRequestSchema)` to create a new message.
  */
 export const StopSqliteSessionRequestSchema: GenMessage<StopSqliteSessionRequest> = /*@__PURE__*/
-    messageDesc(file_viewer_v1_viewer, 0);
+  messageDesc(file_viewer_v1_viewer, 0);
 
 /**
  * @generated from message viewer.v1.StopSqliteSessionResponse
  */
-export type StopSqliteSessionResponse = Message<"viewer.v1.StopSqliteSessionResponse"> & {};
+export type StopSqliteSessionResponse = Message<"viewer.v1.StopSqliteSessionResponse"> & {
+};
 
 /**
  * Describes the message viewer.v1.StopSqliteSessionResponse.
  * Use `create(StopSqliteSessionResponseSchema)` to create a new message.
  */
 export const StopSqliteSessionResponseSchema: GenMessage<StopSqliteSessionResponse> = /*@__PURE__*/
-    messageDesc(file_viewer_v1_viewer, 1);
+  messageDesc(file_viewer_v1_viewer, 1);
 
 /**
  * @generated from message viewer.v1.StartSqliteSessionRequest
  */
 export type StartSqliteSessionRequest = Message<"viewer.v1.StartSqliteSessionRequest"> & {
-    /**
-     * @generated from field: viewer.v1.File path = 1;
-     */
-    path?: File;
+  /**
+   * @generated from field: viewer.v1.File path = 1;
+   */
+  path?: File;
 };
 
 /**
@@ -51,21 +53,21 @@ export type StartSqliteSessionRequest = Message<"viewer.v1.StartSqliteSessionReq
  * Use `create(StartSqliteSessionRequestSchema)` to create a new message.
  */
 export const StartSqliteSessionRequestSchema: GenMessage<StartSqliteSessionRequest> = /*@__PURE__*/
-    messageDesc(file_viewer_v1_viewer, 2);
+  messageDesc(file_viewer_v1_viewer, 2);
 
 /**
  * @generated from message viewer.v1.File
  */
 export type File = Message<"viewer.v1.File"> & {
-    /**
-     * @generated from field: string filename = 1;
-     */
-    filename: string;
+  /**
+   * @generated from field: string filename = 1;
+   */
+  filename: string;
 
-    /**
-     * @generated from field: string alias = 3;
-     */
-    alias: string;
+  /**
+   * @generated from field: string alias = 3;
+   */
+  alias: string;
 };
 
 /**
@@ -73,16 +75,16 @@ export type File = Message<"viewer.v1.File"> & {
  * Use `create(FileSchema)` to create a new message.
  */
 export const FileSchema: GenMessage<File> = /*@__PURE__*/
-    messageDesc(file_viewer_v1_viewer, 3);
+  messageDesc(file_viewer_v1_viewer, 3);
 
 /**
  * @generated from message viewer.v1.StartSqliteSessionResponse
  */
 export type StartSqliteSessionResponse = Message<"viewer.v1.StartSqliteSessionResponse"> & {
-    /**
-     * @generated from field: string url = 1;
-     */
-    url: string;
+  /**
+   * @generated from field: string url = 1;
+   */
+  url: string;
 };
 
 /**
@@ -90,28 +92,28 @@ export type StartSqliteSessionResponse = Message<"viewer.v1.StartSqliteSessionRe
  * Use `create(StartSqliteSessionResponseSchema)` to create a new message.
  */
 export const StartSqliteSessionResponseSchema: GenMessage<StartSqliteSessionResponse> = /*@__PURE__*/
-    messageDesc(file_viewer_v1_viewer, 4);
+  messageDesc(file_viewer_v1_viewer, 4);
 
 /**
  * @generated from service viewer.v1.ViewerService
  */
 export const ViewerService: GenService<{
-    /**
-     * @generated from rpc viewer.v1.ViewerService.StartSqliteSession
-     */
-    startSqliteSession: {
-        methodKind: "server_streaming";
-        input: typeof StartSqliteSessionRequestSchema;
-        output: typeof StartSqliteSessionResponseSchema;
-    },
-    /**
-     * @generated from rpc viewer.v1.ViewerService.StopSqliteSession
-     */
-    stopSqliteSession: {
-        methodKind: "unary";
-        input: typeof StopSqliteSessionRequestSchema;
-        output: typeof StopSqliteSessionResponseSchema;
-    },
+  /**
+   * @generated from rpc viewer.v1.ViewerService.StartSqliteSession
+   */
+  startSqliteSession: {
+    methodKind: "server_streaming";
+    input: typeof StartSqliteSessionRequestSchema;
+    output: typeof StartSqliteSessionResponseSchema;
+  },
+  /**
+   * @generated from rpc viewer.v1.ViewerService.StopSqliteSession
+   */
+  stopSqliteSession: {
+    methodKind: "unary";
+    input: typeof StopSqliteSessionRequestSchema;
+    output: typeof StopSqliteSessionResponseSchema;
+  },
 }> = /*@__PURE__*/
-    serviceDesc(file_viewer_v1_viewer, 0);
+  serviceDesc(file_viewer_v1_viewer, 0);
 

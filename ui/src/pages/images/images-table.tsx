@@ -5,6 +5,7 @@ import {
     Chip,
     Link,
     Paper,
+    Stack,
     Table,
     TableBody,
     TableCell,
@@ -15,7 +16,7 @@ import {
     Tooltip,
     Typography
 } from '@mui/material';
-import {CalendarToday as CalendarIcon} from '@mui/icons-material';
+import {CalendarToday as CalendarIcon, InfoOutlineRounded} from '@mui/icons-material';
 import {getImageHomePageUrl} from "../../hooks/docker-images.ts";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import {useCopyButton} from "../../hooks/copy.ts";
@@ -25,6 +26,7 @@ import {formatDate} from "../../lib/api.ts";
 import {type SortOrder, sortTable, type TableInfo, useSort} from "../../lib/table.ts";
 import {formatBytes} from "../../lib/editor.ts";
 import {useConfig} from "../../hooks/config.ts";
+import {useNavigate} from "react-router-dom";
 
 interface ImageTableProps {
     images: Image[];
@@ -72,6 +74,8 @@ export const ImageTable = (
         dockYaml?.imagePage?.sort?.sortField ?? "images",
         (dockYaml?.imagePage?.sort?.sortOrder as SortOrder) ?? "desc"
     );
+
+    const nav = useNavigate()
 
     const tableInfo: TableInfo<Image> = {
         checkbox: {
@@ -145,6 +149,33 @@ export const ImageTable = (
                             activeID={copiedId ?? ""}
                         />
                     </Box>
+                </TableCell>
+            )
+        },
+        Action: {
+            getValue: (image) => Number(image.id),
+            header: (label) => {
+                return (
+                    <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>
+                        {label}
+                    </TableCell>
+                )
+            },
+            cell: (image) => (
+                <TableCell>
+                    <Stack direction="row" spacing={1}>
+                        <Tooltip title="Inspect Image">
+                            <InfoOutlineRounded
+                                aria-label="Inspect Image"
+                                color="primary"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    nav(`/images/inspect/${image.id}`)
+                                }}
+                                sx={{cursor: 'pointer'}}
+                            />
+                        </Tooltip>
+                    </Stack>
                 </TableCell>
             )
         },
