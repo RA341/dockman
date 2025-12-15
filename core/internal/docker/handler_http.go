@@ -75,7 +75,7 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 
 		wsWriter := wsu.NewWsWriter(ws)
 		var cleanup debug.CleanupFn
-
+		wsu.WsInf(ws, "setting up debug container standby...")
 		resp, cleanup, err = h.srv().Debugger.ExecDebugContainer(
 			readerCtx,
 			contId,
