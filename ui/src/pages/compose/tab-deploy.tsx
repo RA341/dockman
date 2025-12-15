@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import  {useState} from 'react';
 import {
     Autocomplete,
     Box,
@@ -7,6 +7,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Link,
     TextField,
     Typography
 } from '@mui/material';
@@ -58,11 +59,20 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         setShowExecDialog(false)
     }
 
-    const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
+    const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh", "fish"];
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
+    const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
+    const [debuggerImage, setDebuggerImage] = useState("")
+
     const handleConnect = (containerId: string, containerName: string, cmd: string) => {
         const encodedCmd = encodeURIComponent(cmd);
-        const url = getWSUrl(`api/docker/exec/${containerId}?cmd=${encodedCmd}`)
+        let url = getWSUrl(`api/docker/exec/${containerId}?cmd=${encodedCmd}`)
+        if (debuggerImage) {
+            console.log("using dockman debug with debuggerImage", debuggerImage);
+            url += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec
+            url += "&image=" + debuggerImage;
+        }
+
         execContainer(`${selectedPage}: exec-${containerName}`, url, true)
         closeExecDialog()
     }
@@ -133,6 +143,52 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                             />
                         )}
                     />
+
+                    <Box sx={{width: '100%', maxWidth: 400, display: 'flex', gap: 1, alignItems: 'center'}}>
+                        <Typography>
+                            Dockman Debug
+                        </Typography>
+                        <Autocomplete
+                            freeSolo
+                            options={debugImageOptions}
+                            value={debuggerImage}
+                            onInputChange={(_, value) => setDebuggerImage(value)}
+                            sx={{flex: 1}}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Debugger Image"
+                                    variant="outlined"
+                                    size="small"
+                                    slotProps={{
+                                        inputLabel: {style: {color: '#aaa'}},
+                                        input: {
+                                            ...params.InputProps,
+                                            style: {color: '#fff', backgroundColor: '#333'}
+                                        }
+                                    }}
+                                />
+                            )}
+                        />
+                    </Box>
+                    <Typography>
+                        Exec into any container using a custom image {' '}
+                        <Link
+                            href={"gihub.com"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Read more on GitHub (opens in a new tab)"
+                            sx={{
+                                color: '#60a5fa',
+                                fontWeight: 'medium',
+                                '&:hover': {
+                                    color: '#93c5fd',
+                                }
+                            }}
+                        >
+                            more info
+                        </Link>
+                    </Typography>
                     <Button
                         variant="contained"
                         onClick={() => handleConnect(containerId, containerName, selectedCmd)}
