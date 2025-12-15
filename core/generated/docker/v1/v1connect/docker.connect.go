@@ -109,6 +109,9 @@ const (
 	// DockerServiceNetworkDeleteProcedure is the fully-qualified name of the DockerService's
 	// NetworkDelete RPC.
 	DockerServiceNetworkDeleteProcedure = "/docker.v1.DockerService/NetworkDelete"
+	// DockerServiceNetworkInspectProcedure is the fully-qualified name of the DockerService's
+	// NetworkInspect RPC.
+	DockerServiceNetworkInspectProcedure = "/docker.v1.DockerService/NetworkInspect"
 )
 
 // DockerServiceClient is a client for the docker.v1.DockerService service.
@@ -144,6 +147,7 @@ type DockerServiceClient interface {
 	NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
 	NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
+	NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error)
 }
 
 // NewDockerServiceClient constructs a client for the docker.v1.DockerService service. By default,
@@ -313,6 +317,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("NetworkDelete")),
 			connect.WithClientOptions(opts...),
 		),
+		networkInspect: connect.NewClient[v1.NetworkInspectRequest, v1.NetworkInspectResponse](
+			httpClient,
+			baseURL+DockerServiceNetworkInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("NetworkInspect")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -344,6 +354,7 @@ type dockerServiceClient struct {
 	networkList      *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
 	networkCreate    *connect.Client[v1.CreateNetworkRequest, v1.CreateNetworkResponse]
 	networkDelete    *connect.Client[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse]
+	networkInspect   *connect.Client[v1.NetworkInspectRequest, v1.NetworkInspectResponse]
 }
 
 // ContainerStart calls docker.v1.DockerService.ContainerStart.
@@ -476,6 +487,11 @@ func (c *dockerServiceClient) NetworkDelete(ctx context.Context, req *connect.Re
 	return c.networkDelete.CallUnary(ctx, req)
 }
 
+// NetworkInspect calls docker.v1.DockerService.NetworkInspect.
+func (c *dockerServiceClient) NetworkInspect(ctx context.Context, req *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error) {
+	return c.networkInspect.CallUnary(ctx, req)
+}
+
 // DockerServiceHandler is an implementation of the docker.v1.DockerService service.
 type DockerServiceHandler interface {
 	// container
@@ -509,6 +525,7 @@ type DockerServiceHandler interface {
 	NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
 	NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
+	NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error)
 }
 
 // NewDockerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -674,6 +691,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(dockerServiceMethods.ByName("NetworkDelete")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dockerServiceNetworkInspectHandler := connect.NewUnaryHandler(
+		DockerServiceNetworkInspectProcedure,
+		svc.NetworkInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("NetworkInspect")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/docker.v1.DockerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DockerServiceContainerStartProcedure:
@@ -728,6 +751,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceNetworkCreateHandler.ServeHTTP(w, r)
 		case DockerServiceNetworkDeleteProcedure:
 			dockerServiceNetworkDeleteHandler.ServeHTTP(w, r)
+		case DockerServiceNetworkInspectProcedure:
+			dockerServiceNetworkInspectHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -839,4 +864,8 @@ func (UnimplementedDockerServiceHandler) NetworkCreate(context.Context, *connect
 
 func (UnimplementedDockerServiceHandler) NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkDelete is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkInspect is not implemented"))
 }

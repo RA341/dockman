@@ -3,17 +3,17 @@ import {
     Box,
     Checkbox,
     Chip,
-    Paper,
+    Paper, Stack,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    TableSortLabel,
+    TableSortLabel, Tooltip,
     Typography
 } from '@mui/material';
-import {CalendarMonth, Label as LabelIcon} from '@mui/icons-material';
+import {CalendarMonth, InfoOutlineRounded, Label as LabelIcon} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import type {Network} from "../../gen/docker/v1/docker_pb.ts";
 import {useCopyButton} from "../../hooks/copy.ts";
@@ -22,6 +22,7 @@ import {formatDate} from "../../lib/api.ts";
 import {type SortOrder, sortTable, type TableInfo, useSort} from "../../lib/table.ts";
 import {TableLabelWithSort} from "../../lib/table-shared.tsx";
 import {useConfig} from "../../hooks/config.ts";
+import {useNavigate} from "react-router-dom";
 
 interface NetworkTableProps {
     networks: Network[];
@@ -60,6 +61,8 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
         dockYaml?.networkPage?.sort?.sortField ?? 'name',
         (dockYaml?.networkPage?.sort?.sortOrder as SortOrder) ?? 'asc'
     )
+
+    const nav = useNavigate()
 
     const tableInfo: TableInfo<Network> = {
         checkbox: {
@@ -123,6 +126,33 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
                 </TableCell>
             ),
             getValue: (data) => data.name,
+        },
+        Action: {
+            getValue: (image) => Number(image.id),
+            header: (label) => {
+                return (
+                    <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>
+                        {label}
+                    </TableCell>
+                )
+            },
+            cell: (image) => (
+                <TableCell>
+                    <Stack direction="row" spacing={1}>
+                        <Tooltip title="Inspect network">
+                            <InfoOutlineRounded
+                                aria-label="Inspect network"
+                                color="primary"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    nav(`/networks/inspect/${image.id}`)
+                                }}
+                                sx={{cursor: 'pointer'}}
+                            />
+                        </Tooltip>
+                    </Stack>
+                </TableCell>
+            )
         },
         Project: {
             getValue: data => data.composeProject,

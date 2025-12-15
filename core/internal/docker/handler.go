@@ -542,23 +542,54 @@ func (h *Handler) NetworkList(ctx context.Context, _ *connect.Request[v1.ListNet
 
 	var rpcNetworks []*v1.Network
 	for _, netI := range networks {
-		rpcNetworks = append(rpcNetworks, &v1.Network{
-			Id:             netI.ID,
-			Name:           netI.Name,
-			CreatedAt:      netI.Created.Format(time.RFC3339),
-			Subnet:         getSubnet(netI),
-			Scope:          netI.Scope,
-			Driver:         netI.Driver,
-			EnableIpv4:     netI.EnableIPv4,
-			EnableIpv6:     netI.EnableIPv6,
-			Internal:       netI.Internal,
-			Attachable:     netI.Attachable,
-			ComposeProject: netI.Labels[api.ProjectLabel],
-			ContainerIds:   slices.Collect(maps.Keys(netI.Containers)),
-		})
+		rpcNetworks = append(rpcNetworks, ToRpcNetwork(netI))
 	}
 
 	return connect.NewResponse(&v1.ListNetworksResponse{Networks: rpcNetworks}), nil
+}
+
+func ToRpcNetwork(netI network.Inspect) *v1.Network {
+	return &v1.Network{
+		Id:             netI.ID,
+		Name:           netI.Name,
+		CreatedAt:      netI.Created.Format(time.RFC3339),
+		Subnet:         getSubnet(netI),
+		Scope:          netI.Scope,
+		Driver:         netI.Driver,
+		EnableIpv4:     netI.EnableIPv4,
+		EnableIpv6:     netI.EnableIPv6,
+		Internal:       netI.Internal,
+		Attachable:     netI.Attachable,
+		ComposeProject: netI.Labels[api.ProjectLabel],
+		ContainerIds:   slices.Collect(maps.Keys(netI.Containers)),
+	}
+}
+
+func (h *Handler) NetworkInspect(ctx context.Context, c *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error) {
+	inspect, err := h.srv().Container.NetworksInspect(ctx, c.Msg.NetworkId)
+	if err != nil {
+		return nil, err
+	}
+
+	rpcNetworks := make([]*v1.NetworkContainerInspect, 0, len(inspect.Containers))
+	for _, d := range inspect.Containers {
+		rpcNetworks = append(rpcNetworks, &v1.NetworkContainerInspect{
+			Name:     d.Name,
+			Endpoint: d.EndpointID,
+			IPv4:     d.IPv4Address.String(),
+			IPv6:     d.IPv6Address.String(),
+			Mac:      d.MacAddress.String(),
+		})
+	}
+
+	info := v1.NetworkInspectInfo{
+		Net:       ToRpcNetwork(inspect),
+		Container: rpcNetworks,
+	}
+
+	return connect.NewResponse(&v1.NetworkInspectResponse{
+		Inspect: &info,
+	}), nil
 }
 
 func getSubnet(netI network.Inspect) string {

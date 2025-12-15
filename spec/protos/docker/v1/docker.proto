@@ -40,6 +40,29 @@ service DockerService {
   rpc NetworkList(ListNetworksRequest) returns (ListNetworksResponse) {}
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
+  rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
+
+}
+
+message NetworkInspectRequest {
+  string networkId = 1;
+}
+
+message NetworkInspectResponse {
+  NetworkInspectInfo inspect = 1;
+}
+
+message NetworkInspectInfo {
+  Network net = 1;
+  repeated NetworkContainerInspect container = 2;
+}
+
+message NetworkContainerInspect {
+    string Name = 1;
+    string Endpoint = 2;
+    string IPv4 = 3;
+    string IPv6 = 4;
+    string Mac = 5;
 }
 
 message ImageInspectRequest {

@@ -32,6 +32,16 @@ func (s *Service) NetworksList(ctx context.Context) ([]network.Inspect, error) {
 	return result, nil
 }
 
+func (s *Service) NetworksInspect(ctx context.Context, id string) (network.Inspect, error) {
+	inspect, err := s.Cli().NetworkInspect(ctx, id, client.NetworkInspectOptions{
+		Verbose: true,
+	})
+	if err != nil {
+		return network.Inspect{}, err
+	}
+	return inspect.Network, err
+}
+
 func (s *Service) NetworksCreate(ctx context.Context, name string) error {
 	_, err := s.Client.NetworkCreate(ctx, name, client.NetworkCreateOptions{})
 	return err
