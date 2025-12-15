@@ -95,8 +95,9 @@ function CorePage() {
         rpcName: keyof typeof dockerService,
         message: string,
     ) {
+        // @ts-ignore
         const {err} = await callRPC(
-            // wsad @ts-expect-error: type too complex to represent
+            //  @ts-expect-error: type too complex to represent
             () => dockerService[rpcName]({
                 containerIds: selectedContainers
             }) as Promise<never> // we don't care about the output only err
