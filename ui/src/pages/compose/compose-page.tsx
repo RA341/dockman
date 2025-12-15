@@ -1,6 +1,6 @@
 import {type JSX, useEffect, useMemo} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
-import {Box, IconButton, Tab, Tabs} from '@mui/material';
+import {Box, IconButton, Tab, Tabs, Tooltip} from '@mui/material';
 import {FileList} from "./components/file-bar.tsx";
 import {Close} from '@mui/icons-material';
 import {FilesProvider} from "../../context/file-context.tsx";
@@ -34,10 +34,13 @@ export const ComposePage = () => {
 }
 
 export const ComposePageInner = () => {
-    const params = useParams();
-    const filename = params['*'] ?? "";
+    const params = useParams()
+    const filename = params['*'] ?? ""
     const setFile = useActiveComposeFile((state) => state.setFile)
-    setFile(filename)
+
+    useEffect(() => {
+        setFile(filename)
+    }, [filename]);
 
     return (
         <Box sx={{
@@ -82,12 +85,16 @@ export const ComposePageInner = () => {
                         </Box>
                     </Box>
                 </Box>
-
                 <LogsPanel/>
             </Box>
         </Box>
     );
 };
+
+function getTabName(filename: string): string {
+    const s = filename.split("/").pop() ?? filename;
+    return s.slice(0, 19) // max name limit of 19 chars
+}
 
 const FileTabBar = () => {
     const filename = useActiveComposeFile(state => state.activeComposeFile)!
@@ -152,7 +159,9 @@ const FileTabBar = () => {
                                     alignItems: 'center',
                                     px: 1
                                 }}>
-                                    <span>{tabFilename}</span>
+                                    <Tooltip title={filename}>
+                                        <span>{getTabName(tabFilename)}</span>
+                                    </Tooltip>
                                     <IconButton
                                         size="small"
                                         component="div"
