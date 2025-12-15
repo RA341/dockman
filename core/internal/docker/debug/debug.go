@@ -154,7 +154,6 @@ func (s *Service) ExecDebugContainer(
 
 		_, err = s.Cli().ContainerRemove(ctx, debuggerContId, client.ContainerRemoveOptions{
 			RemoveVolumes: true,
-			RemoveLinks:   true,
 			Force:         true,
 		})
 		if err != nil {

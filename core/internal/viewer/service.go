@@ -176,7 +176,6 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		}
 		_, err = s.cli().ContainerRemove(ctx, create.ID, client.ContainerRemoveOptions{
 			RemoveVolumes: true,
-			RemoveLinks:   true,
 			Force:         true,
 		})
 		if err != nil {
