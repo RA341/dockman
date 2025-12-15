@@ -2,11 +2,10 @@ package files
 
 import (
 	b64 "encoding/base64"
-	"fmt"
 	"net/http"
 
+	"github.com/RA341/dockman/internal/host"
 	fu "github.com/RA341/dockman/pkg/fileutil"
-	wsu "github.com/RA341/dockman/pkg/ws"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -26,7 +25,7 @@ func (h *FileHandler) register() http.Handler {
 	subMux := http.NewServeMux()
 	subMux.HandleFunc("POST /save", h.saveFile)
 	subMux.HandleFunc("GET /load/{filename}", h.loadFile)
-	subMux.HandleFunc("GET /search", h.searchFile)
+	subMux.HandleFunc("GET /search/{host}/{root}", h.searchFile)
 
 	return subMux
 }
@@ -39,16 +38,19 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Filename not provided", http.StatusBadRequest)
 		return
 	}
-
-	alias := r.URL.Query().Get(QueryKeyAlias)
-	fullpath, err := h.srv.LoadFilePath(filename, alias)
+	getHost, err := host.GetHost(r.Context())
 	if err != nil {
-		log.Error().Err(err).Str("path", fullpath).Msg("Error loading file")
-		http.Error(w, "Filename not found", http.StatusBadRequest)
+		http.Error(w, "host not provided", http.StatusBadRequest)
 		return
 	}
 
-	http.ServeFile(w, r, fullpath)
+	reader, modTime, err := h.srv.LoadFilePath(filename, getHost)
+	if err != nil {
+		log.Error().Err(err).Str("path", filename).Msg("Error loading file")
+		http.Error(w, "Filename not found", http.StatusBadRequest)
+		return
+	}
+	http.ServeContent(w, r, filename, modTime, reader)
 }
 
 func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
@@ -59,13 +61,19 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, meta, err := r.FormFile(fileContentsFormKey)
+	getHost, err := host.GetHost(r.Context())
+	if err != nil {
+		http.Error(w, "host not provided", http.StatusBadRequest)
+		return
+	}
+
+	content, meta, err := r.FormFile(fileContentsFormKey)
 	if err != nil {
 		log.Error().Err(err).Msg("Error retrieving file from form")
 		http.Error(w, "Error retrieving file from form", http.StatusBadRequest)
 		return
 	}
-	defer fu.Close(file)
+	defer fu.Close(content)
 
 	decodedFileName, err := b64.StdEncoding.DecodeString(meta.Filename)
 	if err != nil {
@@ -73,9 +81,7 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	alias := r.URL.Query().Get(QueryKeyAlias)
-
-	err = h.srv.Save(string(decodedFileName), alias, file)
+	err = h.srv.Save(string(decodedFileName), getHost, content)
 	if err != nil {
 		log.Error().Err(err).Msg("Error saving file")
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
@@ -89,8 +95,22 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+type SearchResponse struct {
+	Results []SearchResult `json:"results"`
+	Error   string         `json:"error"`
+}
+
 func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
-	alias := r.URL.Query().Get(QueryKeyAlias)
+	filename := r.PathValue("root")
+	if filename == "" {
+		http.Error(w, "root not provided for search", http.StatusBadRequest)
+		return
+	}
+	getHost := r.PathValue("host")
+	if getHost == "" {
+		http.Error(w, "host not provided", http.StatusBadRequest)
+		return
+	}
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -99,9 +119,12 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer fu.Close(ws)
 
-	all, err := h.srv.listAll(alias)
+	var response SearchResponse
+
+	all, err := h.srv.listAll(filename, getHost)
 	if err != nil {
-		wsu.WsErr(ws, fmt.Errorf("Unable to list files "+err.Error()))
+		response.Error = err.Error()
+		writeJason(ws, response)
 		return
 	}
 
@@ -114,14 +137,20 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 		query := string(msg)
 
 		results := h.srv.search(query, all)
+		response.Results = results
 
-		err = ws.WriteJSON(results)
-		if err != nil {
-			err = ws.WriteJSON(map[string]string{"error": err.Error()})
-			if err != nil {
-				log.Warn().Err(err).Msg("Error writing results to websocket")
-			}
-			return
-		}
+		writeJason(ws, response)
 	}
+}
+
+// ahh yes the jason protocol
+func writeJason(ws *websocket.Conn, response SearchResponse) {
+	err := ws.WriteJSON(&response)
+	if err != nil {
+		log.Warn().Err(err).
+			Any("response", response).
+			Msg("Error writing search results to websocket")
+		return
+	}
+	return
 }

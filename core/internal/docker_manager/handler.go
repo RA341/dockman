@@ -30,13 +30,13 @@ func (h *Handler) NewClient(_ context.Context, req *connect.Request[v1.Machine])
 }
 
 func (h *Handler) StartUpdate(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.Empty], error) {
-	h.srv.UpdateContainers()
+	// todo
+	//h.srv.UpdateContainers()
 	return connect.NewResponse(&v1.Empty{}), nil
 }
 
 func (h *Handler) ListClients(_ context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.ListClientsResponse], error) {
 	clients := h.srv.manager.ListHostNames()
-	curClient := h.srv.manager.Active()
 
 	var protoClients []string
 	for _, name := range clients {
@@ -44,8 +44,7 @@ func (h *Handler) ListClients(_ context.Context, _ *connect.Request[v1.Empty]) (
 	}
 
 	return connect.NewResponse(&v1.ListClientsResponse{
-		Clients:      protoClients,
-		ActiveClient: curClient,
+		Clients: protoClients,
 	}), nil
 }
 
@@ -101,13 +100,6 @@ func (h *Handler) DeleteClient(_ context.Context, req *connect.Request[v1.Machin
 		return nil, err
 	}
 
-	return connect.NewResponse(&v1.Empty{}), nil
-}
-
-func (h *Handler) SwitchClient(_ context.Context, req *connect.Request[v1.SwitchRequest]) (*connect.Response[v1.Empty], error) {
-	if err := h.srv.SwitchClient(req.Msg.MachineID); err != nil {
-		return nil, err
-	}
 	return connect.NewResponse(&v1.Empty{}), nil
 }
 

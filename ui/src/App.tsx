@@ -1,28 +1,28 @@
-import {Box, createTheme, CssBaseline, ThemeProvider} from '@mui/material';
+import {createTheme, CssBaseline, ThemeProvider} from '@mui/material';
 import {SnackbarProvider} from "./context/snackbar-context.tsx";
 import {BrowserRouter, Navigate, Outlet, Route, Routes} from "react-router-dom";
 import {AuthProvider} from "./context/auth-context.tsx";
 import React from 'react';
 import {useAuth} from "./hooks/auth.ts";
-import {HostProvider} from "./context/host-context.tsx";
 import {AuthPage} from './pages/auth/auth-page.tsx';
-import {DashboardPage} from './pages/dashboard/dashboard-page.tsx';
-import {ComposePage} from './pages/compose/compose-page.tsx';
 import {SettingsPage} from "./pages/settings/settings-page.tsx";
 import {ChangelogProvider} from "./context/changelog-context.tsx";
 import NotFoundPage from "./pages/home/not-found.tsx";
-import {RootLayout, TOP_BAR_HEIGHT} from "./pages/home/home.tsx";
-import NetworksPage from "./pages/networks/networks.tsx";
-import VolumesPage from "./pages/volumes/volumes.tsx";
-import ImagesPage from "./pages/images/images.tsx";
-import ContainersPage from "./pages/containers/containers.tsx";
+import RootLayout, {useHost} from "./pages/home/home.tsx";
 import {UserConfigProvider} from "./context/config-context.tsx";
-import {TabsProvider} from "./context/tab-context.tsx";
-import {useTabs} from "./hooks/tabs.ts";
-import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
 import AliasProvider from "./context/alias-context.tsx";
-import NetworksInspect from "./pages/networks/networks-inspect.tsx";
+import {TabsProvider, useTabs} from "./context/tab-context.tsx";
+import HostProvider from "./context/host-context.tsx";
+import {DashboardPage} from "./pages/dashboard/dashboard-page.tsx";
+import ContainersPage from "./pages/containers/containers.tsx";
+import ImagesPage from "./pages/images/images.tsx";
 import ImageInspectPage from "./pages/images/inspect.tsx";
+import VolumesPage from "./pages/volumes/volumes.tsx";
+import NetworksPage from "./pages/networks/networks.tsx";
+import NetworksInspect from "./pages/networks/networks-inspect.tsx";
+import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
+import {ComposePage} from "./pages/compose/compose-page.tsx";
+import {useEditorUrl} from "./lib/editor.ts";
 
 export function App() {
     return (
@@ -33,41 +33,49 @@ export function App() {
                     <BrowserRouter>
                         <Routes>
                             <Route path="auth" element={<AuthPage/>}/>
-                            {/*IMPORTANT: providers that need auth need to be injected inside private route not here */}
+                            {/*providers that need auth need to be injected inside private route not here */}
                             <Route element={<PrivateRoute/>}>
-                                <Route path="/" element={<HomePage/>}>
-                                    {/*here HomeRedirect uses /stacks*/}
-                                    <Route path="/" element={<HomeRedirect/>}/>
-                                    {/*<Route path="/" element={<Navigate to="/stacks" replace/>}/>*/}
-                                    <Route path="stacks">
-                                        <Route index element={<ComposePage/>}/>
-                                        <Route path="*" element={<ComposePage/>}/>
-                                    </Route>
+                                <Route path="/" element={<RootLayout/>}>
+                                    {/*todo*/}
+                                    {/*<Route path="/" element={<HomeRedirect/>}/>*/}
+                                    <Route index element={<Navigate to="local" replace/>}/>
 
-                                    <Route path="stats">
-                                        <Route index element={<DashboardPage/>}/>
-                                    </Route>
+                                    <Route path=":host">
+                                        <Route index element={<Navigate to="files" replace/>}/>
 
-                                    <Route path="containers">
-                                        <Route index element={<ContainersPage/>}/>
-                                    </Route>
+                                        <Route path="test" element={<TestPage/>}/>
 
-                                    <Route path="images">
-                                        <Route index element={<ImagesPage/>}/>
-                                        <Route path="inspect/:id" element={<ImageInspectPage/>}/>
-                                    </Route>
+                                        <Route path="files">
+                                            <Route index element={<HomeRedirect/>}/>
+                                            {/*<Route index element={<ComposePage/>}/>*/}
+                                            <Route path="*" element={<ComposePage/>}/>
+                                        </Route>
 
-                                    <Route path="volumes">
-                                        <Route index element={<VolumesPage/>}/>
-                                    </Route>
+                                        <Route path="stats">
+                                            <Route index element={<DashboardPage/>}/>
+                                        </Route>
 
-                                    <Route path="networks">
-                                        <Route index element={<NetworksPage/>}/>
-                                        <Route path="inspect/:id" element={<NetworksInspect/>}/>
-                                    </Route>
+                                        <Route path="containers">
+                                            <Route index element={<ContainersPage/>}/>
+                                        </Route>
 
-                                    <Route path="cleaner">
-                                        <Route index element={<DockerCleanerPage/>}/>
+                                        <Route path="images">
+                                            <Route index element={<ImagesPage/>}/>
+                                            <Route path="inspect/:id" element={<ImageInspectPage/>}/>
+                                        </Route>
+
+                                        <Route path="volumes">
+                                            <Route index element={<VolumesPage/>}/>
+                                        </Route>
+
+                                        <Route path="networks">
+                                            <Route index element={<NetworksPage/>}/>
+                                            <Route path="inspect/:id" element={<NetworksInspect/>}/>
+                                        </Route>
+
+                                        <Route path="cleaner">
+                                            <Route index element={<DockerCleanerPage/>}/>
+                                        </Route>
                                     </Route>
 
                                     <Route path="settings" element={<SettingsPage/>}/>
@@ -84,12 +92,14 @@ export function App() {
 }
 
 // Redirect component that reads from TabsProvider
+// todo
 function HomeRedirect() {
     const {activeTab, tabs} = useTabs();
+    const editorUrl = useEditorUrl()
 
     const path = activeTab
-        ? `/stacks/${activeTab}?tab=${tabs[activeTab].subTabIndex}`
-        : `/stacks`;
+        ? editorUrl(activeTab, tabs[activeTab])
+        : `compose`;
 
     return <Navigate to={path} replace/>;
 }
@@ -126,30 +136,15 @@ const PrivateRoute = () => {
     );
 };
 
-function HomePage() {
+const TestPage = () => {
+    const host = useHost()
+
     return (
-        <>
-            <RootLayout/>
-            <Box
-                component="main"
-                sx={() => ({
-                    flexGrow: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minWidth: 0,
-                    ml: `80px`,
-                    width: `calc(100% - 80px)`,
-                    mt: `${TOP_BAR_HEIGHT}px`, // Account for the top bar height
-                    height: `calc(100vh - ${TOP_BAR_HEIGHT}px)`, // Subtract top bar height
-                    overflow: 'auto',
-                    pt: 0.3,
-                })}
-            >
-                <Outlet/>
-            </Box>
-        </>
+        <div>
+            Hello {host}
+        </div>
     );
-}
+};
 
 const darkTheme = createTheme({
     palette: {

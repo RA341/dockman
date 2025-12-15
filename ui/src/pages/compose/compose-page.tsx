@@ -1,21 +1,21 @@
 import {type JSX, useEffect, useMemo} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 import {Box, IconButton, Tab, Tabs, Tooltip} from '@mui/material';
-import {FileList} from "./components/file-bar.tsx";
+import {FileList} from "./components/file-list.tsx";
 import {Close} from '@mui/icons-material';
-import {FilesProvider} from "../../context/file-context.tsx";
 import {AddFilesProvider} from "./dialogs/add/add-context.tsx";
 import {TelescopeProvider} from "./dialogs/search/search-context.tsx";
 import {DeleteFileProvider} from "./dialogs/delete/delete-context.tsx";
-import {useTabs} from "../../hooks/tabs.ts";
 import ActionBar from "./components/action-bar.tsx";
 import CoreComposeEmpty from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
-import {useActiveComposeFile} from "./state/state.tsx";
 import {RenameFilesProvider} from "./dialogs/rename/rename-context.tsx";
-import {getExt} from "./components/file-bar-icon.tsx";
+import {getExt} from "./components/file-icon.tsx";
 import ViewerSqlite from "./components/viewer-sqlite.tsx";
 import TextEditor from "./components/viewer-text.tsx";
+import {useFileComponents} from "./state/state.tsx";
+import {useTabs} from "../../context/tab-context.tsx";
+import FilesProvider from "../../context/file-context.tsx";
 
 export const ComposePage = () => {
     return (
@@ -34,10 +34,8 @@ export const ComposePage = () => {
 }
 
 export const ComposePageInner = () => {
-    const params = useParams()
-    const filename = params['*'] ?? ""
-    const setFile = useActiveComposeFile((state) => state.setFile)
-    setFile(filename)
+    const {filename} = useFileComponents()
+
 
     return (
         <Box sx={{
@@ -94,7 +92,7 @@ function getTabName(filename: string): string {
 }
 
 const FileTabBar = () => {
-    const filename = useActiveComposeFile(state => state.activeComposeFile)!
+    const {filename} = useFileComponents()
 
     const navigate = useNavigate();
     const {tabs, closeTab, onTabClick, activeTab} = useTabs();
@@ -181,9 +179,9 @@ const FileTabBar = () => {
 };
 
 const CoreCompose = () => {
-    const filename = useActiveComposeFile(state => state.activeComposeFile)!
+    const {filename} = useFileComponents()
 
-    const ext = getExt(filename)
+    const ext = getExt(filename!)
 
     const specialFileSupport: Map<string, JSX.Element> = new Map([
         ["db", <ViewerSqlite/>],

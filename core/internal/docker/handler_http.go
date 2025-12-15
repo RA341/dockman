@@ -31,17 +31,21 @@ func NewHandlerHttp(srv ServiceProvider) http.Handler {
 
 func (h *HandlerHttp) register() http.Handler {
 	subMux := http.NewServeMux()
-	subMux.HandleFunc("GET /exec/{contID}", h.containerExec)
-	subMux.HandleFunc("GET /logs/{contID}", h.containerLogs)
+	subMux.HandleFunc("GET /exec/{contID}/{host}", h.containerExec)
+	subMux.HandleFunc("GET /logs/{contID}/{host}", h.containerLogs)
 
 	return subMux
 }
 
 func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
-	contId := r.PathValue("contID")
-	log.Debug().Str("container", contId).Msg("Entering container")
-	if contId == "" {
-		http.Error(w, "No container ID found in path", http.StatusBadRequest)
+	contId, host, err := getIdAndHost(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	dkSrv, err := h.srv(host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -76,7 +80,8 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		wsWriter := wsu.NewWsWriter(ws)
 		var cleanup debug.CleanupFn
 		wsu.WsInf(ws, "setting up debug container standby...")
-		resp, cleanup, err = h.srv().Debugger.ExecDebugContainer(
+
+		resp, cleanup, err = dkSrv.Debugger.ExecDebugContainer(
 			readerCtx,
 			contId,
 			debuggerImage, wsWriter,
@@ -89,7 +94,7 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		defer cleanup()
 
 	} else {
-		resp, err = h.srv().Container.ContainerExec(readerCtx, contId, execCmd)
+		resp, err = dkSrv.Container.ContainerExec(readerCtx, contId, execCmd)
 		if err != nil {
 			wsu.WsErr(ws, err)
 			return
@@ -142,17 +147,40 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Str("container", contId).Msg("exec done")
 }
 
-func (h *HandlerHttp) containerLogs(w http.ResponseWriter, r *http.Request) {
+func getIdAndHost(r *http.Request) (containerId, host string, err error) {
 	contId := r.PathValue("contID")
+	log.Debug().Str("container", contId).Msg("Entering container")
 	if contId == "" {
-		http.Error(w, "No container ID found in path", http.StatusBadRequest)
+		return "", host, fmt.Errorf("no container ID found in path")
+	}
+
+	host = r.PathValue("host")
+	if host == "" {
+		return "", "", fmt.Errorf("no host found in path")
+	}
+	log.Debug().
+		Str("container", contId).Str("host", host).
+		Msg("Entering container")
+
+	return contId, host, nil
+}
+
+func (h *HandlerHttp) containerLogs(w http.ResponseWriter, r *http.Request) {
+	contId, host, err := getIdAndHost(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	dkSrv, err := h.srv(host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logsReader, tty, err := h.srv().Container.ContainerLogs(ctx, contId)
+	logsReader, tty, err := dkSrv.Container.ContainerLogs(ctx, contId)
 	if err != nil {
 		http.Error(w, "unable to stream container logs: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -3,8 +3,7 @@ import {Delete, PlayArrow, Refresh, RestartAlt, Stop, Update} from '@mui/icons-m
 import {ContainerTable} from '../compose/components/container-info-table';
 import {useMemo, useState} from "react";
 import {useDockerContainers} from "../../hooks/docker-containers.ts";
-import {callRPC, useClient} from "../../lib/api.ts";
-import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
+import {callRPC, useDockerClient} from "../../lib/api.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import SearchBar from "../../components/search-bar.tsx";
 import useSearch from "../../hooks/search.ts";
@@ -27,7 +26,7 @@ function ContainersPage() {
 }
 
 function CorePage() {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {containers, loading, refreshContainers, fetchContainers} = useDockerContainers();
     const {showSuccess, showError} = useSnackbar()
 
@@ -97,9 +96,9 @@ function CorePage() {
     ) {
         // @ts-ignore
         const {err} = await callRPC(
-            //  @ts-expect-error: type too complex to represent
+            // @ts-ignore
             () => dockerService[rpcName]({
-                containerIds: selectedContainers
+                containerIds: selectedContainers,
             }) as Promise<never> // we don't care about the output only err
         )
 

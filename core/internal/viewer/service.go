@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/google/uuid"
@@ -15,30 +16,45 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/ssh"
 )
 
-type ClientProvider func() *client.Client
 type GetFullPath func(relPath, alias string) (string, error)
+type ClientProvider func(host string) (*docker.Service, error)
+type SSHProvider func(host string) (*ssh.Client, error)
+
+type Session struct {
+	host string
+	addr string
+}
 
 type Service struct {
 	getPath  GetFullPath
 	cli      ClientProvider
-	sessions syncmap.Map[string, string]
+	sshCli   SSHProvider
+	sessions syncmap.Map[string, Session]
 }
 
-func NewService(cli ClientProvider, getPath GetFullPath) *Service {
+func New(cli ClientProvider, getPath GetFullPath, sshCli SSHProvider) *Service {
 	return &Service{
 		cli:      cli,
+		sshCli:   sshCli,
 		getPath:  getPath,
-		sessions: syncmap.Map[string, string]{},
+		sessions: syncmap.Map[string, Session]{},
 	}
 }
 
-func (s *Service) StartSession(ctx context.Context, relPath string, alias string) (string, func(), error) {
+func (s *Service) StartSession(ctx context.Context, relPath string, alias string, hostname string) (string, func(), error) {
+	cli, err := s.cli(hostname)
+	if err != nil {
+		return "", nil, err
+	}
+	cont := cli.Container.Client
+
 	sessionID := uuid.New().String()
 	urlPrefix := "/api/viewer/view/" + sessionID + "/"
 
-	fullpath, err := s.getPath(relPath, alias)
+	fullpath, err := s.getPath(relPath, hostname)
 	if err != nil {
 		return "", nil, fmt.Errorf("could not get path for %s: %w", alias, err)
 	}
@@ -51,7 +67,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		filterArgs := client.Filters{}
 		filterArgs.Add("label", "dockman.container=true")
 
-		list, err := s.cli().ContainerList(ctx, client.ContainerListOptions{
+		list, err := cont.ContainerList(ctx, client.ContainerListOptions{
 			Filters: filterArgs,
 		})
 		if err != nil {
@@ -96,7 +112,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	}
 
 	image := "ghcr.io/coleifer/sqlite-web:latest"
-	progress, err := s.cli().ImagePull(ctx, image, client.ImagePullOptions{})
+	progress, err := cont.ImagePull(ctx, image, client.ImagePullOptions{})
 	if err != nil {
 		return "", nil, err
 	}
@@ -106,7 +122,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		return "", nil, err
 	}
 
-	create, err := s.cli().ContainerCreate(ctx, client.ContainerCreateOptions{
+	create, err := cont.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Name: fmt.Sprintf("dockman-sqlite-viewer-%s", sessionID[:12]),
 		Config: &container.Config{
 			Image: image,
@@ -136,12 +152,12 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 		return "", nil, err
 	}
 
-	_, err = s.cli().ContainerStart(ctx, create.ID, client.ContainerStartOptions{})
+	_, err = cont.ContainerStart(ctx, create.ID, client.ContainerStartOptions{})
 	if err != nil {
 		return "", nil, err
 	}
 
-	inspect, err := s.cli().ContainerInspect(ctx, create.ID, client.ContainerInspectOptions{})
+	inspect, err := cont.ContainerInspect(ctx, create.ID, client.ContainerInspectOptions{})
 	if err != nil {
 		return "", nil, err
 	}
@@ -164,17 +180,22 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 
 	s.sessions.Store(
 		sessionID,
-		targetAddr,
+		Session{
+			host: hostname,
+			addr: targetAddr,
+		},
 	)
 
 	closer := func() {
-		_, err := s.cli().ContainerStop(ctx, create.ID, client.ContainerStopOptions{
+		s.sessions.Delete(sessionID)
+
+		_, err := cont.ContainerStop(ctx, create.ID, client.ContainerStopOptions{
 			Signal: "SIGKILL",
 		})
 		if err != nil {
 			log.Warn().Err(err).Msg("unable to stop container")
 		}
-		_, err = s.cli().ContainerRemove(ctx, create.ID, client.ContainerRemoveOptions{
+		_, err = cont.ContainerRemove(ctx, create.ID, client.ContainerRemoveOptions{
 			RemoveVolumes: true,
 			Force:         true,
 		})

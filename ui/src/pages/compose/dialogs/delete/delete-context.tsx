@@ -1,7 +1,7 @@
 import {type ReactNode, useState} from 'react'
 import {DeleteFileContext} from "./delete-hook.ts";
 import FileDialogDelete from "./delete-ui.tsx";
-import {useFiles} from "../../../../hooks/files.ts";
+import {useFiles} from "../../../../context/file-context.tsx"
 
 interface DeleteFileProviderProps {
     children: ReactNode
@@ -11,16 +11,14 @@ export function DeleteFileProvider({children}: DeleteFileProviderProps) {
     const [isVisible, setIsVisible] = useState(false)
     const {deleteFile} = useFiles()
     const [fileToDelete, setFileToDelete] = useState("")
-    const [depth, setDepth] = useState<number[]>([])
 
-    const showDialog = (file: string, depthIndex: number[]) => {
+    const showDialog = (file: string) => {
         setIsVisible(true)
         setFileToDelete(file)
-        setDepth(depthIndex)
     }
 
     const deleteFileConfirm = (file: string) => {
-        deleteFile(file, depth).then()
+        deleteFile(file).then()
     }
 
     const closeDialog = () => {

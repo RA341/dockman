@@ -1,7 +1,6 @@
 import {useMemo, useState} from 'react';
 import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
 import {CleaningServices, Delete, Refresh, Sanitizer} from '@mui/icons-material';
-import {useDockerImages} from "../../hooks/docker-images.ts";
 import {ImagesEmpty} from "./images-empty.tsx";
 import {ImageTable} from './images-table.tsx';
 import {formatBytes} from "../../lib/editor.ts";
@@ -10,6 +9,7 @@ import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
 import SearchBar from "../../components/search-bar.tsx";
+import {useDockerImages} from "./docker-images.ts";
 
 const ImagesPage = () => {
     const {
@@ -25,7 +25,6 @@ const ImagesPage = () => {
 
     const {search, setSearch, searchInputRef} = useSearch();
     const [selectedImages, setSelectedImages] = useState<string[]>([])
-
 
     const filteredImages = useMemo(() => {
         if (search) {

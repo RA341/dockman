@@ -81,7 +81,7 @@ interface FileIconProps {
     filename: string;
 }
 
-const FileBarIcon: React.FC<FileIconProps> = ({filename}) => {
+const FileIcon: React.FC<FileIconProps> = ({filename}) => {
     // since we check before the dot as well
     if (filename.endsWith('compose.yaml') || filename.endsWith('compose.yml')) {
         return <DockerComposeIcon/>;
@@ -108,4 +108,4 @@ export function getExt(filename: string) {
     return filename.split(".").pop() ?? filename;
 }
 
-export default FileBarIcon;
+export default FileIcon;

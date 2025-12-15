@@ -1,7 +1,7 @@
 import {type ReactNode, useState} from 'react'
 import {AddFileContext} from "./add-hook.ts";
 import {FileDialogCreate} from "./add-ui.tsx";
-import {useFiles} from "../../../../hooks/files.ts";
+import {useFiles} from "../../../../context/file-context.tsx"
 
 interface AddFilesProps {
     children: ReactNode
@@ -11,7 +11,6 @@ export function AddFilesProvider({children}: AddFilesProps) {
     const [isVisible, setIsVisible] = useState(false)
     const {addFile} = useFiles()
     const [parent, setParent] = useState("")
-    const [depthIndex, setDepthIndex] = useState<number[]>([])
 
     const closeDialog = () => {
         setIsVisible(false)
@@ -19,15 +18,14 @@ export function AddFilesProvider({children}: AddFilesProps) {
     }
 
     const handleAddConfirm = (filename: string, isDir: boolean) => {
-        addFile(filename, isDir, depthIndex).then(() => {
+        addFile(filename, isDir).then(() => {
             closeDialog()
         })
     }
 
-    const showDialog = (parent?: string, depthIndex?: number[]) => {
+    const showDialog = (parent?: string) => {
         setParent(parent ?? "")
         setIsVisible(true)
-        setDepthIndex(depthIndex ?? [])
     }
 
     const value = {

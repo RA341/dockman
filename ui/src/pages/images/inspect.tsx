@@ -1,7 +1,7 @@
-import {useNavigate, useParams} from "react-router-dom";
+import {useParams} from "react-router-dom";
 import {useCallback, useEffect, useState} from "react";
-import {callRPC, useClient} from "../../lib/api.ts";
-import {DockerService, type ImageInspect} from "../../gen/docker/v1/docker_pb.ts";
+import {callRPC, useDockerClient} from "../../lib/api.ts";
+import {type ImageInspect} from "../../gen/docker/v1/docker_pb.ts";
 import {
     Alert,
     Box,
@@ -18,8 +18,10 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    Tooltip,
     Typography
 } from '@mui/material';
+import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
@@ -30,9 +32,8 @@ import {ArrowBack, ContentCopy} from "@mui/icons-material";
 
 
 const ImageInspectPage = () => {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {id} = useParams()
-    const nav = useNavigate()
 
     const [inspect, setInspect] = useState<ImageInspect | null>(null)
     const [err, setErr] = useState("")
@@ -69,7 +70,8 @@ const ImageInspectPage = () => {
                 height: '100%',
                 width: '100%',
                 borderRadius: 0,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                ...scrollbarStyles
             }}
         >
 
@@ -85,7 +87,7 @@ const ImageInspectPage = () => {
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
                     <IconButton
                         onClick={() => {
-                            nav("/images")
+                            history.back();
                         }}
                         title="Back to Images"
                     >
@@ -263,15 +265,20 @@ const ImageInspectPage = () => {
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}>Layer
-                                                    ID</TableCell>
+                                                    Order
+                                                </TableCell>
                                                 <TableCell
-                                                    sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}>Command</TableCell>
-                                                <TableCell sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}
-                                                           align="right">Size</TableCell>
+                                                    sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}
+                                                    align="right">
+                                                    Size
+                                                </TableCell>
+                                                <TableCell sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}>
+                                                    Command
+                                                </TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                            {inspect.layers.map((layer, idx) => (
+                                            {inspect.layers.reverse().map((layer, idx) => (
                                                 <TableRow
                                                     key={layer.LayerId || idx}
                                                     hover
@@ -282,27 +289,7 @@ const ImageInspectPage = () => {
                                                         fontSize: '0.85rem',
                                                         whiteSpace: 'nowrap'
                                                     }}>
-                                                        <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                                            {layer.LayerId ? layer.LayerId.substring(0, 12) : 'N/A'}
-                                                            {layer.LayerId && (
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => handleCopy(layer.LayerId)}
-                                                                    title="Copy Layer ID"
-                                                                >
-                                                                    <ContentCopy fontSize="small"/>
-                                                                </IconButton>
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
-                                                    <TableCell sx={{fontFamily: 'monospace', fontSize: '0.85rem'}}>
-                                                        <Typography
-                                                            variant="body2"
-                                                            sx={{whiteSpace: 'nowrap'}}
-                                                            title={layer.cmd}
-                                                        >
-                                                            {layer.cmd || 'N/A'}
-                                                        </Typography>
+                                                        {idx}
                                                     </TableCell>
                                                     <TableCell align="right" sx={{whiteSpace: 'nowrap'}}>
                                                         <Chip
@@ -310,6 +297,9 @@ const ImageInspectPage = () => {
                                                             size="small"
                                                             variant="outlined"
                                                         />
+                                                    </TableCell>
+                                                    <TableCell sx={{fontFamily: 'monospace', fontSize: '0.85rem'}}>
+                                                        <DockerCommandCell layer={layer}/>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -334,5 +324,64 @@ const ImageInspectPage = () => {
         </Paper>
     );
 };
+
+// Helper to clean up the messy Docker history command string
+const formatDockerCmd = (cmd: string) => {
+    if (!cmd) return {instruction: 'N/A', args: ''};
+
+    // Remove the common prefix added by Docker for metadata-only layers
+    const cleanCmd = cmd.replace(/\/bin\/sh -c #\(nop\)\s+/g, '');
+
+    // Split the instruction (e.g., RUN, CMD) from the rest
+    const parts = cleanCmd.split(/\s+/);
+    const instruction = parts[0]?.toUpperCase();
+    const args = parts.slice(1).join(' ');
+
+    return {instruction, args};
+};
+
+export function DockerCommandCell({layer}: { layer: { cmd: string } }) {
+    const {instruction, args} = formatDockerCmd(layer.cmd);
+
+    return (
+        <TableCell sx={{py: 1, verticalAlign: 'top'}}>
+            <Tooltip title={layer.cmd} placement="top" arrow>
+                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            fontWeight: 'bold',
+                            color: 'primary.main',
+                            fontFamily: 'monospace',
+                            fontSize: '0.7rem',
+                            letterSpacing: 1
+                        }}
+                    >
+                        {instruction}
+                    </Typography>
+
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            fontFamily: 'monospace',
+                            fontSize: '0.85rem',
+                            maxWidth: '100vw',
+                            color: 'text.secondary',
+                            lineHeight: 1.4,
+                            // Wrap long lines but keep them readable
+                            wordBreak: 'break-all',
+                            display: '-webkit-box',
+                            // WebkitLineClamp: 3, // Show up to 3 lines before dots
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {args}
+                    </Typography>
+                </Box>
+            </Tooltip>
+        </TableCell>
+    );
+}
 
 export default ImageInspectPage;

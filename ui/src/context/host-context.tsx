@@ -1,23 +1,36 @@
-import {type ReactNode, useCallback, useEffect, useState} from 'react'
+import {createContext, type ReactNode, useCallback, useContext, useEffect, useState} from 'react'
 import {callRPC, useClient} from '../lib/api'
 import {useSnackbar} from '../hooks/snackbar'
-import {HostContext} from '../hooks/host'
 import {DockerManagerService} from "../gen/docker_manager/v1/docker_manager_pb.ts";
-import {useLocation, useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from "react-router-dom";
 
-interface HostProviderProps {
-    children: ReactNode
+interface HostContextType {
+    getHost: () => string;
+    availableHosts: string[];
+    isLoading: boolean;
+    setHost: (machine: string) => void;
+    fetchHosts: () => Promise<void>;
 }
 
-export function HostProvider({children}: HostProviderProps) {
+export const HostContext = createContext<HostContextType | undefined>(undefined);
+
+export function useHost() {
+    const context = useContext(HostContext);
+    if (context === undefined) {
+        throw new Error('useHost must be used within a HostProvider');
+    }
+    return context;
+}
+
+const HostKey = 'host';
+
+function HostProvider({children}: { children: ReactNode }) {
     const hostManagerClient = useClient(DockerManagerService)
     const {showError} = useSnackbar()
-    const loc = useLocation()
 
     const [availableHosts, setAvailableHosts] = useState<string[]>([])
-    const [selectedHost, setSelectedHost] = useState<string | null>(null)
     const [isLoading, setLoading] = useState(true)
-    const navigate = useNavigate()
+    const [selectedHost,] = useState("")
 
     const fetchHosts = useCallback(async () => {
         setLoading(true)
@@ -29,7 +42,6 @@ export function HostProvider({children}: HostProviderProps) {
         }
 
         setAvailableHosts(val?.clients.map(value => value) || [])
-        setSelectedHost(val?.activeClient || null)
         setLoading(false)
     }, [hostManagerClient]);
 
@@ -37,28 +49,29 @@ export function HostProvider({children}: HostProviderProps) {
         fetchHosts().then()
     }, [fetchHosts])
 
-    const switchMachine = useCallback(async (machine: string) => {
-        if (!machine || machine === selectedHost) return
+    const nav = useNavigate()
+    const {pathname} = useLocation()
 
-        console.log(`Switching to machine: ${machine}`)
-        const {err} = await callRPC(() => hostManagerClient.switchClient({machineID: machine}))
+    const setHost = (host: string) => {
+        // Example: "/local/containers" -> ["", "local", "containers"]
+        const segments = pathname.split('/');
+        // Replace the host segment (which is index 1)
+        segments[1] = host;
+        // Example: "/remote/containers"
+        const newPath = segments.join('/');
+        nav(newPath);
+    }
 
-        if (err) {
-            showError(err)
-        } else {
-            setSelectedHost(machine)
-        }
-
-        if (loc.pathname.startsWith('/stacks')) {
-            navigate('/stacks')
-        }
-
-    }, [hostManagerClient, loc.pathname, navigate, selectedHost])
-
-    const value = {availableHosts, selectedHost, isLoading, switchMachine, fetchHosts}
+    const value = {availableHosts, selectedHost, isLoading, setHost, fetchHosts, getHost}
     return (
         <HostContext.Provider value={value}>
             {children}
         </HostContext.Provider>
     )
 }
+
+export const getHost = () => {
+    return localStorage.getItem(HostKey) ?? "local";
+}
+
+export default HostProvider

@@ -1,4 +1,4 @@
-import  {useState} from 'react';
+import {useState} from 'react';
 import {
     Autocomplete,
     Box,
@@ -16,6 +16,7 @@ import {getWSUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
 import {useContainerExec} from "./state/state.tsx";
 import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
+import {useHost} from "../home/home.tsx";
 
 interface DeployPageProps {
     selectedPage: string;
@@ -35,9 +36,10 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
+    const selectedHost = useHost()
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const url = getWSUrl(`api/docker/logs/${containerId}`)
+        const url = getWSUrl(`api/docker/logs/${containerId}/${encodeURIComponent(selectedHost)}`)
         execContainer(`${selectedPage}: logs-${containerName}`, url, false)
     };
 
@@ -66,7 +68,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const handleConnect = (containerId: string, containerName: string, cmd: string) => {
         const encodedCmd = encodeURIComponent(cmd);
-        let url = getWSUrl(`api/docker/exec/${containerId}?cmd=${encodedCmd}`)
+        let url = getWSUrl(`api/docker/exec/${containerId}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`)
         if (debuggerImage) {
             console.log("using dockman debug with debuggerImage", debuggerImage);
             url += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec

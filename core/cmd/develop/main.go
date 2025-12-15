@@ -27,9 +27,10 @@ func main() {
 		"AUTH_PASSWORD": "test",
 		"LOG_LEVEL":     "debug",
 		"LOG_VERBOSE":   "true",
-		"CONFIG":        "./config",
-		"COMPOSE_ROOT":  "./compose",
-		"UPDATER_HOST":  "http://localhost:8869",
+		//"LOG_HTTP":      "true",
+		"CONFIG":       "./config",
+		"COMPOSE_ROOT": "./compose",
+		"UPDATER_HOST": "http://localhost:8869",
 
 		"GID":  "1000",
 		"PUID": "1000",

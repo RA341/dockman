@@ -11,7 +11,7 @@ service DockerService {
   rpc ContainerRemove(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerRestart(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerUpdate(ContainerRequest) returns (Empty) {}
-  rpc ContainerList(Empty) returns (ListResponse) {}
+  rpc ContainerList(ContainerListRequest) returns (ListResponse) {}
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
 
@@ -41,8 +41,9 @@ service DockerService {
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
   rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
-
 }
+
+message ContainerListRequest {}
 
 message NetworkInspectRequest {
   string networkId = 1;
@@ -58,14 +59,15 @@ message NetworkInspectInfo {
 }
 
 message NetworkContainerInspect {
-    string Name = 1;
-    string Endpoint = 2;
-    string IPv4 = 3;
-    string IPv6 = 4;
-    string Mac = 5;
+  string Name = 1;
+  string Endpoint = 2;
+  string IPv4 = 3;
+  string IPv6 = 4;
+  string Mac = 5;
 }
 
 message ImageInspectRequest {
+
   string imageId = 1;
 }
 
@@ -125,7 +127,9 @@ message ManifestSummary {
   int64 size = 3;
 }
 
-message ListImagesRequest {}
+message ListImagesRequest {
+
+}
 
 message ListImagesResponse {
   int64 totalDiskUsage = 1;
@@ -135,6 +139,7 @@ message ListImagesResponse {
 }
 
 message RemoveImageRequest {
+  string host = 2;
   repeated string imageIds = 1;
 }
 
@@ -146,6 +151,7 @@ message ImagePruneResponse {
 }
 
 message ImagePruneRequest {
+  string host = 2;
   bool pruneAll = 1;
 }
 
@@ -166,19 +172,23 @@ message Volume {
   string composeProjectName = 8;
 }
 
-message ListVolumesRequest {}
+message ListVolumesRequest {
+
+}
 
 message ListVolumesResponse {
   repeated Volume volumes = 1;
 }
 
 message CreateVolumeRequest {
+
 }
 
 message CreateVolumeResponse {
 }
 
 message DeleteVolumeRequest {
+  string host = 4;
   repeated string volumeIds = 1;
   bool anon = 2;
   bool unused = 3;
@@ -203,20 +213,25 @@ message Network {
   repeated string containerIds = 13;
 }
 
-message ListNetworksRequest {}
+message ListNetworksRequest {
+
+}
 
 message ListNetworksResponse {
   repeated Network networks = 1;
 }
 
 message CreateNetworkRequest {
+
+
 }
 
 message CreateNetworkResponse {
 }
 
 message DeleteNetworkRequest {
-  repeated string networkIds = 1;
+
+  repeated string networkIds = 3;
   bool prune = 2;
 }
 
@@ -224,6 +239,7 @@ message DeleteNetworkResponse {
 }
 
 message ContainerLogsRequest {
+
   string containerID = 1;
 }
 
@@ -252,6 +268,7 @@ enum ORDER {
 }
 
 message StatsRequest {
+  string host = 4;
   ComposeFile file = 1;
   SORT_FIELD sortBy = 2;
   ORDER order = 3;
@@ -316,9 +333,11 @@ message Empty{}
 
 message ContainerRequest {
   repeated string containerIds = 1;
+
 }
 
 message ComposeFile {
   string filename = 1;
-  repeated string selectedServices = 2;
+
+  repeated string selectedServices = 3;
 }

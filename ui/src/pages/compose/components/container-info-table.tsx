@@ -19,13 +19,13 @@ import {
 import {DocumentScannerOutlined, Terminal, Update} from '@mui/icons-material'
 import {ContainerInfoPort} from './container-info-port.tsx'
 import type {ContainerList, Port} from "../../../gen/docker/v1/docker_pb.ts"
-import {getImageHomePageUrl} from "../../../hooks/docker-images.ts"
 import scrollbarStyles from "../../../components/scrollbar-style.tsx"
 import CopyButton from "../../../components/copy-button.tsx"
 import {useCopyButton} from "../../../hooks/copy.ts"
 import ComposeLink from "../../../components/compose-link.tsx"
 import {type SortOrder, sortTable, type TableInfo, useSort} from '../../../lib/table.ts'
 import {useConfig} from "../../../hooks/config.ts";
+import {getImageHomePageUrl} from "../../images/docker-images.ts";
 
 interface ContainerTableProps {
     containers: ContainerList[]

@@ -8,38 +8,71 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/RA341/dockman/internal/config"
-	"github.com/RA341/dockman/internal/git"
+	"github.com/RA341/dockman/internal/docker/container"
+	"github.com/RA341/dockman/internal/files/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
-
+	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"github.com/sahilm/fuzzy"
 )
 
 type ActiveMachineFolderProvider func() string
+type ActiveFS func(client, root string) (filesystem.FileSystem, error)
+type SFTPProvider func(client string) (*sftp.Client, error)
 
 type Service struct {
 	config *config.FilePerms
 	store  Store
+	GetFS  ActiveFS
+	dy     *ServiceDockmanYaml
+}
 
-	// for compose files
-	composeRoot ActiveMachineFolderProvider
-	dy          *ServiceDockmanYaml
+// RootAlias default file location alias for compose root
+const RootAlias = "compose"
+
+func FormatAlias(alias string, host string) string {
+	return fmt.Sprintf("%s/%s", host, alias)
 }
 
 func New(
 	store Store,
-	composeRootProvider ActiveMachineFolderProvider,
+	getSSH SFTPProvider,
 	dy *ServiceDockmanYaml,
+	localComposeRoot string,
 	config *config.FilePerms,
 ) *Service {
+	alias := FormatAlias(RootAlias, container.LocalClient)
+	val, err := store.Get(alias)
+	if err != nil {
+		err = store.AddAlias(alias, localComposeRoot)
+	} else {
+		val.Fullpath = localComposeRoot
+		err = store.EditAlias(val.ID, &val)
+	}
+	if err != nil {
+		log.Fatal().Err(err).
+			Str("alias", RootAlias).
+			Msg("could not setup alias for local compose root")
+	}
+
+	var activeFs ActiveFS = func(client, root string) (filesystem.FileSystem, error) {
+		if client == container.LocalClient {
+			return filesystem.NewLocal(root), nil
+		}
+		mach, err := getSSH(client)
+		if err != nil {
+			return nil, err
+		}
+		return filesystem.NewSftp(mach, root), nil
+	}
 	srv := &Service{
-		config:      config,
-		store:       store,
-		composeRoot: composeRootProvider,
-		dy:          dy,
+		config: config,
+		store:  store,
+		GetFS:  activeFs,
+		dy:     dy,
 	}
 
 	log.Debug().Msg("File service loaded successfully")
@@ -52,61 +85,38 @@ type Entry struct {
 	children []Entry
 }
 
-var ignoredFiles = []string{git.DockmanRemoteFolder}
-
-func (s *Service) List(relpath string, alias string) ([]Entry, error) {
-	pathWithRoot, err := s.WithRoot(relpath, alias)
+func (s *Service) List(path string, hostname string) ([]Entry, error) {
+	cliFs, relpath, err := s.LoadFs(path, hostname)
 	if err != nil {
 		return nil, err
 	}
 
-	topLevelEntries, err := os.ReadDir(pathWithRoot)
+	topLevelEntries, err := cliFs.ReadDir(relpath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in compose root: %v", err)
 	}
 
-	eg := sync.WaitGroup{}
-	entriesLen := len(topLevelEntries)
-	subDirChan := make(chan Entry, entriesLen)
-
+	result := make([]Entry, 0, len(topLevelEntries))
 	for _, entry := range topLevelEntries {
-		entryName := entry.Name()
-		if slices.Contains(ignoredFiles, entryName) {
-			continue
-		}
+		fullRelpath := filepath.Join(relpath, entry.Name())
+		displayPath := filepath.Join(path, entry.Name())
 
 		isDir := entry.IsDir()
-		eg.Go(func() {
-			fullPath := filepath.Join(pathWithRoot, entryName)
-			relFullPath := filepath.Join(relpath, entryName)
 
-			e := Entry{
-				fullpath: relFullPath,
-				isDir:    isDir,
+		ele := Entry{
+			fullpath: displayPath,
+			isDir:    isDir,
+		}
+
+		if isDir {
+			children, err := s.listFiles(cliFs, fullRelpath, displayPath)
+			if err != nil {
+				return nil, err
 			}
+			ele.children = children
+		}
 
-			if isDir {
-				files, err := s.listFiles(fullPath, relFullPath)
-				if err != nil {
-					log.Warn().Err(err).Str("path", fullPath).Msg("error listing subdir")
-					return
-				}
-
-				e.children = files
-			}
-
-			subDirChan <- e
-		})
-	}
-
-	go func() {
-		eg.Wait()
-		close(subDirChan)
-	}()
-
-	result := make([]Entry, 0, entriesLen)
-	for item := range subDirChan {
-		result = append(result, item)
+		result = append(result, ele)
 	}
 
 	conf := s.dy.GetDockmanYaml()
@@ -117,19 +127,22 @@ func (s *Service) List(relpath string, alias string) ([]Entry, error) {
 	return result, nil
 }
 
-func (s *Service) listFiles(fullPath string, relPath string) ([]Entry, error) {
-	subEntries, err := os.ReadDir(fullPath)
+func (s *Service) listFiles(cliFs filesystem.FileSystem, relDirpath string, displayPath string) ([]Entry, error) {
+	subEntries, err := cliFs.ReadDir(relDirpath)
 	if err != nil {
 		return nil, err
 	}
 
 	filesInSubDir := make([]Entry, 0, len(subEntries))
 	for _, subEntry := range subEntries {
-		filesInSubDir = append(filesInSubDir, Entry{
-			fullpath: filepath.Join(relPath, subEntry.Name()),
-			isDir:    subEntry.IsDir(),
-			children: []Entry{},
-		})
+		join := filepath.Join(displayPath, subEntry.Name())
+		filesInSubDir = append(filesInSubDir,
+			Entry{
+				fullpath: join,
+				isDir:    subEntry.IsDir(),
+				children: []Entry{},
+			},
+		)
 	}
 
 	// sort subfiles
@@ -141,37 +154,41 @@ func (s *Service) listFiles(fullPath string, relPath string) ([]Entry, error) {
 	return filesInSubDir, nil
 }
 
-func (s *Service) Create(filename string, alias string, dir bool) error {
-	filename, err := s.WithRoot(filename, alias)
+func (s *Service) Create(filename string, dir bool, hostname string) error {
+	cliFs, filename, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
 
 	if dir {
-		return os.MkdirAll(filename, os.ModePerm)
+		return cliFs.MkdirAll(filename, os.ModePerm)
 	}
 
 	baseDir := filepath.Dir(filename)
-	if err = os.MkdirAll(baseDir, 0755); err != nil {
+	if err = cliFs.MkdirAll(baseDir, 0755); err != nil {
 		return err
 	}
 
-	f, err := openFile(filename)
+	file, err := cliFs.OpenFile(
+		filename,
+		os.O_RDWR|os.O_CREATE,
+		os.ModePerm,
+	)
 	if err != nil {
 		return err
 	}
-	fileutil.Close(f)
+	fileutil.Close(file)
 
 	return nil
 }
 
-func (s *Service) Exists(filename string, alias string) error {
-	root, err := s.WithRoot(filename, alias)
+func (s *Service) Exists(filename string, hostname string) error {
+	cliFs, filename, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
 
-	stat, err := os.Stat(root)
+	stat, err := cliFs.Stat(filename)
 	if err != nil {
 		return err
 	}
@@ -182,45 +199,39 @@ func (s *Service) Exists(filename string, alias string) error {
 	return nil
 }
 
-func (s *Service) Delete(fileName string, alias string) error {
-	fullpath, err := s.WithRoot(fileName, alias)
+func (s *Service) Delete(filename string, hostname string) error {
+	sfCli, fullpath, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
-
-	if err = os.RemoveAll(fullpath); err != nil {
-		return err
-	}
-
-	return nil
+	return sfCli.RemoveAll(fullpath)
 }
 
-func (s *Service) Rename(oldFileName, newFilename string, alias string) error {
-	oldFullPath, err := s.rootWithSlash(oldFileName, alias)
+// Rename todo refactor this
+func (s *Service) Rename(oldFileName, newFilename, hostname string) error {
+	cliFs, oldFullPath, err := s.LoadFs(oldFileName, hostname)
 	if err != nil {
 		return err
 	}
 
-	newFullPath, err := s.rootWithSlash(newFilename, alias)
+	_, newFullPath, err := s.LoadFs(newFilename, hostname)
 	if err != nil {
 		return err
 	}
 
-	err = os.Rename(oldFullPath, newFullPath)
-	if err != nil {
-		return err
-	}
+	oldFileName = filepath.ToSlash(oldFullPath)
+	newFilename = filepath.ToSlash(newFullPath)
 
-	return nil
+	return cliFs.Rename(oldFileName, newFilename)
 }
 
-func (s *Service) Save(filename string, alias string, source io.Reader) error {
-	filename, err := s.WithRoot(filename, alias)
+func (s *Service) Save(filename, hostname string, source io.Reader) error {
+	sfCli, filename, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
 
-	dest, err := os.OpenFile(filename, os.O_RDWR|os.O_TRUNC, os.ModePerm)
+	dest, err := sfCli.OpenFile(filename, os.O_RDWR|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -230,59 +241,70 @@ func (s *Service) Save(filename string, alias string, source io.Reader) error {
 	return err
 }
 
-func (s *Service) getFileContents(filename string, alias string) ([]byte, error) {
-	root, err := s.rootWithSlash(filename, alias)
+func (s *Service) getFileContents(filename, hostname string) ([]byte, error) {
+	fsCli, fullpath, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.ReadFile(root)
+	return fsCli.ReadFile(fullpath)
+}
+
+func (s *Service) LoadFilePath(filename, hostname string) (io.ReadSeekCloser, time.Time, error) {
+	cliFs, relpath, err := s.LoadFs(filename, hostname)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return cliFs.LoadFile(relpath)
+}
+
+// LoadAll todo refactor too many returns
+func (s *Service) LoadAll(filename string, hostname string) (fs filesystem.FileSystem, relpath string, root string, err error) {
+	filename, pathAlias, err := s.extractMeta(filename)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	alias, err := s.store.Get(FormatAlias(pathAlias, hostname))
+	if err != nil {
+		return nil, "", "", fmt.Errorf("could not find path for alias %s", pathAlias)
+	}
+
+	fsCli, err := s.GetFS(hostname, alias.Fullpath)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return fsCli, filename, alias.Fullpath, nil
+}
+
+// LoadFs FS gets the correct client -> alias -> path
+func (s *Service) LoadFs(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
+	fsCli, relpath, _, err := s.LoadAll(filename, hostname)
+	if err != nil {
+		return nil, "", err
+	}
+	return fsCli, relpath, nil
+}
+
+func (s *Service) extractMeta(filename string) (relpath string, pathAlias string, err error) {
+	filename = filepath.Clean(filename) + "/" // empty trailing "/" is stripped by clean
+	parts := strings.SplitN(filename, "/", 2)
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid filename: %s", filename)
+	}
+	pathAlias = parts[0]
+	relpath = filepath.Clean(parts[1])
+
+	return relpath, pathAlias, nil
+}
+
+func (s *Service) Format(filename string, hostname string) ([]byte, error) {
+	sfCLi, filename, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, err
 	}
-	return file, nil
-}
 
-func (s *Service) rootWithSlash(filename string, alias string) (string, error) {
-	root, err := s.WithRoot(filepath.ToSlash(filename), alias)
-	if err != nil {
-		return "", nil
-	}
-	return root, err
-}
-
-func (s *Service) LoadFilePath(filename string, alias string) (string, error) {
-	filename = filepath.Clean(filename)
-	return s.WithRoot(filename, alias)
-}
-
-// WithRoot joins s.composeRoot() with filename
-func (s *Service) WithRoot(filename, rootAlias string) (string, error) {
-	filename = filepath.Clean(filename)
-	if rootAlias == "" {
-		// use compose locations
-		return filepath.Join(s.composeRoot(), filename), nil
-	}
-
-	// use other dir
-	root, err := s.getOtherRoot(rootAlias)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(root, filename), nil
-}
-
-// for other locations
-func (s *Service) getOtherRoot(alias string) (string, error) {
-	return s.store.Get(alias)
-}
-
-func (s *Service) Format(filename string, alias string) ([]byte, error) {
-	path, err := s.WithRoot(filename, alias)
-	if err != nil {
-		return nil, err
-	}
-
-	contents, err := os.ReadFile(path)
+	contents, err := sfCLi.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read file %w", err)
 	}
@@ -294,14 +316,6 @@ func (s *Service) Format(filename string, alias string) ([]byte, error) {
 	}
 
 	return contents, nil
-}
-
-func openFile(filename string) (*os.File, error) {
-	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, os.ModePerm)
-}
-
-func (s *Service) Close() error {
-	return nil
 }
 
 type SearchResult struct {
@@ -328,14 +342,14 @@ func (s *Service) search(query string, allPaths []string) []SearchResult {
 	return results
 }
 
-func (s *Service) listAll(alias string) ([]string, error) {
-	root, err := s.WithRoot("", alias)
+func (s *Service) listAll(dirPath string, hostname string) ([]string, error) {
+	fsCli, rel, root, err := s.LoadAll(dirPath, hostname)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	var filez []string
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err = fsCli.WalkDir(rel, func(path string, d fs.DirEntry, err error) error {
 		left := strings.TrimPrefix(path, root)
 		left = strings.TrimPrefix(left, string(filepath.Separator))
 		if left != "" {
@@ -343,9 +357,6 @@ func (s *Service) listAll(alias string) ([]string, error) {
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
 
-	return filez, nil
+	return filez, err
 }

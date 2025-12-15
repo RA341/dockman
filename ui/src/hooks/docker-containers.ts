@@ -1,13 +1,13 @@
 import {useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from '../lib/api.ts'
-import {type ContainerList, DockerService} from '../gen/docker/v1/docker_pb.ts'
+import {callRPC, useDockerClient} from '../lib/api.ts'
+import {type ContainerList} from '../gen/docker/v1/docker_pb.ts'
 import {useSnackbar} from "./snackbar.ts"
-import {useHost} from "./host.ts";
+import {useHost} from "../pages/home/home.tsx";
 
 export function useDockerContainers() {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {showWarning} = useSnackbar()
-    const {selectedHost} = useHost()
+    const selectedHost = useHost()
 
     const [containers, setContainers] = useState<ContainerList[]>([])
     const [loading, setLoading] = useState(true)

@@ -5,8 +5,8 @@ import (
 	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/debug"
 	"github.com/RA341/dockman/internal/docker/updater"
-	docker "github.com/docker/docker/client"
 	"github.com/moby/moby/client"
+	"golang.org/x/crypto/ssh"
 )
 
 type Service struct {
@@ -15,31 +15,25 @@ type Service struct {
 	Updater    *updater.Service
 	Debugger   *debug.Service
 	DaemonAddr string
+	Host       string
 }
 
 func NewService(
+	hostname string,
 	daemonAddr string,
 	mobyClient *client.Client,
-	dockClient *docker.Client,
-	syncer compose.Syncer,
-	imageUpdateStore updater.Store,
-	hostname string,
-	updaterUrl string,
-	composeRoot string,
+	sshCli *ssh.Client,
+	fs compose.GetHost,
 ) *Service {
 	containerClient := container.New(mobyClient)
+	// todo potentially cache sshCli get and fs get ops
+	composeClient := compose.NewComposeTerminal(hostname, containerClient, fs, sshCli)
 
-	composeClient := compose.New(
-		dockClient,
-		syncer,
-		composeRoot,
-		containerClient,
-	)
-
-	upClient := updater.New(containerClient, hostname, updaterUrl, imageUpdateStore)
+	upClient := updater.New(containerClient, hostname, "", nil)
 	dbgClient := debug.New(containerClient)
 
 	return &Service{
+		Host:       hostname,
 		Container:  containerClient,
 		Compose:    composeClient,
 		Updater:    upClient,

@@ -1,11 +1,9 @@
-import React, {type ReactNode, type SyntheticEvent, useEffect, useMemo, useState} from 'react';
+import React, {type ReactNode, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Box, CircularProgress, Fade, Tab, Tabs, Tooltip, Typography} from '@mui/material';
-import {useActiveComposeFile, useOpenFiles} from "../state/state.tsx";
-import {FileService} from "../../../gen/files/v1/files_pb.ts";
-import {callRPC, useClient} from "../../../lib/api.ts";
-import {useAlias} from "../../../context/alias-context.tsx";
-import {isComposeFile} from "../../../lib/editor.ts";
+import {useFileComponents, useOpenFiles} from "../state/state.tsx";
+import {callRPC, useFileClient} from "../../../lib/api.ts";
+import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
 import {type SaveState, useSaveStatus} from "../hooks/status-hook.ts";
 import TabEditor from "../tab-editor.tsx";
 import {ShortcutFormatter} from "./shortcut-formatter.tsx";
@@ -13,7 +11,6 @@ import {TabDeploy} from "../tab-deploy.tsx";
 import {TabStat} from "../tab-stats.tsx";
 import CenteredMessage from "../../../components/centered-message.tsx";
 import {ErrorOutline} from "@mui/icons-material";
-
 
 export enum TabType {
     // noinspection JSUnusedGlobalSymbols
@@ -58,9 +55,10 @@ const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> =
 };
 
 function TextEditor() {
-    const filename = useActiveComposeFile(state => state.activeComposeFile)!
+    const {filename: fn} = useFileComponents()
+    const filename = fn! // file will never be null if we reached this point
 
-    const fileService = useClient(FileService);
+    const fileService = useFileClient();
 
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -70,7 +68,7 @@ function TextEditor() {
     const [fileError, setFileError] = useState("");
 
     const recursiveOpen = useOpenFiles(state => state.recursiveOpen)
-    const {activeAlias} = useAlias()
+    const {alias: activeAlias} = useFileComponents()
 
     useEffect(() => {
         const checkExists = async () => {
@@ -79,7 +77,6 @@ function TextEditor() {
 
             const {err} = await callRPC(() => fileService.exists({
                 filename: filename,
-                alias: activeAlias,
             }))
             if (err) {
                 console.error("API error checking file existence:", err);
@@ -92,25 +89,31 @@ function TextEditor() {
         checkExists().then()
     }, [filename, fileService, activeAlias]);
 
+    const editorUrl = useEditorUrl()
+
+    const changeTab = (tabId: string) => {
+        const url = editorUrl(filename, parseInt(tabId))
+        navigate(url);
+    };
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const path = `/stacks/${filename}`
             if (e.altKey && !e.repeat) {
                 switch (e.code) {
                     case "KeyZ":
                         e.preventDefault();
-                        navigate(`${path}?tab=0`);
+                        changeTab('0')
                         break;
                     case "KeyX":
                         if (isComposeFile(filename)) {
                             e.preventDefault();
-                            navigate(`${path}?tab=1`);
+                            changeTab('1')
                         }
                         break;
                     case "KeyC":
                         if (isComposeFile(filename)) {
                             e.preventDefault();
-                            navigate(`${path}?tab=2`);
+                            changeTab('2')
                         }
                         break;
                 }
@@ -156,15 +159,12 @@ function TextEditor() {
 
     const currentTab = selectedTab ?? 'editor';
 
-    const handleTabChange = (_event: SyntheticEvent, newKey: string) => {
-        navigate(`/stacks/${filename}?tab=${newKey}`);
-    };
-
-    useEffect(() => {
-        if (selectedTab && tabsList.length > 0) {
-            navigate(`/stacks/${filename}?tab=${selectedTab}`, {replace: true});
-        }
-    }, [filename, selectedTab, tabsList, navigate]);
+    // todo why is this here
+    // useEffect(() => {
+    //     if (selectedTab && tabsList.length > 0) {
+    //         navigate(`/stacks/${filename}?tab=${selectedTab}`, {replace: true});
+    //     }
+    // }, [filename, selectedTab, tabsList, navigate]);
 
     if (isLoading) {
         return <CenteredMessage icon={<CircularProgress/>} title=""/>;
@@ -186,7 +186,7 @@ function TextEditor() {
             <Box sx={{borderBottom: 1, borderColor: 'divider'}}>
                 <Tabs
                     value={currentTab}
-                    onChange={handleTabChange}
+                    onChange={(_event, value) => changeTab(value)}
                     slotProps={{
                         indicator: {
                             sx: {

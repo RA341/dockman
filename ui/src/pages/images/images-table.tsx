@@ -17,7 +17,6 @@ import {
     Typography
 } from '@mui/material';
 import {CalendarToday as CalendarIcon, InfoOutlineRounded} from '@mui/icons-material';
-import {getImageHomePageUrl} from "../../hooks/docker-images.ts";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import {useCopyButton} from "../../hooks/copy.ts";
 import type {Image} from "../../gen/docker/v1/docker_pb.ts";
@@ -27,6 +26,7 @@ import {type SortOrder, sortTable, type TableInfo, useSort} from "../../lib/tabl
 import {formatBytes} from "../../lib/editor.ts";
 import {useConfig} from "../../hooks/config.ts";
 import {useNavigate} from "react-router-dom";
+import {getImageHomePageUrl} from "./docker-images.ts";
 
 interface ImageTableProps {
     images: Image[];
@@ -170,7 +170,7 @@ export const ImageTable = (
                                 color="primary"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    nav(`/images/inspect/${image.id}`)
+                                    nav(`inspect/${image.id}`)
                                 }}
                                 sx={{cursor: 'pointer'}}
                             />

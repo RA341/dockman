@@ -1,4 +1,6 @@
-import type {TabDetails} from "../hooks/tabs.ts";
+import type {TabDetails} from "../context/tab-context.tsx";
+import {useHost} from "../pages/home/home.tsx";
+import {useCallback} from "react";
 
 export const COMPOSE_EXTENSIONS = ['compose.yaml', 'compose.yml']
 
@@ -31,9 +33,25 @@ export const getUsageColor = (value: number): 'success.main' | 'warning.main' | 
 }
 
 
-export const getEditorUrl = (filename: string, tabDetail: TabDetails) => {
-    return `/stacks/${filename}?tab=${tabDetail.subTabIndex ?? 0}`;
-}
+export const useEditorUrl = () => {
+    const host = useHost();
+    return useCallback((filename?: string, tabDetail?: TabDetails | number) => {
+        let base = `/${host}/files`;
+        if (filename) {
+            base = `${base}/${filename}`;
+            if (tabDetail) {
+                let tabValue: number;
+                if (typeof tabDetail === 'number') {
+                    tabValue = tabDetail;
+                } else {
+                    tabValue = tabDetail.subTabIndex ?? 0;
+                }
+                base = `${base}?tab=${tabValue}`;
+            }
+        }
+        return base;
+    }, [host]);
+};
 
 export const getLanguageFromExtension = (filename?: string): string => {
     if (!filename) {

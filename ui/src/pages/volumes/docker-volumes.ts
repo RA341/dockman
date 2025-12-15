@@ -1,14 +1,14 @@
 import {useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from '../lib/api.ts'
-import {DockerService, type Volume} from '../gen/docker/v1/docker_pb.ts'
-import {useSnackbar} from "./snackbar.ts"
-import {useHost} from "./host.ts";
+import {type Volume} from "../../gen/docker/v1/docker_pb.ts";
+import {callRPC, useDockerClient} from "../../lib/api";
+import {useSnackbar} from "../../hooks/snackbar.ts";
+import {useHost} from "../home/home.tsx";
 
 export function useDockerVolumes() {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {showWarning} = useSnackbar()
 
-    const {selectedHost} = useHost()
+    const selectedHost = useHost()
 
     const [volumes, setVolumes] = useState<Volume[]>([])
     const [loading, setLoading] = useState(true)
@@ -32,6 +32,7 @@ export function useDockerVolumes() {
 
     const deleteSelected = async (ids: string[]) => {
         const {err} = await callRPC(() => dockerService.volumeDelete({
+            host: selectedHost,
             volumeIds: ids
         }))
         if (err) showWarning(`Error occurred while deleting volumes: ${err}`)
@@ -39,13 +40,19 @@ export function useDockerVolumes() {
     }
 
     const deleteUnunsed = async () => {
-        const {err} = await callRPC(() => dockerService.volumeDelete({unused: true}))
+        const {err} = await callRPC(() => dockerService.volumeDelete({
+            host: selectedHost,
+            unused: true
+        }))
         if (err) showWarning(`Error occurred while deleting volumes: ${err}`)
         loadVolumes()
     }
 
     const deleteAnonynomous = async () => {
-        const {err} = await callRPC(() => dockerService.volumeDelete({anon: true}))
+        const {err} = await callRPC(() => dockerService.volumeDelete({
+            host: selectedHost,
+            anon: true
+        }))
         if (err) showWarning(`Error occurred while deleting volumes: ${err}`)
         loadVolumes()
     }

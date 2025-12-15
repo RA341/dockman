@@ -2,15 +2,15 @@
 // @generated from file docker_manager/v1/docker_manager.proto (package docker_manager.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type {GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
+import {fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
+import type {Message} from "@bufbuild/protobuf";
 
 /**
  * Describes the file docker_manager/v1/docker_manager.proto.
  */
 export const file_docker_manager_v1_docker_manager: GenFile = /*@__PURE__*/
-  fileDesc("CiZkb2NrZXJfbWFuYWdlci92MS9kb2NrZXJfbWFuYWdlci5wcm90bxIRZG9ja2VyX21hbmFnZXIudjEiGgoKR2V0TWFjaGluZRIMCgRuYW1lGAEgASgJIi0KDVRvZ2dsZVJlcWV1c3QSDgoGZW5hYmxlGAEgASgIEgwKBG5hbWUYAiABKAkiPAoTTGlzdENsaWVudHNSZXNwb25zZRIUCgxhY3RpdmVDbGllbnQYASABKAkSDwoHY2xpZW50cxgCIAMoCSI7CgtMaXN0TWFjaGluZRIsCghtYWNoaW5lcxgCIAMoCzIaLmRvY2tlcl9tYW5hZ2VyLnYxLk1hY2hpbmUijAEKB01hY2hpbmUSCgoCaWQYASABKAQSDAoEbmFtZRgCIAEoCRIOCgZlbmFibGUYAyABKAgSDAoEaG9zdBgEIAEoCRIMCgRwb3J0GAUgASgFEgwKBHVzZXIYBiABKAkSEAoIcGFzc3dvcmQYByABKAkSGwoTdXNlX3B1YmxpY19rZXlfYXV0aBgIIAEoCCIiCg1Td2l0Y2hSZXF1ZXN0EhEKCW1hY2hpbmVJRBgBIAEoCSIHCgVFbXB0eTKqBQoURG9ja2VyTWFuYWdlclNlcnZpY2USQwoLU3RhcnRVcGRhdGUSGC5kb2NrZXJfbWFuYWdlci52MS5FbXB0eRoYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5IgASTAoMU3dpdGNoQ2xpZW50EiAuZG9ja2VyX21hbmFnZXIudjEuU3dpdGNoUmVxdWVzdBoYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5IgASUQoLTGlzdENsaWVudHMSGC5kb2NrZXJfbWFuYWdlci52MS5FbXB0eRomLmRvY2tlcl9tYW5hZ2VyLnYxLkxpc3RDbGllbnRzUmVzcG9uc2UiABJHCglMaXN0SG9zdHMSGC5kb2NrZXJfbWFuYWdlci52MS5FbXB0eRoeLmRvY2tlcl9tYW5hZ2VyLnYxLkxpc3RNYWNoaW5lIgASQgoDR2V0Eh0uZG9ja2VyX21hbmFnZXIudjEuR2V0TWFjaGluZRoaLmRvY2tlcl9tYW5hZ2VyLnYxLk1hY2hpbmUiABJDCglOZXdDbGllbnQSGi5kb2NrZXJfbWFuYWdlci52MS5NYWNoaW5lGhguZG9ja2VyX21hbmFnZXIudjEuRW1wdHkiABJECgpFZGl0Q2xpZW50EhouZG9ja2VyX21hbmFnZXIudjEuTWFjaGluZRoYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5IgASRgoMRGVsZXRlQ2xpZW50EhouZG9ja2VyX21hbmFnZXIudjEuTWFjaGluZRoYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5IgASTAoMVG9nZ2xlQ2xpZW50EiAuZG9ja2VyX21hbmFnZXIudjEuVG9nZ2xlUmVxZXVzdBoYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5IgBCwgEKFWNvbS5kb2NrZXJfbWFuYWdlci52MUISRG9ja2VyTWFuYWdlclByb3RvUAFaNGdpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvZG9ja2VyX21hbmFnZXIvdjGiAgNEWFiqAhBEb2NrZXJNYW5hZ2VyLlYxygIQRG9ja2VyTWFuYWdlclxWMeICHERvY2tlck1hbmFnZXJcVjFcR1BCTWV0YWRhdGHqAhFEb2NrZXJNYW5hZ2VyOjpWMWIGcHJvdG8z");
+    fileDesc("CiZkb2NrZXJfbWFuYWdlci92MS9kb2NrZXJfbWFuYWdlci5wcm90bxIRZG9ja2VyX21hbmFnZXIudjEiGgoKR2V0TWFjaGluZRIMCgRuYW1lGAEgASgJIi0KDVRvZ2dsZVJlcWV1c3QSDgoGZW5hYmxlGAEgASgIEgwKBG5hbWUYAiABKAkiJgoTTGlzdENsaWVudHNSZXNwb25zZRIPCgdjbGllbnRzGAEgAygJIjsKC0xpc3RNYWNoaW5lEiwKCG1hY2hpbmVzGAIgAygLMhouZG9ja2VyX21hbmFnZXIudjEuTWFjaGluZSKMAQoHTWFjaGluZRIKCgJpZBgBIAEoBBIMCgRuYW1lGAIgASgJEg4KBmVuYWJsZRgDIAEoCBIMCgRob3N0GAQgASgJEgwKBHBvcnQYBSABKAUSDAoEdXNlchgGIAEoCRIQCghwYXNzd29yZBgHIAEoCRIbChN1c2VfcHVibGljX2tleV9hdXRoGAggASgIIiIKDVN3aXRjaFJlcXVlc3QSEQoJbWFjaGluZUlEGAEgASgJIgcKBUVtcHR5MtwEChREb2NrZXJNYW5hZ2VyU2VydmljZRJDCgtTdGFydFVwZGF0ZRIYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5GhguZG9ja2VyX21hbmFnZXIudjEuRW1wdHkiABJRCgtMaXN0Q2xpZW50cxIYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5GiYuZG9ja2VyX21hbmFnZXIudjEuTGlzdENsaWVudHNSZXNwb25zZSIAEkcKCUxpc3RIb3N0cxIYLmRvY2tlcl9tYW5hZ2VyLnYxLkVtcHR5Gh4uZG9ja2VyX21hbmFnZXIudjEuTGlzdE1hY2hpbmUiABJCCgNHZXQSHS5kb2NrZXJfbWFuYWdlci52MS5HZXRNYWNoaW5lGhouZG9ja2VyX21hbmFnZXIudjEuTWFjaGluZSIAEkMKCU5ld0NsaWVudBIaLmRvY2tlcl9tYW5hZ2VyLnYxLk1hY2hpbmUaGC5kb2NrZXJfbWFuYWdlci52MS5FbXB0eSIAEkQKCkVkaXRDbGllbnQSGi5kb2NrZXJfbWFuYWdlci52MS5NYWNoaW5lGhguZG9ja2VyX21hbmFnZXIudjEuRW1wdHkiABJGCgxEZWxldGVDbGllbnQSGi5kb2NrZXJfbWFuYWdlci52MS5NYWNoaW5lGhguZG9ja2VyX21hbmFnZXIudjEuRW1wdHkiABJMCgxUb2dnbGVDbGllbnQSIC5kb2NrZXJfbWFuYWdlci52MS5Ub2dnbGVSZXFldXN0GhguZG9ja2VyX21hbmFnZXIudjEuRW1wdHkiAELCAQoVY29tLmRvY2tlcl9tYW5hZ2VyLnYxQhJEb2NrZXJNYW5hZ2VyUHJvdG9QAVo0Z2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9kb2NrZXJfbWFuYWdlci92MaICA0RYWKoCEERvY2tlck1hbmFnZXIuVjHKAhBEb2NrZXJNYW5hZ2VyXFYx4gIcRG9ja2VyTWFuYWdlclxWMVxHUEJNZXRhZGF0YeoCEURvY2tlck1hbmFnZXI6OlYxYgZwcm90bzM");
 
 /**
  * @generated from message docker_manager.v1.GetMachine
@@ -56,12 +56,7 @@ export const ToggleReqeustSchema: GenMessage<ToggleReqeust> = /*@__PURE__*/
  */
 export type ListClientsResponse = Message<"docker_manager.v1.ListClientsResponse"> & {
   /**
-   * @generated from field: string activeClient = 1;
-   */
-  activeClient: string;
-
-  /**
-   * @generated from field: repeated string clients = 2;
+   * @generated from field: repeated string clients = 1;
    */
   clients: string[];
 };
@@ -182,14 +177,6 @@ export const DockerManagerService: GenService<{
   startUpdate: {
     methodKind: "unary";
     input: typeof EmptySchema;
-    output: typeof EmptySchema;
-  },
-  /**
-   * @generated from rpc docker_manager.v1.DockerManagerService.SwitchClient
-   */
-  switchClient: {
-    methodKind: "unary";
-    input: typeof SwitchRequestSchema;
     output: typeof EmptySchema;
   },
   /**

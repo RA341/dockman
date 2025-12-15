@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/RA341/dockman/generated/files/v1"
+	"github.com/RA341/dockman/internal/host"
 )
 
 type Handler struct {
@@ -25,8 +26,13 @@ func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
 	return result
 }
 
-func (h *Handler) List(_ context.Context, req *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {
-	result, err := h.srv.List(req.Msg.Path, req.Msg.Alias)
+func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := h.srv.List(req.Msg.Path, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +80,14 @@ func (h *Handler) List(_ context.Context, req *connect.Request[v1.ListRequest]) 
 	return connect.NewResponse(&v1.ListResponse{Entries: rpcResult}), nil
 }
 
-func (h *Handler) Format(_ context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
-	name := req.Msg.GetFilename()
-	format, err := h.srv.Format(name, req.Msg.Alias)
+func (h *Handler) Format(ctx context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	name := req.Msg.Filename
+	format, err := h.srv.Format(name, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -84,43 +95,18 @@ func (h *Handler) Format(_ context.Context, req *connect.Request[v1.FormatReques
 	return connect.NewResponse(&v1.FormatResponse{Contents: string(format)}), nil
 }
 
-func (h *Handler) Create(_ context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	filename, err := getFile(req.Msg)
+func (h *Handler) Create(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	hostname, err := host.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.srv.Create(filename, req.Msg.Alias, req.Msg.IsDir)
+	filename, err := getFile(req.Msg, hostname)
 	if err != nil {
 		return nil, err
 	}
 
-	return &connect.Response[v1.Empty]{}, nil
-}
-
-func (h *Handler) Exists(_ context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	if err := h.srv.Exists(req.Msg.Filename, req.Msg.Alias); err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[v1.Empty]{}, nil
-}
-
-func (h *Handler) Delete(_ context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	filename, err := getFile(req.Msg)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := h.srv.Delete(filename, req.Msg.Alias); err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[v1.Empty]{}, nil
-}
-
-func (h *Handler) Rename(_ context.Context, req *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
-	err := h.srv.Rename(req.Msg.OldFilePath, req.Msg.NewFilePath, req.Msg.Alias)
+	err = h.srv.Create(filename, req.Msg.IsDir, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -128,21 +114,66 @@ func (h *Handler) Rename(_ context.Context, req *connect.Request[v1.RenameFile])
 	return &connect.Response[v1.Empty]{}, nil
 }
 
-func getFile(c *v1.File) (string, error) {
-	msg := c.GetFilename()
+func (h *Handler) Exists(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.srv.Exists(req.Msg.Filename, hostname)
+	if err != nil {
+		return nil, err
+	}
+	return &connect.Response[v1.Empty]{}, nil
+}
+
+func (h *Handler) Delete(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	filename, err := getFile(req.Msg, hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.srv.Delete(filename, hostname); err != nil {
+		return nil, err
+	}
+
+	return &connect.Response[v1.Empty]{}, nil
+}
+
+func (h *Handler) Rename(ctx context.Context, req *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.srv.Rename(req.Msg.OldFilePath, req.Msg.NewFilePath, hostname)
+	if err != nil {
+		return nil, err
+	}
+	return &connect.Response[v1.Empty]{}, nil
+}
+
+func getFile(c *v1.File, hostname string) (string, error) {
+	msg := c.Filename
 	if msg == "" {
 		return "", fmt.Errorf("name is empty")
 	}
 	return msg, nil
 }
 
-func (h *Handler) GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
+func (h *Handler) GetDockmanYaml(ctx context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
+
 	conf := h.srv.dy.GetDockmanYaml()
 	return connect.NewResponse(conf.toProto()), nil
 }
 
-func (h *Handler) ListAlias(ctx context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
-	list, err := h.srv.store.List()
+func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
+	list, err := h.srv.store.List(req.Msg.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +183,7 @@ func (h *Handler) ListAlias(ctx context.Context, req *connect.Request[v1.ListAli
 		resp = append(resp, &v1.Alias{
 			Alias:    alias.Alias,
 			Fullpath: alias.Fullpath,
+			// Host:  we only use host to input new aliases it will use FormatAlias before inserting
 		})
 	}
 
@@ -160,9 +192,9 @@ func (h *Handler) ListAlias(ctx context.Context, req *connect.Request[v1.ListAli
 	}), nil
 }
 
-func (h *Handler) AddAlias(ctx context.Context, req *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
+func (h *Handler) AddAlias(_ context.Context, req *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
 	alias := req.Msg.Alias
-	err := h.srv.store.AddAlias(alias.Alias, alias.Fullpath)
+	err := h.srv.store.AddAlias(FormatAlias(alias.Alias, alias.Host), alias.Fullpath)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +202,7 @@ func (h *Handler) AddAlias(ctx context.Context, req *connect.Request[v1.AddAlias
 	return connect.NewResponse(&v1.AddAliasResponse{}), nil
 }
 
-func (h *Handler) DeleteAlias(ctx context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
+func (h *Handler) DeleteAlias(_ context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
 	err := h.srv.store.RemoveAlias(req.Msg.Alias.Alias)
 	if err != nil {
 		return nil, err

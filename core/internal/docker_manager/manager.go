@@ -14,16 +14,12 @@ import (
 type ClientManager struct {
 	ssh              *ssh.Service
 	connectedClients syncmap.Map[string, *ConnectedDockerClient]
-
-	activeClient string
-	clientLock   *sync.RWMutex
 }
 
 func NewClientManager(sshSrv *ssh.Service) (*ClientManager, string) {
 	cm := &ClientManager{
 		ssh:              sshSrv,
 		connectedClients: syncmap.Map[string, *ConnectedDockerClient]{},
-		clientLock:       &sync.RWMutex{},
 	}
 
 	defaultHost, err := cm.loadAllHosts()
@@ -34,47 +30,24 @@ func NewClientManager(sshSrv *ssh.Service) (*ClientManager, string) {
 	return cm, defaultHost
 }
 
-func (m *ClientManager) GetMachine() *ConnectedDockerClient {
-	val, ok := m.connectedClients.Load(m.Active())
+func (m *ClientManager) GetMachine(name string) (*ConnectedDockerClient, error) {
+	val, ok := m.connectedClients.Load(name)
 	if !ok {
 		// this should never happen since only way of changing client should be Switched,
 		// and we can choose only from valid list of clients validated by Switch
-		log.Warn().Str("name", m.activeClient).Msg("Client is not not found, THIS SHOULD NEVER HAPPEN, submit a bug report https://github.com/RA341/dockman/issues")
+		return nil, fmt.Errorf(
+			"client: %s is not not found in cache, THIS SHOULD NEVER HAPPEN, submit a bug report https://github.com/RA341/dockman/issues",
+			name,
+		)
 	}
-	return val
+	return val, nil
 }
 
-func (m *ClientManager) Active() string {
-	m.clientLock.RLock()
-	defer m.clientLock.RUnlock()
-
-	return m.activeClient
-}
-
-func (m *ClientManager) Delete(name string) error {
-	if err := m.switchIfActive(name); err != nil {
-		return err
-	}
-
+func (m *ClientManager) Delete(name string) {
 	if cli, ok := m.connectedClients.Load(name); ok {
 		cli.Close()
 		m.connectedClients.Delete(name)
 	}
-
-	return nil
-}
-
-func (m *ClientManager) Switch(name string) error {
-	if _, ok := m.connectedClients.Load(name); !ok {
-		return fmt.Errorf("invalid client %s", name)
-	}
-
-	m.clientLock.Lock()
-	defer m.clientLock.Unlock()
-
-	log.Debug().Str("client", name).Msg("setting default client")
-	m.activeClient = name
-	return nil
 }
 
 func (m *ClientManager) ListHostNames() []string {
@@ -124,33 +97,6 @@ func (m *ClientManager) Load(name string, sshCon *ssh.ConnectedMachine) error {
 func (m *ClientManager) Exists(name string) bool {
 	_, ok := m.connectedClients.Load(name)
 	return ok
-}
-
-// switch out to next available client, if currently active
-func (m *ClientManager) switchIfActive(name string) error {
-	if active := m.Active(); active != name {
-		return nil
-	}
-
-	client := m.ListHostNames()
-	var switched bool
-	for _, newClient := range client {
-		if newClient == name {
-			continue
-		}
-
-		if err := m.Switch(newClient); err != nil {
-			return fmt.Errorf("failed to switch to client: %w", err)
-		} else {
-			switched = true
-		}
-	}
-
-	if !switched {
-		return fmt.Errorf("nice try, but %s is the only client left", name)
-	}
-
-	return nil
 }
 
 func (m *ClientManager) loadAllHosts() (string, error) {

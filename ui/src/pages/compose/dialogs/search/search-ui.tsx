@@ -13,8 +13,9 @@ import {
 } from '@mui/material'
 import {Search} from '@mui/icons-material'
 import {useNavigate} from 'react-router-dom'
-import {useAlias} from "../../../../context/alias-context.tsx";
 import {getWSUrl} from "../../../../lib/api.ts";
+import {useFileComponents} from "../../state/state.tsx";
+import {useEditorUrl} from "../../../../lib/editor.ts";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -53,33 +54,27 @@ const HighlightedText = ({text, indices}: { text: string; indices: number[] }) =
 
 function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () => void }) {
     const navigate = useNavigate()
-    const {activeAlias} = useAlias()
+    const {alias: activeAlias} = useFileComponents()
 
     const [filteredFiles, setFilteredFiles] = useState<SearchResult[]>([])
     const [error, setError] = useState<string | null>(null)
 
-    // Immediate state for the Input field (so typing feels fast)
     const [searchQuery, setSearchQuery] = useState('')
 
-    // --- 2. Create the Debounced State (300ms delay) ---
-    // This variable will only update 300ms after you stop typing
     const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
     const ws = useRef<WebSocket | null>(null)
     const [activeIndex, setActiveIndex] = useState<number>(-1)
     const itemRefs = useRef<(HTMLLIElement | null)[]>([])
 
-    // WebSocket Connection Logic
+    const {alias, host} = useFileComponents()
+
     useEffect(() => {
         if (!isVisible) return
 
-        const params = new URLSearchParams()
-        params.append('alias', activeAlias)
-
         let socket: WebSocket | null = null;
-
         try {
-            socket = new WebSocket(getWSUrl(`api/file/search?${params.toString()}`))
+            socket = new WebSocket(getWSUrl(`api/file/search/${host}/${alias}`))
         } catch (e: unknown) {
             console.error(`unknown err ${e}`)
             setError("Invalid WebSocket URL")
@@ -88,7 +83,6 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
 
         socket.onopen = () => {
             setError(null)
-            // Send the current debounced query on connect
             if (debouncedSearchQuery) socket.send(debouncedSearchQuery)
         }
 
@@ -100,7 +94,12 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data)
-                setFilteredFiles((data as SearchResult[]) || [])
+                if (data.error) {
+                    setError(data.error)
+                } else {
+                    setFilteredFiles((data.results as SearchResult[]) || [])
+                }
+
             } catch (e) {
                 console.error("Failed to parse search results", e)
             }
@@ -116,21 +115,19 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
         }
     }, [isVisible, activeAlias])
 
-    // --- 3. Send Message ONLY when 'debouncedSearchQuery' changes ---
     useEffect(() => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            // This sends the "full query" after the user paused typing
             ws.current.send(debouncedSearchQuery)
         }
 
-        // Reset navigation
         setActiveIndex(-1)
         itemRefs.current = []
+    }, [debouncedSearchQuery])
 
-    }, [debouncedSearchQuery]) // <--- Dependency is now the debounced value, not raw input
+    const editorUrl = useEditorUrl()
 
     const handleOpen = (file: string) => {
-        navigate(`/stacks/${file}`)
+        navigate(editorUrl(`/${alias}/${file}`))
         handleClose()
     }
 

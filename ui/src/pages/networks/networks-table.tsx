@@ -3,14 +3,16 @@ import {
     Box,
     Checkbox,
     Chip,
-    Paper, Stack,
+    Paper,
+    Stack,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    TableSortLabel, Tooltip,
+    TableSortLabel,
+    Tooltip,
     Typography
 } from '@mui/material';
 import {CalendarMonth, InfoOutlineRounded, Label as LabelIcon} from '@mui/icons-material';
@@ -145,7 +147,7 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
                                 color="primary"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    nav(`/networks/inspect/${image.id}`)
+                                    nav(`inspect/${image.id}`)
                                 }}
                                 sx={{cursor: 'pointer'}}
                             />

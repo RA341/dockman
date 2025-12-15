@@ -6,7 +6,6 @@ option go_package = "github.com/RA341/dockman/generated/docker_manager/v1";
 
 service DockerManagerService {
   rpc StartUpdate (Empty) returns (Empty) {}
-  rpc SwitchClient(SwitchRequest) returns (Empty) {}
   rpc ListClients(Empty) returns (ListClientsResponse) {}
   rpc ListHosts(Empty) returns (ListMachine) {}
   rpc Get(GetMachine) returns (Machine) {}
@@ -26,8 +25,7 @@ message ToggleReqeust {
 }
 
 message ListClientsResponse {
-  string activeClient = 1;
-  repeated string clients = 2;
+  repeated string clients = 1;
 }
 
 message ListMachine {

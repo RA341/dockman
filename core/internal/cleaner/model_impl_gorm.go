@@ -38,7 +38,7 @@ func (g *GormStore) InitConfig() error {
 	return fmt.Errorf("failed to query config: %w", err)
 }
 
-func (g *GormStore) GetConfig() (PruneConfig, error) {
+func (g *GormStore) GetConfig(string) (PruneConfig, error) {
 	dest := PruneConfig{}
 	dest.Model.ID = configID
 

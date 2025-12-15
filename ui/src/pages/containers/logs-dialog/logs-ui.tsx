@@ -1,11 +1,11 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Box, Dialog, DialogActions, DialogContent, DialogTitle, IconButton} from '@mui/material';
 import CloseIcon from "@mui/icons-material/Close";
-import {getWSUrl, useClient} from "../../../lib/api.ts";
-import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
+import {getWSUrl, useDockerClient} from "../../../lib/api.ts";
 import {FitAddon} from "@xterm/addon-fit";
 import AppTerminal from "../../compose/components/logs-terminal.tsx";
 import {createTab} from "../../compose/state/state.tsx";
+import {useHost} from "../../home/home.tsx";
 
 interface LogsDialogProps {
     show: boolean;
@@ -15,7 +15,7 @@ interface LogsDialogProps {
 }
 
 export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => {
-    const dockerService = useClient(DockerService);
+    const dockerService = useDockerClient();
 
     const [panelTitle, setPanelTitle] = useState('');
     const fitAddonRef = useRef<FitAddon>(new FitAddon());
@@ -33,12 +33,14 @@ export const LogsDialog = ({show, hide, name, containerID}: LogsDialogProps) => 
         hide();
     };
 
+    const selectedHost = useHost()
+
     const getLogTab = useCallback(() => {
         return createTab(
-            getWSUrl(`api/docker/logs/${containerID}`),
+            getWSUrl(`api/docker/logs/${containerID}/${encodeURIComponent(selectedHost)}`),
             `Logs: ${containerID}`,
             false)
-    }, [containerID])
+    }, [containerID, selectedHost])
 
     return (
         <Dialog

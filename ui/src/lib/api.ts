@@ -1,7 +1,11 @@
 import {type Client, Code, ConnectError, createClient} from "@connectrpc/connect";
 import {createConnectTransport} from "@connectrpc/connect-web";
 import type {DescService} from "@bufbuild/protobuf";
-import {useMemo} from "react";
+import {useEffect, useMemo} from "react";
+import {DockerService} from "../gen/docker/v1/docker_pb.ts";
+import {useHost} from "../pages/home/home.tsx";
+import {FileService} from "../gen/files/v1/files_pb.ts";
+import {CleanerService} from "../gen/cleaner/v1/cleaner_pb.ts";
 
 export const API_URL = import.meta.env.MODE === 'development'
     ? "http://localhost:8866"
@@ -17,14 +21,49 @@ export function getWSUrl(path: string) {
 
 console.log(`API url: ${API_URL} `)
 
+export const DOCKER_HOST = "DOCKER_HOST";
 const transport = createConnectTransport({
     baseUrl: API_URL,
     useBinaryFormat: true,
+    interceptors: [(next) => async (req) => {
+        req.header.set(DOCKER_HOST, hosRef.dockerHost);
+        return await next(req);
+    }],
 })
 
 export function useClient<T extends DescService>(service: T): Client<T> {
     return useMemo(() => createClient(service, transport), [service]);
 }
+
+export const hosRef = {
+    dockerHost: ""
+}
+
+export const useCleanerClient = () => {
+    const host = useHost()
+    useEffect(() => {
+        hosRef.dockerHost = host
+    }, [host]);
+    return useClient(CleanerService);
+};
+
+export const useDockerClient = () => {
+    const host = useHost()
+    useEffect(() => {
+        hosRef.dockerHost = host
+    }, [host]);
+
+    return useClient(DockerService);
+};
+
+export const useFileClient = () => {
+    const host = useHost()
+    useEffect(() => {
+        hosRef.dockerHost = host
+    }, [host]);
+    return useClient(FileService);
+};
+
 
 export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | null; err: string; }> {
     try {
@@ -65,52 +104,6 @@ export async function pingWithAuth() {
     } catch (error) {
         console.error("Authentication check failed:", error);
         return false
-    }
-}
-
-export async function uploadFile(filename: string, contents: string, alias: string): Promise<string> {
-    try {
-        const formData = new FormData();
-        const file = new File([contents], filename);
-
-        formData.append('contents', file, btoa(filename));
-
-        const response = await fetch(`${API_URL}/api/file/save?alias=${alias}`, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            return `Server error: ${response.status} ${response.statusText} - ${errorText}`
-        }
-
-        console.log(`Uploaded ${file}, response status: ${response.status}`);
-        return "";
-    } catch (error: any) {
-        console.error(`Error: ${error.message}`);
-        return `Server error: ${error.message}`;
-    }
-}
-
-export async function downloadFile(filename: string, alias: string): Promise<{ file: string; err: string }> {
-    return download(`api/file/load/${encodeURIComponent(filename)}?alias=${alias}`)
-}
-
-async function download(subPath: string) {
-    try {
-        const response = await fetch(
-            `${API_URL}/${subPath}`,
-            {cache: 'no-cache'}
-        );
-        if (!response.ok) {
-            return {file: "", err: `Failed to download file: ${response.status} ${response.statusText}`};
-        }
-        const fileData = await response.text()
-        return {file: fileData, err: ""};
-    } catch (error: unknown) {
-        console.error(`Error: ${(error as Error).toString()}`);
-        return {file: "", err: (error as Error).toString()};
     }
 }
 

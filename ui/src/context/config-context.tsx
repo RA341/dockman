@@ -1,15 +1,15 @@
 import {type ReactNode, useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from "../lib/api.ts";
+import {callRPC, useClient, useFileClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
 import {ConfigService, type UserConfig} from "../gen/config/v1/config_pb.ts";
 import {ConfigContext, type ConfigContextType, type UpdateSettingsOption} from "../hooks/config.ts";
-import {type DockmanYaml, FileService} from "../gen/files/v1/files_pb.ts";
+import {type DockmanYaml} from "../gen/files/v1/files_pb.ts";
 
 export type Config = Omit<UserConfig, '$typeName' | '$unknown'>;
 
 export function UserConfigProvider({children}: { children: ReactNode }) {
     const client = useClient(ConfigService)
-    const file = useClient(FileService)
+    const file = useFileClient()
 
     const {showError, showSuccess, showWarning} = useSnackbar()
     const [config, setConfig] = useState<Config>({})

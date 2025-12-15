@@ -42,9 +42,24 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w \
              -X ${INFO_PACKAGE}.Branch=${BRANCH}" \
     -o dockman "./cmd/server"
 
+FROM alpine:latest AS compose_cli_downloader
+
+WORKDIR /download
+
+RUN apk --no-cache add curl ca-certificates
+
+ARG COMPOSE_VERSION=v5.0.0
+
+# $(uname -m) to automatically detect x86_64 or aarch64 (ARM)
+RUN curl -SL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"  \
+    -o ./docker-compose && \
+    chmod +x ./docker-compose
+
 FROM alpine:latest AS alpine
 
 RUN apk add --no-cache tzdata
+
+COPY --from=compose_cli_downloader /download/docker-compose /usr/local/bin/docker-compose
 
 # identify dockman containers
 LABEL dockman.container=true
@@ -59,6 +74,8 @@ COPY --from=front /frontend/dist/ ./dist
 #RUN chown -R appuser:appgroup /app
 #
 #USER appuser
+
+RUN docker-compose version
 
 EXPOSE 8866
 

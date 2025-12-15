@@ -7,7 +7,8 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    IconButton, Link,
+    IconButton,
+    Link,
     TextField,
     Typography
 } from '@mui/material';
@@ -18,6 +19,7 @@ import {getWSUrl} from "../../../lib/api.ts";
 import AppTerminal from "../../compose/components/logs-terminal.tsx";
 import {FitAddon} from "@xterm/addon-fit";
 import {createTab} from "../../compose/state/state.tsx";
+import {useHost} from "../../home/home.tsx";
 
 export const ExecDialog = ({show, hide, name, containerID}: {
     show: boolean;
@@ -50,9 +52,11 @@ export const ExecDialog = ({show, hide, name, containerID}: {
     const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
     const [debuggerImage, setDebuggerImage] = useState("")
 
+    const selectedHost = useHost()
+
     const setupExec = useCallback(() => {
         const encodedCmd = encodeURIComponent(selectedCmd);
-        let base = `api/docker/exec/${containerID}?cmd=${encodedCmd}`;
+        let base = `api/docker/exec/${containerID}/${encodeURIComponent(selectedHost)}/?cmd=${encodedCmd}`;
 
         if (debuggerImage) {
             console.log("using dockman debug with debuggerImage", debuggerImage);
