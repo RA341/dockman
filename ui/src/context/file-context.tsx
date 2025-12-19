@@ -63,7 +63,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
     const addFile = useCallback(async (
         filename: string,
         isDir: boolean,
-        entryInsertIndex?: number[]
+        _entryInsertIndex?: number[]
     ) => {
         const {err} = await callRPC(() => client.create({filename, isDir, alias: activeAlias}))
         if (err) {
@@ -75,12 +75,14 @@ export function FilesProvider({children}: { children: ReactNode }) {
             }
             showSuccess(`Created ${filename}`)
         }
-        await fetchFiles(getDir(filename), entryInsertIndex)
+        await fetchFiles("", [])
+
+        // await fetchFiles(getDir(filename), entryInsertIndex)
     }, [client, fetchFiles, navigate])
 
     const deleteFile = async (
         filename: string,
-        entryInsertIndex?: number[]
+        _entryInsertIndex?: number[]
     ) => {
         const {err} = await callRPC(() => client.delete({filename, alias: activeAlias}))
         if (err) {
@@ -92,9 +94,9 @@ export function FilesProvider({children}: { children: ReactNode }) {
         }
 
         // Slice off the last index to get the PARENT folder's index not needed on insert
-        const parentFolderIndex = entryInsertIndex ? entryInsertIndex.slice(0, -1) : [];
+        // const parentFolderIndex = entryInsertIndex ? entryInsertIndex.slice(0, -1) : [];
 
-        await fetchFiles(getDir(filename), parentFolderIndex)
+        await fetchFiles("", [])
     }
 
     const renameFile = async (
