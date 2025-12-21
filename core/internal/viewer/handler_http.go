@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -44,28 +45,38 @@ func (h *HandlerHttp) proxySession(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionID := parts[4]
 
-	targetAddr, exists := h.srv.sessions.Load(sessionID)
+	session, exists := h.srv.sessions.Load(sessionID)
 	if !exists {
 		http.Error(w, "Session expired", 404)
 		return
 	}
 
-	targetURL, err := url.Parse("http://" + targetAddr)
+	targetURL, err := url.Parse("http://" + session.addr)
 	if err != nil {
 		http.Error(w, "Invalid URL: "+err.Error(), 400)
 		return
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	cli, err := h.srv.sshCli(session.host)
+	if err != nil {
+		http.Error(w, "Failed to connect: "+err.Error(), 500)
+		return
+	}
 
-	// 3. Ensure the Host header matches the container (not localhost:3000)
-	// and PRESERVE the path.
+	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	if cli != nil {
+		// set if an ssh session otherwise use local
+		proxy.Transport = &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return cli.Dial(network, addr)
+			},
+		}
+	}
+
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
 		req.Host = targetURL.Host
-		// We do NOT touch req.URL.Path. It is already "/api/viewer/view/..."
-		// which matches what we passed to --url-prefix in Docker.
 	}
 
 	proxy.FlushInterval = 100 * time.Millisecond

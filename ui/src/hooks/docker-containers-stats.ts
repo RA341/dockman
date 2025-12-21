@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {callRPC, useClient} from '../lib/api.ts';
-import {type ContainerStats, DockerService, ORDER, SORT_FIELD} from '../gen/docker/v1/docker_pb.ts';
+import {callRPC, useDockerClient} from '../lib/api.ts';
+import {type ContainerStats, ORDER, SORT_FIELD} from '../gen/docker/v1/docker_pb.ts';
 import {useSnackbar} from "./snackbar.ts";
-import {useHost} from "./host.ts";
+import {useHost} from "../pages/home/home.tsx";
 
 // This map remains very useful for clean, client-side sorting.
 const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
@@ -16,15 +16,13 @@ const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
 };
 
 export function useDockerStats(selectedPage?: string) {
-    const dockerService = useClient(DockerService);
+    const dockerService = useDockerClient();
     const {showError} = useSnackbar();
-    const {selectedHost} = useHost()
+    const selectedHost = useHost()
 
-    // Holds the latest data received from the server, unsorted.
     const [rawContainers, setRawContainers] = useState<ContainerStats[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // This state is the source of truth for the desired sort order.
     const [sortField, setSortField] = useState(SORT_FIELD.MEM);
     const [sortOrder, setSortOrder] = useState(ORDER.DSC);
     const [refreshInterval, setRefreshInterval] = useState(2500);
@@ -38,6 +36,7 @@ export function useDockerStats(selectedPage?: string) {
             const {val, err} = await callRPC(() => dockerService.containerStats({
                 sortBy: sortField,
                 order: sortOrder,
+                host: selectedHost,
                 file: selectedPage ? {filename: selectedPage} : undefined
             }));
 

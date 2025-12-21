@@ -1,17 +1,19 @@
-import {createContext, type ReactNode, useContext, useEffect, useState} from "react";
-import {type Alias, FileService} from "../gen/files/v1/files_pb.ts";
-import {callRPC, useClient} from "../lib/api.ts";
+import {createContext, type ReactNode, useCallback, useContext, useEffect, useState} from "react";
+import {type Alias} from "../gen/files/v1/files_pb.ts";
+import {callRPC, useFileClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
+import {useNavigate} from "react-router-dom";
+import {useEditorUrl} from "../lib/editor.ts";
+import {useHost} from "../pages/home/home.tsx";
 
 interface AliasContextType {
     files: Alias[]
     isLoading: boolean
 
-    addAlias: (alias: string, fullpath: string) => Promise<void>
+    addAlias: (alias: string, host: string, fullpath: string) => Promise<void>
     deleteAlias: (alias: string) => Promise<void>
     listAlias: () => Promise<void>
 
-    activeAlias: string
     setAlias: (alias: string) => void
     clearAlias: () => void
 }
@@ -26,30 +28,32 @@ export function useAlias() {
     return context
 }
 
-const AliasProvider = ({children}: { children: ReactNode }) => {
-    const files = useClient(FileService)
-    const {showError} = useSnackbar()
+export const COMPOSE_ROOT_ALIAS = "compose";
 
-    const [activeAlias, setActiveAlias] = useState("")
+const AliasProvider = ({children}: { children: ReactNode }) => {
+    const files = useFileClient()
+    const {showError} = useSnackbar()
+    const host = useHost()
+
     const [aliases, setAliases] = useState<Alias[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
-    useEffect(() => {
-        list().then()
-    }, []);
+    const nav = useNavigate()
+
+    const editorUrl = useEditorUrl()
 
     const setAlias = (alias: string) => {
-        setActiveAlias(alias)
+        nav(editorUrl(alias))
     }
 
     const clearAlias = () => {
-        setActiveAlias("")
+        nav(`/files`)
     }
 
-    const list = async () => {
+    const list = useCallback(async () => {
         setIsLoading(true)
 
-        const {val, err} = await callRPC(() => files.listAlias({}))
+        const {val, err} = await callRPC(() => files.listAlias({host}))
         if (err) {
             showError(`Unable to list file aliases\n${err}`)
         } else {
@@ -61,10 +65,10 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
         }
 
         setIsLoading(false)
-    }
+    }, [host])
 
-    const addAlias = async (alias: string, fullpath: string) => {
-        const {err} = await callRPC(() => files.addAlias({alias: {alias, fullpath}}))
+    const addAlias = async (alias: string, host: string, fullpath: string) => {
+        const {err} = await callRPC(() => files.addAlias({alias: {alias, fullpath, host}}))
         if (err) {
             showError(`Unable to add file alias\n${err}`)
         }
@@ -79,16 +83,20 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
         await list()
     }
 
+
+    useEffect(() => {
+        list().then()
+    }, [list])
+
+
     const value = {
         files: aliases,
         isLoading: isLoading,
         addAlias: addAlias,
         deleteAlias: deleteAlias,
         listAlias: list,
-
-        activeAlias: activeAlias,
-        setAlias: setAlias,
-        clearAlias: clearAlias,
+        setAlias,
+        clearAlias,
     }
 
     return (

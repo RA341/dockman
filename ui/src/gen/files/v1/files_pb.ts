@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file files/v1/files.proto.
  */
 export const file_files_v1_files: GenFile = /*@__PURE__*/
-  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiNAoSRGVsZXRlQWxpYXNSZXF1ZXN0Eh4KBWFsaWFzGAEgASgLMg8uZmlsZXMudjEuQWxpYXMiFQoTRGVsZXRlQWxpYXNSZXNwb25zZSIxCg9BZGRBbGlhc1JlcXVlc3QSHgoFYWxpYXMYASABKAsyDy5maWxlcy52MS5BbGlhcyISChBBZGRBbGlhc1Jlc3BvbnNlIhIKEExpc3RBbGlhc1JlcXVlc3QiKAoFQWxpYXMSDQoFYWxpYXMYASABKAkSEAoIZnVsbHBhdGgYAiABKAkiNQoRTGlzdEFsaWFzUmVzcG9uc2USIAoHYWxpYXNlcxgBIAMoCzIPLmZpbGVzLnYxLkFsaWFzIioKC0xpc3RSZXF1ZXN0EgwKBHBhdGgYASABKAkSDQoFYWxpYXMYAiABKAkiMgoMTGlzdFJlc3BvbnNlEiIKB2VudHJpZXMYASADKAsyES5maWxlcy52MS5Gc0VudHJ5IjAKDUZvcm1hdFJlcXVlc3QSEAoIZmlsZW5hbWUYASABKAkSDQoFYWxpYXMYAiABKAkiIgoORm9ybWF0UmVzcG9uc2USEAoIY29udGVudHMYASABKAkiewoHRnNFbnRyeRIQCghmaWxlbmFtZRgCIAEoCRINCgVpc0RpchgDIAEoCBIjCghzdWJGaWxlcxgEIAMoCzIRLmZpbGVzLnYxLkZzRW50cnkSEQoJaXNGZXRjaGVkGAUgASgIEhcKD2lzQ29tcG9zZUZvbGRlchgGIAEoCSJFCgpSZW5hbWVGaWxlEhMKC29sZEZpbGVQYXRoGAEgASgJEhMKC25ld0ZpbGVQYXRoGAIgASgJEg0KBWFsaWFzGAMgASgJIjYKBEZpbGUSEAoIZmlsZW5hbWUYASABKAkSDQoFaXNEaXIYAiABKAgSDQoFYWxpYXMYAyABKAkiBwoFRW1wdHkiqwIKC0RvY2ttYW5ZYW1sEhkKEXVzZUNvbXBvc2VGb2xkZXJzGAEgASgIEiIKGmRpc2FibGVDb21wb3NlUXVpY2tBY3Rpb25zGAcgASgIEhMKC3NlYXJjaExpbWl0GAggASgFEhAKCHRhYkxpbWl0GAYgASgFEiwKC3ZvbHVtZXNQYWdlGAIgASgLMhcuZmlsZXMudjEuVm9sdW1lc0NvbmZpZxIsCgtuZXR3b3JrUGFnZRgDIAEoCzIXLmZpbGVzLnYxLk5ldHdvcmtDb25maWcSKAoJaW1hZ2VQYWdlGAQgASgLMhUuZmlsZXMudjEuSW1hZ2VDb25maWcSMAoNY29udGFpbmVyUGFnZRgFIAEoCzIZLmZpbGVzLnYxLkNvbnRhaW5lckNvbmZpZyItCg1Wb2x1bWVzQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0Ii0KDU5ldHdvcmtDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiKwoLSW1hZ2VDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiLwoPQ29udGFpbmVyQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0IiwKBFNvcnQSEQoJc29ydE9yZGVyGAEgASgJEhEKCXNvcnRGaWVsZBgCIAEoCTLWBAoLRmlsZVNlcnZpY2USNwoETGlzdBIVLmZpbGVzLnYxLkxpc3RSZXF1ZXN0GhYuZmlsZXMudjEuTGlzdFJlc3BvbnNlIgASKwoGQ3JlYXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRGVsZXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRXhpc3RzEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASMQoGUmVuYW1lEhQuZmlsZXMudjEuUmVuYW1lRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASOgoOR2V0RG9ja21hbllhbWwSDy5maWxlcy52MS5FbXB0eRoVLmZpbGVzLnYxLkRvY2ttYW5ZYW1sIgASPQoGRm9ybWF0EhcuZmlsZXMudjEuRm9ybWF0UmVxdWVzdBoYLmZpbGVzLnYxLkZvcm1hdFJlc3BvbnNlIgASRgoJTGlzdEFsaWFzEhouZmlsZXMudjEuTGlzdEFsaWFzUmVxdWVzdBobLmZpbGVzLnYxLkxpc3RBbGlhc1Jlc3BvbnNlIgASQwoIQWRkQWxpYXMSGS5maWxlcy52MS5BZGRBbGlhc1JlcXVlc3QaGi5maWxlcy52MS5BZGRBbGlhc1Jlc3BvbnNlIgASTAoLRGVsZXRlQWxpYXMSHC5maWxlcy52MS5EZWxldGVBbGlhc1JlcXVlc3QaHS5maWxlcy52MS5EZWxldGVBbGlhc1Jlc3BvbnNlIgBCiAEKDGNvbS5maWxlcy52MUIKRmlsZXNQcm90b1ABWitnaXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2ZpbGVzL3YxogIDRlhYqgIIRmlsZXMuVjHKAghGaWxlc1xWMeICFEZpbGVzXFYxXEdQQk1ldGFkYXRh6gIJRmlsZXM6OlYxYgZwcm90bzM");
+  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiNAoSRGVsZXRlQWxpYXNSZXF1ZXN0Eh4KBWFsaWFzGAEgASgLMg8uZmlsZXMudjEuQWxpYXMiFQoTRGVsZXRlQWxpYXNSZXNwb25zZSIxCg9BZGRBbGlhc1JlcXVlc3QSHgoFYWxpYXMYASABKAsyDy5maWxlcy52MS5BbGlhcyISChBBZGRBbGlhc1Jlc3BvbnNlIiAKEExpc3RBbGlhc1JlcXVlc3QSDAoEaG9zdBgBIAEoCSI2CgVBbGlhcxINCgVhbGlhcxgBIAEoCRIMCgRob3N0GAIgASgJEhAKCGZ1bGxwYXRoGAMgASgJIjUKEUxpc3RBbGlhc1Jlc3BvbnNlEiAKB2FsaWFzZXMYASADKAsyDy5maWxlcy52MS5BbGlhcyIbCgtMaXN0UmVxdWVzdBIMCgRwYXRoGAEgASgJIjIKDExpc3RSZXNwb25zZRIiCgdlbnRyaWVzGAEgAygLMhEuZmlsZXMudjEuRnNFbnRyeSIhCg1Gb3JtYXRSZXF1ZXN0EhAKCGZpbGVuYW1lGAEgASgJIiIKDkZvcm1hdFJlc3BvbnNlEhAKCGNvbnRlbnRzGAEgASgJInsKB0ZzRW50cnkSEAoIZmlsZW5hbWUYAiABKAkSDQoFaXNEaXIYAyABKAgSIwoIc3ViRmlsZXMYBCADKAsyES5maWxlcy52MS5Gc0VudHJ5EhEKCWlzRmV0Y2hlZBgFIAEoCBIXCg9pc0NvbXBvc2VGb2xkZXIYBiABKAkiNgoKUmVuYW1lRmlsZRITCgtvbGRGaWxlUGF0aBgBIAEoCRITCgtuZXdGaWxlUGF0aBgCIAEoCSInCgRGaWxlEhAKCGZpbGVuYW1lGAEgASgJEg0KBWlzRGlyGAIgASgIIgcKBUVtcHR5IqsCCgtEb2NrbWFuWWFtbBIZChF1c2VDb21wb3NlRm9sZGVycxgBIAEoCBIiChpkaXNhYmxlQ29tcG9zZVF1aWNrQWN0aW9ucxgHIAEoCBITCgtzZWFyY2hMaW1pdBgIIAEoBRIQCgh0YWJMaW1pdBgGIAEoBRIsCgt2b2x1bWVzUGFnZRgCIAEoCzIXLmZpbGVzLnYxLlZvbHVtZXNDb25maWcSLAoLbmV0d29ya1BhZ2UYAyABKAsyFy5maWxlcy52MS5OZXR3b3JrQ29uZmlnEigKCWltYWdlUGFnZRgEIAEoCzIVLmZpbGVzLnYxLkltYWdlQ29uZmlnEjAKDWNvbnRhaW5lclBhZ2UYBSABKAsyGS5maWxlcy52MS5Db250YWluZXJDb25maWciLQoNVm9sdW1lc0NvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCItCg1OZXR3b3JrQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0IisKC0ltYWdlQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0Ii8KD0NvbnRhaW5lckNvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCIsCgRTb3J0EhEKCXNvcnRPcmRlchgBIAEoCRIRCglzb3J0RmllbGQYAiABKAky1gQKC0ZpbGVTZXJ2aWNlEjcKBExpc3QSFS5maWxlcy52MS5MaXN0UmVxdWVzdBoWLmZpbGVzLnYxLkxpc3RSZXNwb25zZSIAEisKBkNyZWF0ZRIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEisKBkRlbGV0ZRIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEisKBkV4aXN0cxIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjEKBlJlbmFtZRIULmZpbGVzLnYxLlJlbmFtZUZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjoKDkdldERvY2ttYW5ZYW1sEg8uZmlsZXMudjEuRW1wdHkaFS5maWxlcy52MS5Eb2NrbWFuWWFtbCIAEj0KBkZvcm1hdBIXLmZpbGVzLnYxLkZvcm1hdFJlcXVlc3QaGC5maWxlcy52MS5Gb3JtYXRSZXNwb25zZSIAEkYKCUxpc3RBbGlhcxIaLmZpbGVzLnYxLkxpc3RBbGlhc1JlcXVlc3QaGy5maWxlcy52MS5MaXN0QWxpYXNSZXNwb25zZSIAEkMKCEFkZEFsaWFzEhkuZmlsZXMudjEuQWRkQWxpYXNSZXF1ZXN0GhouZmlsZXMudjEuQWRkQWxpYXNSZXNwb25zZSIAEkwKC0RlbGV0ZUFsaWFzEhwuZmlsZXMudjEuRGVsZXRlQWxpYXNSZXF1ZXN0Gh0uZmlsZXMudjEuRGVsZXRlQWxpYXNSZXNwb25zZSIAQogBCgxjb20uZmlsZXMudjFCCkZpbGVzUHJvdG9QAVorZ2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9maWxlcy92MaICA0ZYWKoCCEZpbGVzLlYxygIIRmlsZXNcVjHiAhRGaWxlc1xWMVxHUEJNZXRhZGF0YeoCCUZpbGVzOjpWMWIGcHJvdG8z");
 
 /**
  * @generated from message files.v1.DeleteAliasRequest
@@ -76,6 +76,10 @@ export const AddAliasResponseSchema: GenMessage<AddAliasResponse> = /*@__PURE__*
  * @generated from message files.v1.ListAliasRequest
  */
 export type ListAliasRequest = Message<"files.v1.ListAliasRequest"> & {
+  /**
+   * @generated from field: string host = 1;
+   */
+  host: string;
 };
 
 /**
@@ -95,7 +99,12 @@ export type Alias = Message<"files.v1.Alias"> & {
   alias: string;
 
   /**
-   * @generated from field: string fullpath = 2;
+   * @generated from field: string host = 2;
+   */
+  host: string;
+
+  /**
+   * @generated from field: string fullpath = 3;
    */
   fullpath: string;
 };
@@ -132,11 +141,6 @@ export type ListRequest = Message<"files.v1.ListRequest"> & {
    * @generated from field: string path = 1;
    */
   path: string;
-
-  /**
-   * @generated from field: string alias = 2;
-   */
-  alias: string;
 };
 
 /**
@@ -171,11 +175,6 @@ export type FormatRequest = Message<"files.v1.FormatRequest"> & {
    * @generated from field: string filename = 1;
    */
   filename: string;
-
-  /**
-   * @generated from field: string alias = 2;
-   */
-  alias: string;
 };
 
 /**
@@ -254,11 +253,6 @@ export type RenameFile = Message<"files.v1.RenameFile"> & {
    * @generated from field: string newFilePath = 2;
    */
   newFilePath: string;
-
-  /**
-   * @generated from field: string alias = 3;
-   */
-  alias: string;
 };
 
 /**
@@ -281,11 +275,6 @@ export type File = Message<"files.v1.File"> & {
    * @generated from field: bool isDir = 2;
    */
   isDir: boolean;
-
-  /**
-   * @generated from field: string alias = 3;
-   */
-  alias: string;
 };
 
 /**

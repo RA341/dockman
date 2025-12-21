@@ -3,7 +3,7 @@ import {createContext, useContext} from "react";
 export interface DeleteFileContextType {
     isVisible: boolean
     closeDialog: () => void
-    showDialog: (file: string, depthIndex: number[]) => void
+    showDialog: (file: string) => void
 }
 
 export const DeleteFileContext = createContext<DeleteFileContextType | undefined>(undefined)

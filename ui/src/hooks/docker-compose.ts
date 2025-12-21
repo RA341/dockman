@@ -1,10 +1,10 @@
 import {useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from '../lib/api.ts'
-import {type ContainerList, DockerService} from '../gen/docker/v1/docker_pb.ts'
+import {callRPC, useDockerClient} from '../lib/api.ts'
+import {type ContainerList} from '../gen/docker/v1/docker_pb.ts'
 import {useSnackbar} from "./snackbar.ts"
 
 export function useDockerCompose(composeFile: string) {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {showWarning} = useSnackbar()
 
     const [containers, setContainers] = useState<ContainerList[]>([])
@@ -17,7 +17,9 @@ export function useDockerCompose(composeFile: string) {
             return
         }
 
-        const {val, err} = await callRPC(() => dockerService.composeList({filename: composeFile}))
+        const {val, err} = await callRPC(() => dockerService.composeList({
+            filename: composeFile,
+        }))
         if (err) {
             showWarning(`Failed to refresh containers: ${err}`)
             setContainers([])
@@ -25,7 +27,7 @@ export function useDockerCompose(composeFile: string) {
         }
 
         setContainers(val?.list || [])
-    }, [dockerService, composeFile])
+    }, [composeFile, dockerService])
 
     useEffect(() => {
         setLoading(true)

@@ -3,112 +3,117 @@ package cleaner
 import (
 	"context"
 	"fmt"
-	"sync"
-	"time"
 
+	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/internal/docker/container"
+	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/dustin/go-humanize"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-
-	"github.com/moby/moby/client"
 )
 
-type containerFn func() *container.Service
+type GetService func(host string) (*docker.Service, error)
 
 type Service struct {
-	cont     containerFn
-	store    Store
-	log      zerolog.Logger
-	task     *Scheduler
-	taskLock sync.Mutex
-	// use a closure to get the upto date client
-	hostname func() string
+	cont  GetService
+	store Store
+	log   zerolog.Logger
+
+	taskList syncmap.Map[string, gocron.Job]
+	schd     gocron.Scheduler
 }
 
-func NewService(cont containerFn, hostname func() string, store Store) *Service {
+func NewService(cont GetService, store Store) *Service {
 	s := &Service{
-		cont:     cont,
-		hostname: hostname,
-		store:    store,
-		log:      log.With().Str("service", "docker cleaner").Logger(),
+		cont:  cont,
+		store: store,
+		log:   log.With().Str("service", "docker cleaner").Logger(),
 	}
 	err := s.store.InitConfig()
 	if err != nil {
 		s.log.Fatal().Err(err).Msg("Failed to initialize default cleaner config")
 	}
 
+	schd, err := gocron.NewScheduler()
+	if err != nil {
+		s.log.Fatal().Err(err).Msg("Failed to initialize task runner")
+	}
+	s.schd = schd
+	schd.Start()
+
 	return s
 }
 
-func (s *Service) cli() *client.Client {
-	return s.cont().Cli()
-}
-
-func (s *Service) Run() error {
-	config, err := s.store.GetConfig()
+func (s *Service) cli(hostname string) (*container.Service, error) {
+	cont, err := s.cont(hostname)
 	if err != nil {
-		return fmt.Errorf("failed to get config for cleaner: %w", err)
+		return nil, err
 	}
-	if !config.Enabled {
-		return fmt.Errorf("cleaner is disabled, enable in config")
-	}
-
-	if !s.isTaskSetup() {
-		s.setupTask(config.Interval)
-	}
-
-	msg := s.task.Manual()
-	s.log.Info().Msg(msg)
-
-	return nil
+	return cont.Container, nil
 }
 
-func (s *Service) GetTask() *Scheduler {
-	s.taskLock.Lock()
-	defer s.taskLock.Unlock()
+func (s *Service) Run(host string, edit bool) error {
+	getConfig, err := s.store.GetConfig(host)
+	if err != nil {
+		return err
+	}
+	if !getConfig.Enabled {
+		return fmt.Errorf("enabled cleaner run")
+	}
 
-	return s.task
+	var jb gocron.Job
+	jobDef := gocron.DurationJob(getConfig.Interval)
+	task := gocron.NewTask(s.clean, host)
+
+	val, ok := s.taskList.Load(host)
+	if ok {
+		if !edit {
+			return val.RunNow()
+		}
+
+		jb, err = s.schd.Update(val.ID(), jobDef, task)
+	} else {
+		jb, err = s.schd.NewJob(jobDef, task)
+	}
+	if err != nil {
+		return err
+	}
+
+	s.taskList.Store(host, jb)
+	return jb.RunNow()
 }
 
-func (s *Service) isTaskSetup() bool {
-	s.taskLock.Lock()
-	defer s.taskLock.Unlock()
+func (s *Service) clean(ctx context.Context, host string) {
+	result := PruneResult{
+		Host: host,
+	}
 
-	return s.task != nil
-}
+	pruneConfig, err := s.store.GetConfig(host)
+	if err != nil {
+		s.log.Err(err).Msg("failed to get docker config")
+		result.Err = err.Error()
+	}
 
-func (s *Service) setupTask(interval time.Duration) {
-	s.taskLock.Lock()
-	defer s.taskLock.Unlock()
+	if !pruneConfig.Enabled {
+		return
+	}
 
-	s.task = NewScheduler(
-		func(ctx context.Context) {
-			pruneConfig, err := s.store.GetConfig()
-			if err != nil {
-				s.log.Err(err).Msg("failed to get docker config")
-			}
+	cli, err := s.cli(host)
+	if err != nil {
+		result.Err = err.Error()
+		return
+	}
 
-			if !pruneConfig.Enabled {
-				s.GetTask().Stop()
-				return
-			}
+	s.Prune(ctx, pruneConfig, cli.Client, &result)
 
-			cli := s.cli()
-			result := PruneResult{}
-			result.Host = s.hostname()
-
-			s.Prune(ctx, pruneConfig, cli, &result)
-
-			err = s.store.AddResult(&result)
-			if err != nil {
-				s.log.Err(err).Msg("Failed to add result for cleaner")
-				return
-			}
-		},
-		interval,
-	)
+	err = s.store.AddResult(&result)
+	if err != nil {
+		s.log.Err(err).Msg("Failed to add result for cleaner")
+		return
+	}
 }
 
 type DiskSpace struct {
@@ -118,8 +123,13 @@ type DiskSpace struct {
 	BuildCache string
 }
 
-func (s *Service) SystemStorage(ctx context.Context) (client.DiskUsageResult, []network.Inspect, error) {
-	usage, err := s.cli().DiskUsage(ctx, client.DiskUsageOptions{
+func (s *Service) SystemStorage(ctx context.Context, hostname string) (client.DiskUsageResult, []network.Inspect, error) {
+	cli, err := s.cli(hostname)
+	if err != nil {
+		return client.DiskUsageResult{}, nil, err
+	}
+
+	usage, err := cli.Cli().DiskUsage(ctx, client.DiskUsageOptions{
 		Containers: true,
 		Images:     true,
 		BuildCache: true,
@@ -130,7 +140,7 @@ func (s *Service) SystemStorage(ctx context.Context) (client.DiskUsageResult, []
 		return client.DiskUsageResult{}, nil, err
 	}
 
-	list, err := s.cont().NetworksList(ctx)
+	list, err := cli.NetworksList(ctx)
 	if err != nil {
 		return client.DiskUsageResult{}, nil, err
 	}

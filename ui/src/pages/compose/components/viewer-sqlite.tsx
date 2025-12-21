@@ -1,15 +1,13 @@
 import {Box, Link, Typography} from '@mui/material';
-import {useActiveComposeFile} from "../state/state.tsx";
-import {useAlias} from "../../../context/alias-context.tsx";
 import {useClient} from "../../../lib/api.ts";
 import {ViewerService} from "../../../gen/viewer/v1/viewer_pb.ts";
 import {useEffect, useState} from "react";
+import {useFileComponents} from "../state/state.tsx";
 
 const ViewerSqlite = () => {
     const viewerClient = useClient(ViewerService)
 
-    const filename = useActiveComposeFile(state => state.activeComposeFile)!
-    const {activeAlias} = useAlias()
+    const {filename, alias: activeAlias} = useFileComponents()
 
     const [iframeUrl, setIframeUrl] = useState("")
     const [sessionErr, setSessionErr] = useState("")

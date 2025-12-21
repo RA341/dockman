@@ -16,25 +16,26 @@ import {
     Tooltip,
     Typography
 } from '@mui/material'
-import {DocumentScannerOutlined, Terminal, Update} from '@mui/icons-material'
+import {DocumentScannerOutlined, InfoOutline, Terminal, Update} from '@mui/icons-material'
 import {ContainerInfoPort} from './container-info-port.tsx'
 import type {ContainerList, Port} from "../../../gen/docker/v1/docker_pb.ts"
-import {getImageHomePageUrl} from "../../../hooks/docker-images.ts"
 import scrollbarStyles from "../../../components/scrollbar-style.tsx"
 import CopyButton from "../../../components/copy-button.tsx"
 import {useCopyButton} from "../../../hooks/copy.ts"
 import ComposeLink from "../../../components/compose-link.tsx"
 import {type SortOrder, sortTable, type TableInfo, useSort} from '../../../lib/table.ts'
 import {useConfig} from "../../../hooks/config.ts";
+import {getImageHomePageUrl} from "../../images/docker-images.ts";
 
 interface ContainerTableProps {
-    containers: ContainerList[]
-    loading: boolean
-    selectedServices: string[]
-    onShowLogs: (containerId: string, containerName: string) => void
+    containers: ContainerList[],
+    loading: boolean,
+    selectedServices: string[],
+    onShowLogs: (containerId: string, containerName: string) => void,
     setSelectedServices: (services: string[]) => void,
     useContainerId?: boolean,
-    onExec?: (containerId: string, containerName: string) => void
+    onExec?: (containerId: string, containerName: string) => void,
+    onInspect?: (containerId: string) => void
 }
 
 export function ContainerTable(
@@ -46,6 +47,7 @@ export function ContainerTable(
         selectedServices,
         useContainerId = false,
         onExec,
+        onInspect
     }: ContainerTableProps) {
 
     const [isLoaded, setIsLoaded] = useState(false)
@@ -182,6 +184,22 @@ export function ContainerTable(
                                 />
                             </Tooltip>
                         )}
+
+                        {onInspect && (
+                            <Tooltip title="Inspect Container">
+                                <InfoOutline
+                                    aria-label="Inspect Container"
+                                    color="primary"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation();
+                                        onInspect(container.id)
+                                    }}
+                                    sx={{cursor: 'pointer'}}
+                                />
+                            </Tooltip>
+                        )}
+
                     </Stack>
                 </TableCell>
             )

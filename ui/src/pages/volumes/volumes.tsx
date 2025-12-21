@@ -1,7 +1,6 @@
 import {useMemo, useState} from 'react';
 import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
 import {CleaningServices, Delete, DryCleaning, Refresh} from '@mui/icons-material';
-import {useDockerVolumes} from "../../hooks/docker-volumes.ts";
 import {VolumeTable} from './volumes-table.tsx';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import VolumesLoading from "./volumes-loading.tsx";
@@ -9,6 +8,7 @@ import VolumesEmpty from "./volumes-empty.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
 import SearchBar from "../../components/search-bar.tsx";
+import {useDockerVolumes} from "./docker-volumes.ts";
 
 const VolumesPage = () => {
     const {loadVolumes, volumes, loading, deleteAnonynomous, deleteSelected, deleteUnunsed} = useDockerVolumes();

@@ -1,8 +1,8 @@
 import React from 'react';
 import {Box, Tab, Tabs} from "@mui/material";
 import {useSearchParams} from 'react-router-dom';
-import {TabDockerHosts} from "./tab-host.tsx";
 import TabAliases from "./tab-aliases.tsx";
+import {TabDockerHosts} from "./tab-host.tsx";
 
 interface TabConfig {
     label: string;

@@ -10,21 +10,23 @@ type GormStore struct {
 }
 
 func NewGormStore(db *gorm.DB) *GormStore {
-	err := db.AutoMigrate(&LocationAliases{})
+	err := db.AutoMigrate(&FolderAlias{})
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to migrate LocationAliases store")
+		log.Fatal().Err(err).Msg("failed to migrate FolderAlias store")
 	}
 	return &GormStore{db: db}
 }
 
-func (g GormStore) Get(alias string) (string, error) {
-	var al LocationAliases
-	// todo select only fullpath
-	return al.Fullpath, g.db.Where("alias = ?", alias).Find(&al).Error
+func (g GormStore) Get(alias string) (FolderAlias, error) {
+	var al FolderAlias
+	err := g.db.
+		Where("alias = ?", alias).
+		First(&al).Error
+	return al, err
 }
 
 func (g GormStore) AddAlias(alias string, path string) error {
-	fileLocation := LocationAliases{
+	fileLocation := FolderAlias{
 		Alias:    alias,
 		Fullpath: path,
 	}
@@ -32,12 +34,21 @@ func (g GormStore) AddAlias(alias string, path string) error {
 }
 
 func (g GormStore) RemoveAlias(alias string) error {
-	// Hard delete using Unscoped()
-	return g.db.Unscoped().Where("alias = ?", alias).Delete(&LocationAliases{}).Error
+	return g.db.Unscoped().
+		Where("alias = ?", alias).
+		Delete(&FolderAlias{}).Error
 }
 
-func (g GormStore) List() ([]LocationAliases, error) {
-	var locations []LocationAliases
-	err := g.db.Find(&locations).Error
+func (g GormStore) EditAlias(id uint, alias *FolderAlias) error {
+	alias.ID = id
+	return g.db.Save(&alias).Error
+}
+
+func (g GormStore) List(host string) ([]FolderAlias, error) {
+	var locations []FolderAlias
+	err := g.db.
+		Where("alias LIKE ?", host+"%"). // starts with 'host'
+		Find(&locations).Error
+
 	return locations, err
 }

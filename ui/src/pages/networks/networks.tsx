@@ -4,11 +4,11 @@ import {Delete, DryCleaning, Refresh} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import NetworksLoading from "./networks-loading.tsx";
 import NetworksEmpty from "./networks-empty.tsx";
-import {useDockerNetwork} from "../../hooks/docker-networks.ts";
 import {NetworkTable} from "./networks-table.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
 import SearchBar from "../../components/search-bar.tsx";
+import {useDockerNetwork} from "./docker-hook-networks.ts";
 
 const NetworksPage = () => {
     const {loading, networks, loadNetworks, networkPrune, deleteSelected} = useDockerNetwork();

@@ -1,11 +1,11 @@
 import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
-import {type DockmanYaml, FileService} from "../gen/files/v1/files_pb.ts";
-import {callRPC, useClient} from "./api.ts";
+import {type DockmanYaml} from "../gen/files/v1/files_pb.ts";
+import {callRPC, useFileClient} from "./api.ts";
 
 export type SortOrder = 'asc' | 'desc';
 
 export const useDockmanYaml = () => {
-    const fs = useClient(FileService)
+    const fs = useFileClient()
     const [dockYaml, setDockYaml] = useState<DockmanYaml | null>(null)
 
     useEffect(() => {

@@ -12,7 +12,7 @@ import {
     Typography
 } from "@mui/material"
 import {Add, AddCircleOutline, ArrowBack, Cancel, ErrorOutline, Folder, InsertDriveFile} from "@mui/icons-material"
-import {DockerFolderIcon} from "../../components/file-bar-icon.tsx";
+import {DockerFolderIcon} from "../../components/file-icon.tsx";
 import {amber} from "@mui/material/colors";
 
 interface AddFileDialogProps {

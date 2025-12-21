@@ -1,41 +1,42 @@
-import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
-import {Delete, PlayArrow, Refresh, RestartAlt, Stop, Update} from '@mui/icons-material';
+import {
+    Box,
+    Chip,
+    CircularProgress,
+    Divider,
+    Fade,
+    IconButton,
+    Paper,
+    Stack,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import {Delete, DnsOutlined, PlayArrow, Refresh, RestartAlt, Stop, Update,} from '@mui/icons-material';
 import {ContainerTable} from '../compose/components/container-info-table';
 import {useMemo, useState} from "react";
 import {useDockerContainers} from "../../hooks/docker-containers.ts";
-import {callRPC, useClient} from "../../lib/api.ts";
-import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
+import {callRPC, useDockerClient} from "../../lib/api.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import SearchBar from "../../components/search-bar.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
-import {LogsDialogProvider} from "./logs-dialog/logs-context.tsx";
-import {useLogsDialog} from "./logs-dialog/logs-hook.ts";
-import {useExecDialog} from "./exec-dialog/exec-hook.ts";
-import {ExecDialogProvider} from "./exec-dialog/exec-context.tsx";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import {ContainersLoading} from "./containers-loading.tsx";
+import {useNavigate} from "react-router-dom";
+import {useHost} from "../home/home.tsx";
 
 function ContainersPage() {
-    return (
-        <ExecDialogProvider>
-            <LogsDialogProvider>
-                <CorePage/>
-            </LogsDialogProvider>
-        </ExecDialogProvider>
-    );
-}
-
-function CorePage() {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient();
     const {containers, loading, refreshContainers, fetchContainers} = useDockerContainers();
-    const {showSuccess, showError} = useSnackbar()
+    const {showSuccess, showError} = useSnackbar();
+    const {search, setSearch, searchInputRef} = useSearch();
+    const [selectedContainers, setSelectedContainers] = useState<string[]>([]);
 
-    const {search, setSearch, searchInputRef} = useSearch()
-    const {showDialog: showLogsDialog} = useLogsDialog()
-    const {showDialog: showExecDialog} = useExecDialog()
+    const navigate = useNavigate();
+    const host = useHost();
 
-    const [selectedContainers, setSelectedContainers] = useState<string[]>([])
+    const onInspect = (id: string) => navigate(`/${host}/containers/inspect/${id}`);
+    const onExec = (id: string) => navigate(`/${host}/containers/inspect/${id}?tabId=exec`);
+    const onLogs = (id: string) => navigate(`/${host}/containers/inspect/${id}?tabId=logs`);
 
     const actions = [
         {
@@ -43,9 +44,7 @@ function CorePage() {
             buttonText: "Start",
             icon: <PlayArrow/>,
             disabled: selectedContainers.length === 0,
-            handler: async () => {
-                await handleContainerAction('start', 'containerStart', "started")
-            },
+            handler: () => handleContainerAction('start', 'containerStart', "started"),
             tooltip: "",
         },
         {
@@ -53,29 +52,16 @@ function CorePage() {
             buttonText: "Stop",
             icon: <Stop/>,
             disabled: selectedContainers.length === 0,
-            handler: async () => {
-                await handleContainerAction('stop', 'containerStop', "stopped")
-            },
+            handler: () => handleContainerAction('stop', 'containerStop', "stopped"),
             tooltip: "",
-        },
-        {
-            action: 'remove',
-            buttonText: "Remove",
-            icon: <Delete/>,
-            disabled: selectedContainers.length === 0,
-            handler: async () => {
-                await handleContainerAction('remove', 'containerRemove', "removed")
-            },
-            tooltip: "",
+
         },
         {
             action: 'restart',
             buttonText: "Restart",
             icon: <RestartAlt/>,
             disabled: selectedContainers.length === 0,
-            handler: async () => {
-                await handleContainerAction('restart', 'containerRestart', "restarted")
-            },
+            handler: () => handleContainerAction('restart', 'containerRestart', "restarted"),
             tooltip: "",
         },
         {
@@ -83,143 +69,148 @@ function CorePage() {
             buttonText: "Update",
             icon: <Update/>,
             disabled: selectedContainers.length === 0,
-            handler: async () => {
-                await handleContainerAction('update', 'containerUpdate', "updated")
-            },
+            handler: () => handleContainerAction('update', 'containerUpdate', "updated"),
+            tooltip: "",
+        },
+        {
+            action: 'remove',
+            buttonText: "Remove",
+            icon: <Delete/>,
+            disabled: selectedContainers.length === 0,
+            handler: () => handleContainerAction('remove', 'containerRemove', "removed"),
             tooltip: "",
         },
     ];
 
-    async function handleContainerAction(
-        name: string,
-        rpcName: keyof typeof dockerService,
-        message: string,
-    ) {
+    async function handleContainerAction(name: string, rpcName: keyof typeof dockerService, message: string) {
         // @ts-ignore
-        const {err} = await callRPC(
-            //  @ts-expect-error: type too complex to represent
-            () => dockerService[rpcName]({
-                containerIds: selectedContainers
-            }) as Promise<never> // we don't care about the output only err
-        )
+        const {err} = await callRPC(() => dockerService[rpcName]({containerIds: selectedContainers}));
+        if (err) showError(`Failed to ${name} Containers: ${err}`);
+        else showSuccess(`Successfully ${message} containers`);
 
-        if (err) {
-            console.error(err)
-            showError(`Failed to ${name} Containers: ${err}`)
-        } else {
-            showSuccess(`Successfully ${message} containers`)
-        }
-
-        fetchContainers().then()
-        setSelectedContainers([])
+        setSelectedContainers([]);
+        await fetchContainers();
     }
 
     const filteredContainers = useMemo(() => {
-        const lowerSearch = search.toLowerCase()
-
-        if (search) {
-            return containers.filter(cont =>
-                cont.serviceName.toLowerCase().includes(lowerSearch) ||
-                cont.imageName.toLowerCase().includes(lowerSearch) ||
-                cont.stackName.toLowerCase().includes(lowerSearch) ||
-                cont.name.toLowerCase().includes(lowerSearch)
-            )
-        }
-        return containers;
+        const lowerSearch = search.toLowerCase();
+        return containers.filter(cont =>
+            [cont.serviceName, cont.imageName, cont.stackName, cont.name].some(f => f.toLowerCase().includes(lowerSearch))
+        );
     }, [containers, search]);
-
 
     return (
         <Box sx={{
             display: 'flex',
             flexDirection: 'column',
             height: '100vh',
-            p: 3,
+            p: {xs: 1, md: 3},
             overflow: 'hidden',
             ...scrollbarStyles
         }}>
-            <Card
+            {/* Header Section */}
+            <Box sx={{mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
+                <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <DnsOutlined color="primary"/>
+                        <Typography variant="h5" sx={{fontWeight: 800, letterSpacing: -0.5}}>
+                            Containers
+                        </Typography>
+                        <Chip
+                            label={containers.length}
+                            size="medium"
+                            sx={{fontWeight: 700, color: 'primary.main'}}
+                        />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                        Manage and monitor containers on <code style={{fontWeight: 'bold'}}>{host}</code>
+                    </Typography>
+                </Box>
+
+                <Stack direction="row" spacing={1}>
+                    <Tooltip title="Refresh List">
+                        <IconButton
+                            onClick={refreshContainers}
+                            disabled={loading}
+                            sx={{border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper'}}
+                        >
+                            {loading ? <CircularProgress size={20}/> : <Refresh fontSize="small"/>}
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
+            </Box>
+
+            {/* Toolbar Card */}
+            <Paper
+                variant="outlined"
                 sx={{
-                    mb: 3,
-                    p: 2,
+                    p: 1.5,
+                    mb: 2,
                     display: 'flex',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 3,
-                    backgroundColor: 'background.paper',
-                    boxShadow: 2,
+                    gap: 2,
                     borderRadius: 2,
-                    flexShrink: 0,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}
             >
-                {/* Title and Stats */}
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    <Typography variant="h6" sx={{fontWeight: 'bold'}}>
-                        Docker Containers
-                    </Typography>
+                <Box sx={{flex: 1, maxWidth: 400}}>
+                    <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
                 </Box>
 
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    <Typography variant="h6">
-                        {containers.length} containers
-                    </Typography>
+                <Divider orientation="vertical" flexItem sx={{mx: 1}}/>
+
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, flex: 1}}>
+                    {selectedContainers.length > 0 ? (
+                        <Fade in={selectedContainers.length > 0}>
+                            <Box sx={{display: 'flex', alignItems: 'center', gap: 2, width: '100%'}}>
+                                <Typography variant="caption"
+                                            sx={{fontWeight: 700, color: 'primary.main', whiteSpace: 'nowrap'}}>
+                                    {selectedContainers.length} SELECTED
+                                </Typography>
+                                <ActionButtons actions={actions}/>
+                            </Box>
+                        </Fade>
+                    ) : (
+                        <Typography variant="body2" color="text.disabled" sx={{fontStyle: 'italic'}}>
+                            Select containers to perform bulk actions
+                        </Typography>
+                    )}
                 </Box>
+            </Paper>
 
-                <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
-
-                <Tooltip title={loading ? 'Refreshing...' : 'Refresh containers'}>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={refreshContainers}
-                        disabled={loading}
-                        sx={{minWidth: 'auto', px: 1.5}}
-                    >
-                        {loading ? <CircularProgress size={16} color="inherit"/> : <Refresh/>}
-                    </Button>
-                </Tooltip>
-
-                {/* Spacer */}
-                <Box sx={{flexGrow: 0.95}}/>
-
-                <ActionButtons actions={actions}/>
-            </Card>
-
-            {/* Table Container */}
-            <Box sx={{
-                flexGrow: 1,
-                border: '3px ridge',
-                borderColor: 'rgba(255, 255, 255, 0.23)',
-                borderRadius: 3,
-                display: 'flex',
-                flexDirection: 'column', // Add this
-                minHeight: 0,
-                overflow: 'hidden' // Keep this on the outer box
-            }}>
+            {/* Main Table Area */}
+            <Paper
+                variant="outlined"
+                sx={{
+                    flexGrow: 1,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    bgcolor: 'background.paper'
+                }}
+            >
                 {loading ? (
                     <ContainersLoading/>
                 ) : (
-                    <Fade in={!loading} timeout={300}>
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            overflow: 'auto' // Add scrolling here
-                        }}>
+                    <Fade in={!loading}>
+                        <Box sx={{height: '100%', width: '100%', overflow: 'hidden'}}>
                             <ContainerTable
                                 containers={filteredContainers}
                                 loading={loading}
-                                onShowLogs={showLogsDialog}
+                                onShowLogs={onLogs}
                                 setSelectedServices={setSelectedContainers}
                                 selectedServices={selectedContainers}
                                 useContainerId={true}
-                                onExec={showExecDialog}
+                                onExec={onExec}
+                                onInspect={onInspect}
                             />
-                        </div>
+                        </Box>
                     </Fade>
                 )}
-            </Box>
+            </Paper>
         </Box>
-    )
+    );
 }
 
 export default ContainersPage;

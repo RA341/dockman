@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	connectcors "connectrpc.com/cors"
+	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/config"
+	"github.com/RA341/dockman/internal/host"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/logger"
@@ -45,8 +47,12 @@ func StartServer(opt ...config.ServerOpt) {
 		AllowedOrigins:      conf.GetAllowedOrigins(),
 		AllowPrivateNetwork: true,
 		AllowedMethods:      connectcors.AllowedMethods(),
-		AllowedHeaders:      append(connectcors.AllowedHeaders(), "Authorization"),
-		ExposedHeaders:      connectcors.ExposedHeaders(),
+		AllowedHeaders: append(
+			connectcors.AllowedHeaders(),
+			auth.CookieHeaderAuth,
+			host.HeaderDockerHost,
+		),
+		ExposedHeaders: connectcors.ExposedHeaders(),
 	})
 	finalMux := corsConfig.Handler(router)
 

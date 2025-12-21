@@ -1,90 +1,128 @@
-import {type ReactNode, useCallback, useEffect, useState} from 'react'
+import {createContext, type ReactNode, useCallback, useContext, useEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
-import {callRPC, useClient} from "../lib/api.ts";
-import {FilesContext, type FilesContextType} from "../hooks/files.ts";
-import {useHost} from "../hooks/host.ts";
+import {API_URL, callRPC, hosRef, useFileClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
-import {FileService, type FsEntry} from '../gen/files/v1/files_pb.ts';
-import {useTabs} from "../hooks/tabs.ts";
-import {useOpenFiles} from "../pages/compose/state/state.tsx";
-import {useAlias} from "./alias-context.tsx";
+import {type FsEntry} from '../gen/files/v1/files_pb.ts';
+import {useFileComponents, useOpenFiles} from "../pages/compose/state/state.tsx";
+import {useTabs} from "./tab-context.tsx";
+import {useHost} from "../pages/home/home.tsx";
+import {useEditorUrl} from "../lib/editor.ts";
 
-export function FilesProvider({children}: { children: ReactNode }) {
-    const client = useClient(FileService)
+export interface FilesContextType {
+    files: FsEntry[]
+    isLoading: boolean
+
+    addFile: (filename: string, isDir: boolean) => Promise<void>
+    deleteFile: (filename: string) => Promise<void>
+    renameFile: (oldFilename: string, newFile: string) => Promise<void>
+    listFiles: (path: string, depthIndex: number[]) => Promise<void>
+
+    uploadFile: (filename: string, contents: File | string, upload?: boolean) => Promise<string>
+    uploadFilesFromPC: (targetDir: string, files: File[]) => Promise<void>
+
+    downloadFile: (filename: string) => Promise<{ file: string; err: string }>
+}
+
+export const FilesContext = createContext<FilesContextType | undefined>(undefined)
+
+export function useFiles() {
+    const context = useContext(FilesContext)
+    if (context === undefined) {
+        throw new Error('useFiles must be used within a FilesProvider')
+    }
+    return context
+}
+
+export function getDir(filePath: string): string {
+    const lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash === -1) return '';
+    if (lastSlash === 0) return '';
+    return filePath.substring(0, lastSlash);
+}
+
+export const getEntryDisplayName = (path: string) => {
+    const split = path.split("/");
+    const pop = split.pop();
+    if (!pop) {
+        console.error("unable to get last element in path", "split: ", split, "last element: ", pop)
+        return "ERR_EMPTY_PATH"
+    }
+    return pop
+}
+
+function FilesProvider({children}: { children: ReactNode }) {
+    const client = useFileClient()
     const {showError, showSuccess} = useSnackbar()
     const navigate = useNavigate()
-    const {selectedHost} = useHost()
     const location = useLocation()
 
     const {closeTab} = useTabs()
-    const {activeAlias} = useAlias()
 
     const [files, setFiles] = useState<FsEntry[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
+    const host = useHost()
+    const {alias} = useFileComponents()
+
     const fetchFiles = useCallback(async (
-            path: string = "",
-            entryInsertIndex: number[] = [],
-        ) => {
-            if (!path) {
-                // first load empty filelist
-                setIsLoading(true)
-            }
+        path: string = "",
+        depthIndex: number[] = []
+    ) => {
+        if (files.length < 1) {
+            // empty filelist show full spinner
+            setIsLoading(true)
+        }
 
-            const {val, err} = await callRPC(() => client.list({
-                path: path,
-                alias: activeAlias
-            }))
-            if (err) {
-                showError(err)
-                setFiles([])
-            } else if (val) {
-                // entryInsertIndex of 1 is at root
-                if (entryInsertIndex.length < 1) {
-                    // console.log("inserting at root")
-                    setFiles(val.entries)
+        if (path === "") {
+            path = `${alias}`
+        }
+
+        const {val, err} = await callRPC(() => client.list({
+            path: path,
+        }))
+        if (err) {
+            showError(err)
+            setFiles([])
+        } else if (val) {
+            setFiles(prevState => {
+                if (depthIndex.length < 1) {
+                    return val.entries
                 } else {
-                    // console.log(`inserting at ${entryInsertIndex}`)
-                    // sub index
-                    setFiles(prevState => {
-                        const newList = [...prevState]
-                        insertAtNestedIndex(newList, entryInsertIndex, val.entries)
-                        return newList
-                    })
+                    const newList = [...prevState]
+                    insertAtNestedIndex(newList, depthIndex, val.entries)
+                    return newList
                 }
-            }
+            })
+        }
 
-            setIsLoading(false)
-        },
-        [client, selectedHost, activeAlias, showError]);
+        setIsLoading(false)
+    }, [alias, host, files, client]);
 
     const closeFolder = useOpenFiles(state => state.delete)
+    const fileUrl = useEditorUrl()
 
     const addFile = useCallback(async (
         filename: string,
         isDir: boolean,
-        _entryInsertIndex?: number[]
     ) => {
-        const {err} = await callRPC(() => client.create({filename, isDir, alias: activeAlias}))
+        const {err} = await callRPC(() => client.create({filename, isDir}))
         if (err) {
             showError(err)
             return
         } else {
             if (!isDir) {
-                navigate(`/stacks/${filename}`)
+                navigate(fileUrl(filename))
             }
             showSuccess(`Created ${filename}`)
         }
-        await fetchFiles("", [])
 
-        // await fetchFiles(getDir(filename), entryInsertIndex)
-    }, [client, fetchFiles, navigate])
+        await fetchFiles("",)
+    }, [client, fetchFiles, host, navigate])
 
     const deleteFile = async (
         filename: string,
-        _entryInsertIndex?: number[]
     ) => {
-        const {err} = await callRPC(() => client.delete({filename, alias: activeAlias}))
+        const {err} = await callRPC(() => client.delete({filename}))
         if (err) {
             showError(err)
         } else {
@@ -93,10 +131,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
             closeTab(filename)
         }
 
-        // Slice off the last index to get the PARENT folder's index not needed on insert
-        // const parentFolderIndex = entryInsertIndex ? entryInsertIndex.slice(0, -1) : [];
-
-        await fetchFiles("", [])
+        await fetchFiles("")
     }
 
     const renameFile = async (
@@ -106,7 +141,6 @@ export function FilesProvider({children}: { children: ReactNode }) {
         const {err} = await callRPC(() => client.rename({
             newFilePath: newFileName,
             oldFilePath: oldFilename,
-            alias: activeAlias
         }))
         if (err) {
             showError(err)
@@ -114,12 +148,82 @@ export function FilesProvider({children}: { children: ReactNode }) {
             showSuccess(`${oldFilename} renamed to ${newFileName}`)
             closeTab(oldFilename)
             const currentPath = location.pathname
-            if (currentPath === `/stacks/${oldFilename}`) {
-                navigate(`/stacks/${newFileName}`)
+            if (currentPath === oldFilename) {
+                navigate(newFileName)
             }
         }
 
-        await fetchFiles("", [])
+        await fetchFiles("")
+    }
+
+
+    async function uploadFile(fullPath: string, content: File | string, isNew: boolean = false): Promise<string> {
+        const url = `${API_URL}/api/file/save${isNew ? '?create=true' : ''}`;
+
+        try {
+            const formData = new FormData();
+
+            const fileBlob = typeof content === 'string'
+                // If it's a string (from editor), wrap it.
+                ? new File([content], getEntryDisplayName(fullPath))
+                // If it's already a File (from DnD), use it.
+                : content;
+
+            formData.append('contents', fileBlob, btoa(fullPath));
+
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'DOCKER_HOST': hosRef.dockerHost
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                return `Error: ${response.status} - ${errorText}`;
+            }
+
+            return "";
+        } catch (error) {
+            console.error("Upload failed:", error);
+            return "Network error";
+        }
+    }
+
+    const uploadFilesFromPC = async (targetDir: string, files: File[]) => {
+        const results = await Promise.all(files.map(file => {
+            const cleanDir = targetDir.endsWith('/') ? targetDir.slice(0, -1) : targetDir;
+            const fullPath = `${cleanDir}/${file.name}`;
+            return uploadFile(fullPath, file, true);
+        }));
+
+        const errors = results.filter(res => res !== "");
+        if (errors.length > 0) {
+            showError(`${errors.length} files failed to upload.`)
+        } else {
+            showSuccess(`Uploaded ${results.length} files`);
+        }
+
+        await fetchFiles("");
+    };
+
+    async function downloadFile(filename: string): Promise<{ file: string; err: string }> {
+        const subPath = `api/file/load/${encodeURIComponent(filename)}`
+        try {
+            const response = await fetch(`${API_URL}/${subPath}`, {
+                cache: 'no-cache',
+                headers: {DOCKER_HOST: hosRef.dockerHost}
+            });
+            if (!response.ok) {
+                return {file: "", err: `Failed to download file: ${response.status} ${response.statusText}`};
+            }
+            const fileData = await response.text()
+            return {file: fileData, err: ""};
+        } catch (error: unknown) {
+            console.error(`Error: ${(error as Error).toString()}`);
+            return {file: "", err: (error as Error).toString()};
+        }
     }
 
     useEffect(() => {
@@ -133,7 +237,9 @@ export function FilesProvider({children}: { children: ReactNode }) {
         deleteFile,
         renameFile,
         listFiles: fetchFiles,
-        refetch: async () => fetchFiles(),
+        uploadFile,
+        downloadFile,
+        uploadFilesFromPC
     }
 
     return (
@@ -143,6 +249,7 @@ export function FilesProvider({children}: { children: ReactNode }) {
     )
 }
 
+export default FilesProvider
 
 function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[]): void {
     if (indices.length === 0) return;
@@ -168,11 +275,4 @@ function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[
 
     current[lastIndex].isFetched = true;
     current[lastIndex].subFiles = value;
-}
-
-export function getDir(filePath: string): string {
-    const lastSlash = filePath.lastIndexOf('/');
-    if (lastSlash === -1) return '';
-    if (lastSlash === 0) return '';
-    return filePath.substring(0, lastSlash);
 }

@@ -13,8 +13,7 @@ import {
     Typography
 } from '@mui/material';
 import {PlayArrow, Save} from '@mui/icons-material';
-import {CleanerService} from "../../gen/cleaner/v1/cleaner_pb.ts";
-import {callRPC, useClient} from "../../lib/api.ts";
+import {callRPC, useCleanerClient} from "../../lib/api.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import StorageInuse from "./storage-inuse.tsx";
 import {type CleanerConfig, useCleanerConfig} from "./state.ts";
@@ -23,7 +22,7 @@ import scrollbarStyles from "../../components/scrollbar-style.tsx";
 
 function DockerCleanerPage() {
     const {showError, showSuccess} = useSnackbar()
-    const cleaner = useClient(CleanerService)
+    const cleaner = useCleanerClient()
 
     const configErr = useCleanerConfig(state => state.err)
     const isLoading = useCleanerConfig(state => state.isLoading)

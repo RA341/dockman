@@ -1,37 +1,37 @@
-import {useEffect} from 'react'
+import {useCallback, useEffect} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
 import {Add as AddIcon, Refresh, Search as SearchIcon} from '@mui/icons-material'
-import {useHost} from "../../../hooks/host.ts"
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
 import {useTelescope} from "../dialogs/search/search-hook.ts";
 import {useAddFile} from "../dialogs/add/add-hook.ts";
-import {useSideBarAction} from "../state/state.tsx";
+import {useFileComponents, useSideBarAction} from "../state/state.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
-import {useFiles} from "../../../hooks/files.ts";
-import {FileBarItem} from "./file-bar-item.tsx";
-import AliasSelector from "./file-bar-alias-selector.tsx";
+import {FileItem} from "./file-item.tsx";
+import AliasSelector from "./file-alias-selector.tsx";
+import {useFiles} from "../../../context/file-context.tsx"
 
 export function FileList() {
-    const {selectedHost} = useHost()
-
     const {showTelescope} = useTelescope()
-    // const {showDialog: showGitImport} = useGitImport()
     const {showDialog: showAddFile} = useAddFile()
 
     const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
 
     const {listFiles} = useFiles()
+    const {alias} = useFileComponents()
+
+    const showFileAdd = useCallback(() => {
+        showAddFile(`${alias}`)
+    }, [alias]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-
             if ((event.altKey) && event.key === 's') {
                 event.preventDefault()
                 showTelescope()
             }
             if ((event.altKey) && event.key === 'a') {
                 event.preventDefault()
-                showAddFile("")
+                showFileAdd()
             }
         }
         window.addEventListener('keydown', handleKeyDown)
@@ -39,7 +39,7 @@ export function FileList() {
             window.removeEventListener('keydown', handleKeyDown)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedHost])
+    }, [])
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
 
@@ -75,7 +75,7 @@ export function FileList() {
                     }>
                         <IconButton
                             size="small"
-                            onClick={() => listFiles()}
+                            onClick={() => listFiles("", [])}
                             color="primary"
                             aria-label="Search"
                         >
@@ -107,7 +107,7 @@ export function FileList() {
                     }>
                         <IconButton
                             size="small"
-                            onClick={() => showAddFile('')}
+                            onClick={() => showFileAdd()}
                             color="success"
                             sx={{ml: 1}}
                             aria-label="Add"
@@ -157,7 +157,7 @@ const FileListInner = () => {
             ) : (
                 <List>
                     {files.map((ele, inde) =>
-                        <FileBarItem
+                        <FileItem
                             key={ele.filename}
                             entry={ele}
                             index={inde}/>

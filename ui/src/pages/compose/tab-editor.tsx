@@ -1,16 +1,16 @@
 import {Box, Fade, IconButton, Tooltip} from "@mui/material";
 import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
-import {callRPC, downloadFile, uploadFile, useClient} from "../../lib/api";
+import {callRPC, useDockerClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {type SaveState} from "./hooks/status-hook.ts";
 import {CloudUploadOutlined, ErrorOutlineOutlined} from "@mui/icons-material";
-import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 import {isComposeFile} from "../../lib/editor.ts";
 import EditorErrorWidget from "./editor-widget-errors.tsx";
 import EditorDeployWidget from "./editor-widget-deploy.tsx";
 import useResizeBar from "./hooks/resize-hook.ts";
-import {useAlias} from "../../context/alias-context.tsx";
+import {useFileComponents} from "./state/state.tsx";
+import {useFiles} from "../../context/file-context.tsx";
 
 interface EditorProps {
     selectedPage: string;
@@ -26,24 +26,24 @@ type ActionItem = {
 
 function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) {
     const {showError, showWarning} = useSnackbar();
-    const dockerClient = useClient(DockerService)
+    const dockerClient = useDockerClient()
+    const {uploadFile, downloadFile} = useFiles()
 
     const [errors, setErrors] = useState<string[]>([])
 
     const [fileContent, setFileContent] = useState("")
-    const {activeAlias} = useAlias()
+    const {alias: activeAlias} = useFileComponents()
 
     const fetchDataCallback = useCallback(async () => {
         if (selectedPage !== "") {
-            const {file, err} = await downloadFile(selectedPage, activeAlias)
+            const {file, err} = await downloadFile(selectedPage)
             if (err) {
                 showError(`Error downloading file ${err}`)
             } else {
                 setFileContent(file)
             }
         }
-        // eslint-disable-next-line
-    }, [selectedPage, activeAlias]);
+    }, [selectedPage]);
 
     const actions: Record<string, ActionItem> = useMemo(() => {
         const baseActions: Record<string, ActionItem> = {
@@ -72,7 +72,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
     const [activeAction, setActiveAction] = useState<keyof typeof actions | null>(null);
 
     const saveFile = useCallback(async (val: string) => {
-        const err = await uploadFile(selectedPage, val, activeAlias);
+        const err = await uploadFile(selectedPage, val);
         if (err) {
             setStatus('error');
             showError(`Autosave failed: ${err}`);
@@ -83,7 +83,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
         if (isComposeFile(selectedPage)) {
             const {val: errs, err: err2} = await callRPC(
                 () => dockerClient.composeValidate({
-                    filename: selectedPage
+                    filename: selectedPage,
                 }))
             if (err2) {
                 showWarning(`Error validating file ${err2}`);

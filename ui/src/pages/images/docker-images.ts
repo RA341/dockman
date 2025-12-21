@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from '../lib/api.ts'
-import {DockerService, type Image} from '../gen/docker/v1/docker_pb.ts'
-import {useSnackbar} from "./snackbar.ts"
-import {useHost} from "./host.ts";
+import {callRPC, useDockerClient} from "../../lib/api.ts";
+import {type Image} from "../../gen/docker/v1/docker_pb.ts";
+import {useSnackbar} from "../../hooks/snackbar.ts";
+import {useHost} from "../home/home.tsx";
 
 /**
  * Generates a clickable URL for a container image, pointing to its repository.
@@ -48,6 +48,7 @@ export const getImageHomePageUrl = (imageName: string): string => {
         // For other registries, link to the registry itself
         return `https://${cleanName}`
     } else {
+        // todo move this to backend
         // It's a Docker Hub image
         if (nameSplit.length === 1) {
             // Official Docker Hub image (e.g., "nginx")
@@ -60,9 +61,10 @@ export const getImageHomePageUrl = (imageName: string): string => {
 }
 
 export function useDockerImages() {
-    const dockerService = useClient(DockerService)
-    const {selectedHost} = useHost()
+    const dockerService = useDockerClient()
     const {showWarning} = useSnackbar()
+    const selectedHost = useHost()
+
 
     const [images, setImages] = useState<Image[]>([])
     const [totalImageSize, setTotalImageSize] = useState(BigInt(0))
@@ -96,7 +98,9 @@ export function useDockerImages() {
     }, [fetchImages]);
 
     const pruneUnused = useCallback(async (all = false) => {
-        const {val, err} = await callRPC(() => dockerService.imagePruneUnused({pruneAll: all}))
+        const {val, err} = await callRPC(() => dockerService.imagePruneUnused({
+            pruneAll: all,
+        }))
         if (err) {
             showWarning(`Failed to prune images: ${err}`)
             return
@@ -109,7 +113,9 @@ export function useDockerImages() {
     }, [dockerService, fetchImages])
 
     const deleteImages = useCallback(async (images: string[]) => {
-        const {err} = await callRPC(() => dockerService.imageRemove({imageIds: images}))
+        const {err} = await callRPC(() => dockerService.imageRemove({
+            imageIds: images,
+        }))
         if (err) {
             showWarning(`Failed to delete images: ${err}`)
             return

@@ -36,9 +36,6 @@ const (
 	// DockerManagerServiceStartUpdateProcedure is the fully-qualified name of the
 	// DockerManagerService's StartUpdate RPC.
 	DockerManagerServiceStartUpdateProcedure = "/docker_manager.v1.DockerManagerService/StartUpdate"
-	// DockerManagerServiceSwitchClientProcedure is the fully-qualified name of the
-	// DockerManagerService's SwitchClient RPC.
-	DockerManagerServiceSwitchClientProcedure = "/docker_manager.v1.DockerManagerService/SwitchClient"
 	// DockerManagerServiceListClientsProcedure is the fully-qualified name of the
 	// DockerManagerService's ListClients RPC.
 	DockerManagerServiceListClientsProcedure = "/docker_manager.v1.DockerManagerService/ListClients"
@@ -65,7 +62,6 @@ const (
 // DockerManagerServiceClient is a client for the docker_manager.v1.DockerManagerService service.
 type DockerManagerServiceClient interface {
 	StartUpdate(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.Empty], error)
-	SwitchClient(context.Context, *connect.Request[v1.SwitchRequest]) (*connect.Response[v1.Empty], error)
 	ListClients(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListClientsResponse], error)
 	ListHosts(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListMachine], error)
 	Get(context.Context, *connect.Request[v1.GetMachine]) (*connect.Response[v1.Machine], error)
@@ -90,12 +86,6 @@ func NewDockerManagerServiceClient(httpClient connect.HTTPClient, baseURL string
 			httpClient,
 			baseURL+DockerManagerServiceStartUpdateProcedure,
 			connect.WithSchema(dockerManagerServiceMethods.ByName("StartUpdate")),
-			connect.WithClientOptions(opts...),
-		),
-		switchClient: connect.NewClient[v1.SwitchRequest, v1.Empty](
-			httpClient,
-			baseURL+DockerManagerServiceSwitchClientProcedure,
-			connect.WithSchema(dockerManagerServiceMethods.ByName("SwitchClient")),
 			connect.WithClientOptions(opts...),
 		),
 		listClients: connect.NewClient[v1.Empty, v1.ListClientsResponse](
@@ -146,7 +136,6 @@ func NewDockerManagerServiceClient(httpClient connect.HTTPClient, baseURL string
 // dockerManagerServiceClient implements DockerManagerServiceClient.
 type dockerManagerServiceClient struct {
 	startUpdate  *connect.Client[v1.Empty, v1.Empty]
-	switchClient *connect.Client[v1.SwitchRequest, v1.Empty]
 	listClients  *connect.Client[v1.Empty, v1.ListClientsResponse]
 	listHosts    *connect.Client[v1.Empty, v1.ListMachine]
 	get          *connect.Client[v1.GetMachine, v1.Machine]
@@ -159,11 +148,6 @@ type dockerManagerServiceClient struct {
 // StartUpdate calls docker_manager.v1.DockerManagerService.StartUpdate.
 func (c *dockerManagerServiceClient) StartUpdate(ctx context.Context, req *connect.Request[v1.Empty]) (*connect.Response[v1.Empty], error) {
 	return c.startUpdate.CallUnary(ctx, req)
-}
-
-// SwitchClient calls docker_manager.v1.DockerManagerService.SwitchClient.
-func (c *dockerManagerServiceClient) SwitchClient(ctx context.Context, req *connect.Request[v1.SwitchRequest]) (*connect.Response[v1.Empty], error) {
-	return c.switchClient.CallUnary(ctx, req)
 }
 
 // ListClients calls docker_manager.v1.DockerManagerService.ListClients.
@@ -205,7 +189,6 @@ func (c *dockerManagerServiceClient) ToggleClient(ctx context.Context, req *conn
 // service.
 type DockerManagerServiceHandler interface {
 	StartUpdate(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.Empty], error)
-	SwitchClient(context.Context, *connect.Request[v1.SwitchRequest]) (*connect.Response[v1.Empty], error)
 	ListClients(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListClientsResponse], error)
 	ListHosts(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListMachine], error)
 	Get(context.Context, *connect.Request[v1.GetMachine]) (*connect.Response[v1.Machine], error)
@@ -226,12 +209,6 @@ func NewDockerManagerServiceHandler(svc DockerManagerServiceHandler, opts ...con
 		DockerManagerServiceStartUpdateProcedure,
 		svc.StartUpdate,
 		connect.WithSchema(dockerManagerServiceMethods.ByName("StartUpdate")),
-		connect.WithHandlerOptions(opts...),
-	)
-	dockerManagerServiceSwitchClientHandler := connect.NewUnaryHandler(
-		DockerManagerServiceSwitchClientProcedure,
-		svc.SwitchClient,
-		connect.WithSchema(dockerManagerServiceMethods.ByName("SwitchClient")),
 		connect.WithHandlerOptions(opts...),
 	)
 	dockerManagerServiceListClientsHandler := connect.NewUnaryHandler(
@@ -280,8 +257,6 @@ func NewDockerManagerServiceHandler(svc DockerManagerServiceHandler, opts ...con
 		switch r.URL.Path {
 		case DockerManagerServiceStartUpdateProcedure:
 			dockerManagerServiceStartUpdateHandler.ServeHTTP(w, r)
-		case DockerManagerServiceSwitchClientProcedure:
-			dockerManagerServiceSwitchClientHandler.ServeHTTP(w, r)
 		case DockerManagerServiceListClientsProcedure:
 			dockerManagerServiceListClientsHandler.ServeHTTP(w, r)
 		case DockerManagerServiceListHostsProcedure:
@@ -307,10 +282,6 @@ type UnimplementedDockerManagerServiceHandler struct{}
 
 func (UnimplementedDockerManagerServiceHandler) StartUpdate(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker_manager.v1.DockerManagerService.StartUpdate is not implemented"))
-}
-
-func (UnimplementedDockerManagerServiceHandler) SwitchClient(context.Context, *connect.Request[v1.SwitchRequest]) (*connect.Response[v1.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker_manager.v1.DockerManagerService.SwitchClient is not implemented"))
 }
 
 func (UnimplementedDockerManagerServiceHandler) ListClients(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListClientsResponse], error) {

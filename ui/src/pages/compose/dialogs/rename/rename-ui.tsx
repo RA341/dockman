@@ -11,7 +11,7 @@ import {
     Typography
 } from "@mui/material"
 import {Cancel, DriveFileRenameOutline, DriveFileRenameOutlineRounded, ErrorOutline} from "@mui/icons-material"
-import {useFiles} from "../../../../hooks/files.ts";
+import {useFiles} from "../../../../context/file-context.tsx"
 
 interface RenameFileDialogProps {
     open: boolean

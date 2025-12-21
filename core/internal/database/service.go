@@ -39,8 +39,8 @@ func NewService(basepath string) (*gorm.DB, *Service) {
 	}
 
 	userMan := impl.NewUserConfigDB(gormDB)
-	keyman := impl.NewKeyManagerDB(gormDB)
-	macMan := impl.NewMachineManagerDB(gormDB)
+	keyman := ssh.NewKeyManagerDB(gormDB)
+	macMan := ssh.NewMachineManagerDB(gormDB)
 	verMan := impl.NewVersionHistoryManager(gormDB)
 	imgMan := updater.NewImageUpdateDB(gormDB)
 

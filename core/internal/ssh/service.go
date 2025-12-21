@@ -143,7 +143,14 @@ func (m *Service) LoadClient(machine *MachineOptions, newClient bool) error {
 	// we check enable again because if a new client is
 	// created we need to check if they want to enable it or not
 	if machine.Enable {
-		m.connectedClients.Store(machine.Name, NewConnectedMachine(cli, sftpCli))
+		m.connectedClients.Store(
+			machine.Name,
+			NewConnectedMachine(
+				cli,
+				sftpCli.sfCli,
+				sftpCli,
+			),
+		)
 	} else {
 		fileutil.Close(cli)
 	}
@@ -231,7 +238,6 @@ func (m *Service) transferPublicKey(client *ssh.Client, machine *MachineOptions)
 
 	remoteCommand := getTransferCommand(keys.PublicKey)
 
-	// Create a new session
 	session, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
@@ -262,30 +268,35 @@ func (m *Service) newClient(machine *MachineOptions) (*ssh.Client, error) {
 	return createSSHClient(machine, auth, m.saveHostKey(machine))
 }
 
-func (m *Service) loadClients() error {
-	list, err := m.machines.List()
-	if err != nil {
-		return err
-	}
-
-	for _, machine := range list {
-		sshClient, err := m.newClient(&machine)
-		if err != nil {
-			log.Warn().Err(err).Str("client", machine.Name).Msg("Failed to setup ssh client")
-			continue
-		}
-
-		sftpClient, err := NewSFTPFromSSH(sshClient)
-		if err != nil {
-			log.Error().Err(err).Str("client", machine.Name).Msg("Failed to setup sftp client")
-			continue
-		}
-
-		m.connectedClients.Store(machine.Name, NewConnectedMachine(sshClient, sftpClient))
-	}
-
-	return nil
-}
+//func (m *Service) loadClients() error {
+//	list, err := m.machines.List()
+//	if err != nil {
+//		return err
+//	}
+//
+//	for _, machine := range list {
+//		sshClient, err := m.newClient(&machine)
+//		if err != nil {
+//			log.Warn().Err(err).Str("client", machine.Name).Msg("Failed to setup ssh client")
+//			continue
+//		}
+//
+//		sftpClient, err := sftp.NewClient(sshClient)
+//		if err != nil {
+//			log.Error().Err(err).Str("client", machine.Name).Msg("Failed to setup sftp client")
+//			continue
+//		}
+//
+//		cl := &SftpClient{sfCli: sftpClient}
+//
+//		m.connectedClients.Store(
+//			machine.Name,
+//			NewConnectedMachine(sshClient, sftpClient, cl),
+//		)
+//	}
+//
+//	return nil
+//}
 
 // The command will be executed on the remote server.
 // This command creates the .ssh directory if it doesn't exist,

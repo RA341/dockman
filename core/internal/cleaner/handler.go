@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/cleaner/v1"
+	"github.com/RA341/dockman/internal/host"
 	"github.com/dustin/go-humanize"
 )
 
@@ -19,8 +20,13 @@ func NewHandler(srv *Service) *Handler {
 	return &Handler{srv: srv}
 }
 
-func (h *Handler) ListHistory(context.Context, *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {
-	result, err := h.srv.store.ListResult(h.srv.hostname())
+func (h *Handler) ListHistory(ctx context.Context, _ *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := h.srv.store.ListResult(hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -46,14 +52,20 @@ func (h *Handler) ListHistory(context.Context, *connect.Request[v1.ListHistoryRe
 }
 
 func (h *Handler) SpaceStatus(ctx context.Context, req *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
-	sys, net, err := h.srv.SystemStorage(ctx)
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sys, net, err := h.srv.SystemStorage(ctx, hostname)
 	if err != nil {
 		return nil, err
 	}
 
 	var inuse int
 	for _, ne := range net {
-		if len(ne.Containers) > 0 {
+		isSystem := ne.Name == "host" || ne.Name == "bridge" || ne.Name == "none"
+		if len(ne.Containers) > 0 || isSystem {
 			inuse++
 		}
 	}
@@ -104,8 +116,13 @@ func (h *Handler) SpaceStatus(ctx context.Context, req *connect.Request[v1.Space
 	}), nil
 }
 
-func (h *Handler) RunCleaner(context.Context, *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
-	err := h.srv.Run()
+func (h *Handler) RunCleaner(ctx context.Context, _ *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.srv.Run(hostname, false)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +130,13 @@ func (h *Handler) RunCleaner(context.Context, *connect.Request[v1.RunCleanerRequ
 	return connect.NewResponse(&v1.RunCleanerResponse{}), nil
 }
 
-func (h *Handler) GetConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
-	config, err := h.srv.store.GetConfig()
+func (h *Handler) GetConfig(ctx context.Context, _ *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := h.srv.store.GetConfig(hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -127,19 +149,12 @@ func (h *Handler) GetConfig(context.Context, *connect.Request[v1.GetConfigReques
 	return resp, nil
 }
 
-func ToRpcPruneConfig(config PruneConfig) *v1.PruneConfig {
-	return &v1.PruneConfig{
-		Enabled:         config.Enabled,
-		IntervalInHours: uint32(config.Interval.Hours()),
-		Volumes:         config.Volumes,
-		Networks:        config.Networks,
-		Images:          config.Images,
-		Containers:      config.Containers,
-		BuildCache:      config.BuildCache,
+func (h *Handler) EditConfig(ctx context.Context, req *connect.Request[v1.EditConfigRequest]) (*connect.Response[v1.EditConfigResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
 	}
-}
 
-func (h *Handler) EditConfig(_ context.Context, req *connect.Request[v1.EditConfigRequest]) (*connect.Response[v1.EditConfigResponse], error) {
 	rpcConfig := req.Msg.Config
 	var config = PruneConfig{
 		Enabled:  rpcConfig.Enabled,
@@ -152,17 +167,34 @@ func (h *Handler) EditConfig(_ context.Context, req *connect.Request[v1.EditConf
 		BuildCache: rpcConfig.BuildCache,
 	}
 
-	err := h.srv.store.UpdateConfig(&config)
+	err = h.srv.store.UpdateConfig(&config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update config: %v", err)
 	}
 
-	getConfig, err := h.srv.store.GetConfig()
+	getConfig, err := h.srv.store.GetConfig(hostname)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get config: %v", err)
+		return nil, err
+	}
+
+	err = h.srv.Run(hostname, true)
+	if err != nil {
+		return nil, err
 	}
 
 	return connect.NewResponse(&v1.EditConfigResponse{
 		Config: ToRpcPruneConfig(getConfig),
 	}), nil
+}
+
+func ToRpcPruneConfig(config PruneConfig) *v1.PruneConfig {
+	return &v1.PruneConfig{
+		Enabled:         config.Enabled,
+		IntervalInHours: uint32(config.Interval.Hours()),
+		Volumes:         config.Volumes,
+		Networks:        config.Networks,
+		Images:          config.Images,
+		Containers:      config.Containers,
+		BuildCache:      config.BuildCache,
+	}
 }

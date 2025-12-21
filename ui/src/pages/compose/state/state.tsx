@@ -3,16 +3,25 @@ import {create} from 'zustand'
 import {type ComposeFile, type LogsMessage} from "../../../gen/docker/v1/docker_pb.ts";
 import type {CallOptions} from "@connectrpc/connect";
 import type {Terminal} from "@xterm/xterm";
+import {useParams} from "react-router-dom";
 
-interface ActiveComposeFileState {
-    activeComposeFile: string | null;
-    setFile: (composeFile: string) => void;
+export const useFileComponents = (): { host: string; alias: string; filename: string; } => {
+    const params = useParams()
+    const param = params["*"];
+    const host = params.host;
+    if (!param || !host) {
+        return {host: "", alias: "", filename: ""}
+    }
+
+    const [alias, relpath] = param.split("/", 2)
+    // if the path has more than the host and alias
+    // "local/compose/foo/bar":	"local", "compose", "foo/bar"
+    return {
+        host: host ?? "",
+        alias: alias ?? "",
+        filename: relpath ? param : ""
+    }
 }
-
-export const useActiveComposeFile = create<ActiveComposeFileState>((set) => ({
-    activeComposeFile: null,
-    setFile: (composeFile: string) => set({activeComposeFile: composeFile}),
-}));
 
 export const deployActionsConfig = [
     {
@@ -126,26 +135,22 @@ export const useContainerExec = create<{
 export const useComposeAction = create<{
     activeAction: ActiveAction | null
     runAction: (
+        composeFile: string,
         streamFn: ComposeActionStreamFn,
         action: ActiveAction,
         selectedService: string[],
-        onDone?: () => void
+        onDone?: () => void,
     ) => void
     reset: () => void
 }>((set, get) => ({
     activeAction: null,
     runAction: (
+        composeFile: string,
         streamFn: ComposeActionStreamFn,
         action: ActiveAction,
         selectedService: string[] = [],
-        onDone?: () => void
+        onDone?: () => void,
     ) => {
-        const composeFile = useActiveComposeFile.getState().activeComposeFile;
-        if (!composeFile) {
-            console.warn("No file selected")
-            return;
-        }
-
         set({activeAction: action})
 
         useTerminalAction.getState().open()
@@ -166,7 +171,7 @@ export const useComposeAction = create<{
             },
             onTerminal: term => {
                 const asyncStream = async () => {
-                    console.log("starting stream")
+                    // console.log("starting stream")
                     try {
                         for await (const item of stream) {
                             term.write(item.message);
@@ -210,6 +215,7 @@ export interface TabTerminal {
 export const useTerminalTabs = create<{
     tabs: Map<string, TabTerminal>;
     activeTab: string | null;
+    clearAll: () => void;
     setActiveTab: (tabId: string) => void;
     addTab: (id: string, term: TabTerminal) => void;
     updateTab: (id: string, term: (curTab: TabTerminal) => TabTerminal) => void;
@@ -222,6 +228,12 @@ export const useTerminalTabs = create<{
             set(() => ({
                 activeTab: tabId
             }))
+        },
+        clearAll: () => {
+            set({
+                activeTab: null,
+                tabs: new Map<string, TabTerminal>,
+            })
         },
         updateTab: (id, term) => {
             const tab = get().tabs.get(id)

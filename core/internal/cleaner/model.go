@@ -12,6 +12,7 @@ type PruneResult struct {
 	gorm.Model
 	// machine on which it was cleaned
 	Host string
+	Err  string
 
 	Volumes    OpResult `gorm:"embedded;embeddedPrefix:volumes_"`
 	Networks   OpResult `gorm:"embedded;embeddedPrefix:networks_"`
@@ -46,7 +47,7 @@ func (r OpResult) Val() string {
 }
 
 type Store interface {
-	GetConfig() (PruneConfig, error)
+	GetConfig(string) (PruneConfig, error)
 	UpdateConfig(*PruneConfig) error
 	InitConfig() error
 

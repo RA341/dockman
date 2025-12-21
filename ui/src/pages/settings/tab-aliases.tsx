@@ -1,9 +1,14 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Box,
     Button,
+    FormControl,
     IconButton,
+    InputLabel,
+    LinearProgress,
+    MenuItem,
     Paper,
+    Select,
     Stack,
     Table,
     TableBody,
@@ -12,30 +17,31 @@ import {
     TableHead,
     TableRow,
     TextField,
-    Typography,
-    LinearProgress,
-    Tooltip
+    Tooltip,
+    Typography
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
 import {useAlias} from "../../context/alias-context.tsx";
+import {useHost} from "../../context/host-context.tsx";
 
 
 const TabAliases = () => {
     const {files, isLoading, addAlias, deleteAlias} = useAlias();
-
-    // Local state for the input form
     const [aliasInput, setAliasInput] = useState("");
     const [pathInput, setPathInput] = useState("");
+
+    const {availableHosts} = useHost()
+    const [selectedOption, setSelectedOption] = useState(availableHosts[0]);
+    useEffect(() => {
+        setSelectedOption(availableHosts[0]);
+    }, [availableHosts]);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!aliasInput || !pathInput) return;
-
-        await addAlias(aliasInput, pathInput);
-
-        // Clear inputs on success
+        await addAlias(aliasInput, selectedOption, pathInput);
         setAliasInput("");
         setPathInput("");
     };
@@ -48,8 +54,6 @@ const TabAliases = () => {
 
     return (
         <Stack spacing={3} sx={{height: '100%', width: '100%', p: 2}}>
-
-            {/* --- Add New Alias Section --- */}
             <Paper elevation={2} sx={{p: 2}}>
                 <Typography variant="h6" gutterBottom sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                     <AddIcon fontSize="small"/> Add New Alias
@@ -66,6 +70,22 @@ const TabAliases = () => {
                             sx={{minWidth: '200px'}}
                             required
                         />
+                        <FormControl sx={{minWidth: '200px'}} required>
+                            <InputLabel>Host</InputLabel>
+                            <Select
+                                value={selectedOption}
+                                onChange={(e) => setSelectedOption(e.target.value)}
+                                disabled={isLoading}
+                                label="Host"
+                                required
+                            >
+                                {availableHosts.map((host) => (
+                                    <MenuItem key={host} value={host}>
+                                        {host}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                         <TextField
                             label="Full Path"
                             placeholder="e.g. /home/user/documents"
@@ -75,14 +95,19 @@ const TabAliases = () => {
                             fullWidth
                             required
                         />
+
                         <Button
                             variant="contained"
                             type="submit"
                             startIcon={<AddIcon/>}
                             disabled={isLoading || !aliasInput || !pathInput}
-                            sx={{whiteSpace: 'nowrap'}}
+                            sx={{
+                                whiteSpace: 'nowrap',
+                                px: 3,
+                                py: 1
+                            }}
                         >
-                            Add Alias
+                            Add
                         </Button>
                     </Stack>
                 </form>
@@ -96,7 +121,7 @@ const TabAliases = () => {
                     <Table stickyHeader aria-label="alias table">
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{fontWeight: 'bold', width: '20%'}}>Alias</TableCell>
+                                <TableCell sx={{fontWeight: 'bold', width: '20%'}}>Host/Alias</TableCell>
                                 <TableCell sx={{fontWeight: 'bold'}}>Full Path</TableCell>
                                 <TableCell sx={{fontWeight: 'bold', width: '100px'}} align="right">Actions</TableCell>
                             </TableRow>

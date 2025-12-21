@@ -87,7 +87,7 @@ func formatCPU(statsJSON container.StatsResponse) float64 {
 	return cpuPercent
 }
 
-// Stats ContainerStats holds metrics for a single Docker container.
+// Stats Stats holds metrics for a single Docker container.
 type Stats struct {
 	ID          string
 	Name        string

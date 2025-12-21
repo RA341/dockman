@@ -1,14 +1,13 @@
 import {useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from '../lib/api.ts'
-import {DockerService, type Network} from '../gen/docker/v1/docker_pb.ts'
-import {useSnackbar} from "./snackbar.ts"
-import {useHost} from "./host.ts";
+import {callRPC, useDockerClient} from "../../lib/api.ts";
+import {type Network} from "../../gen/docker/v1/docker_pb.ts";
+import {useSnackbar} from "../../hooks/snackbar.ts";
+import {useHost} from "../home/home.tsx";
 
 export function useDockerNetwork() {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {showWarning} = useSnackbar()
-
-    const {selectedHost} = useHost()
+    const selectedHost = useHost()
 
     const [networks, setNetworks] = useState<Network[]>([])
     const [loading, setLoading] = useState(true)
@@ -27,10 +26,9 @@ export function useDockerNetwork() {
     }, [dockerService, selectedHost])
 
     const deleteSelected = async (networkIDs: string[]) => {
-        const {err} = await callRPC(
-            () => dockerService.networkDelete(
-                {networkIds: networkIDs}
-            )
+        const {err} = await callRPC(() => dockerService.networkDelete({
+                networkIds: networkIDs
+            })
         )
         if (err) {
             showWarning(`Failed to delete networks: ${err}`)
@@ -40,8 +38,9 @@ export function useDockerNetwork() {
     }
 
     const networkPrune = async () => {
-        const {err} = await callRPC(() => dockerService.networkDelete(
-            {prune: true}))
+        const {err} = await callRPC(() => dockerService.networkDelete({
+            prune: true
+        }))
         if (err) {
             showWarning(`Failed to delete networks: ${err}`)
         }

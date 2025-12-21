@@ -1,0 +1,22 @@
+name: test
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./html:/usr/share/nginx/html
+      - nginx_logs:/var/log/nginx
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: example
+    env_file:
+      - config.env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  nginx_logs:
+  db_data:

@@ -183,6 +183,7 @@ func (*AddAliasResponse) Descriptor() ([]byte, []int) {
 
 type ListAliasRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -217,10 +218,18 @@ func (*ListAliasRequest) Descriptor() ([]byte, []int) {
 	return file_files_v1_files_proto_rawDescGZIP(), []int{4}
 }
 
+func (x *ListAliasRequest) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
 type Alias struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Alias         string                 `protobuf:"bytes,1,opt,name=alias,proto3" json:"alias,omitempty"`
-	Fullpath      string                 `protobuf:"bytes,2,opt,name=fullpath,proto3" json:"fullpath,omitempty"`
+	Host          string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	Fullpath      string                 `protobuf:"bytes,3,opt,name=fullpath,proto3" json:"fullpath,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -258,6 +267,13 @@ func (*Alias) Descriptor() ([]byte, []int) {
 func (x *Alias) GetAlias() string {
 	if x != nil {
 		return x.Alias
+	}
+	return ""
+}
+
+func (x *Alias) GetHost() string {
+	if x != nil {
+		return x.Host
 	}
 	return ""
 }
@@ -316,7 +332,6 @@ func (x *ListAliasResponse) GetAliases() []*Alias {
 type ListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Alias         string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -354,13 +369,6 @@ func (*ListRequest) Descriptor() ([]byte, []int) {
 func (x *ListRequest) GetPath() string {
 	if x != nil {
 		return x.Path
-	}
-	return ""
-}
-
-func (x *ListRequest) GetAlias() string {
-	if x != nil {
-		return x.Alias
 	}
 	return ""
 }
@@ -412,7 +420,6 @@ func (x *ListResponse) GetEntries() []*FsEntry {
 type FormatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
-	Alias         string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -450,13 +457,6 @@ func (*FormatRequest) Descriptor() ([]byte, []int) {
 func (x *FormatRequest) GetFilename() string {
 	if x != nil {
 		return x.Filename
-	}
-	return ""
-}
-
-func (x *FormatRequest) GetAlias() string {
-	if x != nil {
-		return x.Alias
 	}
 	return ""
 }
@@ -586,7 +586,6 @@ type RenameFile struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OldFilePath   string                 `protobuf:"bytes,1,opt,name=oldFilePath,proto3" json:"oldFilePath,omitempty"`
 	NewFilePath   string                 `protobuf:"bytes,2,opt,name=newFilePath,proto3" json:"newFilePath,omitempty"`
-	Alias         string                 `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -635,18 +634,10 @@ func (x *RenameFile) GetNewFilePath() string {
 	return ""
 }
 
-func (x *RenameFile) GetAlias() string {
-	if x != nil {
-		return x.Alias
-	}
-	return ""
-}
-
 type File struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
 	IsDir         bool                   `protobuf:"varint,2,opt,name=isDir,proto3" json:"isDir,omitempty"`
-	Alias         string                 `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -693,13 +684,6 @@ func (x *File) GetIsDir() bool {
 		return x.IsDir
 	}
 	return false
-}
-
-func (x *File) GetAlias() string {
-	if x != nil {
-		return x.Alias
-	}
-	return ""
 }
 
 type Empty struct {
@@ -1076,21 +1060,21 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x13DeleteAliasResponse\"8\n" +
 	"\x0fAddAliasRequest\x12%\n" +
 	"\x05alias\x18\x01 \x01(\v2\x0f.files.v1.AliasR\x05alias\"\x12\n" +
-	"\x10AddAliasResponse\"\x12\n" +
-	"\x10ListAliasRequest\"9\n" +
+	"\x10AddAliasResponse\"&\n" +
+	"\x10ListAliasRequest\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\"M\n" +
 	"\x05Alias\x12\x14\n" +
-	"\x05alias\x18\x01 \x01(\tR\x05alias\x12\x1a\n" +
-	"\bfullpath\x18\x02 \x01(\tR\bfullpath\">\n" +
+	"\x05alias\x18\x01 \x01(\tR\x05alias\x12\x12\n" +
+	"\x04host\x18\x02 \x01(\tR\x04host\x12\x1a\n" +
+	"\bfullpath\x18\x03 \x01(\tR\bfullpath\">\n" +
 	"\x11ListAliasResponse\x12)\n" +
-	"\aaliases\x18\x01 \x03(\v2\x0f.files.v1.AliasR\aaliases\"7\n" +
+	"\aaliases\x18\x01 \x03(\v2\x0f.files.v1.AliasR\aaliases\"!\n" +
 	"\vListRequest\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\x12\x14\n" +
-	"\x05alias\x18\x02 \x01(\tR\x05alias\";\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\";\n" +
 	"\fListResponse\x12+\n" +
-	"\aentries\x18\x01 \x03(\v2\x11.files.v1.FsEntryR\aentries\"A\n" +
+	"\aentries\x18\x01 \x03(\v2\x11.files.v1.FsEntryR\aentries\"+\n" +
 	"\rFormatRequest\x12\x1a\n" +
-	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
-	"\x05alias\x18\x02 \x01(\tR\x05alias\",\n" +
+	"\bfilename\x18\x01 \x01(\tR\bfilename\",\n" +
 	"\x0eFormatResponse\x12\x1a\n" +
 	"\bcontents\x18\x01 \x01(\tR\bcontents\"\xb2\x01\n" +
 	"\aFsEntry\x12\x1a\n" +
@@ -1098,16 +1082,14 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x05isDir\x18\x03 \x01(\bR\x05isDir\x12-\n" +
 	"\bsubFiles\x18\x04 \x03(\v2\x11.files.v1.FsEntryR\bsubFiles\x12\x1c\n" +
 	"\tisFetched\x18\x05 \x01(\bR\tisFetched\x12(\n" +
-	"\x0fisComposeFolder\x18\x06 \x01(\tR\x0fisComposeFolder\"f\n" +
+	"\x0fisComposeFolder\x18\x06 \x01(\tR\x0fisComposeFolder\"P\n" +
 	"\n" +
 	"RenameFile\x12 \n" +
 	"\voldFilePath\x18\x01 \x01(\tR\voldFilePath\x12 \n" +
-	"\vnewFilePath\x18\x02 \x01(\tR\vnewFilePath\x12\x14\n" +
-	"\x05alias\x18\x03 \x01(\tR\x05alias\"N\n" +
+	"\vnewFilePath\x18\x02 \x01(\tR\vnewFilePath\"8\n" +
 	"\x04File\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
-	"\x05isDir\x18\x02 \x01(\bR\x05isDir\x12\x14\n" +
-	"\x05alias\x18\x03 \x01(\tR\x05alias\"\a\n" +
+	"\x05isDir\x18\x02 \x01(\bR\x05isDir\"\a\n" +
 	"\x05Empty\"\xa5\x03\n" +
 	"\vDockmanYaml\x12,\n" +
 	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +

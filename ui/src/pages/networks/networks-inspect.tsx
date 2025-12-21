@@ -1,17 +1,33 @@
-import {callRPC, useClient} from "../../lib/api.ts";
-import {DockerService, type NetworkInspectInfo} from "../../gen/docker/v1/docker_pb.ts";
-import {useNavigate, useParams} from "react-router-dom";
+import {callRPC, useDockerClient} from "../../lib/api.ts";
+import {type NetworkInspectInfo} from "../../gen/docker/v1/docker_pb.ts";
+import {useParams} from "react-router-dom";
 import {useCallback, useEffect, useState} from "react";
-import {Alert, Box, Button, Chip, CircularProgress, Divider, IconButton, Paper, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
+import {
+    Alert,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Divider,
+    IconButton,
+    Paper,
+    Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Typography
+} from "@mui/material";
 import {ArrowBack, ContentCopy} from "@mui/icons-material";
 import HubIcon from "@mui/icons-material/Hub";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 const NetworksInspect = () => {
-    const dockerService = useClient(DockerService)
+    const dockerService = useDockerClient()
     const {id} = useParams()
-    const nav = useNavigate()
 
     const [inspect, setInspect] = useState<NetworkInspectInfo | null>(null)
     const [err, setErr] = useState("")
@@ -64,7 +80,7 @@ const NetworksInspect = () => {
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
                     <IconButton
                         onClick={() => {
-                            nav("/networks")
+                            history.back();
                         }}
                         title="Back to Networks"
                     >
