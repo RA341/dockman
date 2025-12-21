@@ -215,6 +215,7 @@ export interface TabTerminal {
 export const useTerminalTabs = create<{
     tabs: Map<string, TabTerminal>;
     activeTab: string | null;
+    clearAll: () => void;
     setActiveTab: (tabId: string) => void;
     addTab: (id: string, term: TabTerminal) => void;
     updateTab: (id: string, term: (curTab: TabTerminal) => TabTerminal) => void;
@@ -227,6 +228,12 @@ export const useTerminalTabs = create<{
             set(() => ({
                 activeTab: tabId
             }))
+        },
+        clearAll: () => {
+            set({
+                activeTab: null,
+                tabs: new Map<string, TabTerminal>,
+            })
         },
         updateTab: (id, term) => {
             const tab = get().tabs.get(id)

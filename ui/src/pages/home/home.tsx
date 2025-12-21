@@ -16,6 +16,7 @@ import {
 } from "../compose/components/file-icon.tsx";
 import {useTabs} from "../../context/tab-context.tsx";
 import {useEditorUrl} from "../../lib/editor.ts";
+import {create} from "zustand";
 
 const MAIN_SIDEBAR_WIDTH = 72;
 
@@ -24,12 +25,29 @@ export const useHost = () => {
     return host || "local";
 }
 
+export const useActiveHost = create<{
+    activeHost: string;
+    setActiveHost: (activeHost: string | undefined) => void;
+}>((set) => ({
+    activeHost: "local",
+    setActiveHost: (activeHost) => {
+        set({
+            activeHost: activeHost || "local",
+        });
+    }
+}))
+
 export function RootLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const {logout} = useAuth();
     const {activeTab, tabs} = useTabs();
     const host = useHost();
+    const setHost = useActiveHost(state => state.setActiveHost)
+
+    useEffect(() => {
+        setHost(host)
+    }, [host]);
 
     const handleLogout = () => {
         logout();

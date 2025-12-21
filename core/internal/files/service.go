@@ -14,6 +14,8 @@ import (
 	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/files/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
+
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"github.com/sahilm/fuzzy"
@@ -225,13 +227,18 @@ func (s *Service) Rename(oldFileName, newFilename, hostname string) error {
 	return cliFs.Rename(oldFileName, newFilename)
 }
 
-func (s *Service) Save(filename, hostname string, source io.Reader) error {
+func (s *Service) Save(filename, hostname string, create bool, source io.Reader) error {
 	sfCli, filename, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
 
-	dest, err := sfCli.OpenFile(filename, os.O_RDWR|os.O_TRUNC, os.ModePerm)
+	flag := os.O_RDWR | os.O_TRUNC
+	if create {
+		flag |= os.O_CREATE
+	}
+
+	dest, err := sfCli.OpenFile(filename, flag, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -246,7 +253,12 @@ func (s *Service) getFileContents(filename, hostname string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fsCli.ReadFile(fullpath)
+	file, err := fsCli.ReadFile(fullpath)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, err
 }
 
 func (s *Service) LoadFilePath(filename, hostname string) (io.ReadSeekCloser, time.Time, error) {
@@ -254,7 +266,53 @@ func (s *Service) LoadFilePath(filename, hostname string) (io.ReadSeekCloser, ti
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return cliFs.LoadFile(relpath)
+
+	file, t, err := cliFs.LoadFile(relpath)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	err = CheckFileType(file)
+	if err != nil {
+		// file cannot be opened close it before return the err
+		fileutil.Close(file)
+		return nil, time.Time{}, err
+	}
+
+	// reset seek pointer after checking trghe file mime
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("failed to seek: %w", err)
+	}
+
+	return file, t, err
+}
+
+func CheckFileType(reader io.Reader) error {
+	mtype, err := mimetype.DetectReader(reader)
+	if err != nil {
+		return err
+	}
+
+	// Almost all text formats (json, yaml, txt)
+	// inherit from "text/plain"
+	isText := false
+	for m := mtype; m != nil; m = m.Parent() {
+		if m.Is("text/plain") {
+			return nil
+		}
+	}
+
+	// Explicit check for SQLite
+	if mtype.String() == "application/x-sqlite3" {
+		return fmt.Errorf("SQLite not allowed")
+	}
+
+	if !isText {
+		return fmt.Errorf("binary files not allowed")
+	}
+
+	return nil
 }
 
 // LoadAll todo refactor too many returns

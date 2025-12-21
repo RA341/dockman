@@ -57,6 +57,9 @@ const (
 	// DockerServiceContainerLogsProcedure is the fully-qualified name of the DockerService's
 	// ContainerLogs RPC.
 	DockerServiceContainerLogsProcedure = "/docker.v1.DockerService/ContainerLogs"
+	// DockerServiceContainerInspectProcedure is the fully-qualified name of the DockerService's
+	// ContainerInspect RPC.
+	DockerServiceContainerInspectProcedure = "/docker.v1.DockerService/ContainerInspect"
 	// DockerServiceComposeUpProcedure is the fully-qualified name of the DockerService's ComposeUp RPC.
 	DockerServiceComposeUpProcedure = "/docker.v1.DockerService/ComposeUp"
 	// DockerServiceComposeDownProcedure is the fully-qualified name of the DockerService's ComposeDown
@@ -125,6 +128,7 @@ type DockerServiceClient interface {
 	ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error)
 	ContainerStats(context.Context, *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error)
 	ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
+	ContainerInspect(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error)
 	// compose
 	ComposeUp(context.Context, *connect.Request[v1.ComposeFile]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
 	ComposeDown(context.Context, *connect.Request[v1.ComposeFile]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
@@ -207,6 +211,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+DockerServiceContainerLogsProcedure,
 			connect.WithSchema(dockerServiceMethods.ByName("ContainerLogs")),
+			connect.WithClientOptions(opts...),
+		),
+		containerInspect: connect.NewClient[v1.ContainerLogsRequest, v1.ContainerInspectMessage](
+			httpClient,
+			baseURL+DockerServiceContainerInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("ContainerInspect")),
 			connect.WithClientOptions(opts...),
 		),
 		composeUp: connect.NewClient[v1.ComposeFile, v1.LogsMessage](
@@ -336,6 +346,7 @@ type dockerServiceClient struct {
 	containerList    *connect.Client[v1.ContainerListRequest, v1.ListResponse]
 	containerStats   *connect.Client[v1.StatsRequest, v1.StatsResponse]
 	containerLogs    *connect.Client[v1.ContainerLogsRequest, v1.LogsMessage]
+	containerInspect *connect.Client[v1.ContainerLogsRequest, v1.ContainerInspectMessage]
 	composeUp        *connect.Client[v1.ComposeFile, v1.LogsMessage]
 	composeDown      *connect.Client[v1.ComposeFile, v1.LogsMessage]
 	composeStart     *connect.Client[v1.ComposeFile, v1.LogsMessage]
@@ -395,6 +406,11 @@ func (c *dockerServiceClient) ContainerStats(ctx context.Context, req *connect.R
 // ContainerLogs calls docker.v1.DockerService.ContainerLogs.
 func (c *dockerServiceClient) ContainerLogs(ctx context.Context, req *connect.Request[v1.ContainerLogsRequest]) (*connect.ServerStreamForClient[v1.LogsMessage], error) {
 	return c.containerLogs.CallServerStream(ctx, req)
+}
+
+// ContainerInspect calls docker.v1.DockerService.ContainerInspect.
+func (c *dockerServiceClient) ContainerInspect(ctx context.Context, req *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error) {
+	return c.containerInspect.CallUnary(ctx, req)
 }
 
 // ComposeUp calls docker.v1.DockerService.ComposeUp.
@@ -503,6 +519,7 @@ type DockerServiceHandler interface {
 	ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error)
 	ContainerStats(context.Context, *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error)
 	ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest], *connect.ServerStream[v1.LogsMessage]) error
+	ContainerInspect(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error)
 	// compose
 	ComposeUp(context.Context, *connect.Request[v1.ComposeFile], *connect.ServerStream[v1.LogsMessage]) error
 	ComposeDown(context.Context, *connect.Request[v1.ComposeFile], *connect.ServerStream[v1.LogsMessage]) error
@@ -581,6 +598,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		DockerServiceContainerLogsProcedure,
 		svc.ContainerLogs,
 		connect.WithSchema(dockerServiceMethods.ByName("ContainerLogs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dockerServiceContainerInspectHandler := connect.NewUnaryHandler(
+		DockerServiceContainerInspectProcedure,
+		svc.ContainerInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("ContainerInspect")),
 		connect.WithHandlerOptions(opts...),
 	)
 	dockerServiceComposeUpHandler := connect.NewServerStreamHandler(
@@ -715,6 +738,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceContainerStatsHandler.ServeHTTP(w, r)
 		case DockerServiceContainerLogsProcedure:
 			dockerServiceContainerLogsHandler.ServeHTTP(w, r)
+		case DockerServiceContainerInspectProcedure:
+			dockerServiceContainerInspectHandler.ServeHTTP(w, r)
 		case DockerServiceComposeUpProcedure:
 			dockerServiceComposeUpHandler.ServeHTTP(w, r)
 		case DockerServiceComposeDownProcedure:
@@ -792,6 +817,10 @@ func (UnimplementedDockerServiceHandler) ContainerStats(context.Context, *connec
 
 func (UnimplementedDockerServiceHandler) ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest], *connect.ServerStream[v1.LogsMessage]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerLogs is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) ContainerInspect(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerInspect is not implemented"))
 }
 
 func (UnimplementedDockerServiceHandler) ComposeUp(context.Context, *connect.Request[v1.ComposeFile], *connect.ServerStream[v1.LogsMessage]) error {

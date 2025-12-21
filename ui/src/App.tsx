@@ -23,6 +23,7 @@ import NetworksInspect from "./pages/networks/networks-inspect.tsx";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
 import {ComposePage} from "./pages/compose/compose-page.tsx";
 import {useEditorUrl} from "./lib/editor.ts";
+import ContainerInspectPage from "./pages/containers/inspect.tsx";
 
 export function App() {
     return (
@@ -57,6 +58,7 @@ export function App() {
 
                                         <Route path="containers">
                                             <Route index element={<ContainersPage/>}/>
+                                            <Route path="inspect/:id" element={<ContainerInspectPage/>}/>
                                         </Route>
 
                                         <Route path="images">

@@ -30,7 +30,6 @@ export const useTabs = (): TabsContextType => {
     return context;
 };
 
-
 export function TabsProvider({children}: { children: ReactNode }) {
     const {dockYaml} = useConfig()
     const tabLimit = dockYaml?.tabLimit ?? 5

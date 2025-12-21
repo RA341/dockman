@@ -13,9 +13,10 @@ import {RenameFilesProvider} from "./dialogs/rename/rename-context.tsx";
 import {getExt} from "./components/file-icon.tsx";
 import ViewerSqlite from "./components/viewer-sqlite.tsx";
 import TextEditor from "./components/viewer-text.tsx";
-import {useFileComponents} from "./state/state.tsx";
+import {useFileComponents, useTerminalTabs} from "./state/state.tsx";
 import {useTabs} from "../../context/tab-context.tsx";
 import FilesProvider from "../../context/file-context.tsx";
+import {useHost} from "../home/home.tsx";
 
 export const ComposePage = () => {
     return (
@@ -36,6 +37,11 @@ export const ComposePage = () => {
 export const ComposePageInner = () => {
     const {filename} = useFileComponents()
 
+    const clearTabs = useTerminalTabs(state => state.clearAll)
+    const host = useHost()
+    useEffect(() => {
+        clearTabs()
+    }, [clearTabs, host]);
 
     return (
         <Box sx={{

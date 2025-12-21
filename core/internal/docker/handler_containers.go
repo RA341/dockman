@@ -78,6 +78,42 @@ func (h *Handler) ContainerRestart(ctx context.Context, req *connect.Request[v1.
 	return connect.NewResponse(&v1.LogsMessage{}), nil
 }
 
+func (h *Handler) ContainerInspect(ctx context.Context, req *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	inspect, err := dkSrv.Container.Inspect(ctx, req.Msg.ContainerID)
+	if err != nil {
+		return nil, err
+	}
+
+	mounts := make([]*v1.ContainerMount, 0, len(inspect.Mounts))
+	for _, mr := range inspect.Mounts {
+		mounts = append(mounts, &v1.ContainerMount{
+			Type:        string(mr.Type),
+			Name:        mr.Name,
+			Source:      mr.Source,
+			Destination: mr.Destination,
+			Driver:      mr.Driver,
+			Mode:        mr.Mode,
+			RW:          mr.RW,
+		})
+	}
+
+	return connect.NewResponse(&v1.ContainerInspectMessage{
+		Name:      inspect.Name,
+		Created:   inspect.Created,
+		ID:        inspect.ID,
+		Path:      inspect.Path,
+		Image:     inspect.Image,
+		HostsPath: inspect.HostsPath,
+
+		Mounts: mounts,
+	}), nil
+}
+
 func (h *Handler) ContainerUpdate(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error) {
 	_, _, err := h.getHost(ctx)
 	if err != nil {
@@ -120,7 +156,7 @@ func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.St
 		containers, err = dkSrv.Compose.Stats(ctx, file.Filename)
 	} else {
 		// list all containers
-		containers, err = dkSrv.Container.ContainerStats(ctx, client.ContainerListOptions{})
+		containers, err = dkSrv.Container.Stats(ctx, client.ContainerListOptions{})
 	}
 	if err != nil {
 		return nil, err

@@ -20,9 +20,73 @@ import FileIcon from "./file-icon.tsx";
 import {amber} from "@mui/material/colors";
 import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
-import {getDir, useFiles} from "../../../context/file-context.tsx";
+import {getDir, getEntryDisplayName, useFiles} from "../../../context/file-context.tsx";
 import {useRenameFile} from "../dialogs/rename/rename-hook.ts";
 import {useEditorUrl} from "../../../lib/editor.ts";
+
+export const useFileDnD = (entry: FsEntry) => {
+    const [isDragOver, setIsDragOver] = useState(false);
+    const {renameFile, uploadFilesFromPC} = useFiles();
+
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.setData("sourcePath", entry.filename);
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        const targetDir = entry.isDir ?
+            // target is a folder, move INTO it.
+            entry.filename :
+            // target is a file, move into its PARENT folder.
+            getDir(entry.filename);
+
+        const sourcePath = e.dataTransfer.getData("sourcePath");
+        if (sourcePath) {
+            if (sourcePath === entry.filename) return; // Can't drop on self
+            const fileName = sourcePath.split('/').pop() || "";
+            const newPath = `${targetDir}/${fileName}`;
+            // Only trigger if the path actually changes
+            if (sourcePath !== newPath) {
+                await renameFile(sourcePath, newPath);
+            }
+            return;
+        }
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const droppedFiles = Array.from(e.dataTransfer.files);
+            await uploadFilesFromPC(targetDir, droppedFiles);
+            return;
+        }
+    };
+
+    return {
+        isDragOver,
+        dndProps: {
+            draggable: true,
+            onDragStart: handleDragStart,
+            onDragOver: handleDragOver,
+            onDragLeave: handleDragLeave,
+            onDrop: handleDrop,
+        }
+    };
+};
 
 export const FileItem = ({entry, index}: { entry: FsEntry; index: number }) => {
     return (
@@ -45,6 +109,8 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     const openFiles = useOpenFiles(state => state.openFiles)
     const toggle = useOpenFiles(state => state.toggle)
     const {listFiles} = useFiles()
+
+    const {isDragOver, dndProps} = useFileDnD(entry);
 
     const name = entry.filename
     const folderOpen = openFiles.has(entry.filename)
@@ -86,10 +152,19 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     return (
         <>
             <ListItemButton
+                {...dndProps}
+                draggable
+
                 selected={isSelected}
                 onContextMenu={handleContextMenu}
-                sx={{py: 1.25}}
                 onClick={handleToggle}
+
+                sx={{
+                    py: 1.25,
+                    backgroundColor: isDragOver ? 'action.hover' : 'transparent',
+                    outline: isDragOver ? '1px dashed primary.main' : 'none',
+                    outlineOffset: '-2px'
+                }}
             >
                 <ListItemIcon sx={{minWidth: 32}}>
                     <Folder sx={{color: amber[800], fontSize: '1.1rem'}}/>
@@ -151,6 +226,8 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
     const filename = entry.filename
 
+    const {isDragOver, dndProps} = useFileDnD(entry);
+
     const editorUrl = useEditorUrl()
     const filePath = editorUrl(filename)
 
@@ -162,6 +239,12 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
     return (
         <>
             <ListItemButton
+                {...dndProps}
+                sx={{
+                    backgroundColor: isDragOver ? 'action.hover' : 'transparent',
+                    borderLeft: isDragOver ? '3px solid primary.main' : '3px solid transparent',
+                }}
+
                 selected={isSelected}
                 onContextMenu={handleContextMenu}
                 to={filePath}
@@ -279,13 +362,3 @@ const useFileMenuCtx = (entry: FsEntry) => {
 //         inputRef,
 //     }
 // }
-
-const getEntryDisplayName = (path: string) => {
-    const split = path.split("/");
-    const pop = split.pop();
-    if (!pop) {
-        console.error("unable to get last element in path", "split: ", split, "last element: ", pop)
-        return "ERR_EMPTY_PATH"
-    }
-    return pop
-}

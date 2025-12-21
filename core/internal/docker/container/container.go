@@ -148,7 +148,7 @@ func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.Rea
 	return logStream, inspect.Container.Config.Tty, nil
 }
 
-func (s *Service) ContainerStats(ctx context.Context, filter client.ContainerListOptions) ([]Stats, error) {
+func (s *Service) Stats(ctx context.Context, filter client.ContainerListOptions) ([]Stats, error) {
 	contRes, err := s.Client.ContainerList(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not list containers: %w", err)
@@ -172,4 +172,14 @@ func (s *Service) ContainerGetStatsFromList(ctx context.Context, containers []co
 		}
 		return stats, true
 	})
+}
+
+func (s *Service) Inspect(ctx context.Context, containerId string) (container.InspectResponse, error) {
+	inspect, err := s.Cli().ContainerInspect(ctx, containerId, client.ContainerInspectOptions{
+		Size: true,
+	})
+	if err != nil {
+		return container.InspectResponse{}, err
+	}
+	return inspect.Container, nil
 }

@@ -1,10 +1,8 @@
 import {useMemo, useState} from 'react';
-import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
-import {CleaningServices, Delete, Refresh, Sanitizer} from '@mui/icons-material';
-import {ImagesEmpty} from "./images-empty.tsx";
+import {Box, Button, Card, CircularProgress, Fade, Link, Paper, Tooltip, Typography} from '@mui/material';
+import {CleaningServices, Delete, Refresh, Sanitizer, Storage} from '@mui/icons-material';
 import {ImageTable} from './images-table.tsx';
 import {formatBytes} from "../../lib/editor.ts";
-import {ImagesLoading} from "./images-loading.tsx";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
@@ -156,6 +154,66 @@ const ImagesPage = () => {
             </Box>
         </Box>
     )
+};
+
+const ImagesLoading = () => {
+    return (
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            flex: 1
+        }}>
+            <CircularProgress sx={{mr: 2}}/>
+            <Typography variant="body1" color="text.secondary">
+                Loading images...
+            </Typography>
+        </Box>
+    );
+};
+
+
+const ImagesEmpty = ({searchTerm}: { searchTerm: string }) => {
+    return (
+        <Paper sx={{
+            p: 6,
+            textAlign: 'center',
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+        }}>
+            <Storage sx={{
+                fontSize: 48,
+                color: 'text.secondary',
+                mb: 2,
+                mx: 'auto'
+            }}/>
+
+            <Typography variant="h6" sx={{mb: 1}}>
+                {searchTerm ? 'No images found' : 'No images available'}
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary">
+                {searchTerm ? (
+                    'Try adjusting your search criteria.'
+                ) : (
+                    <>
+                        Run some apps, treat yourself, {' '}
+                        <Link
+                            href="https://selfh.st/apps/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            https://selfh.st/apps/
+                        </Link>
+                    </>
+                )}
+            </Typography>
+        </Paper>
+    );
 };
 
 export default ImagesPage;

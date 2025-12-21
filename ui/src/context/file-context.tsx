@@ -17,7 +17,9 @@ export interface FilesContextType {
     renameFile: (oldFilename: string, newFile: string) => Promise<void>
     listFiles: (path: string, depthIndex: number[]) => Promise<void>
 
-    uploadFile: (filename: string, contents: string) => Promise<string>
+    uploadFile: (filename: string, contents: File | string, upload?: boolean) => Promise<string>
+    uploadFilesFromPC: (targetDir: string, files: File[]) => Promise<void>
+
     downloadFile: (filename: string) => Promise<{ file: string; err: string }>
 }
 
@@ -38,6 +40,16 @@ export function getDir(filePath: string): string {
     return filePath.substring(0, lastSlash);
 }
 
+export const getEntryDisplayName = (path: string) => {
+    const split = path.split("/");
+    const pop = split.pop();
+    if (!pop) {
+        console.error("unable to get last element in path", "split: ", split, "last element: ", pop)
+        return "ERR_EMPTY_PATH"
+    }
+    return pop
+}
+
 function FilesProvider({children}: { children: ReactNode }) {
     const client = useFileClient()
     const {showError, showSuccess} = useSnackbar()
@@ -53,39 +65,38 @@ function FilesProvider({children}: { children: ReactNode }) {
     const {alias} = useFileComponents()
 
     const fetchFiles = useCallback(async (
-            path: string = "",
-            depthIndex: number[] = []
-        ) => {
-            if (!path) {
-                // empty filelist show full spinner
-                setIsLoading(true)
-            }
+        path: string = "",
+        depthIndex: number[] = []
+    ) => {
+        if (files.length < 1) {
+            // empty filelist show full spinner
+            setIsLoading(true)
+        }
 
-            if (path === "") {
-                path = `${alias}`
-            }
+        if (path === "") {
+            path = `${alias}`
+        }
 
-            const {val, err} = await callRPC(() => client.list({
-                path: path,
-            }))
-            if (err) {
-                showError(err)
-                setFiles([])
-            } else if (val) {
-                setFiles(prevState => {
-                    if (depthIndex.length < 1) {
-                        return val.entries
-                    } else {
-                        const newList = [...prevState]
-                        insertAtNestedIndex(newList, depthIndex, val.entries)
-                        return newList
-                    }
-                })
-            }
+        const {val, err} = await callRPC(() => client.list({
+            path: path,
+        }))
+        if (err) {
+            showError(err)
+            setFiles([])
+        } else if (val) {
+            setFiles(prevState => {
+                if (depthIndex.length < 1) {
+                    return val.entries
+                } else {
+                    const newList = [...prevState]
+                    insertAtNestedIndex(newList, depthIndex, val.entries)
+                    return newList
+                }
+            })
+        }
 
-            setIsLoading(false)
-        },
-        [alias, host, client]);
+        setIsLoading(false)
+    }, [alias, host, files, client]);
 
     const closeFolder = useOpenFiles(state => state.delete)
     const fileUrl = useEditorUrl()
@@ -146,37 +157,56 @@ function FilesProvider({children}: { children: ReactNode }) {
     }
 
 
-    async function uploadFile(filename: string, contents: string): Promise<string> {
+    async function uploadFile(fullPath: string, content: File | string, isNew: boolean = false): Promise<string> {
+        const url = `${API_URL}/api/file/save${isNew ? '?create=true' : ''}`;
+
         try {
             const formData = new FormData();
-            const file = new File([contents], filename);
 
-            formData.append('contents', file, btoa(filename));
+            const fileBlob = typeof content === 'string'
+                // If it's a string (from editor), wrap it.
+                ? new File([content], getEntryDisplayName(fullPath))
+                // If it's already a File (from DnD), use it.
+                : content;
 
-            const response = await fetch(`${API_URL}/api/file/save`, {
+            formData.append('contents', fileBlob, btoa(fullPath));
+
+            const response = await fetch(url, {
                 method: 'POST',
                 body: formData,
-                headers: {DOCKER_HOST: hosRef.dockerHost}
+                headers: {
+                    'DOCKER_HOST': hosRef.dockerHost
+                }
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                return `Server error: ${response.status} ${response.statusText} - ${errorText}`
+                return `Error: ${response.status} - ${errorText}`;
             }
 
-            console.log(`Uploaded ${file}, response status: ${response.status}`);
             return "";
-        } catch (error: unknown) {
-            // fucking exceptions so useless
-            if (error instanceof Error) {
-                console.error("Fetch error:", error.message);
-                return `Server error: ${error.message}`;
-            } else {
-                console.error(`An unknown error occurred ${error}`)
-                return `An unknown error occurred check browser logs`
-            }
+        } catch (error) {
+            console.error("Upload failed:", error);
+            return "Network error";
         }
     }
+
+    const uploadFilesFromPC = async (targetDir: string, files: File[]) => {
+        const results = await Promise.all(files.map(file => {
+            const cleanDir = targetDir.endsWith('/') ? targetDir.slice(0, -1) : targetDir;
+            const fullPath = `${cleanDir}/${file.name}`;
+            return uploadFile(fullPath, file, true);
+        }));
+
+        const errors = results.filter(res => res !== "");
+        if (errors.length > 0) {
+            showError(`${errors.length} files failed to upload.`)
+        } else {
+            showSuccess(`Uploaded ${results.length} files`);
+        }
+
+        await fetchFiles("");
+    };
 
     async function downloadFile(filename: string): Promise<{ file: string; err: string }> {
         const subPath = `api/file/load/${encodeURIComponent(filename)}`
@@ -209,6 +239,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         listFiles: fetchFiles,
         uploadFile,
         downloadFile,
+        uploadFilesFromPC
     }
 
     return (

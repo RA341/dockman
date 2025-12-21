@@ -11,9 +11,11 @@ service DockerService {
   rpc ContainerRemove(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerRestart(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerUpdate(ContainerRequest) returns (Empty) {}
+
   rpc ContainerList(ContainerListRequest) returns (ListResponse) {}
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
+  rpc ContainerInspect(ContainerLogsRequest) returns (ContainerInspectMessage) {}
 
   // compose
   rpc ComposeUp(ComposeFile) returns (stream LogsMessage) {}
@@ -41,6 +43,26 @@ service DockerService {
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
   rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
+}
+
+message ContainerInspectMessage {
+  string Name = 1;
+  string ID = 2;
+  string Path = 3;
+  string Created = 7;
+  string Image = 4;
+  string HostsPath = 5;
+  repeated ContainerMount mounts = 6;
+}
+
+message ContainerMount {
+  string Type = 1;
+  string Name = 2;
+  string Source = 3;
+  string Destination = 4;
+  string Driver = 5;
+  string Mode = 6;
+  bool RW = 7;
 }
 
 message ContainerListRequest {}
@@ -239,7 +261,6 @@ message DeleteNetworkResponse {
 }
 
 message ContainerLogsRequest {
-
   string containerID = 1;
 }
 

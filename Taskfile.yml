@@ -178,7 +178,7 @@ tasks:
     vars:
       TARGET: "{{index .MATCH 0}}"
     cmds:
-      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}} --target {{.TARGET}}
+      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}}
     preconditions:
       - sh: 'test -n "{{.TARGET}}"'
         msg: "The 'target' variable must be provided. Usage: task dk.<target-name>"
