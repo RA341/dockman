@@ -314,6 +314,8 @@ export function ContainerTable(
     return (
         <TableContainer component={Paper}
                         sx={{
+                            height: '100vh',
+                            overflow: 'auto',
                             flexGrow: 1,
                             boxShadow: 3,
                             borderRadius: 2,
