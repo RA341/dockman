@@ -68,7 +68,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         path: string = "",
         depthIndex: number[] = []
     ) => {
-        if (files.length < 1) {
+        if (depthIndex.length < 2) {
             // empty filelist show full spinner
             setIsLoading(true)
         }
@@ -96,7 +96,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         }
 
         setIsLoading(false)
-    }, [alias, host, files, client]);
+    }, [alias, host, client]);
 
     const closeFolder = useOpenFiles(state => state.delete)
     const fileUrl = useEditorUrl()
