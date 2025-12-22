@@ -65,7 +65,6 @@ func (h *Handler) ComposeUp(ctx context.Context, req *connect.Request[v1.Compose
 			ctx,
 			req.Msg.Filename,
 			writer,
-			[]string{},
 			req.Msg.SelectedServices...,
 		)
 	})
@@ -119,13 +118,7 @@ func (h *Handler) ComposeRestart(ctx context.Context, req *connect.Request[v1.Co
 
 func (h *Handler) ComposeUpdate(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.WithClientAndStream(ctx, responseStream, func(dkSrv *Service, writer io.Writer) error {
-		return dkSrv.Compose.Update(
-			ctx,
-			req.Msg.Filename,
-			writer,
-			[]string{},
-			req.Msg.SelectedServices...,
-		)
+		return dkSrv.Compose.Update(ctx, req.Msg.Filename, writer, req.Msg.SelectedServices...)
 	})
 
 	// todo
@@ -137,11 +130,7 @@ func (h *Handler) ComposeValidate(ctx context.Context, req *connect.Request[v1.C
 	var validationResult []error
 
 	err := h.WithClient(ctx, func(dkSrv *Service) error {
-		errs := dkSrv.Compose.Validate(
-			ctx,
-			req.Msg.Filename,
-			[]string{},
-		)
+		errs := dkSrv.Compose.Validate(ctx, req.Msg.Filename)
 		validationResult = errs
 		return nil
 	})

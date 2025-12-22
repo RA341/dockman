@@ -64,7 +64,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	out, err := termCli.Validate(ctx, working, com, []string{})
+	out, err := termCli.Validate(ctx, working)
 	require.NoError(t, err)
 
 	t.Log(out)

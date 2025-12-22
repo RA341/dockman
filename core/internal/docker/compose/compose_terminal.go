@@ -10,7 +10,6 @@ import (
 
 	"github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/files/filesystem"
-
 	"github.com/fatih/color"
 	container2 "github.com/moby/moby/api/types/container"
 	"golang.org/x/crypto/ssh"
@@ -110,15 +109,21 @@ func (c *Service) WithBinary(
 		return err
 	}
 
+	rootEnv := loadEnvFile(&info, "")
+	dirEnv := loadEnvFile(&info, filepath.Dir(info.Relpath))
+
+	envs := []string{rootEnv, dirEnv}
+
 	if binary == composePlugin {
 		split := strings.Split(composePlugin, " ")
 
-		rootEnv := loadEnvFile(&info, "")
-		dirEnv := loadEnvFile(&info, filepath.Dir(info.Relpath))
-
-		elems := append([]string{rootEnv, dirEnv}, fullCmd[1:]...)
+		elems := append(envs, fullCmd[1:]...)
 		fullCmd = append(split, elems...)
+	} else {
+		elems := append(envs, fullCmd[1:]...)
+		fullCmd = append([]string{fullCmd[0]}, elems...)
 	}
+	//log.Debug().Strs("envs", fullCmd).Msg("loading envs")
 
 	var cleanCmd = make([]string, 0, len(fullCmd))
 	var sb strings.Builder
@@ -166,18 +171,12 @@ func (c *Service) Up(
 	ctx context.Context,
 	filename string,
 	io io.Writer,
-	envFiles []string,
 	services ...string,
 ) error {
 	return c.WithBinary(ctx, filename, io,
 		func(binary string, relpath string) ([]string, error) {
-			var envstr string
-			if len(envFiles) > 0 {
-				envstr = "--env-file=" + strings.Join(envFiles, ",")
-			}
-
 			raw := []string{
-				binary, TTYProgress, envstr,
+				binary, TTYProgress,
 				"-f", relpath,
 				"up", "-d", "-y",
 				"--build", "--remove-orphans",
@@ -287,14 +286,13 @@ func (c *Service) Update(
 	ctx context.Context,
 	filename string,
 	io io.Writer,
-	envFiles []string,
 	services ...string,
 ) error {
 	err := c.Pull(ctx, filename, io, services...)
 	if err != nil {
 		return err
 	}
-	return c.Up(ctx, filename, io, envFiles, services...)
+	return c.Up(ctx, filename, io, services...)
 }
 
 func (c *Service) List(ctx context.Context, filename string) ([]container2.Summary, error) {
@@ -339,7 +337,7 @@ func (c *Service) listIds(ctx context.Context, filename string) ([]string, error
 	return lines, err
 }
 
-func (c *Service) Validate(ctx context.Context, filename string, envFiles []string) []error {
+func (c *Service) Validate(ctx context.Context, filename string) []error {
 	buf := new(bytes.Buffer)
 	err := c.WithBinary(ctx, filename, buf,
 		func(binary string, relpath string) ([]string, error) {
