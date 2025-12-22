@@ -146,11 +146,11 @@ export function FileList() {
 }
 
 const FileListInner = () => {
-    const {files, isLoading} = useFiles()
+    const {files} = useFiles()
 
     return (
         <StyledScrollbarBox sx={{flexGrow: 1}}>
-            {files.length === 0 && isLoading ? (
+            {files.length < 1 ? (
                 <Box display="flex" justifyContent="center" alignItems="center" height="100%">
                     <CircularProgress/>
                 </Box>
