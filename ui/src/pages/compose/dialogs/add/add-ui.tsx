@@ -14,16 +14,7 @@ import {
 import {Add, AddCircleOutline, ArrowBack, Cancel, ErrorOutline, Folder, InsertDriveFile} from "@mui/icons-material"
 import {DockerFolderIcon} from "../../components/file-icon.tsx";
 import {amber} from "@mui/material/colors";
-
-interface AddFileDialogProps {
-    open: boolean
-    onClose: () => void
-    onConfirm: (name: string, isDir: boolean) => void
-    parentName: string
-}
-
-type PresetType = 'file' | 'folder' | 'compose-directory'
-type CreationStep = 'preset-selection' | 'name-input'
+import type {CreationStep, PresetType} from "./add-hook.ts";
 
 interface FilePreset {
     type: PresetType
@@ -56,7 +47,13 @@ const FILE_PRESETS: FilePreset[] = [
     }
 ]
 
-export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFileDialogProps) {
+export function FileDialogCreate({open, onClose, onConfirm, parentName, preset = null}: {
+    open: boolean
+    onClose: () => void
+    onConfirm: (name: string, isDir: boolean) => void
+    parentName: string
+    preset?: PresetType | null
+}) {
     const [step, setStep] = useState<CreationStep>('preset-selection')
     const [selectedPreset, setSelectedPreset] = useState<PresetType>('file')
     const [presetIndex, setPresetIndex] = useState(0)
@@ -67,11 +64,10 @@ export function FileDialogCreate({open, onClose, onConfirm, parentName}: AddFile
 
     useEffect(() => {
         if (open) {
-            setStep('preset-selection')
-            setSelectedPreset('file')
+            setStep(preset ? 'name-input' : 'preset-selection')
+            setSelectedPreset(preset ?? 'file')
+            setName(parentName ?? '')
             setPresetIndex(0)
-
-            setName('')
             setError('')
         }
     }, [open, parentName])

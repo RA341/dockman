@@ -1,5 +1,5 @@
 import {type ReactNode, useState} from 'react'
-import {AddFileContext} from "./add-hook.ts";
+import {AddFileContext, type PresetType} from "./add-hook.ts";
 import {FileDialogCreate} from "./add-ui.tsx";
 import {useFiles} from "../../../../context/file-context.tsx"
 
@@ -11,6 +11,7 @@ export function AddFilesProvider({children}: AddFilesProps) {
     const [isVisible, setIsVisible] = useState(false)
     const {addFile} = useFiles()
     const [parent, setParent] = useState("")
+    const [preset, setPreset] = useState<PresetType | null>(null)
 
     const closeDialog = () => {
         setIsVisible(false)
@@ -23,8 +24,9 @@ export function AddFilesProvider({children}: AddFilesProps) {
         })
     }
 
-    const showDialog = (parent?: string) => {
+    const showDialog = (parent?: string, preset?: PresetType) => {
         setParent(parent ?? "")
+        setPreset(preset ?? null)
         setIsVisible(true)
     }
 
@@ -38,6 +40,7 @@ export function AddFilesProvider({children}: AddFilesProps) {
         <AddFileContext.Provider value={value}>
             {children}
             <FileDialogCreate
+                preset={preset}
                 parentName={parent}
                 open={isVisible}
                 onClose={closeDialog}

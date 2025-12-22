@@ -20,7 +20,7 @@ export interface FilesContextType {
     uploadFile: (filename: string, contents: File | string, upload?: boolean) => Promise<string>
     uploadFilesFromPC: (targetDir: string, files: File[]) => Promise<void>
 
-    downloadFile: (filename: string) => Promise<{ file: string; err: string }>
+    downloadFile: (filename: string, shouldDownload?: boolean) => Promise<{ file: string; err: string }>
 }
 
 export const FilesContext = createContext<FilesContextType | undefined>(undefined)
@@ -208,18 +208,42 @@ function FilesProvider({children}: { children: ReactNode }) {
         await fetchFiles("");
     };
 
-    async function downloadFile(filename: string): Promise<{ file: string; err: string }> {
-        const subPath = `api/file/load/${encodeURIComponent(filename)}`
+    async function downloadFile(
+        filename: string,
+        shouldDownload: boolean = false
+    ): Promise<{ file: string; err: string }> {
+        const subPath = `api/file/load/${encodeURIComponent(filename)}?download=${shouldDownload}`;
+
         try {
             const response = await fetch(`${API_URL}/${subPath}`, {
                 cache: 'no-cache',
                 headers: {DOCKER_HOST: hosRef.dockerHost}
             });
+
             if (!response.ok) {
                 return {file: "", err: `Failed to download file: ${response.status} ${response.statusText}`};
             }
-            const fileData = await response.text()
+
+
+            if (shouldDownload) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                return {file: "", err: ""};
+            }
+
+            const fileData = await response.text();
             return {file: fileData, err: ""};
+
         } catch (error: unknown) {
             console.error(`Error: ${(error as Error).toString()}`);
             return {file: "", err: (error as Error).toString()};

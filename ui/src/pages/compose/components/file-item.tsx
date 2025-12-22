@@ -23,6 +23,7 @@ import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
 import {getDir, getEntryDisplayName, useFiles} from "../../../context/file-context.tsx";
 import {useRenameFile} from "../dialogs/rename/rename-hook.ts";
 import {useEditorUrl} from "../../../lib/editor.ts";
+import {useSnackbar} from "../../../hooks/snackbar.ts";
 
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
@@ -301,10 +302,12 @@ const useFileMenuCtx = (entry: FsEntry) => {
     const closeCtxMenu = () => {
         setContextMenu(null);
     };
+    const {showError, showSuccess} = useSnackbar()
 
     const {showDialog: showAdd} = useAddFile()
     const {showDialog: showDelete} = useFileDelete()
     const {showDialog: showRename} = useRenameFile()
+    const {downloadFile} = useFiles()
 
     const filename = entry.filename
 
@@ -321,6 +324,17 @@ const useFileMenuCtx = (entry: FsEntry) => {
                 Add
             </MenuItem>
         ),
+        // (
+        //     <MenuItem onClick={() => {
+        //         closeCtxMenu()
+        //         showAdd(
+        //             `${filename}-copy`,
+        //             entry.isDir ? 'folder' : 'file'
+        //         )
+        //     }}>
+        //         Duplicate
+        //     </MenuItem>
+        // ),
         // todo
         // (
         //     <MenuItem onClick={() => {
@@ -335,6 +349,22 @@ const useFileMenuCtx = (entry: FsEntry) => {
             }}>
                 Rename
             </MenuItem>
+        ),
+        (
+            !entry.isDir ?
+                <MenuItem onClick={() => {
+                    closeCtxMenu()
+                    downloadFile(filename, true).then(value => {
+                        if (value.err) {
+                            showError(`Error downloading File: ${value.err}`)
+                        } else {
+                            showSuccess("File downloaded")
+                        }
+                    })
+                }}>
+                    Download
+                </MenuItem>
+                : <></>
         ),
         (
             <MenuItem onClick={() => {

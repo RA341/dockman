@@ -261,10 +261,24 @@ func (s *Service) getFileContents(filename, hostname string) ([]byte, error) {
 	return file, err
 }
 
-func (s *Service) LoadFilePath(filename, hostname string) (io.ReadSeekCloser, time.Time, error) {
+func (s *Service) LoadFilePath(filename, hostname string, download bool) (io.ReadSeekCloser, time.Time, error) {
 	cliFs, relpath, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, time.Time{}, err
+	}
+
+	if download {
+		stat, err := cliFs.Stat(relpath)
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+
+		if stat.IsDir() {
+			// convert to zip
+			// todo
+		} else {
+			return cliFs.LoadFile(relpath)
+		}
 	}
 
 	file, t, err := cliFs.LoadFile(relpath)

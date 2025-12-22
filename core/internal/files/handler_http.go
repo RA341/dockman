@@ -32,6 +32,7 @@ func (h *FileHandler) register() http.Handler {
 }
 
 const QueryKeyCreate = "create"
+const QueryKeyDownload = "download"
 
 func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 	filename := r.PathValue("filename")
@@ -45,7 +46,13 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reader, modTime, err := h.srv.LoadFilePath(filename, getHost)
+	downloadStr := r.URL.Query().Get(QueryKeyDownload)
+	download := false
+	if downloadStr != "" {
+		download, _ = strconv.ParseBool(downloadStr)
+	}
+
+	reader, modTime, err := h.srv.LoadFilePath(filename, getHost, download)
 	if err != nil {
 		log.Error().Err(err).Str("path", filename).Msg("Error loading file")
 		http.Error(w, "Filename not found", http.StatusBadRequest)

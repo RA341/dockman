@@ -1,9 +1,13 @@
 import {createContext, useContext} from "react";
 
+
+export type PresetType = 'file' | 'folder' | 'compose-directory'
+export type CreationStep = 'preset-selection' | 'name-input'
+
 export interface AddFileContextType {
     isVisible: boolean
     closeDialog: () => void
-    showDialog: (parent?: string) => void
+    showDialog: (parent?: string, preset?: PresetType) => void
 }
 
 export const AddFileContext = createContext<AddFileContextType | undefined>(undefined)
