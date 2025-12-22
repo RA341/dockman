@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/RA341/dockman/internal/docker/container"
@@ -111,7 +112,12 @@ func (c *Service) WithBinary(
 
 	if binary == composePlugin {
 		split := strings.Split(composePlugin, " ")
-		fullCmd = append(split, fullCmd[1:]...)
+
+		rootEnv := loadEnvFile(&info, "")
+		dirEnv := loadEnvFile(&info, filepath.Dir(info.Relpath))
+
+		elems := append([]string{rootEnv, dirEnv}, fullCmd[1:]...)
+		fullCmd = append(split, elems...)
 	}
 
 	var cleanCmd = make([]string, 0, len(fullCmd))
@@ -137,6 +143,19 @@ func (c *Service) WithBinary(
 		return fmt.Errorf(errWriter.String())
 	}
 	return nil
+}
+
+func loadEnvFile(info *Host, dir string) string {
+	const envFileName = ".env"
+
+	envPath := info.Fs.Join(dir, envFileName)
+	_, err := info.Fs.Stat(envPath)
+	if err == nil {
+		join := info.Fs.Join(info.Root, envPath)
+		return fmt.Sprintf("--env-file=%s", join)
+	}
+
+	return ""
 }
 
 var green = color.New(color.BgGreen).SprintlnFunc()

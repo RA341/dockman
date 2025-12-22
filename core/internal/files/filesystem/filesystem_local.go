@@ -34,6 +34,10 @@ func (l *LocalFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) 
 	return os.OpenFile(l.fullPath(filename), flag, perm)
 }
 
+func (l *LocalFileSystem) Join(elem ...string) string {
+	return filepath.Join(elem...)
+}
+
 func (l *LocalFileSystem) LoadFile(filename string) (io.ReadSeekCloser, time.Time, error) {
 	file, err := os.OpenFile(l.fullPath(filename), os.O_RDONLY, os.ModePerm)
 	if err != nil {
@@ -47,7 +51,8 @@ func (l *LocalFileSystem) LoadFile(filename string) (io.ReadSeekCloser, time.Tim
 }
 
 func (l *LocalFileSystem) Stat(name string) (os.FileInfo, error) {
-	return os.Stat(l.fullPath(name))
+	path := l.fullPath(name)
+	return os.Stat(path)
 }
 
 func (l *LocalFileSystem) RemoveAll(path string) error {
@@ -67,7 +72,7 @@ func (l *LocalFileSystem) WalkDir(path string, f func(path string, d fs.DirEntry
 }
 
 func (l *LocalFileSystem) fullPath(name string) string {
-	clean := filepath.Join(l.root, filepath.Clean(name))
+	clean := l.Join(l.root, filepath.Clean(name))
 	if !strings.HasPrefix(clean, l.root) {
 		// todo maybe err its annoying
 		//return "", fmt.Errorf("security violation: path %s is outside root %s", name, l.root)

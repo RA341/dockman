@@ -18,4 +18,5 @@ type FileSystem interface {
 	ReadFile(fullpath string) ([]byte, error)
 	WalkDir(root string, f func(path string, d fs.DirEntry, err error) error) error
 	Abs(path string) (string, error)
+	Join(elem ...string) string
 }

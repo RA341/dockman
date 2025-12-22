@@ -52,6 +52,10 @@ func (s *SftpFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) (
 	return s.client.OpenFile(s.fullPath(filename), flag)
 }
 
+func (s *SftpFileSystem) Join(elem ...string) string {
+	return s.client.Join(elem...)
+}
+
 func (s *SftpFileSystem) LoadFile(filename string) (io.ReadSeekCloser, time.Time, error) {
 	file, err := s.client.OpenFile(s.fullPath(filename), os.O_RDONLY)
 	if err != nil {
@@ -110,7 +114,7 @@ func (s *SftpFileSystem) WalkDir(root string, fn func(path string, d fs.DirEntry
 
 func (s *SftpFileSystem) fullPath(name string) string {
 	// todo possible bug: filepath.clean using local system may fail on windows
-	clean := s.client.Join(s.root, filepath.Clean(name))
+	clean := s.Join(s.root, filepath.Clean(name))
 	if !strings.HasPrefix(clean, s.root) {
 		// todo maybe err its annoying
 		//return "", fmt.Errorf("security violation: path %s is outside root %s", name, l.root)
