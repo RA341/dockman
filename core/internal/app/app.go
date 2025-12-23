@@ -25,7 +25,7 @@ import (
 	"github.com/RA341/dockman/internal/docker/container"
 	dm "github.com/RA341/dockman/internal/docker_manager"
 	"github.com/RA341/dockman/internal/files"
-	"github.com/RA341/dockman/internal/files/dockman_yaml"
+	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/host"
 	"github.com/RA341/dockman/internal/info"
@@ -65,10 +65,12 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 		sessionsDB,
 	)
 
+	composeRoot := setupComposeRoot(conf.ComposeRoot)
+
 	// docker manager setup
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
 	fileStore := files.NewGormStore(gormDB)
-	dockYamlSrv := dockman_yaml.NewDockmanYaml(conf.DockYaml, func() string {
+	dockYamlSrv := dockmanYaml.NewDockmanYaml(conf.DockYaml, func() string {
 		// todo host aware
 		return conf.ComposeRoot
 	})
@@ -107,7 +109,6 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 		},
 	)
 
-	composeRoot := setupComposeRoot(conf.ComposeRoot)
 	err = git.NewMigrator(composeRoot)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to complete git migration")

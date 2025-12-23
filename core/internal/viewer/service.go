@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type GetFullPath func(relPath, alias string) (string, error)
+type GetFullPath func(relPath, alias string) (root string, relpath string, err error)
 type ClientProvider func(host string) (*docker.Service, error)
 type SSHProvider func(host string) (*ssh.Client, error)
 
@@ -54,7 +54,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	sessionID := uuid.New().String()
 	urlPrefix := "/api/viewer/view/" + sessionID + "/"
 
-	fullpath, err := s.getPath(relPath, hostname)
+	fullpath, _, err := s.getPath(relPath, hostname)
 	if err != nil {
 		return "", nil, fmt.Errorf("could not get path for %s: %w", alias, err)
 	}
@@ -81,9 +81,10 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 				break
 			}
 			for _, m := range cont.Mounts {
-				//log.Debug().Any("mount", m).Str("fullpath", fullpath).Msg("Checking mount")
+				log.Debug().Any("mount", m).Str("fullpath", fullpath).Msg("Checking mount")
 				if strings.HasPrefix(fullpath, m.Destination) {
 					fullpath = filepath.Join(m.Source, relPath)
+					log.Debug().Any("fullpath", fullpath).Str("rel", relPath).Msg("fullpath")
 					done = true
 
 					var netName string
