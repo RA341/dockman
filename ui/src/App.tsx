@@ -13,7 +13,6 @@ import {UserConfigProvider} from "./context/config-context.tsx";
 import AliasProvider from "./context/alias-context.tsx";
 import {TabsProvider, useTabs} from "./context/tab-context.tsx";
 import HostProvider from "./context/host-context.tsx";
-import {DashboardPage} from "./pages/dashboard/dashboard-page.tsx";
 import ContainersPage from "./pages/containers/containers.tsx";
 import ImagesPage from "./pages/images/images.tsx";
 import ImageInspectPage from "./pages/images/inspect.tsx";
@@ -25,6 +24,7 @@ import {ComposePage} from "./pages/compose/compose-page.tsx";
 import {useEditorUrl} from "./lib/editor.ts";
 import ContainerInspectPage from "./pages/containers/inspect.tsx";
 import scrollbarStyles from "./components/scrollbar-style.tsx";
+import StatsPage from "./pages/stats/stats-page.tsx";
 
 export function App() {
     return (
@@ -54,7 +54,7 @@ export function App() {
                                         </Route>
 
                                         <Route path="stats">
-                                            <Route index element={<DashboardPage/>}/>
+                                            <Route index element={<StatsPage/>}/>
                                         </Route>
 
                                         <Route path="containers">

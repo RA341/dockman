@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useState} from 'react'
 import {callRPC, useDockerClient} from '../lib/api.ts'
-import {type ContainerList} from '../gen/docker/v1/docker_pb.ts'
+import {type ListResponse} from '../gen/docker/v1/docker_pb.ts'
 import {useSnackbar} from "./snackbar.ts"
 import {useHost} from "../pages/home/home.tsx";
 
@@ -9,7 +9,7 @@ export function useDockerContainers() {
     const {showWarning} = useSnackbar()
     const selectedHost = useHost()
 
-    const [containers, setContainers] = useState<ContainerList[]>([])
+    const [containers, setContainers] = useState<ListResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshInterval, setRefreshInterval] = useState(2000)
 
@@ -17,11 +17,11 @@ export function useDockerContainers() {
         const {val, err} = await callRPC(() => dockerService.containerList({}))
         if (err) {
             showWarning(`Failed to refresh containers: ${err}`)
-            setContainers([])
+            setContainers(null)
             return
         }
 
-        setContainers(val?.list || [])
+        setContainers(val)
     }, [dockerService, selectedHost])
 
     const refreshContainers = useCallback(() => {

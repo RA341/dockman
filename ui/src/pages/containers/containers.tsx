@@ -94,9 +94,9 @@ function ContainersPage() {
 
     const filteredContainers = useMemo(() => {
         const lowerSearch = search.toLowerCase();
-        return containers.filter(cont =>
+        return containers?.list.filter(cont =>
             [cont.serviceName, cont.imageName, cont.stackName, cont.name].some(f => f.toLowerCase().includes(lowerSearch))
-        );
+        ) ?? [];
     }, [containers, search]);
 
     return (
@@ -117,7 +117,7 @@ function ContainersPage() {
                             Containers
                         </Typography>
                         <Chip
-                            label={containers.length}
+                            label={containers?.list.length}
                             size="medium"
                             sx={{fontWeight: 700, color: 'primary.main'}}
                         />
