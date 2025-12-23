@@ -88,16 +88,33 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     }
 
     return (
-        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'background.default'}}>
-            <Box sx={{flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+        <Box sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'background.default'
+        }}>
+            <Box sx={{
+                flexGrow: 1,
+                p: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+            }}>
                 <ComposeActionHeaders
                     selectedServices={selectedServices}
                     fetchContainers={fetchContainers}
                 />
                 <Box sx={{
-                    flexGrow: 1, overflow: 'hidden', border: '3px ridge',
-                    borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
-                    flexDirection: 'column', backgroundColor: 'rgb(41,41,41)'
+                    height: '100%',
+                    display: 'flex',
+                    flexGrow: 1,
+                    overflow: 'hidden',
+                    border: '2px ridge',
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                    borderRadius: 3,
+                    flexDirection: 'column',
+                    backgroundColor: 'rgb(41,41,41)'
                 }}>
                     <ContainerTable
                         containers={containers}

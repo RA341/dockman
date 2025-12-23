@@ -4,6 +4,7 @@ import {
     Checkbox,
     Chip,
     Paper,
+    Stack,
     Table,
     TableBody,
     TableCell,
@@ -13,12 +14,7 @@ import {
     TableSortLabel,
     Typography
 } from '@mui/material';
-import {
-    CalendarToday as CalendarIcon,
-    FolderOpen as FolderIcon,
-    Label as LabelIcon,
-    Storage as StorageIcon
-} from '@mui/icons-material';
+import {CalendarToday as CalendarIcon, FolderOpen as FolderIcon} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import type {Volume} from "../../gen/docker/v1/docker_pb.ts";
 import {formatBytes} from "../../lib/editor.ts";
@@ -41,266 +37,192 @@ export const VolumeTable = ({
                                 onSelectionChange
                             }: VolumeTableProps) => {
     const {handleCopy, copiedId} = useCopyButton();
+    const {dockYaml} = useConfig();
 
     const handleRowSelection = (volumeName: string) => {
         if (!onSelectionChange) return;
-
         const newSelection = selectedVolumes.includes(volumeName)
             ? selectedVolumes.filter(name => name !== volumeName)
             : [...selectedVolumes, volumeName];
-
         onSelectionChange(newSelection);
     };
 
     const handleSelectAll = () => {
         if (!onSelectionChange) return;
-
-        const allSelected = selectedVolumes.length === volumes.length;
-        const newSelection = allSelected ? [] : volumes.map(vol => vol.name);
-        onSelectionChange(newSelection);
+        onSelectionChange(selectedVolumes.length === volumes.length ? [] : volumes.map(vol => vol.name));
     };
 
-    const isAllSelected = selectedVolumes.length === volumes.length && volumes.length > 0;
-    const isIndeterminate = selectedVolumes.length > 0 && selectedVolumes.length < volumes.length;
-
-    const {dockYaml} = useConfig()
-    const {
-        sortField,
-        sortOrder,
-        handleSort,
-    } = useSort(
+    const {sortField, sortOrder, handleSort} = useSort(
         dockYaml?.volumesPage?.sort?.sortField ?? 'name',
         (dockYaml?.volumesPage?.sort?.sortOrder as SortOrder) ?? 'asc'
-    )
+    );
 
     const tableInfo: TableInfo<Volume> = {
         checkbox: {
             getValue: () => 0,
             header: () => (
-                <TableCell padding="checkbox">
+                <TableCell padding="checkbox" sx={headerStyles}>
                     <Checkbox
-                        indeterminate={isIndeterminate}
-                        checked={isAllSelected}
+                        indeterminate={selectedVolumes.length > 0 && selectedVolumes.length < volumes.length}
+                        checked={volumes.length > 0 && selectedVolumes.length === volumes.length}
                         onChange={handleSelectAll}
                     />
                 </TableCell>
             ),
             cell: (volume) => (
                 <TableCell padding="checkbox">
-                    <Checkbox
-                        checked={selectedVolumes.includes(volume.name)}
-                        onChange={() => handleRowSelection(volume.name)}
-                        onClick={(e) => e.stopPropagation()}
-                    />
+                    <Checkbox checked={selectedVolumes.includes(volume.name)}/>
                 </TableCell>
             )
         },
         "Volume Name": {
             getValue: (volume) => volume.name,
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold'}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (volume) => (
                 <TableCell>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                        <Box sx={{flex: 1}}>
-                            <Typography variant="body2" sx={{wordBreak: 'break-all', fontWeight: 'medium'}}>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{minWidth: 0}}>
+                            <Typography variant="body2" sx={{fontWeight: 200, lineHeight: 1.2, wordBreak: 'break-all'}}>
                                 {volume.name}
                             </Typography>
+                            <CopyButton
+                                handleCopy={handleCopy}
+                                thisID={volume.name}
+                                activeID={copiedId ?? ""}
+                                tooltip="Copy Name"
+                            />
                         </Box>
-                        <CopyButton
-                            handleCopy={handleCopy}
-                            thisID={volume.name}
-                            activeID={copiedId ?? ""}
-                            tooltip={"Copy Volume name"}
-                        />
-                    </Box>
+                    </Stack>
                 </TableCell>
             )
         },
-        Label: {
-            getValue: (volume) => volume.labels || '',
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold'}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+        Usage: {
+            getValue: (volume) => !!volume.containerID,
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        STATUS
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (volume) => (
                 <TableCell>
-                    {volume.labels ? (
+                    {volume.containerID ? (
                         <Chip
-                            label={`${volume.labels}`}
+                            label="In Use"
                             size="small"
+                            color="success"
                             variant="outlined"
-                            color="secondary"
-                            icon={<LabelIcon/>}
-                            sx={{fontSize: '0.75rem'}}
+                            sx={{fontWeight: 700, fontSize: '0.65rem', height: 20, bgcolor: 'success.lighter'}}
                         />
                     ) : (
-                        <Typography variant="body2" color="text.secondary">—</Typography>
+                        <Chip
+                            label="Unused"
+                            size="small"
+                            variant="outlined"
+                            sx={{fontWeight: 700, fontSize: '0.65rem', height: 20, color: 'text.disabled'}}
+                        />
                     )}
                 </TableCell>
             )
         },
         Project: {
             getValue: (volume) => volume.composeProjectName || '',
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold'}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (volume) => (
                 <TableCell>
-                    <ComposeLink
-                        servicePath={volume.composePath}
-                        stackName={volume.composeProjectName}
-                    />
+                    {volume.composeProjectName ? (
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <ComposeLink
+                                servicePath={volume.composePath}
+                                stackName={volume.composeProjectName}
+                            />
+                        </Stack>
+                    ) : (
+                        <Typography variant="caption" color="text.disabled">—</Typography>
+                    )}
                 </TableCell>
             )
         },
         Size: {
             getValue: (volume) => volume.size,
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 120}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
-            cell: (volume) => (
-                <TableCell>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                        <StorageIcon sx={{fontSize: 18, color: 'text.secondary'}}/>
-                        <Box sx={{flex: 1}}>
-                            <Typography variant="body2" sx={{wordBreak: 'break-all', fontWeight: 'medium'}}>
-                                {formatBytes(volume.size)}
-                            </Typography>
-                        </Box>
-                    </Box>
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
                 </TableCell>
-            )
-        },
-        "In use": {
-            getValue: (volume) => !!volume.containerID,
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 120}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            ),
             cell: (volume) => (
                 <TableCell>
-                    <Chip
-                        label={volume.containerID ? 'in use' : 'unused'}
-                        size="small"
-                        color={volume.containerID ? 'success' : 'info'}
-                        variant="outlined"
-                    />
+                    <Typography variant="body2" sx={{fontFamily: 'monospace', fontWeight: 600}}>
+                        {formatBytes(volume.size)}
+                    </Typography>
                 </TableCell>
             )
         },
         "Mount Point": {
             getValue: (volume) => volume.mountPoint,
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 200}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        MOUNT POINT
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (volume) => (
                 <TableCell>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                        <FolderIcon sx={{fontSize: 16, color: 'text.secondary'}}/>
-                        <Typography variant="body2"
-                                    sx={{wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.85rem'}}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <FolderIcon sx={{fontSize: 14, color: 'text.disabled'}}/>
+                        <Typography variant="caption"
+                                    sx={{fontFamily: 'monospace', color: 'text.secondary', wordBreak: 'break-all'}}>
                             {volume.mountPoint}
                         </Typography>
                         <CopyButton
                             handleCopy={handleCopy}
                             thisID={volume.mountPoint}
                             activeID={copiedId ?? ""}
-                            tooltip={"Copy Mount point"}
+                            tooltip="Copy Path"
                         />
-                    </Box>
+                    </Stack>
                 </TableCell>
             )
         },
         Created: {
             getValue: (volume) => volume.createdAt,
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 150}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (volume) => (
                 <TableCell>
-                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <CalendarIcon sx={{fontSize: 14, mr: 0.5, color: 'text.secondary'}}/>
-                        <Typography variant="body2">
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{color: 'text.secondary'}}>
+                        <CalendarIcon sx={{fontSize: 14}}/>
+                        <Typography variant="body2" sx={{whiteSpace: 'nowrap'}}>
                             {formatDate(volume.createdAt)}
                         </Typography>
-                    </Box>
+                    </Stack>
                 </TableCell>
             )
         }
@@ -311,9 +233,10 @@ export const VolumeTable = ({
     return (
         <TableContainer
             component={Paper}
-            sx={{height: '100%', overflow: 'auto', ...scrollbarStyles}}
+            variant="outlined"
+            sx={{height: '100%', borderRadius: 2, overflow: 'auto', ...scrollbarStyles}}
         >
-            <Table stickyHeader sx={{minWidth: 650}}>
+            <Table stickyHeader size="small">
                 <TableHead>
                     <TableRow>
                         {Object.entries(tableInfo).map(([key, val], index) => (
@@ -328,14 +251,13 @@ export const VolumeTable = ({
                         <TableRow
                             key={volume.name}
                             hover
-                            sx={{
-                                '&:last-child td, &:last-child th': {border: 0},
-                                cursor: 'pointer',
-                                backgroundColor: selectedVolumes.includes(volume.name)
-                                    ? 'rgba(25, 118, 210, 0.08)'
-                                    : 'transparent'
-                            }}
                             onClick={() => handleRowSelection(volume.name)}
+                            selected={selectedVolumes.includes(volume.name)}
+                            sx={{
+                                cursor: 'pointer',
+                                '&.Mui-selected': {bgcolor: 'primary.lighter'},
+                                '&:last-child td, &:last-child th': {border: 0}
+                            }}
                         >
                             {Object.values(tableInfo).map((val, index) => (
                                 <React.Fragment key={index}>
@@ -348,4 +270,13 @@ export const VolumeTable = ({
             </Table>
         </TableContainer>
     );
+};
+
+const headerStyles = {
+    fontWeight: 700,
+    fontSize: '0.65rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    py: 1.5,
+    whiteSpace: 'nowrap'
 };

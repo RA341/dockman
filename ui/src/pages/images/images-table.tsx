@@ -3,6 +3,7 @@ import {
     Box,
     Checkbox,
     Chip,
+    IconButton,
     Link,
     Paper,
     Stack,
@@ -16,7 +17,7 @@ import {
     Tooltip,
     Typography
 } from '@mui/material';
-import {CalendarToday as CalendarIcon, InfoOutlineRounded} from '@mui/icons-material';
+import {CalendarToday as CalendarIcon, InfoOutlined as InspectIcon, OpenInNew as OpenIcon} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import {useCopyButton} from "../../hooks/copy.ts";
 import type {Image} from "../../gen/docker/v1/docker_pb.ts";
@@ -34,182 +35,151 @@ interface ImageTableProps {
     onSelectionChange?: (selectedIds: string[]) => void;
 }
 
-export const ImageTable = (
-    {
-        images,
-        selectedImages = [],
-        onSelectionChange
-    }: ImageTableProps
-) => {
+export const ImageTable = ({images, selectedImages = [], onSelectionChange}: ImageTableProps) => {
     const {handleCopy, copiedId} = useCopyButton();
+    const {dockYaml} = useConfig();
+    const navigate = useNavigate();
 
     const handleRowSelection = (imageId: string) => {
         if (!onSelectionChange) return;
-
         const newSelection = selectedImages.includes(imageId)
             ? selectedImages.filter(id => id !== imageId)
             : [...selectedImages, imageId];
-
         onSelectionChange(newSelection);
     };
 
     const handleSelectAll = () => {
         if (!onSelectionChange) return;
-
-        const allSelected = selectedImages.length === images.length;
-        const newSelection = allSelected ? [] : images.map(img => img.id);
-        onSelectionChange(newSelection);
+        onSelectionChange(selectedImages.length === images.length ? [] : images.map(img => img.id));
     };
 
-    const isAllSelected = selectedImages.length === images.length && images.length > 0;
-    const isIndeterminate = selectedImages.length > 0 && selectedImages.length < images.length;
-
-    const {dockYaml} = useConfig()
-
-    const {
-        sortField,
-        sortOrder,
-        handleSort
-    } = useSort(
-        dockYaml?.imagePage?.sort?.sortField ?? "images",
+    const {sortField, sortOrder, handleSort} = useSort(
+        dockYaml?.imagePage?.sort?.sortField ?? "Images",
         (dockYaml?.imagePage?.sort?.sortOrder as SortOrder) ?? "desc"
     );
-
-    const nav = useNavigate()
 
     const tableInfo: TableInfo<Image> = {
         checkbox: {
             getValue: () => 0,
             header: () => (
-                <TableCell padding="checkbox">
+                <TableCell padding="checkbox" sx={headerStyles}>
                     <Checkbox
-                        indeterminate={isIndeterminate}
-                        checked={isAllSelected}
+                        indeterminate={selectedImages.length > 0 && selectedImages.length < images.length}
+                        checked={selectedImages.length === images.length && images.length > 0}
                         onChange={handleSelectAll}
                     />
                 </TableCell>
             ),
             cell: (image) => (
                 <TableCell padding="checkbox">
-                    <Checkbox
-                        checked={selectedImages.includes(image.id)}
-                        onChange={() => handleRowSelection(image.id)}
-                        onClick={(e) => e.stopPropagation()}
-                    />
+                    <Checkbox checked={selectedImages.includes(image.id)}/>
                 </TableCell>
             )
         },
         Images: {
             getValue: (image) => image.repoTags[0] || 'untagged',
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold'}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (image) => (
                 <TableCell>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                        <Box sx={{flex: 0.6}}>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{minWidth: 0}}>
                             {image.repoTags.length > 0 ? (
-                                <Tooltip title="Open image website" arrow>
-                                    <Link
-                                        href={getImageHomePageUrl(image.repoTags[0])}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        sx={{textDecoration: 'none', color: 'primary.main'}}
-                                        onClick={(event) => event.stopPropagation()}
-                                    >
-                                        <Typography variant="body2" component="span" sx={{
-                                            wordBreak: 'break-all',
-                                            '&:hover': {textDecoration: 'underline'}
-                                        }}>
-                                            {image.repoTags[0]}
-                                        </Typography>
-                                    </Link>
-                                </Tooltip>
+                                <Link
+                                    href={getImageHomePageUrl(image.repoTags[0])}
+                                    target="_blank"
+                                    rel="noopener"
+                                    sx={{
+                                        fontWeight: 700,
+                                        fontSize: '0.85rem',
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        color: 'primary.main',
+                                        '&:hover': {textDecoration: 'underline'}
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {image.repoTags[0]}
+                                    <OpenIcon sx={{fontSize: 12}}/>
+                                </Link>
                             ) : (
-                                <Typography variant="body2" sx={{fontWeight: 'medium'}}>
-                                    Untagged
+                                <Typography variant="body2"
+                                            sx={{fontWeight: 700, color: 'text.disabled', fontStyle: 'italic'}}>
+                                    untagged
                                 </Typography>
                             )}
+                            <Stack direction="row" spacing={0.5} alignItems="center">
+                                <Typography variant="caption"
+                                            sx={{fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.7rem'}}>
+                                    {image.id.substring(0, 12)}
+                                </Typography>
+                                <CopyButton
+                                    handleCopy={handleCopy}
+                                    thisID={image.id}
+                                    activeID={copiedId ?? ""}
+                                    tooltip={"Copy Image ID"}
+                                />
+                            </Stack>
                         </Box>
-                        <CopyButton
-                            tooltip={"Copy image ID"}
-                            handleCopy={handleCopy}
-                            thisID={image.id}
-                            activeID={copiedId ?? ""}
-                        />
-                    </Box>
-                </TableCell>
-            )
-        },
-        Action: {
-            getValue: (image) => Number(image.id),
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>
-                        {label}
-                    </TableCell>
-                )
-            },
-            cell: (image) => (
-                <TableCell>
-                    <Stack direction="row" spacing={1}>
-                        <Tooltip title="Inspect Image">
-                            <InfoOutlineRounded
-                                aria-label="Inspect Image"
-                                color="primary"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    nav(`inspect/${image.id}`)
-                                }}
-                                sx={{cursor: 'pointer'}}
-                            />
-                        </Tooltip>
                     </Stack>
                 </TableCell>
             )
         },
-        Containers: {
-            getValue: (image) => Number(image.containers),
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
+        Actions: {
+            getValue: () => 0,
+            header: () => <TableCell sx={{...headerStyles,}}>ACTIONS</TableCell>,
+            cell: (image) => (
+                <TableCell>
+                    <Tooltip title="Inspect Image" arrow>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`inspect/${image.id}`);
+                            }}
+                            sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.5}}
                         >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+                            <InspectIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+                </TableCell>
+            )
+        },
+        Usage: {
+            getValue: (image) => Number(image.containers),
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        USAGE
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (image) => (
                 <TableCell>
                     {Number(image.containers) > 0 ? (
                         <Chip
-                            label={`${Number(image.containers)} using`}
+                            label={`${image.containers} In Use`}
                             size="small"
                             color="success"
                             variant="outlined"
+                            sx={{fontWeight: 700, fontSize: '0.65rem', height: 20, bgcolor: 'success.lighter'}}
                         />
                     ) : (
                         <Chip
-                            label={`Unused ${Number(image.containers)}`}
+                            label="Unused"
                             size="small"
-                            color="info"
                             variant="outlined"
+                            sx={{fontWeight: 700, fontSize: '0.65rem', height: 20, color: 'text.disabled'}}
                         />
                     )}
                 </TableCell>
@@ -217,117 +187,61 @@ export const ImageTable = (
         },
         Size: {
             getValue: (image) => Number(image.size),
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (image) => (
                 <TableCell>
-                    <Typography variant="body2" sx={{fontWeight: 'medium'}}>
+                    <Typography variant="body2" sx={{fontFamily: 'monospace', fontWeight: 600}}>
                         {formatBytes(image.size)}
                     </Typography>
                 </TableCell>
             )
         },
-        "Shared Size": {
+        Shared: {
             getValue: (image) => Number(image.sharedSize),
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        SHARED
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (image) => (
                 <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{fontFamily: 'monospace', color: 'text.secondary'}}>
                         {Number(image.sharedSize) > 0 ? formatBytes(image.sharedSize) : '—'}
                     </Typography>
                 </TableCell>
             )
         },
-        // todo tags
-        // tags: {
-        //     getValue: (image) => image.repoTags[0],
-        //     header: () => <TableCell sx={{fontWeight: 'bold', minWidth: 100}}>Tags</TableCell>,
-        //     cell: (image) => (
-        //         <TableCell>
-        //             <Stack direction="row" spacing={0.5} sx={{flexWrap: 'wrap', gap: 0.5}}>
-        //                 {image.repoTags.length > 1 ? (
-        //                     <>
-        //                         {image.repoTags.slice(1, 3).map((tag, idx) => (
-        //                             <Chip
-        //                                 key={idx}
-        //                                 label={tag}
-        //                                 size="small"
-        //                                 variant="outlined"
-        //                                 color="primary"
-        //                                 icon={<TagIcon/>}
-        //                                 sx={{fontSize: '0.75rem'}}
-        //                             />
-        //                         ))}
-        //                         {image.repoTags.length > 3 && (
-        //                             <Chip
-        //                                 label={`+${image.repoTags.length - 3} more`}
-        //                                 size="small"
-        //                                 variant="outlined"
-        //                                 sx={{fontSize: '0.75rem'}}
-        //                             />
-        //                         )}
-        //                     </>
-        //                 ) : (
-        //                     <Typography variant="body2" color="text.secondary">
-        //                         —
-        //                     </Typography>
-        //                 )}
-        //             </Stack>
-        //         </TableCell>
-        //     )
-        // },
         Created: {
             getValue: (image) => image.created,
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: 'bold', minWidth: 150}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : 'asc'}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                )
-            },
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
             cell: (image) => (
                 <TableCell>
-                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <CalendarIcon sx={{fontSize: 14, mr: 0.5, color: 'text.secondary'}}/>
-                        <Typography variant="body2">
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{color: 'text.secondary'}}>
+                        <CalendarIcon sx={{fontSize: 14}}/>
+                        <Typography variant="body2" sx={{whiteSpace: 'nowrap'}}>
                             {formatDate(image.created)}
                         </Typography>
-                    </Box>
+                    </Stack>
                 </TableCell>
             )
-        }
+        },
     };
 
     const sortedImages = sortTable(images, sortField, tableInfo, sortOrder);
@@ -335,19 +249,20 @@ export const ImageTable = (
     return (
         <TableContainer
             component={Paper}
+            variant="outlined"
             sx={{
-                height: '100%',
+                flexGrow: 1,
+                minHeight: 0,
+                borderRadius: 2,
                 overflow: 'auto',
                 ...scrollbarStyles
             }}
         >
-            <Table stickyHeader sx={{minWidth: 650}}>
+            <Table stickyHeader size="small">
                 <TableHead>
                     <TableRow>
                         {Object.entries(tableInfo).map(([key, val], index) => (
-                            <React.Fragment key={index}>
-                                {val.header(key)}
-                            </React.Fragment>
+                            <React.Fragment key={index}>{val.header(key)}</React.Fragment>
                         ))}
                     </TableRow>
                 </TableHead>
@@ -356,19 +271,16 @@ export const ImageTable = (
                         <TableRow
                             key={image.id}
                             hover
-                            sx={{
-                                '&:last-child td, &:last-child th': {border: 0},
-                                cursor: 'pointer',
-                                backgroundColor: selectedImages.includes(image.id)
-                                    ? 'rgba(25, 118, 210, 0.08)'
-                                    : 'transparent'
-                            }}
                             onClick={() => handleRowSelection(image.id)}
+                            selected={selectedImages.includes(image.id)}
+                            sx={{
+                                cursor: 'pointer',
+                                '&.Mui-selected': {bgcolor: 'primary.lighter'},
+                                '&:last-child td, &:last-child th': {border: 0}
+                            }}
                         >
                             {Object.values(tableInfo).map((val, index) => (
-                                <React.Fragment key={index}>
-                                    {val.cell(image)}
-                                </React.Fragment>
+                                <React.Fragment key={index}>{val.cell(image)}</React.Fragment>
                             ))}
                         </TableRow>
                     ))}
@@ -376,4 +288,13 @@ export const ImageTable = (
             </Table>
         </TableContainer>
     );
+};
+
+const headerStyles = {
+    fontWeight: 700,
+    fontSize: '0.65rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    py: 1.5,
+    whiteSpace: 'nowrap'
 };

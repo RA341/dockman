@@ -16,7 +16,7 @@ interface ActionButtonProps {
     variant?: 'outlined' | 'contained'
 }
 
-function ActionButtons({actions, variant = 'contained'}: ActionButtonProps) {
+function ActionButtons({actions, variant = 'outlined'}: ActionButtonProps) {
     const {buttonAction, activeAction} = useButtonAction()
 
     return (

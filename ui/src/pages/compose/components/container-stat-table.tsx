@@ -81,7 +81,6 @@ export function ContainerStatTable({
             component={Paper}
             variant="outlined"
             sx={{
-
                 flexGrow: 1,
                 minHeight: 0,
                 height: '100%',

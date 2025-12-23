@@ -10,7 +10,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {Delete, DnsOutlined, PlayArrow, Refresh, RestartAlt, Stop, Update,} from '@mui/icons-material';
+import {Delete, DnsOutlined, PlayArrow, Refresh, RestartAlt, Stop,} from '@mui/icons-material';
 import {ContainerTable} from '../compose/components/container-info-table';
 import {useMemo, useState} from "react";
 import {useDockerContainers} from "../../hooks/docker-containers.ts";
@@ -64,14 +64,14 @@ function ContainersPage() {
             handler: () => handleContainerAction('restart', 'containerRestart', "restarted"),
             tooltip: "",
         },
-        {
-            action: 'update',
-            buttonText: "Update",
-            icon: <Update/>,
-            disabled: selectedContainers.length === 0,
-            handler: () => handleContainerAction('update', 'containerUpdate', "updated"),
-            tooltip: "",
-        },
+        // {
+        //     action: 'update',
+        //     buttonText: "Update",
+        //     icon: <Update/>,
+        //     disabled: selectedContainers.length === 0,
+        //     handler: () => handleContainerAction('update', 'containerUpdate', "updated"),
+        //     tooltip: "",
+        // },
         {
             action: 'remove',
             buttonText: "Remove",
@@ -153,28 +153,26 @@ function ContainersPage() {
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}
             >
-                <Box sx={{flex: 1, maxWidth: 400}}>
+                <Box sx={{flex: 1, maxWidth: 270}}>
                     <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
                 </Box>
 
                 <Divider orientation="vertical" flexItem sx={{mx: 1}}/>
 
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 1, flex: 1}}>
-                    {selectedContainers.length > 0 ? (
-                        <Fade in={selectedContainers.length > 0}>
-                            <Box sx={{display: 'flex', alignItems: 'center', gap: 2, width: '100%'}}>
-                                <Typography variant="caption"
-                                            sx={{fontWeight: 700, color: 'primary.main', whiteSpace: 'nowrap'}}>
-                                    {selectedContainers.length} SELECTED
-                                </Typography>
-                                <ActionButtons actions={actions}/>
-                            </Box>
-                        </Fade>
-                    ) : (
-                        <Typography variant="body2" color="text.disabled" sx={{fontStyle: 'italic'}}>
-                            Select containers to perform bulk actions
-                        </Typography>
-                    )}
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 2, width: '100%'}}>
+                        <ActionButtons actions={actions}/>
+                        {selectedContainers.length > 0 && <Typography
+                            variant="caption"
+                            sx={{
+                                fontWeight: 700,
+                                color: 'primary.main',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {selectedContainers.length} SELECTED
+                        </Typography>}
+                    </Box>
                 </Box>
             </Paper>
 
@@ -194,7 +192,13 @@ function ContainersPage() {
                     <ContainersLoading/>
                 ) : (
                     <Fade in={!loading}>
-                        <Box sx={{height: '100%', width: '100%', overflow: 'hidden'}}>
+                        <Box sx={{
+                            height: '100%',
+                            width: '100%',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
                             <ContainerTable
                                 containers={filteredContainers}
                                 loading={loading}
