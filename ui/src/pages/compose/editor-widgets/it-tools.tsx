@@ -1,6 +1,12 @@
 import {Box} from "@mui/material";
+import {useConfig} from "../../../hooks/config.ts";
 
 const ItToolsWidget = () => {
+    const {dockYaml} = useConfig()
+
+    const itToolsUrl = dockYaml?.customTools["ittools"] ?? "https://it-tools.tech/"
+    console.log("itToolsUrl", itToolsUrl)
+
     return (
         <Box sx={{
             position: 'absolute',
@@ -11,7 +17,7 @@ const ItToolsWidget = () => {
             <Box
                 component="iframe"
                 title="It tools"
-                src="https://it-tools.tech/"
+                src={itToolsUrl}
                 sx={{
                     // Hide the default scrollbar its ugly
                     width: 'calc(100% + 20px)',

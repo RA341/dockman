@@ -166,10 +166,9 @@ func getFile(c *v1.File, hostname string) (string, error) {
 	return msg, nil
 }
 
-func (h *Handler) GetDockmanYaml(ctx context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
-
+func (h *Handler) GetDockmanYaml(_ context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
 	conf := h.srv.dy.GetDockmanYaml()
-	return connect.NewResponse(conf.toProto()), nil
+	return connect.NewResponse(conf.ToProto()), nil
 }
 
 func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
@@ -208,48 +207,4 @@ func (h *Handler) DeleteAlias(_ context.Context, req *connect.Request[v1.DeleteA
 		return nil, err
 	}
 	return connect.NewResponse(&v1.DeleteAliasResponse{}), nil
-}
-
-func (d *DockmanYaml) toProto() *v1.DockmanYaml {
-	return &v1.DockmanYaml{
-		DisableComposeQuickActions: d.DisableComposeQuickActions,
-		UseComposeFolders:          d.UseComposeFolders,
-		SearchLimit:                int32(d.SearchLimit),
-		VolumesPage:                d.VolumesPage.toProto(),
-		TabLimit:                   d.TabLimit,
-		NetworkPage:                d.NetworkPage.toProto(),
-		ImagePage:                  d.ImagePage.toProto(),
-		ContainerPage:              d.ContainerPage.toProto(),
-	}
-}
-
-func (s Sort) toProto() *v1.Sort {
-	return &v1.Sort{
-		SortOrder: s.Order,
-		SortField: s.Field,
-	}
-}
-
-func (v ContainerConfig) toProto() *v1.ContainerConfig {
-	return &v1.ContainerConfig{
-		Sort: v.Sort.toProto(),
-	}
-}
-
-func (v VolumesConfig) toProto() *v1.VolumesConfig {
-	return &v1.VolumesConfig{
-		Sort: v.Sort.toProto(),
-	}
-}
-
-func (n NetworkConfig) toProto() *v1.NetworkConfig {
-	return &v1.NetworkConfig{
-		Sort: n.Sort.toProto(),
-	}
-}
-
-func (i ImageConfig) toProto() *v1.ImageConfig {
-	return &v1.ImageConfig{
-		Sort: i.Sort.toProto(),
-	}
 }

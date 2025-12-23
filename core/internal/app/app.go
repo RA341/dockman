@@ -25,6 +25,7 @@ import (
 	"github.com/RA341/dockman/internal/docker/container"
 	dm "github.com/RA341/dockman/internal/docker_manager"
 	"github.com/RA341/dockman/internal/files"
+	"github.com/RA341/dockman/internal/files/dockman_yaml"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/host"
 	"github.com/RA341/dockman/internal/info"
@@ -67,7 +68,7 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 	// docker manager setup
 	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
 	fileStore := files.NewGormStore(gormDB)
-	dockYamlSrv := files.NewDockmanYaml(conf.DockYaml, func() string {
+	dockYamlSrv := dockman_yaml.NewDockmanYaml(conf.DockYaml, func() string {
 		// todo host aware
 		return conf.ComposeRoot
 	})
@@ -125,14 +126,14 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 
 	viewerSrv := viewer.New(
 		dockerManagerSrv.GetService,
-		func(relPath, host string) (string, error) {
-			_, relpath, root, err := fileSrv.LoadAll(relPath, host)
+		func(input, host string) (root string, relpath string, err error) {
+			_, relpath, root, err = fileSrv.LoadAll(input, host)
 			if err != nil {
-				return "", err
+				return "", "", err
 			}
 
 			join := filepath.Join(root, relpath)
-			return join, nil
+			return join, relpath, nil
 		},
 		func(host string) (*ssh2.Client, error) {
 			if host == container.LocalClient {

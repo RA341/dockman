@@ -724,6 +724,7 @@ func (*Empty) Descriptor() ([]byte, []int) {
 
 type DockmanYaml struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
+	CustomTools                map[string]string      `protobuf:"bytes,9,rep,name=customTools,proto3" json:"customTools,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	UseComposeFolders          bool                   `protobuf:"varint,1,opt,name=useComposeFolders,proto3" json:"useComposeFolders,omitempty"`
 	DisableComposeQuickActions bool                   `protobuf:"varint,7,opt,name=disableComposeQuickActions,proto3" json:"disableComposeQuickActions,omitempty"`
 	SearchLimit                int32                  `protobuf:"varint,8,opt,name=searchLimit,proto3" json:"searchLimit,omitempty"`
@@ -764,6 +765,13 @@ func (x *DockmanYaml) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DockmanYaml.ProtoReflect.Descriptor instead.
 func (*DockmanYaml) Descriptor() ([]byte, []int) {
 	return file_files_v1_files_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *DockmanYaml) GetCustomTools() map[string]string {
+	if x != nil {
+		return x.CustomTools
+	}
+	return nil
 }
 
 func (x *DockmanYaml) GetUseComposeFolders() bool {
@@ -1090,8 +1098,9 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x04File\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05isDir\x18\x02 \x01(\bR\x05isDir\"\a\n" +
-	"\x05Empty\"\xa5\x03\n" +
-	"\vDockmanYaml\x12,\n" +
+	"\x05Empty\"\xaf\x04\n" +
+	"\vDockmanYaml\x12H\n" +
+	"\vcustomTools\x18\t \x03(\v2&.files.v1.DockmanYaml.CustomToolsEntryR\vcustomTools\x12,\n" +
 	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +
 	"\x1adisableComposeQuickActions\x18\a \x01(\bR\x1adisableComposeQuickActions\x12 \n" +
 	"\vsearchLimit\x18\b \x01(\x05R\vsearchLimit\x12\x1a\n" +
@@ -1099,7 +1108,10 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\vvolumesPage\x18\x02 \x01(\v2\x17.files.v1.VolumesConfigR\vvolumesPage\x129\n" +
 	"\vnetworkPage\x18\x03 \x01(\v2\x17.files.v1.NetworkConfigR\vnetworkPage\x123\n" +
 	"\timagePage\x18\x04 \x01(\v2\x15.files.v1.ImageConfigR\timagePage\x12?\n" +
-	"\rcontainerPage\x18\x05 \x01(\v2\x19.files.v1.ContainerConfigR\rcontainerPage\"3\n" +
+	"\rcontainerPage\x18\x05 \x01(\v2\x19.files.v1.ContainerConfigR\rcontainerPage\x1a>\n" +
+	"\x10CustomToolsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"3\n" +
 	"\rVolumesConfig\x12\"\n" +
 	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"3\n" +
 	"\rNetworkConfig\x12\"\n" +
@@ -1137,7 +1149,7 @@ func file_files_v1_files_proto_rawDescGZIP() []byte {
 	return file_files_v1_files_proto_rawDescData
 }
 
-var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_files_v1_files_proto_goTypes = []any{
 	(*DeleteAliasRequest)(nil),  // 0: files.v1.DeleteAliasRequest
 	(*DeleteAliasResponse)(nil), // 1: files.v1.DeleteAliasResponse
@@ -1160,6 +1172,7 @@ var file_files_v1_files_proto_goTypes = []any{
 	(*ImageConfig)(nil),         // 18: files.v1.ImageConfig
 	(*ContainerConfig)(nil),     // 19: files.v1.ContainerConfig
 	(*Sort)(nil),                // 20: files.v1.Sort
+	nil,                         // 21: files.v1.DockmanYaml.CustomToolsEntry
 }
 var file_files_v1_files_proto_depIdxs = []int32{
 	5,  // 0: files.v1.DeleteAliasRequest.alias:type_name -> files.v1.Alias
@@ -1167,39 +1180,40 @@ var file_files_v1_files_proto_depIdxs = []int32{
 	5,  // 2: files.v1.ListAliasResponse.aliases:type_name -> files.v1.Alias
 	11, // 3: files.v1.ListResponse.entries:type_name -> files.v1.FsEntry
 	11, // 4: files.v1.FsEntry.subFiles:type_name -> files.v1.FsEntry
-	16, // 5: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
-	17, // 6: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
-	18, // 7: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
-	19, // 8: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
-	20, // 9: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
-	20, // 10: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
-	20, // 11: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
-	20, // 12: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
-	7,  // 13: files.v1.FileService.List:input_type -> files.v1.ListRequest
-	13, // 14: files.v1.FileService.Create:input_type -> files.v1.File
-	13, // 15: files.v1.FileService.Delete:input_type -> files.v1.File
-	13, // 16: files.v1.FileService.Exists:input_type -> files.v1.File
-	12, // 17: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
-	14, // 18: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
-	9,  // 19: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
-	4,  // 20: files.v1.FileService.ListAlias:input_type -> files.v1.ListAliasRequest
-	2,  // 21: files.v1.FileService.AddAlias:input_type -> files.v1.AddAliasRequest
-	0,  // 22: files.v1.FileService.DeleteAlias:input_type -> files.v1.DeleteAliasRequest
-	8,  // 23: files.v1.FileService.List:output_type -> files.v1.ListResponse
-	14, // 24: files.v1.FileService.Create:output_type -> files.v1.Empty
-	14, // 25: files.v1.FileService.Delete:output_type -> files.v1.Empty
-	14, // 26: files.v1.FileService.Exists:output_type -> files.v1.Empty
-	14, // 27: files.v1.FileService.Rename:output_type -> files.v1.Empty
-	15, // 28: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
-	10, // 29: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
-	6,  // 30: files.v1.FileService.ListAlias:output_type -> files.v1.ListAliasResponse
-	3,  // 31: files.v1.FileService.AddAlias:output_type -> files.v1.AddAliasResponse
-	1,  // 32: files.v1.FileService.DeleteAlias:output_type -> files.v1.DeleteAliasResponse
-	23, // [23:33] is the sub-list for method output_type
-	13, // [13:23] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	21, // 5: files.v1.DockmanYaml.customTools:type_name -> files.v1.DockmanYaml.CustomToolsEntry
+	16, // 6: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
+	17, // 7: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
+	18, // 8: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
+	19, // 9: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
+	20, // 10: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
+	20, // 11: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
+	20, // 12: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
+	20, // 13: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
+	7,  // 14: files.v1.FileService.List:input_type -> files.v1.ListRequest
+	13, // 15: files.v1.FileService.Create:input_type -> files.v1.File
+	13, // 16: files.v1.FileService.Delete:input_type -> files.v1.File
+	13, // 17: files.v1.FileService.Exists:input_type -> files.v1.File
+	12, // 18: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
+	14, // 19: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
+	9,  // 20: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
+	4,  // 21: files.v1.FileService.ListAlias:input_type -> files.v1.ListAliasRequest
+	2,  // 22: files.v1.FileService.AddAlias:input_type -> files.v1.AddAliasRequest
+	0,  // 23: files.v1.FileService.DeleteAlias:input_type -> files.v1.DeleteAliasRequest
+	8,  // 24: files.v1.FileService.List:output_type -> files.v1.ListResponse
+	14, // 25: files.v1.FileService.Create:output_type -> files.v1.Empty
+	14, // 26: files.v1.FileService.Delete:output_type -> files.v1.Empty
+	14, // 27: files.v1.FileService.Exists:output_type -> files.v1.Empty
+	14, // 28: files.v1.FileService.Rename:output_type -> files.v1.Empty
+	15, // 29: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
+	10, // 30: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
+	6,  // 31: files.v1.FileService.ListAlias:output_type -> files.v1.ListAliasResponse
+	3,  // 32: files.v1.FileService.AddAlias:output_type -> files.v1.AddAliasResponse
+	1,  // 33: files.v1.FileService.DeleteAlias:output_type -> files.v1.DeleteAliasResponse
+	24, // [24:34] is the sub-list for method output_type
+	14, // [14:24] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }
@@ -1213,7 +1227,7 @@ func file_files_v1_files_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_files_v1_files_proto_rawDesc), len(file_files_v1_files_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -12,6 +12,7 @@ import (
 
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/docker/container"
+	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
 	"github.com/RA341/dockman/internal/files/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
 
@@ -29,7 +30,7 @@ type Service struct {
 	config *config.FilePerms
 	store  Store
 	GetFS  ActiveFS
-	dy     *ServiceDockmanYaml
+	dy     *dockmanYaml.Service
 }
 
 // RootAlias default file location alias for compose root
@@ -42,7 +43,7 @@ func FormatAlias(alias string, host string) string {
 func New(
 	store Store,
 	getSSH SFTPProvider,
-	dy *ServiceDockmanYaml,
+	dy *dockmanYaml.Service,
 	localComposeRoot string,
 	config *config.FilePerms,
 ) *Service {
@@ -121,9 +122,8 @@ func (s *Service) List(path string, hostname string) ([]Entry, error) {
 		result = append(result, ele)
 	}
 
-	conf := s.dy.GetDockmanYaml()
 	slices.SortFunc(result, func(a, b Entry) int {
-		return conf.sortFiles(&a, &b)
+		return s.sortFiles(&a, &b)
 	})
 
 	return result, nil
@@ -147,10 +147,8 @@ func (s *Service) listFiles(cliFs filesystem.FileSystem, relDirpath string, disp
 		)
 	}
 
-	// sort subfiles
-	conf := s.dy.GetDockmanYaml()
 	slices.SortFunc(filesInSubDir, func(a, b Entry) int {
-		return conf.sortFiles(&a, &b)
+		return s.sortFiles(&a, &b)
 	})
 
 	return filesInSubDir, nil
@@ -310,6 +308,7 @@ func CheckFileType(reader io.Reader) error {
 
 	// Almost all text formats (json, yaml, txt)
 	// inherit from "text/plain"
+	// todo
 	isText := false
 	for m := mtype; m != nil; m = m.Parent() {
 		if m.Is("text/plain") {
@@ -431,4 +430,58 @@ func (s *Service) listAll(dirPath string, hostname string) ([]string, error) {
 	})
 
 	return filez, err
+}
+
+func (s *Service) sortFiles(a, b *Entry) int {
+	ra := s.getSortRank(a)
+	rb := s.getSortRank(b)
+
+	if ra < rb {
+		return -1
+	}
+	if ra > rb {
+		return 1
+	}
+	return strings.Compare(a.fullpath, b.fullpath)
+}
+
+// getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
+func (s *Service) getSortRank(entry *Entry) int {
+	conf := s.dy.GetDockmanYaml()
+
+	base := filepath.Base(entry.fullpath)
+	// -1: pinned files (highest priority)
+	if priority, ok := conf.PinnedFiles[base]; ok {
+		// potential bug, but if someone is manually writing the order of 100000 files i say get a life
+		// -999 > -12 in this context, pretty stupid but i cant be bothered to fix this mathematically
+		return priority - 100_000
+	}
+
+	// 0: dotfiles (highest priority)
+	if strings.HasPrefix(base, ".") {
+		return 1
+	}
+
+	// Check if it's a directory (has subfiles)
+	if entry.isDir {
+		return 2
+	}
+
+	// 2+: normal files, ranked by getFileSortRank
+	return 3 + s.getFileSortRank(entry.fullpath)
+}
+
+// getFileSortRank assigns priority within normal files
+func (s *Service) getFileSortRank(filename string) int {
+	base := filepath.Base(filename)
+	// Priority 0: docker-compose files
+	if strings.HasSuffix(base, "compose.yaml") || strings.HasSuffix(base, "compose.yml") {
+		return 0
+	}
+	// Priority 1: other yaml/yml
+	if strings.HasSuffix(base, ".yaml") || strings.HasSuffix(base, ".yml") {
+		return 1
+	}
+	// Priority 2: everything else
+	return 2
 }

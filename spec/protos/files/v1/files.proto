@@ -85,6 +85,7 @@ message File {
 message Empty {}
 
 message DockmanYaml {
+  map<string, string> customTools = 9;
   bool useComposeFolders = 1;
   bool disableComposeQuickActions = 7;
   int32 searchLimit = 8;

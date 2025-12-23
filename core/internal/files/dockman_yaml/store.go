@@ -1,4 +1,4 @@
-package files
+package dockman_yaml
 
 const dockmanYamlFileYml = ".dockman.yml"
 const dockmanYamlFileYaml = ".dockman.yaml"
@@ -55,7 +55,11 @@ type DockmanYaml struct {
 	ImagePage ImageConfig `yaml:"images"`
 
 	ContainerPage ContainerConfig `yaml:"containers"`
-	SearchLimit   int             `yaml:"searchLimit"`
+
+	// define a max search limit for files
+	SearchLimit int `yaml:"searchLimit"`
+
+	CustomTools map[string]string `yaml:"customTools"`
 }
 
 type VolumesConfig struct {
