@@ -24,6 +24,7 @@ import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
 import {ComposePage} from "./pages/compose/compose-page.tsx";
 import {useEditorUrl} from "./lib/editor.ts";
 import ContainerInspectPage from "./pages/containers/inspect.tsx";
+import scrollbarStyles from "./components/scrollbar-style.tsx";
 
 export function App() {
     return (
@@ -151,51 +152,34 @@ const TestPage = () => {
 const darkTheme = createTheme({
     palette: {
         mode: 'dark',
-        primary:
-            {
-                main: '#90caf9',
-            }
-        ,
-        secondary: {
-            main: '#f48fb1',
-        }
-        ,
+        primary: {main: '#90caf9'},
+        secondary: {main: '#f48fb1'},
         background: {
-            default:
-                '#121212',
-            paper:
-                '#1e1e1e',
-        }
-        ,
-    }
-    ,
+            default: '#121212',
+            paper: '#1e1e1e',
+        },
+    },
     typography: {
         fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    }
-    ,
+    },
     components: {
+        MuiCssBaseline: {
+            styleOverrides: {
+                body: scrollbarStyles,
+                '*': scrollbarStyles,
+            },
+        },
         MuiDrawer: {
             styleOverrides: {
                 paper: {
                     backgroundColor: '#1a1a1a',
-                }
-                ,
-            }
-            ,
-        }
-        ,
-    }
-    ,
+                },
+            },
+        },
+    },
 });
 
-
-const styles: {
-    [key
-    :
-    string
-        ]:
-        React.CSSProperties
-} = {
+const styles: { [key: string]: React.CSSProperties } = {
     loadingWrapper: {
         display: 'flex',
         flexDirection:

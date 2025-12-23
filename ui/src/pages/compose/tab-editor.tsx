@@ -4,7 +4,7 @@ import {callRPC, useDockerClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {type SaveState} from "./hooks/status-hook.ts";
-import {CloudUploadOutlined, ErrorOutlineOutlined, MoveDownRounded} from "@mui/icons-material";
+import {CloudUploadOutlined, ConstructionRounded, ErrorOutlineOutlined, MoveDownRounded} from "@mui/icons-material";
 import {isComposeFile} from "../../lib/editor.ts";
 import useResizeBar from "./hooks/resize-hook.ts";
 import {useFileComponents} from "./state/state.tsx";
@@ -12,6 +12,7 @@ import {useFiles} from "../../context/file-context.tsx";
 import ComposerizeWidget from "./editor-widgets/composerize.tsx";
 import EditorErrorWidget from "./editor-widgets/errors.tsx";
 import EditorDeployWidget from "./editor-widgets/deploy.tsx";
+import ItToolsWidget from "./editor-widgets/it-tools.tsx";
 
 interface EditorProps {
     selectedPage: string;
@@ -53,6 +54,11 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
                 icon: <ErrorOutlineOutlined/>,
                 label: 'Show validation errors',
             },
+            "it-tools": {
+                element: <ItToolsWidget/>,
+                icon: <ConstructionRounded/>,
+                label: 'Use IT tools',
+            }
         };
 
         if (isComposeFile(selectedPage)) {
@@ -89,8 +95,8 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
         }
 
         if (isComposeFile(selectedPage)) {
-            const {val: errs, err: err2} = await callRPC(
-                () => dockerClient.composeValidate({
+            const {val: errs, err: err2} = await callRPC(() =>
+                dockerClient.composeValidate({
                     filename: selectedPage,
                 }))
             if (err2) {
@@ -103,13 +109,19 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
                 setActiveAction('errors')
             } else {
                 setErrors([])
-                setActiveAction(null)
+                setActiveAction(prevState => {
+                    if (prevState && prevState === 'errors') {
+                        return null
+                    } else {
+                        return prevState
+                    }
+                })
             }
         }
         // eslint-disable-next-line
     }, [selectedPage, activeAlias, setStatus]);
 
-    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left')
+    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left', 450)
 
     function handleEditorChange(value: string | undefined): void {
         const newValue = value!
