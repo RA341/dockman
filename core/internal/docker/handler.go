@@ -163,7 +163,7 @@ func (h *Handler) ComposeList(ctx context.Context, req *connect.Request[v1.Compo
 			return err
 		}
 
-		result = h.containersToRpc(res, dkSrv.Host, dkSrv)
+		result, _ = h.containersToRpc(res, dkSrv.Host, dkSrv)
 		return nil
 	})
 	return connect.NewResponse(&v1.ListResponse{List: result}), err

@@ -22,6 +22,25 @@ import (
 // 			Container Actions 			  //
 ////////////////////////////////////////////
 
+func (h *Handler) ContainerList(ctx context.Context, req *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error) {
+	host, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := dkSrv.Container.ContainersList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rpcResult, count := h.containersToRpc(result, host, dkSrv)
+
+	return connect.NewResponse(&v1.ListResponse{
+		List:        rpcResult,
+		StatusCount: count,
+	}), err
+}
+
 func (h *Handler) ContainerStart(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error) {
 	_, dkSrv, err := h.getHost(ctx)
 	if err != nil {
@@ -128,21 +147,6 @@ func (h *Handler) ContainerUpdate(ctx context.Context, req *connect.Request[v1.C
 	return connect.NewResponse(&v1.Empty{}), nil
 }
 
-func (h *Handler) ContainerList(ctx context.Context, req *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error) {
-	host, dkSrv, err := h.getHost(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := dkSrv.Container.ContainersList(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	rpcResult := h.containersToRpc(result, host, dkSrv)
-	return connect.NewResponse(&v1.ListResponse{List: rpcResult}), err
-}
-
 func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error) {
 	file := req.Msg.GetFile()
 	_, dkSrv, err := h.getHost(ctx)
@@ -222,9 +226,12 @@ func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.Con
 	return nil
 }
 
-func (h *Handler) containersToRpc(result []container.Summary, host string, srv *Service) []*v1.ContainerList {
+func (h *Handler) containersToRpc(result []container.Summary, host string, srv *Service) ([]*v1.ContainerList, map[string]int32) {
 	var dockerResult []*v1.ContainerList
+	statusCount := map[string]int32{}
 	for _, stack := range result {
+		statusCount[string(stack.State)]++
+
 		//available, err := h.container().imageUpdateStore.GetUpdateAvailable(
 		//	h.container().hostname,
 		//	stack.ImageID,
@@ -260,5 +267,5 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 			updater.ImageUpdate{},
 		))
 	}
-	return dockerResult
+	return dockerResult, statusCount
 }

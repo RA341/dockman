@@ -301,7 +301,8 @@ message SystemInfo {
 }
 
 message ListResponse {
-  repeated ContainerList list = 1;
+  map<string, int32> statusCount = 1;
+  repeated ContainerList list = 2;
 }
 
 message ContainerList {

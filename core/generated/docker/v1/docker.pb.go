@@ -2471,7 +2471,8 @@ func (x *SystemInfo) GetMemInBytes() uint64 {
 
 type ListResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	List          []*ContainerList       `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
+	StatusCount   map[string]int32       `protobuf:"bytes,1,rep,name=statusCount,proto3" json:"statusCount,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	List          []*ContainerList       `protobuf:"bytes,2,rep,name=list,proto3" json:"list,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2504,6 +2505,13 @@ func (x *ListResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListResponse.ProtoReflect.Descriptor instead.
 func (*ListResponse) Descriptor() ([]byte, []int) {
 	return file_docker_v1_docker_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ListResponse) GetStatusCount() map[string]int32 {
+	if x != nil {
+		return x.StatusCount
+	}
+	return nil
 }
 
 func (x *ListResponse) GetList() []*ContainerList {
@@ -3138,9 +3146,13 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"\x03CPU\x18\x01 \x01(\x01R\x03CPU\x12\x1e\n" +
 	"\n" +
 	"memInBytes\x18\x02 \x01(\x04R\n" +
-	"memInBytes\"<\n" +
-	"\fListResponse\x12,\n" +
-	"\x04list\x18\x01 \x03(\v2\x18.docker.v1.ContainerListR\x04list\"\xee\x02\n" +
+	"memInBytes\"\xc8\x01\n" +
+	"\fListResponse\x12J\n" +
+	"\vstatusCount\x18\x01 \x03(\v2(.docker.v1.ListResponse.StatusCountEntryR\vstatusCount\x12,\n" +
+	"\x04list\x18\x02 \x03(\v2\x18.docker.v1.ContainerListR\x04list\x1a>\n" +
+	"\x10StatusCountEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xee\x02\n" +
 	"\rContainerList\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aimageID\x18\x02 \x01(\tR\aimageID\x12\x1c\n" +
@@ -3242,7 +3254,7 @@ func file_docker_v1_docker_proto_rawDescGZIP() []byte {
 }
 
 var file_docker_v1_docker_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_docker_v1_docker_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_docker_v1_docker_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_docker_v1_docker_proto_goTypes = []any{
 	(SORT_FIELD)(0),                 // 0: docker.v1.SORT_FIELD
 	(ORDER)(0),                      // 1: docker.v1.ORDER
@@ -3296,6 +3308,7 @@ var file_docker_v1_docker_proto_goTypes = []any{
 	(*ContainerRequest)(nil),        // 49: docker.v1.ContainerRequest
 	(*ComposeFile)(nil),             // 50: docker.v1.ComposeFile
 	nil,                             // 51: docker.v1.Image.LabelsEntry
+	nil,                             // 52: docker.v1.ListResponse.StatusCountEntry
 }
 var file_docker_v1_docker_proto_depIdxs = []int32{
 	3,  // 0: docker.v1.ContainerInspectMessage.mounts:type_name -> docker.v1.ContainerMount
@@ -3315,69 +3328,70 @@ var file_docker_v1_docker_proto_depIdxs = []int32{
 	50, // 14: docker.v1.StatsRequest.file:type_name -> docker.v1.ComposeFile
 	0,  // 15: docker.v1.StatsRequest.sortBy:type_name -> docker.v1.SORT_FIELD
 	1,  // 16: docker.v1.StatsRequest.order:type_name -> docker.v1.ORDER
-	45, // 17: docker.v1.ListResponse.list:type_name -> docker.v1.ContainerList
-	47, // 18: docker.v1.ContainerList.ports:type_name -> docker.v1.Port
-	49, // 19: docker.v1.DockerService.ContainerStart:input_type -> docker.v1.ContainerRequest
-	49, // 20: docker.v1.DockerService.ContainerStop:input_type -> docker.v1.ContainerRequest
-	49, // 21: docker.v1.DockerService.ContainerRemove:input_type -> docker.v1.ContainerRequest
-	49, // 22: docker.v1.DockerService.ContainerRestart:input_type -> docker.v1.ContainerRequest
-	49, // 23: docker.v1.DockerService.ContainerUpdate:input_type -> docker.v1.ContainerRequest
-	4,  // 24: docker.v1.DockerService.ContainerList:input_type -> docker.v1.ContainerListRequest
-	42, // 25: docker.v1.DockerService.ContainerStats:input_type -> docker.v1.StatsRequest
-	39, // 26: docker.v1.DockerService.ContainerLogs:input_type -> docker.v1.ContainerLogsRequest
-	39, // 27: docker.v1.DockerService.ContainerInspect:input_type -> docker.v1.ContainerLogsRequest
-	50, // 28: docker.v1.DockerService.ComposeUp:input_type -> docker.v1.ComposeFile
-	50, // 29: docker.v1.DockerService.ComposeDown:input_type -> docker.v1.ComposeFile
-	50, // 30: docker.v1.DockerService.ComposeStart:input_type -> docker.v1.ComposeFile
-	50, // 31: docker.v1.DockerService.ComposeStop:input_type -> docker.v1.ComposeFile
-	50, // 32: docker.v1.DockerService.ComposeRestart:input_type -> docker.v1.ComposeFile
-	50, // 33: docker.v1.DockerService.ComposeUpdate:input_type -> docker.v1.ComposeFile
-	50, // 34: docker.v1.DockerService.ComposeList:input_type -> docker.v1.ComposeFile
-	50, // 35: docker.v1.DockerService.ComposeValidate:input_type -> docker.v1.ComposeFile
-	18, // 36: docker.v1.DockerService.ImageList:input_type -> docker.v1.ListImagesRequest
-	20, // 37: docker.v1.DockerService.ImageRemove:input_type -> docker.v1.RemoveImageRequest
-	23, // 38: docker.v1.DockerService.ImagePruneUnused:input_type -> docker.v1.ImagePruneRequest
-	9,  // 39: docker.v1.DockerService.ImageInspect:input_type -> docker.v1.ImageInspectRequest
-	26, // 40: docker.v1.DockerService.VolumeList:input_type -> docker.v1.ListVolumesRequest
-	28, // 41: docker.v1.DockerService.VolumeCreate:input_type -> docker.v1.CreateVolumeRequest
-	30, // 42: docker.v1.DockerService.VolumeDelete:input_type -> docker.v1.DeleteVolumeRequest
-	33, // 43: docker.v1.DockerService.NetworkList:input_type -> docker.v1.ListNetworksRequest
-	35, // 44: docker.v1.DockerService.NetworkCreate:input_type -> docker.v1.CreateNetworkRequest
-	37, // 45: docker.v1.DockerService.NetworkDelete:input_type -> docker.v1.DeleteNetworkRequest
-	5,  // 46: docker.v1.DockerService.NetworkInspect:input_type -> docker.v1.NetworkInspectRequest
-	40, // 47: docker.v1.DockerService.ContainerStart:output_type -> docker.v1.LogsMessage
-	40, // 48: docker.v1.DockerService.ContainerStop:output_type -> docker.v1.LogsMessage
-	40, // 49: docker.v1.DockerService.ContainerRemove:output_type -> docker.v1.LogsMessage
-	40, // 50: docker.v1.DockerService.ContainerRestart:output_type -> docker.v1.LogsMessage
-	48, // 51: docker.v1.DockerService.ContainerUpdate:output_type -> docker.v1.Empty
-	44, // 52: docker.v1.DockerService.ContainerList:output_type -> docker.v1.ListResponse
-	41, // 53: docker.v1.DockerService.ContainerStats:output_type -> docker.v1.StatsResponse
-	40, // 54: docker.v1.DockerService.ContainerLogs:output_type -> docker.v1.LogsMessage
-	2,  // 55: docker.v1.DockerService.ContainerInspect:output_type -> docker.v1.ContainerInspectMessage
-	40, // 56: docker.v1.DockerService.ComposeUp:output_type -> docker.v1.LogsMessage
-	40, // 57: docker.v1.DockerService.ComposeDown:output_type -> docker.v1.LogsMessage
-	40, // 58: docker.v1.DockerService.ComposeStart:output_type -> docker.v1.LogsMessage
-	40, // 59: docker.v1.DockerService.ComposeStop:output_type -> docker.v1.LogsMessage
-	40, // 60: docker.v1.DockerService.ComposeRestart:output_type -> docker.v1.LogsMessage
-	40, // 61: docker.v1.DockerService.ComposeUpdate:output_type -> docker.v1.LogsMessage
-	44, // 62: docker.v1.DockerService.ComposeList:output_type -> docker.v1.ListResponse
-	13, // 63: docker.v1.DockerService.ComposeValidate:output_type -> docker.v1.ComposeValidateResponse
-	19, // 64: docker.v1.DockerService.ImageList:output_type -> docker.v1.ListImagesResponse
-	21, // 65: docker.v1.DockerService.ImageRemove:output_type -> docker.v1.RemoveImageResponse
-	22, // 66: docker.v1.DockerService.ImagePruneUnused:output_type -> docker.v1.ImagePruneResponse
-	10, // 67: docker.v1.DockerService.ImageInspect:output_type -> docker.v1.ImageInspectResponse
-	27, // 68: docker.v1.DockerService.VolumeList:output_type -> docker.v1.ListVolumesResponse
-	29, // 69: docker.v1.DockerService.VolumeCreate:output_type -> docker.v1.CreateVolumeResponse
-	31, // 70: docker.v1.DockerService.VolumeDelete:output_type -> docker.v1.DeleteVolumeResponse
-	34, // 71: docker.v1.DockerService.NetworkList:output_type -> docker.v1.ListNetworksResponse
-	36, // 72: docker.v1.DockerService.NetworkCreate:output_type -> docker.v1.CreateNetworkResponse
-	38, // 73: docker.v1.DockerService.NetworkDelete:output_type -> docker.v1.DeleteNetworkResponse
-	6,  // 74: docker.v1.DockerService.NetworkInspect:output_type -> docker.v1.NetworkInspectResponse
-	47, // [47:75] is the sub-list for method output_type
-	19, // [19:47] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	52, // 17: docker.v1.ListResponse.statusCount:type_name -> docker.v1.ListResponse.StatusCountEntry
+	45, // 18: docker.v1.ListResponse.list:type_name -> docker.v1.ContainerList
+	47, // 19: docker.v1.ContainerList.ports:type_name -> docker.v1.Port
+	49, // 20: docker.v1.DockerService.ContainerStart:input_type -> docker.v1.ContainerRequest
+	49, // 21: docker.v1.DockerService.ContainerStop:input_type -> docker.v1.ContainerRequest
+	49, // 22: docker.v1.DockerService.ContainerRemove:input_type -> docker.v1.ContainerRequest
+	49, // 23: docker.v1.DockerService.ContainerRestart:input_type -> docker.v1.ContainerRequest
+	49, // 24: docker.v1.DockerService.ContainerUpdate:input_type -> docker.v1.ContainerRequest
+	4,  // 25: docker.v1.DockerService.ContainerList:input_type -> docker.v1.ContainerListRequest
+	42, // 26: docker.v1.DockerService.ContainerStats:input_type -> docker.v1.StatsRequest
+	39, // 27: docker.v1.DockerService.ContainerLogs:input_type -> docker.v1.ContainerLogsRequest
+	39, // 28: docker.v1.DockerService.ContainerInspect:input_type -> docker.v1.ContainerLogsRequest
+	50, // 29: docker.v1.DockerService.ComposeUp:input_type -> docker.v1.ComposeFile
+	50, // 30: docker.v1.DockerService.ComposeDown:input_type -> docker.v1.ComposeFile
+	50, // 31: docker.v1.DockerService.ComposeStart:input_type -> docker.v1.ComposeFile
+	50, // 32: docker.v1.DockerService.ComposeStop:input_type -> docker.v1.ComposeFile
+	50, // 33: docker.v1.DockerService.ComposeRestart:input_type -> docker.v1.ComposeFile
+	50, // 34: docker.v1.DockerService.ComposeUpdate:input_type -> docker.v1.ComposeFile
+	50, // 35: docker.v1.DockerService.ComposeList:input_type -> docker.v1.ComposeFile
+	50, // 36: docker.v1.DockerService.ComposeValidate:input_type -> docker.v1.ComposeFile
+	18, // 37: docker.v1.DockerService.ImageList:input_type -> docker.v1.ListImagesRequest
+	20, // 38: docker.v1.DockerService.ImageRemove:input_type -> docker.v1.RemoveImageRequest
+	23, // 39: docker.v1.DockerService.ImagePruneUnused:input_type -> docker.v1.ImagePruneRequest
+	9,  // 40: docker.v1.DockerService.ImageInspect:input_type -> docker.v1.ImageInspectRequest
+	26, // 41: docker.v1.DockerService.VolumeList:input_type -> docker.v1.ListVolumesRequest
+	28, // 42: docker.v1.DockerService.VolumeCreate:input_type -> docker.v1.CreateVolumeRequest
+	30, // 43: docker.v1.DockerService.VolumeDelete:input_type -> docker.v1.DeleteVolumeRequest
+	33, // 44: docker.v1.DockerService.NetworkList:input_type -> docker.v1.ListNetworksRequest
+	35, // 45: docker.v1.DockerService.NetworkCreate:input_type -> docker.v1.CreateNetworkRequest
+	37, // 46: docker.v1.DockerService.NetworkDelete:input_type -> docker.v1.DeleteNetworkRequest
+	5,  // 47: docker.v1.DockerService.NetworkInspect:input_type -> docker.v1.NetworkInspectRequest
+	40, // 48: docker.v1.DockerService.ContainerStart:output_type -> docker.v1.LogsMessage
+	40, // 49: docker.v1.DockerService.ContainerStop:output_type -> docker.v1.LogsMessage
+	40, // 50: docker.v1.DockerService.ContainerRemove:output_type -> docker.v1.LogsMessage
+	40, // 51: docker.v1.DockerService.ContainerRestart:output_type -> docker.v1.LogsMessage
+	48, // 52: docker.v1.DockerService.ContainerUpdate:output_type -> docker.v1.Empty
+	44, // 53: docker.v1.DockerService.ContainerList:output_type -> docker.v1.ListResponse
+	41, // 54: docker.v1.DockerService.ContainerStats:output_type -> docker.v1.StatsResponse
+	40, // 55: docker.v1.DockerService.ContainerLogs:output_type -> docker.v1.LogsMessage
+	2,  // 56: docker.v1.DockerService.ContainerInspect:output_type -> docker.v1.ContainerInspectMessage
+	40, // 57: docker.v1.DockerService.ComposeUp:output_type -> docker.v1.LogsMessage
+	40, // 58: docker.v1.DockerService.ComposeDown:output_type -> docker.v1.LogsMessage
+	40, // 59: docker.v1.DockerService.ComposeStart:output_type -> docker.v1.LogsMessage
+	40, // 60: docker.v1.DockerService.ComposeStop:output_type -> docker.v1.LogsMessage
+	40, // 61: docker.v1.DockerService.ComposeRestart:output_type -> docker.v1.LogsMessage
+	40, // 62: docker.v1.DockerService.ComposeUpdate:output_type -> docker.v1.LogsMessage
+	44, // 63: docker.v1.DockerService.ComposeList:output_type -> docker.v1.ListResponse
+	13, // 64: docker.v1.DockerService.ComposeValidate:output_type -> docker.v1.ComposeValidateResponse
+	19, // 65: docker.v1.DockerService.ImageList:output_type -> docker.v1.ListImagesResponse
+	21, // 66: docker.v1.DockerService.ImageRemove:output_type -> docker.v1.RemoveImageResponse
+	22, // 67: docker.v1.DockerService.ImagePruneUnused:output_type -> docker.v1.ImagePruneResponse
+	10, // 68: docker.v1.DockerService.ImageInspect:output_type -> docker.v1.ImageInspectResponse
+	27, // 69: docker.v1.DockerService.VolumeList:output_type -> docker.v1.ListVolumesResponse
+	29, // 70: docker.v1.DockerService.VolumeCreate:output_type -> docker.v1.CreateVolumeResponse
+	31, // 71: docker.v1.DockerService.VolumeDelete:output_type -> docker.v1.DeleteVolumeResponse
+	34, // 72: docker.v1.DockerService.NetworkList:output_type -> docker.v1.ListNetworksResponse
+	36, // 73: docker.v1.DockerService.NetworkCreate:output_type -> docker.v1.CreateNetworkResponse
+	38, // 74: docker.v1.DockerService.NetworkDelete:output_type -> docker.v1.DeleteNetworkResponse
+	6,  // 75: docker.v1.DockerService.NetworkInspect:output_type -> docker.v1.NetworkInspectResponse
+	48, // [48:76] is the sub-list for method output_type
+	20, // [20:48] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_docker_v1_docker_proto_init() }
@@ -3391,7 +3405,7 @@ func file_docker_v1_docker_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_docker_v1_docker_proto_rawDesc), len(file_docker_v1_docker_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   50,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
