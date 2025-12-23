@@ -141,46 +141,44 @@ const FileTabBar = () => {
     }, [tabs])
 
     return (
-        tablist.length > 0 && (
-            <Box sx={{borderBottom: 1, borderColor: 'divider', flexShrink: 0}}>
-                <Tabs
-                    value={filename}
-                    onChange={(_event, value) => onTabClick(value as string)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                >
-                    {tablist.map((tabFilename) => (
-                        <Tab
-                            key={tabFilename}
-                            value={tabFilename}
-                            sx={{textTransform: 'none', p: 0.5}}
-                            label={
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    px: 1
-                                }}>
-                                    <Tooltip title={filename}>
-                                        <span>{getTabName(tabFilename)}</span>
-                                    </Tooltip>
-                                    <IconButton
-                                        size="small"
-                                        component="div"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            closeTab(tabFilename)
-                                        }}
-                                        sx={{ml: 1.5}}
-                                    >
-                                        <Close sx={{fontSize: '1rem'}}/>
-                                    </IconButton>
-                                </Box>
-                            }
-                        />
-                    ))}
-                </Tabs>
-            </Box>
-        )
+        <Box sx={{borderBottom: 1, borderColor: 'divider', flexShrink: 0}}>
+            <Tabs
+                value={filename}
+                onChange={(_event, value) => onTabClick(value as string)}
+                variant="scrollable"
+                scrollButtons="auto"
+            >
+                {tablist.map((tabFilename) => (
+                    <Tab
+                        key={tabFilename}
+                        value={tabFilename}
+                        sx={{textTransform: 'none', p: 0.5}}
+                        label={
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                px: 1
+                            }}>
+                                <Tooltip title={filename}>
+                                    <span>{getTabName(tabFilename)}</span>
+                                </Tooltip>
+                                <IconButton
+                                    size="small"
+                                    component="div"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        closeTab(tabFilename)
+                                    }}
+                                    sx={{ml: 1.5}}
+                                >
+                                    <Close sx={{fontSize: '1rem'}}/>
+                                </IconButton>
+                            </Box>
+                        }
+                    />
+                ))}
+            </Tabs>
+        </Box>
     );
 };
 

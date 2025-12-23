@@ -1,6 +1,6 @@
-import React, {type ReactNode, useEffect, useMemo, useState} from 'react';
+import React, {type ReactElement, type ReactNode, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import {Box, CircularProgress, Fade, Tab, Tabs, Tooltip, Typography} from '@mui/material';
+import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip, Typography} from '@mui/material';
 import {useFileComponents, useOpenFiles} from "../state/state.tsx";
 import {callRPC, useFileClient} from "../../../lib/api.ts";
 import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
@@ -10,7 +10,8 @@ import {ShortcutFormatter} from "./shortcut-formatter.tsx";
 import {TabDeploy} from "../tab-deploy.tsx";
 import {TabStat} from "../tab-stats.tsx";
 import CenteredMessage from "../../../components/centered-message.tsx";
-import {ErrorOutline} from "@mui/icons-material";
+import {ErrorOutline, RefreshRounded} from "@mui/icons-material";
+import {useConfig} from "../../../hooks/config.ts";
 
 export enum TabType {
     // noinspection JSUnusedGlobalSymbols
@@ -54,9 +55,21 @@ const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> =
     }
 };
 
+interface ActionButtons {
+    title: string;
+    icon: ReactElement;
+    onClick: () => void;
+}
+
+function isDockmanYaml(filename: string) {
+    return filename.endsWith(".dockman.yaml") ||
+        filename.endsWith(".dockman.yml");
+}
+
 function TextEditor() {
     const {filename: fn} = useFileComponents()
     const filename = fn! // file will never be null if we reached this point
+    const {fetchDockmanYaml} = useConfig()
 
     const fileService = useFileClient();
 
@@ -157,14 +170,38 @@ function TextEditor() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filename]);
 
-    const currentTab = selectedTab ?? 'editor';
+    const buttonList: ActionButtons[] = useMemo(() => {
+        if (!filename) return [];
 
-    // todo why is this here
-    // useEffect(() => {
-    //     if (selectedTab && tabsList.length > 0) {
-    //         navigate(`/stacks/${filename}?tab=${selectedTab}`, {replace: true});
-    //     }
-    // }, [filename, selectedTab, tabsList, navigate]);
+        const map: ActionButtons[] = []
+
+        // todo action is not available outside of the editor
+        // if (isComposeFile(filename)) {
+        //     map.push({
+        //         title: "Format",
+        //         icon: <CleaningServicesRounded/>,
+        //         onClick: () => {
+        //             fs.format({filename: filename}).then()
+        //         },
+        //     })
+        // }
+
+        if (isDockmanYaml(filename)) {
+            map.push({
+                title: "Reload",
+                icon: <RefreshRounded/>,
+                onClick: () => {
+                    fetchDockmanYaml().then()
+                },
+            })
+        }
+
+        return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filename, fetchDockmanYaml]);
+
+
+    const currentTab = selectedTab ?? 'editor';
 
     if (isLoading) {
         return <CenteredMessage icon={<CircularProgress/>} title=""/>;
@@ -183,10 +220,16 @@ function TextEditor() {
     const activePanel = tabsList[currentTab].component;
     return (
         <>
-            <Box sx={{borderBottom: 1, borderColor: 'divider'}}>
+            <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: 1,
+                borderColor: 'divider'
+            }}>
                 <Tabs
                     value={currentTab}
                     onChange={(_event, value) => changeTab(value)}
+                    sx={{minHeight: '48px'}}
                     slotProps={{
                         indicator: {
                             sx: {
@@ -201,7 +244,8 @@ function TextEditor() {
                             <Tab
                                 value={key}
                                 sx={{
-                                    color: (key == 0) ? indicatorMap[status].color : "primary.secondary",
+                                    color: (key === 0) ? indicatorMap[status].color : "text.secondary",
+                                    minHeight: '48px'
                                 }}
                                 label={
                                     key === 0 ? (
@@ -217,7 +261,23 @@ function TextEditor() {
                         </Tooltip>
                     ))}
                 </Tabs>
+
+                {selectedTab === TabType.EDITOR &&
+                    <Box sx={{display: 'flex', gap: 1, px: 2}}>
+                        {buttonList.map((details) => (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={details.onClick}
+                                startIcon={details.icon}
+                            >
+                                {details.title}
+                            </Button>
+                        ))}
+                    </Box>
+                }
             </Box>
+
             {activePanel && (
                 <Fade in={true} timeout={200} key={currentTab}>
                     <Box sx={{

@@ -11,6 +11,7 @@ export interface ConfigContextType {
     isLoading: boolean
     updateSettings: (user: Config, opts?: UpdateSettingsOption) => Promise<void>,
     dockYaml: DockmanYaml | null
+    fetchDockmanYaml: () => Promise<void>,
 }
 
 export const ConfigContext = createContext<ConfigContextType | undefined>(undefined)

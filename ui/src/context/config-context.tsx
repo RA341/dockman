@@ -63,6 +63,7 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
         isLoading,
         updateSettings,
         dockYaml,
+        fetchDockmanYaml: fetchDockYaml,
     }
 
     return (

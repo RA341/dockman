@@ -32,7 +32,6 @@ export function MonacoEditor(
         setMounted(true);
         editor.focus();
 
-
         editor.addCommand(
             monaco.KeyMod.Alt | monaco.KeyCode.KeyL,
             async () => {
@@ -42,12 +41,9 @@ export function MonacoEditor(
                 } else {
                     const contents = val?.contents;
                     if (contents) {
-                        // Save current state
                         const model = editor.getModel()!;
                         const position = editor.getPosition()!;
                         const offset = model?.getOffsetAt(position);
-
-                        // Get the full range of the editor content
                         const fullRange = model.getFullModelRange();
 
                         // Replace content while preserving undo stack
