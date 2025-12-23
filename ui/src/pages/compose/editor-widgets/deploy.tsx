@@ -1,6 +1,7 @@
 import {Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography} from "@mui/material";
 import {useState} from "react";
-import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
+import {ComposeActionHeaders} from "../components/compose-action-buttons.tsx";
+
 
 function EditorDeployWidget() {
     const [composeErrorDialog, setComposeErrorDialog] = useState<{ dialog: boolean; message: string }>({

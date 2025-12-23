@@ -4,13 +4,14 @@ import {callRPC, useDockerClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {type SaveState} from "./hooks/status-hook.ts";
-import {CloudUploadOutlined, ErrorOutlineOutlined} from "@mui/icons-material";
+import {CloudUploadOutlined, ErrorOutlineOutlined, MoveDownRounded} from "@mui/icons-material";
 import {isComposeFile} from "../../lib/editor.ts";
-import EditorErrorWidget from "./editor-widget-errors.tsx";
-import EditorDeployWidget from "./editor-widget-deploy.tsx";
 import useResizeBar from "./hooks/resize-hook.ts";
 import {useFileComponents} from "./state/state.tsx";
 import {useFiles} from "../../context/file-context.tsx";
+import ComposerizeWidget from "./editor-widgets/composerize.tsx";
+import EditorErrorWidget from "./editor-widgets/errors.tsx";
+import EditorDeployWidget from "./editor-widgets/deploy.tsx";
 
 interface EditorProps {
     selectedPage: string;
@@ -60,6 +61,13 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
                 icon: <CloudUploadOutlined/>,
                 label: 'Deploy project',
             };
+
+            baseActions["composerize"] = {
+                element: <ComposerizeWidget/>,
+                icon: <MoveDownRounded/>,
+                label: 'Convert Docker run to compose',
+            };
+
         }
 
         return baseActions;
