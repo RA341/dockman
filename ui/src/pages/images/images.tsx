@@ -131,6 +131,7 @@ const ImagesPage = () => {
                 borderColor: 'rgba(255, 255, 255, 0.23)',
                 borderRadius: 3,
                 display: 'flex',
+                flexDirection: 'column',
                 overflow: 'hidden',
                 minHeight: 0
             }}>
@@ -138,7 +139,13 @@ const ImagesPage = () => {
                     <ImagesLoading/>
                 ) : (
                     <Fade in={!loading} timeout={300}>
-                        <div style={{width: '100%'}}>
+                        <Box sx={{
+                            width: '100%',
+                            height: '100%',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
                             {images.length === 0 ? (
                                 <ImagesEmpty searchTerm={''}/>
                             ) : (
@@ -148,7 +155,7 @@ const ImagesPage = () => {
                                     onSelectionChange={setSelectedImages}
                                 />
                             )}
-                        </div>
+                        </Box>
                     </Fade>
                 )}
             </Box>

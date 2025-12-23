@@ -116,24 +116,33 @@ const NetworksPage = () => {
                 borderColor: 'rgba(255, 255, 255, 0.23)',
                 borderRadius: 3,
                 display: 'flex',
+                flexDirection: 'column',
                 overflow: 'hidden',
                 minHeight: 0
             }}>
-                {loading ?
-                    <NetworksLoading/> :
+                {loading ? (
+                    <NetworksLoading/>
+                ) : (
                     <Fade in={!loading} timeout={300}>
-                        <div style={{width: '100%'}}>
-                            {isEmpty ?
-                                <NetworksEmpty/> :
+                        <Box sx={{
+                            width: '100%',
+                            height: '100%',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            {isEmpty ? (
+                                <NetworksEmpty/>
+                            ) : (
                                 <NetworkTable
                                     networks={filteredNetworks}
                                     selectedNetworks={selectedNetworks}
                                     onSelectionChange={setSelectedNetworks}
                                 />
-                            }
-                        </div>
+                            )}
+                        </Box>
                     </Fade>
-                }
+                )}
             </Box>
         </Box>
     );
