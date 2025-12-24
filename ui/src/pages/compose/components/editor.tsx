@@ -26,7 +26,6 @@ export function MonacoEditor(
 
     const [mounted, setMounted] = useState(false);
     const {setTabDetails} = useTabs()
-    const tabs = useTabsStore(state => state.allTabs)
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;
@@ -88,7 +87,7 @@ export function MonacoEditor(
             handleEditorChange(model.getValue());
         });
 
-        const tab = tabs[selectedFile];
+        const tab = useTabsStore.getState().allTabs[selectedFile];
         if (!tab) return;
         const {row, col} = tab;
 

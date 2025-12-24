@@ -217,8 +217,13 @@ export function ContainerTable(
             )
         },
         Ports: {
-            getValue: () => 0,
-            header: () => <TableCell sx={headerStyles}>PORTS</TableCell>,
+            getValue: (v) => v.ports[0].public ?? 0,
+            header: (label) => {
+                return <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>PORTS</TableSortLabel>
+                </TableCell>
+            },
             cell: (c) => (
                 <TableCell>
                     <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.5}}>{formatPorts(c.ports)}</Box>
@@ -330,20 +335,22 @@ const StatusChip = ({status}: { status: string }) => {
 
 const formatPorts = (ports: Port[]) => {
     if (!ports?.length) return <Typography variant="caption" color="text.disabled">—</Typography>;
-    return ports.map((p, i) => (
-        <Box
-            key={i}
-            component="span"
-            sx={{
-                bgcolor: 'action.hover',
-                px: 0.5,
-                py: 0.1,
-                borderRadius: 0.5,
-                border: '1px solid',
-                borderColor: 'divider'
-            }}
-        >
-            <ContainerInfoPort port={p}/>
-        </Box>
-    ));
+    return ports
+        // .sort((a, b) => a.public - b.public)
+        .map((p, i) => (
+            <Box
+                key={i}
+                component="span"
+                sx={{
+                    bgcolor: 'action.hover',
+                    px: 0.5,
+                    py: 0.1,
+                    borderRadius: 0.5,
+                    border: '1px solid',
+                    borderColor: 'divider'
+                }}
+            >
+                <ContainerInfoPort port={p}/>
+            </Box>
+        ));
 };
