@@ -25,12 +25,12 @@ import {callRPC, useClient} from "../../lib/api.ts"
 import {Add, Delete, Edit, ErrorOutlined, InfoOutlined} from '@mui/icons-material'
 import {DockerManagerService, type Machine} from '../../gen/docker_manager/v1/docker_manager_pb.ts'
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {useHost} from "../../context/host-context.tsx";
+import {useHostManager} from "../../context/host-context.tsx";
 
 export function TabDockerHosts() {
     const sshClient = useClient(DockerManagerService)
     const {showError} = useSnackbar()
-    const {fetchHosts} = useHost()
+    const {fetchHosts} = useHostManager()
 
     const [machines, setMachines] = useState<Machine[]>([])
     const [loading, setLoading] = useState(true)

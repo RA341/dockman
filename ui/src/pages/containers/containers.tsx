@@ -22,7 +22,7 @@ import ActionButtons from "../../components/action-buttons.tsx";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import {ContainersLoading} from "./containers-loading.tsx";
 import {useNavigate} from "react-router-dom";
-import {useHost} from "../home/home.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 
 function ContainersPage() {
     const dockerService = useDockerClient();
@@ -32,7 +32,7 @@ function ContainersPage() {
     const [selectedContainers, setSelectedContainers] = useState<string[]>([]);
 
     const navigate = useNavigate();
-    const host = useHost();
+    const host = useHostStore(state => state.host);
 
     const onInspect = (id: string) => navigate(`/${host}/containers/inspect/${id}`);
     const onExec = (id: string) => navigate(`/${host}/containers/inspect/${id}?tabId=exec`);

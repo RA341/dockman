@@ -2,7 +2,7 @@ import {type RefObject, useEffect, useRef} from "react";
 import {type ITerminalInitOnlyOptions, type ITerminalOptions, Terminal} from "@xterm/xterm";
 import {FitAddon} from "@xterm/addon-fit";
 import {Box} from "@mui/material";
-import type {TabTerminal} from "../state/state.tsx";
+import type {TabTerminal} from "../state/terminal.tsx";
 
 const terminalConfig: ITerminalOptions & ITerminalInitOnlyOptions = {
     theme: {

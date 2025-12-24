@@ -3,10 +3,9 @@ import {useLocation, useNavigate} from 'react-router-dom'
 import {API_URL, callRPC, hosRef, useFileClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
 import {type FsEntry} from '../gen/files/v1/files_pb.ts';
-import {useFileComponents, useOpenFiles} from "../pages/compose/state/state.tsx";
 import {useTabs} from "./tab-context.tsx";
-import {useHost} from "../pages/home/home.tsx";
 import {useEditorUrl} from "../lib/editor.ts";
+import {useAliasStore, useHostStore, useOpenFiles} from "../pages/compose/state/files.ts";
 
 export interface FilesContextType {
     files: FsEntry[]
@@ -34,23 +33,6 @@ export function useFiles() {
     return context
 }
 
-export function getDir(filePath: string): string {
-    const lastSlash = filePath.lastIndexOf('/');
-    if (lastSlash === -1) return '';
-    if (lastSlash === 0) return '';
-    return filePath.substring(0, lastSlash);
-}
-
-export const getEntryDisplayName = (path: string) => {
-    const split = path.split("/");
-    const pop = split.pop();
-    if (!pop) {
-        console.error("unable to get last element in path", "split: ", split, "last element: ", pop)
-        return "ERR_EMPTY_PATH"
-    }
-    return pop
-}
-
 function FilesProvider({children}: { children: ReactNode }) {
     const client = useFileClient()
     const {showError, showSuccess} = useSnackbar()
@@ -62,8 +44,8 @@ function FilesProvider({children}: { children: ReactNode }) {
     const [files, setFiles] = useState<FsEntry[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    const host = useHost()
-    const {alias} = useFileComponents()
+    const host = useHostStore(state => state.host)
+    const alias = useAliasStore(state => state.alias)
 
     const fetchFiles = useCallback(async (
         path: string = "",
@@ -300,7 +282,6 @@ function FilesProvider({children}: { children: ReactNode }) {
     )
 }
 
-export default FilesProvider
 
 function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[]): void {
     if (indices.length === 0) return;
@@ -327,3 +308,22 @@ function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[
     current[lastIndex].isFetched = true;
     current[lastIndex].subFiles = value;
 }
+
+export function getDir(filePath: string): string {
+    const lastSlash = filePath.lastIndexOf('/');
+    if (lastSlash === -1) return '';
+    if (lastSlash === 0) return '';
+    return filePath.substring(0, lastSlash);
+}
+
+export const getEntryDisplayName = (path: string) => {
+    const split = path.split("/");
+    const pop = split.pop();
+    if (!pop) {
+        console.error("unable to get last element in path", "split: ", split, "last element: ", pop)
+        return "ERR_EMPTY_PATH"
+    }
+    return pop
+}
+
+export default FilesProvider

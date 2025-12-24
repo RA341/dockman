@@ -1,7 +1,8 @@
-import {useSideBarAction, useTerminalAction} from "../state/state.tsx";
+import { useTerminalAction} from "../state/terminal.tsx";
 import {Box, IconButton} from "@mui/material";
 import {Folder, TerminalOutlined} from "@mui/icons-material";
 import {useEffect} from "react";
+import {useSideBarAction} from "../state/files.ts";
 
 const ActionBar = () => {
     const {isSidebarOpen, toggle: fileSideBarToggle} = useSideBarAction(state => state)

@@ -1,14 +1,14 @@
 import {useCallback, useRef} from 'react';
 import {FitAddon} from "@xterm/addon-fit";
 import AppTerminal from "../compose/components/logs-terminal.tsx";
-import {createTab} from "../compose/state/state.tsx";
+import {createTab} from "../compose/state/terminal.tsx";
 import {getWSUrl} from "../../lib/api.ts";
-import {useHost} from "../home/home.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 
 const InspectTabLog = ({containerID}: { containerID: string }) => {
     const fitAddonRef = useRef<FitAddon>(new FitAddon());
 
-    const selectedHost = useHost()
+    const selectedHost = useHostStore(state => state.host)
 
     const getLogTab = useCallback(() => {
         return createTab(

@@ -3,14 +3,14 @@ import {
     Autocomplete,
     Box,
     Button,
-    Paper,
-    TextField,
-    Typography,
-    Stack,
     Divider,
-    Link,
     IconButton,
+    Link,
+    Paper,
+    Stack,
+    TextField,
     Tooltip,
+    Typography,
 } from '@mui/material';
 
 import "@xterm/xterm/css/xterm.css";
@@ -23,18 +23,18 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {useHost} from "../home/home.tsx";
 import {FitAddon} from "@xterm/addon-fit";
-import {createTab} from "../compose/state/state.tsx";
+import {createTab} from "../compose/state/terminal.tsx";
 import {getWSUrl} from "../../lib/api.ts";
 import AppTerminal from "../compose/components/logs-terminal.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 
 const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
 const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
 
 const InspectTabExec = ({containerID}: { containerID: string; }) => {
     const {showError} = useSnackbar();
-    const selectedHost = useHost();
+    const selectedHost = useHostStore(state => state.host)
     const fitAddonRef = useRef<FitAddon>(new FitAddon());
 
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');

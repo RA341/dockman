@@ -2,7 +2,7 @@ import {Box, Link, Typography} from '@mui/material';
 import {useClient} from "../../../lib/api.ts";
 import {ViewerService} from "../../../gen/viewer/v1/viewer_pb.ts";
 import {useEffect, useState} from "react";
-import {useFileComponents} from "../state/state.tsx";
+import {useFileComponents} from "../state/terminal.tsx";
 
 const ViewerSqlite = () => {
     const viewerClient = useClient(ViewerService)
