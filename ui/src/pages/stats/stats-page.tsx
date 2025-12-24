@@ -1,10 +1,10 @@
 import {Box, Paper, Stack, Typography} from "@mui/material";
 import {BarChart as StatsIcon} from "@mui/icons-material";
-import {useHost} from "../home/home.tsx";
 import {TabStat} from "../compose/tab-stats.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 
 const StatsPage = () => {
-    const host = useHost();
+    const host = useHostStore(state => state.host);
 
     return (
         <Box sx={{

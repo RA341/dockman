@@ -13,7 +13,6 @@ import {
 import {useLocation} from 'react-router-dom'
 import React, {type MouseEvent, useEffect, useState} from 'react'
 import {ExpandLess, ExpandMore, Folder} from '@mui/icons-material'
-import {useOpenFiles} from "../state/state.tsx";
 import {Link as RouterLink} from "react-router";
 import FileIcon from "./file-icon.tsx";
 import {amber} from "@mui/material/colors";
@@ -26,7 +25,7 @@ import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useFileDelete} from "../dialogs/file-delete.tsx";
 import {useFileRename} from "../dialogs/file-rename.tsx";
-
+import {useAliasStore, useHostStore, useOpenFiles} from "../state/files.ts";
 
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
@@ -116,8 +115,12 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const {isDragOver, dndProps} = useFileDnD(entry);
 
+    const {host} = useHostStore.getState();
+    const {alias} = useAliasStore.getState();
+    const ctxKey = `${host}/${alias}`;
+
     const name = entry.filename
-    const folderOpen = openFiles.has(entry.filename)
+    const folderOpen = openFiles[ctxKey]?.has(entry.filename) ?? false
 
     // todo if a file with same starting letter is open then the folder and
     //  the file will be highlighted
@@ -348,22 +351,20 @@ const useFileMenuCtx = (entry: FsEntry) => {
                 Rename
             </MenuItem>
         ),
-        (
-            !entry.isDir ?
-                <MenuItem onClick={() => {
-                    closeCtxMenu()
-                    downloadFile(filename, true).then(value => {
-                        if (value.err) {
-                            showError(`Error downloading File: ${value.err}`)
-                        } else {
-                            showSuccess("File downloaded")
-                        }
-                    })
-                }}>
-                    Download
-                </MenuItem>
-                : <></>
-        ),
+        ...(!entry.isDir ? [
+            <MenuItem key="download" onClick={() => {
+                closeCtxMenu()
+                downloadFile(filename, true).then(value => {
+                    if (value.err) {
+                        showError(`Error downloading File: ${value.err}`)
+                    } else {
+                        showSuccess("File downloaded")
+                    }
+                })
+            }}>
+                Download
+            </MenuItem>
+        ] : []),
         (
             <MenuItem onClick={() => {
                 closeCtxMenu()

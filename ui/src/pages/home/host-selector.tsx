@@ -1,11 +1,11 @@
 import {Box, Button, Menu, MenuItem, Tooltip, Typography} from "@mui/material";
 import {type MouseEvent, useEffect, useRef, useState} from "react";
 import {KeyChar} from "../../components/keychar.tsx";
-import {useHost as useHostContext} from "../../context/host-context.tsx";
-import {useHost} from "./home.tsx";
+import {useHostManager as useHostContext} from "../../context/host-context.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 
 function HostSelectDropdown() {
-    const selectedHost = useHost();
+    const selectedHost = useHostStore(state => state.host)
     const {isLoading, availableHosts, setHost} = useHostContext();
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -73,14 +73,13 @@ function HostSelectDropdown() {
                         p: 0,
                         borderRadius: 1.5,
                         fontSize: '1.1rem',
-                        fontWeight: '900', // Thicker font makes the blue pop
-                        // Colors
-                        color: 'primary.main',           // Blue initial
-                        backgroundColor: '#2a2a2a',         // Black background
+                        fontWeight: '900',
+                        color: 'primary.main',
+                        backgroundColor: '#2a2a2a',
                         border: '1px solid',
-                        borderColor: 'divider',          // Subtle border
+                        borderColor: 'divider',
                         '&:hover': {
-                            borderColor: 'primary.main', // Border turns blue on hover
+                            borderColor: 'primary.main',
                             backgroundColor: '#0a0a0a',
                         },
                         boxShadow: 'none',

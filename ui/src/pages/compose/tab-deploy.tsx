@@ -14,9 +14,9 @@ import {
 import {ContainerTable} from './components/container-info-table';
 import {getWSUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {useContainerExec} from "./state/state.tsx";
+import {useContainerExec} from "./state/terminal.tsx";
 import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
-import {useHost} from "../home/home.tsx";
+import {useHostStore} from "./state/files.ts";
 
 interface DeployPageProps {
     selectedPage: string;
@@ -36,7 +36,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
-    const selectedHost = useHost()
+    const selectedHost = useHostStore(state => state.host)
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
         const url = getWSUrl(`api/docker/logs/${containerId}/${encodeURIComponent(selectedHost)}`)

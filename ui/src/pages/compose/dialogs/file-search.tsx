@@ -14,7 +14,7 @@ import {
 import {Search} from '@mui/icons-material'
 import {useNavigate} from 'react-router-dom'
 import {create} from "zustand";
-import {useFileComponents} from "../state/state.tsx";
+import {useFileComponents} from "../state/terminal.tsx";
 import {getWSUrl} from "../../../lib/api.ts";
 import {useEditorUrl} from "../../../lib/editor.ts";
 

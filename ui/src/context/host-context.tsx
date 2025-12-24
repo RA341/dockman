@@ -14,10 +14,10 @@ interface HostContextType {
 
 export const HostContext = createContext<HostContextType | undefined>(undefined);
 
-export function useHost() {
+export function useHostManager() {
     const context = useContext(HostContext);
     if (context === undefined) {
-        throw new Error('useHost must be used within a HostProvider');
+        throw new Error('useHostManager must be used within a HostProvider');
     }
     return context;
 }

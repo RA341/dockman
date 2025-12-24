@@ -8,10 +8,10 @@ import {AuthPage} from './pages/auth/auth-page.tsx';
 import {SettingsPage} from "./pages/settings/settings-page.tsx";
 import {ChangelogProvider} from "./context/changelog-context.tsx";
 import NotFoundPage from "./pages/home/not-found.tsx";
-import RootLayout, {useHost} from "./pages/home/home.tsx";
+import RootLayout from "./pages/home/home.tsx";
 import {UserConfigProvider} from "./context/config-context.tsx";
 import AliasProvider from "./context/alias-context.tsx";
-import {TabsProvider, useTabs} from "./context/tab-context.tsx";
+import {TabsProvider, useTabsStore} from "./context/tab-context.tsx";
 import HostProvider from "./context/host-context.tsx";
 import ContainersPage from "./pages/containers/containers.tsx";
 import ImagesPage from "./pages/images/images.tsx";
@@ -25,8 +25,12 @@ import {useEditorUrl} from "./lib/editor.ts";
 import ContainerInspectPage from "./pages/containers/inspect.tsx";
 import scrollbarStyles from "./components/scrollbar-style.tsx";
 import StatsPage from "./pages/stats/stats-page.tsx";
+import {useHostStore} from "./pages/compose/state/files.ts";
+import {enableMapSet} from "immer";
 
 export function App() {
+    enableMapSet()
+
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
@@ -97,11 +101,13 @@ export function App() {
 // Redirect component that reads from TabsProvider
 // todo
 function HomeRedirect() {
-    const {activeTab, tabs} = useTabs();
+    const lastOpened = useTabsStore(state => state.lastOpened);
+    const tabs = useTabsStore(state => state.allTabs);
+
     const editorUrl = useEditorUrl()
 
-    const path = activeTab
-        ? editorUrl(activeTab, tabs[activeTab])
+    const path = lastOpened
+        ? editorUrl(lastOpened, tabs[lastOpened])
         : `compose`;
 
     return <Navigate to={path} replace/>;
@@ -140,7 +146,7 @@ const PrivateRoute = () => {
 };
 
 const TestPage = () => {
-    const host = useHost()
+    const host = useHostStore(state => state.host)
 
     return (
         <div>

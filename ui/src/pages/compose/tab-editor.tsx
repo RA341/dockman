@@ -7,7 +7,7 @@ import {type SaveState} from "./hooks/status-hook.ts";
 import {CloudUploadOutlined, ConstructionRounded, ErrorOutlineOutlined, MoveDownRounded} from "@mui/icons-material";
 import {isComposeFile} from "../../lib/editor.ts";
 import useResizeBar from "./hooks/resize-hook.ts";
-import {useFileComponents} from "./state/state.tsx";
+import {useFileComponents} from "./state/terminal.tsx";
 import {useFiles} from "../../context/file-context.tsx";
 import ComposerizeWidget from "./editor-widgets/composerize.tsx";
 import EditorErrorWidget from "./editor-widgets/errors.tsx";
