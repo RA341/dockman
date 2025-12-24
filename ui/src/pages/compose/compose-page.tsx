@@ -3,13 +3,9 @@ import {useNavigate} from 'react-router-dom';
 import {Box, IconButton, Tab, Tabs, Tooltip} from '@mui/material';
 import {FileList} from "./components/file-list.tsx";
 import {Close} from '@mui/icons-material';
-import {AddFilesProvider} from "./dialogs/add/add-context.tsx";
-import {TelescopeProvider} from "./dialogs/search/search-context.tsx";
-import {DeleteFileProvider} from "./dialogs/delete/delete-context.tsx";
 import ActionBar from "./components/action-bar.tsx";
 import CoreComposeEmpty from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
-import {RenameFilesProvider} from "./dialogs/rename/rename-context.tsx";
 import {getExt} from "./components/file-icon.tsx";
 import ViewerSqlite from "./components/viewer-sqlite.tsx";
 import TextEditor from "./components/viewer-text.tsx";
@@ -17,19 +13,20 @@ import {useFileComponents, useTerminalTabs} from "./state/state.tsx";
 import {useTabs} from "../../context/tab-context.tsx";
 import FilesProvider from "../../context/file-context.tsx";
 import {useHost} from "../home/home.tsx";
+import FileSearch from "./dialogs/file-search.tsx";
+import FileCreate from "./dialogs/file-create.tsx";
+import FileDelete from "./dialogs/file-delete.tsx";
+import FileRename from "./dialogs/file-rename.tsx";
+
 
 export const ComposePage = () => {
     return (
         <FilesProvider>
-            <TelescopeProvider>
-                <AddFilesProvider>
-                    <RenameFilesProvider>
-                        <DeleteFileProvider>
-                            <ComposePageInner/>
-                        </DeleteFileProvider>
-                    </RenameFilesProvider>
-                </AddFilesProvider>
-            </TelescopeProvider>
+            <ComposePageInner/>
+            <FileCreate/>
+            <FileSearch/>
+            <FileDelete/>
+            <FileRename/>
         </FilesProvider>
     )
 }

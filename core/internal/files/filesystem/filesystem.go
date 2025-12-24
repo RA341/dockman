@@ -8,9 +8,11 @@ import (
 )
 
 type FileSystem interface {
+	Root() string
+
 	MkdirAll(path string, perm os.FileMode) error
 	ReadDir(path string) ([]fs.DirEntry, error)
-	OpenFile(filename string, flag int, perm fs.FileMode) (io.WriteCloser, error)
+	OpenFile(filename string, flag int, perm fs.FileMode) (io.ReadWriteCloser, error)
 	LoadFile(filename string) (io.ReadSeekCloser, time.Time, error)
 	Stat(root string) (os.FileInfo, error)
 	RemoveAll(fullpath string) error

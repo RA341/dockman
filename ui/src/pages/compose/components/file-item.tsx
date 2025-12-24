@@ -13,17 +13,20 @@ import {
 import {useLocation} from 'react-router-dom'
 import React, {type MouseEvent, useEffect, useState} from 'react'
 import {ExpandLess, ExpandMore, Folder} from '@mui/icons-material'
-import {useAddFile} from "../dialogs/add/add-hook.ts";
 import {useOpenFiles} from "../state/state.tsx";
 import {Link as RouterLink} from "react-router";
 import FileIcon from "./file-icon.tsx";
 import {amber} from "@mui/material/colors";
-import {useFileDelete} from "../dialogs/delete/delete-hook.ts";
+
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
 import {getDir, getEntryDisplayName, useFiles} from "../../../context/file-context.tsx";
-import {useRenameFile} from "../dialogs/rename/rename-hook.ts";
+
 import {useEditorUrl} from "../../../lib/editor.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
+import {useFileCreate} from "../dialogs/file-create.tsx";
+import {useFileDelete} from "../dialogs/file-delete.tsx";
+import {useFileRename} from "../dialogs/file-rename.tsx";
+
 
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
@@ -153,6 +156,7 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     return (
         <>
             <ListItemButton
+                key={entry.filename}
                 {...dndProps}
                 draggable
 
@@ -218,7 +222,7 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                         : undefined
                 }
             >
-                {...contextActions}
+                {contextActions}
             </Menu>
         </>
     )
@@ -272,7 +276,7 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
                         : undefined
                 }
             >
-                {...contextActions}
+                {contextActions}
             </Menu>
         </>
     );
@@ -304,10 +308,10 @@ const useFileMenuCtx = (entry: FsEntry) => {
     };
     const {showError, showSuccess} = useSnackbar()
 
-    const {showDialog: showAdd} = useAddFile()
-    const {showDialog: showDelete} = useFileDelete()
-    const {showDialog: showRename} = useRenameFile()
     const {downloadFile} = useFiles()
+    const showCreate = useFileCreate(state => state.open)
+    const showDelete = useFileDelete(state => state.open)
+    const showRename = useFileRename(state => state.open)
 
     const filename = entry.filename
 
@@ -315,7 +319,7 @@ const useFileMenuCtx = (entry: FsEntry) => {
         (
             <MenuItem onClick={() => {
                 closeCtxMenu()
-                showAdd(
+                showCreate(
                     entry.isDir ?
                         filename :
                         getDir(filename),
@@ -324,22 +328,16 @@ const useFileMenuCtx = (entry: FsEntry) => {
                 Add
             </MenuItem>
         ),
-        // (
-        //     <MenuItem onClick={() => {
-        //         closeCtxMenu()
-        //         showAdd(
-        //             `${filename}-copy`,
-        //             entry.isDir ? 'folder' : 'file'
-        //         )
-        //     }}>
-        //         Duplicate
-        //     </MenuItem>
-        // ),
         // todo
         // (
         //     <MenuItem onClick={() => {
+        //         closeCtxMenu()
+        //         showCreate(
+        //             `${filename}-copy`,
+        //             true,
+        //         )
         //     }}>
-        //         Copy
+        //         Duplicate
         //     </MenuItem>
         // ),
         (

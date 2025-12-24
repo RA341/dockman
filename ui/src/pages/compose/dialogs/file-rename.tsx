@@ -11,27 +11,39 @@ import {
     Typography
 } from "@mui/material"
 import {Cancel, DriveFileRenameOutline, DriveFileRenameOutlineRounded, ErrorOutline} from "@mui/icons-material"
-import {useFiles} from "../../../../context/file-context.tsx"
+import {create} from "zustand";
+import {useFiles} from "../../../context/file-context.tsx";
 
-interface RenameFileDialogProps {
-    open: boolean
-    onClose: () => void
+export const useFileRename = create<{
     filename: string
-}
+    open: (filename: string) => void
+    close: () => void
+}>(setState => ({
+    filename: "",
+    open: (filename) => {
+        setState({filename})
+    },
+    close: () => {
+        setState({filename: ""})
+    }
+}))
 
-export function FileDialogCreate({open, onClose, filename}: RenameFileDialogProps) {
+function FileRename() {
+    const filename = useFileRename(state => state.filename)
+    const close = useFileRename(state => state.close)
+
     const [name, setName] = useState('')
     const [error, setError] = useState('')
 
     const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
-        if (open) {
+        if (filename) {
             setName(filename)
             setError('')
             inputRef.current?.focus()
         }
-    }, [open, filename])
+    }, [filename])
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         // Check for Alt+B shortcut to go back to preset selection (only if no parent)
@@ -56,7 +68,7 @@ export function FileDialogCreate({open, onClose, filename}: RenameFileDialogProp
         if (!newFilename) return
 
         renameFile(filename, newFilename).then()
-        onClose()
+        close()
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,8 +87,8 @@ export function FileDialogCreate({open, onClose, filename}: RenameFileDialogProp
 
     return (
         <Dialog
-            open={open}
-            onClose={onClose}
+            open={!!filename}
+            onClose={close}
             fullWidth
             maxWidth="md"
             onKeyDown={handleKeyDown}
@@ -176,7 +188,7 @@ export function FileDialogCreate({open, onClose, filename}: RenameFileDialogProp
 
             <DialogActions sx={{px: 3, py: 2.5, gap: 2}}>
                 <Button
-                    onClick={onClose}
+                    onClick={close}
                     startIcon={<Cancel/>}
                     size="large"
                 >
@@ -199,3 +211,5 @@ export function FileDialogCreate({open, onClose, filename}: RenameFileDialogProp
         </Dialog>
     )
 }
+
+export default FileRename

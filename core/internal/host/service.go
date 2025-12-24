@@ -4,7 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"github.com/RA341/dockman/internal/files/filesystem"
+	"github.com/moby/moby/client"
 )
+
+type Host struct {
+	hostname string
+	docker   client.Client
+	fs       func(alias string) filesystem.FileSystem
+}
 
 func GetHost(ctx context.Context) (string, error) {
 	va := ctx.Value(HeaderDockerHost)

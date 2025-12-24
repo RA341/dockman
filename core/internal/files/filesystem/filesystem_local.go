@@ -18,6 +18,10 @@ func NewLocal(root string) FileSystem {
 	return &LocalFileSystem{root: root}
 }
 
+func (l *LocalFileSystem) Root() string {
+	return l.root
+}
+
 func (l *LocalFileSystem) MkdirAll(path string, perm os.FileMode) error {
 	return os.MkdirAll(l.fullPath(path), perm)
 }
@@ -30,7 +34,7 @@ func (l *LocalFileSystem) ReadDir(name string) ([]fs.DirEntry, error) {
 	return os.ReadDir(l.fullPath(name))
 }
 
-func (l *LocalFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) (io.WriteCloser, error) {
+func (l *LocalFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) (io.ReadWriteCloser, error) {
 	return os.OpenFile(l.fullPath(filename), flag, perm)
 }
 

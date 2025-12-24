@@ -182,6 +182,35 @@ func (s *Service) Create(filename string, dir bool, hostname string) error {
 	return nil
 }
 
+func (s *Service) Copy(source, dest, hostname string, isDir bool) error {
+	if isDir {
+		return fmt.Errorf("directory copying is unimplemented")
+	}
+
+	cliFs, sourceFile, err := s.LoadFs(source, hostname)
+	if err != nil {
+		return err
+	}
+
+	_, destFile, err := s.LoadFs(dest, hostname)
+	if err != nil {
+		return err
+	}
+
+	sourceReader, err := cliFs.OpenFile(sourceFile, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	destWriter, err := cliFs.OpenFile(destFile, os.O_RDWR|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(destWriter, sourceReader)
+	return err
+}
+
 func (s *Service) Exists(filename string, hostname string) error {
 	cliFs, filename, err := s.LoadFs(filename, hostname)
 	if err != nil {

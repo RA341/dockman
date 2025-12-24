@@ -30,6 +30,10 @@ func NewSftp(client *sftp.Client, root string) *SftpFileSystem {
 	}
 }
 
+func (s *SftpFileSystem) Root() string {
+	return s.root
+}
+
 func (s *SftpFileSystem) MkdirAll(path string, perm os.FileMode) error {
 	return s.client.MkdirAll(s.fullPath(path))
 }
@@ -48,7 +52,7 @@ func (s *SftpFileSystem) ReadDir(path string) ([]fs.DirEntry, error) {
 	return entries, nil
 }
 
-func (s *SftpFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) (io.WriteCloser, error) {
+func (s *SftpFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) (io.ReadWriteCloser, error) {
 	return s.client.OpenFile(s.fullPath(filename), flag)
 }
 

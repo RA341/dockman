@@ -2,17 +2,17 @@ import {useCallback, useEffect} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
 import {Add as AddIcon, Refresh, Search as SearchIcon} from '@mui/icons-material'
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
-import {useTelescope} from "../dialogs/search/search-hook.ts";
-import {useAddFile} from "../dialogs/add/add-hook.ts";
 import {useFileComponents, useSideBarAction} from "../state/state.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
 import {FileItem} from "./file-item.tsx";
 import AliasSelector from "./file-alias-selector.tsx";
 import {useFiles} from "../../../context/file-context.tsx"
+import {useFileSearch} from "../dialogs/file-search.tsx";
+import {useFileCreate} from "../dialogs/file-create.tsx";
 
 export function FileList() {
-    const {showTelescope} = useTelescope()
-    const {showDialog: showAddFile} = useAddFile()
+    const showSearch = useFileSearch(state => state.open)
+    const fileCreate = useFileCreate(state => state.open)
 
     const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
 
@@ -20,14 +20,14 @@ export function FileList() {
     const {alias} = useFileComponents()
 
     const showFileAdd = useCallback(() => {
-        showAddFile(`${alias}`)
+        fileCreate(`${alias}`)
     }, [alias]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if ((event.altKey) && event.key === 's') {
                 event.preventDefault()
-                showTelescope()
+                showSearch()
             }
             if ((event.altKey) && event.key === 'a') {
                 event.preventDefault()
@@ -77,7 +77,7 @@ export function FileList() {
                             size="small"
                             onClick={() => listFiles("", [])}
                             color="primary"
-                            aria-label="Search"
+                            aria-label="FileSearch"
                         >
                             <Refresh fontSize="small"/>
                         </IconButton>
@@ -85,15 +85,15 @@ export function FileList() {
 
                     <Tooltip arrow title={
                         <ShortcutFormatter
-                            title="Search"
+                            title="FileSearch"
                             keyCombo={["ALT", "S"]}
                         />
                     }>
                         <IconButton
                             size="small"
-                            onClick={() => showTelescope()}
+                            onClick={() => showSearch()}
                             color="primary"
-                            aria-label="Search"
+                            aria-label="FileSearch"
                         >
                             <SearchIcon fontSize="small"/>
                         </IconButton>

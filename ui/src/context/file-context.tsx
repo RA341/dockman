@@ -13,6 +13,7 @@ export interface FilesContextType {
     isLoading: boolean
 
     addFile: (filename: string, isDir: boolean) => Promise<void>
+    copyFile: (srcFilename: string, destFilename: string, isDir: boolean) => Promise<void>
     deleteFile: (filename: string) => Promise<void>
     renameFile: (oldFilename: string, newFile: string) => Promise<void>
     listFiles: (path: string, depthIndex: number[]) => Promise<void>
@@ -116,8 +117,33 @@ function FilesProvider({children}: { children: ReactNode }) {
             showSuccess(`Created ${filename}`)
         }
 
-        await fetchFiles("",)
+        await fetchFiles()
     }, [client, fetchFiles, host, navigate])
+
+    const copyFile = useCallback(async (srcFilename: string, destFilename: string, isDir: boolean) => {
+        const {err} = await callRPC(() => client.copy({
+            dest: {
+                filename: srcFilename,
+                isDir: isDir,
+            },
+            source: {
+                filename: destFilename,
+                isDir: isDir,
+            },
+        }))
+
+        if (err) {
+            showError(err)
+        } else {
+            if (!isDir) {
+                navigate(fileUrl(destFilename))
+            }
+            showSuccess(`Copied ${destFilename}`)
+        }
+
+        await fetchFiles()
+    }, [])
+
 
     const deleteFile = async (
         filename: string,
@@ -131,7 +157,7 @@ function FilesProvider({children}: { children: ReactNode }) {
             closeTab(filename)
         }
 
-        await fetchFiles("")
+        await fetchFiles()
     }
 
     const renameFile = async (
@@ -153,7 +179,7 @@ function FilesProvider({children}: { children: ReactNode }) {
             }
         }
 
-        await fetchFiles("")
+        await fetchFiles()
     }
 
 
@@ -258,6 +284,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         files,
         isLoading,
         addFile,
+        copyFile,
         deleteFile,
         renameFile,
         listFiles: fetchFiles,

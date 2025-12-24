@@ -10,7 +10,42 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file files/v1/files.proto.
  */
 export const file_files_v1_files: GenFile = /*@__PURE__*/
-  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiNAoSRGVsZXRlQWxpYXNSZXF1ZXN0Eh4KBWFsaWFzGAEgASgLMg8uZmlsZXMudjEuQWxpYXMiFQoTRGVsZXRlQWxpYXNSZXNwb25zZSIxCg9BZGRBbGlhc1JlcXVlc3QSHgoFYWxpYXMYASABKAsyDy5maWxlcy52MS5BbGlhcyISChBBZGRBbGlhc1Jlc3BvbnNlIiAKEExpc3RBbGlhc1JlcXVlc3QSDAoEaG9zdBgBIAEoCSI2CgVBbGlhcxINCgVhbGlhcxgBIAEoCRIMCgRob3N0GAIgASgJEhAKCGZ1bGxwYXRoGAMgASgJIjUKEUxpc3RBbGlhc1Jlc3BvbnNlEiAKB2FsaWFzZXMYASADKAsyDy5maWxlcy52MS5BbGlhcyIbCgtMaXN0UmVxdWVzdBIMCgRwYXRoGAEgASgJIjIKDExpc3RSZXNwb25zZRIiCgdlbnRyaWVzGAEgAygLMhEuZmlsZXMudjEuRnNFbnRyeSIhCg1Gb3JtYXRSZXF1ZXN0EhAKCGZpbGVuYW1lGAEgASgJIiIKDkZvcm1hdFJlc3BvbnNlEhAKCGNvbnRlbnRzGAEgASgJInsKB0ZzRW50cnkSEAoIZmlsZW5hbWUYAiABKAkSDQoFaXNEaXIYAyABKAgSIwoIc3ViRmlsZXMYBCADKAsyES5maWxlcy52MS5Gc0VudHJ5EhEKCWlzRmV0Y2hlZBgFIAEoCBIXCg9pc0NvbXBvc2VGb2xkZXIYBiABKAkiNgoKUmVuYW1lRmlsZRITCgtvbGRGaWxlUGF0aBgBIAEoCRITCgtuZXdGaWxlUGF0aBgCIAEoCSInCgRGaWxlEhAKCGZpbGVuYW1lGAEgASgJEg0KBWlzRGlyGAIgASgIIgcKBUVtcHR5IpwDCgtEb2NrbWFuWWFtbBI7CgtjdXN0b21Ub29scxgJIAMoCzImLmZpbGVzLnYxLkRvY2ttYW5ZYW1sLkN1c3RvbVRvb2xzRW50cnkSGQoRdXNlQ29tcG9zZUZvbGRlcnMYASABKAgSIgoaZGlzYWJsZUNvbXBvc2VRdWlja0FjdGlvbnMYByABKAgSEwoLc2VhcmNoTGltaXQYCCABKAUSEAoIdGFiTGltaXQYBiABKAUSLAoLdm9sdW1lc1BhZ2UYAiABKAsyFy5maWxlcy52MS5Wb2x1bWVzQ29uZmlnEiwKC25ldHdvcmtQYWdlGAMgASgLMhcuZmlsZXMudjEuTmV0d29ya0NvbmZpZxIoCglpbWFnZVBhZ2UYBCABKAsyFS5maWxlcy52MS5JbWFnZUNvbmZpZxIwCg1jb250YWluZXJQYWdlGAUgASgLMhkuZmlsZXMudjEuQ29udGFpbmVyQ29uZmlnGjIKEEN1c3RvbVRvb2xzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASItCg1Wb2x1bWVzQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0Ii0KDU5ldHdvcmtDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiKwoLSW1hZ2VDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiLwoPQ29udGFpbmVyQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0IiwKBFNvcnQSEQoJc29ydE9yZGVyGAEgASgJEhEKCXNvcnRGaWVsZBgCIAEoCTLWBAoLRmlsZVNlcnZpY2USNwoETGlzdBIVLmZpbGVzLnYxLkxpc3RSZXF1ZXN0GhYuZmlsZXMudjEuTGlzdFJlc3BvbnNlIgASKwoGQ3JlYXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRGVsZXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRXhpc3RzEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASMQoGUmVuYW1lEhQuZmlsZXMudjEuUmVuYW1lRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASOgoOR2V0RG9ja21hbllhbWwSDy5maWxlcy52MS5FbXB0eRoVLmZpbGVzLnYxLkRvY2ttYW5ZYW1sIgASPQoGRm9ybWF0EhcuZmlsZXMudjEuRm9ybWF0UmVxdWVzdBoYLmZpbGVzLnYxLkZvcm1hdFJlc3BvbnNlIgASRgoJTGlzdEFsaWFzEhouZmlsZXMudjEuTGlzdEFsaWFzUmVxdWVzdBobLmZpbGVzLnYxLkxpc3RBbGlhc1Jlc3BvbnNlIgASQwoIQWRkQWxpYXMSGS5maWxlcy52MS5BZGRBbGlhc1JlcXVlc3QaGi5maWxlcy52MS5BZGRBbGlhc1Jlc3BvbnNlIgASTAoLRGVsZXRlQWxpYXMSHC5maWxlcy52MS5EZWxldGVBbGlhc1JlcXVlc3QaHS5maWxlcy52MS5EZWxldGVBbGlhc1Jlc3BvbnNlIgBCiAEKDGNvbS5maWxlcy52MUIKRmlsZXNQcm90b1ABWitnaXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2ZpbGVzL3YxogIDRlhYqgIIRmlsZXMuVjHKAghGaWxlc1xWMeICFEZpbGVzXFYxXEdQQk1ldGFkYXRh6gIJRmlsZXM6OlYxYgZwcm90bzM");
+  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiSwoLQ29weVJlcXVlc3QSHgoGc291cmNlGAEgASgLMg4uZmlsZXMudjEuRmlsZRIcCgRkZXN0GAIgASgLMg4uZmlsZXMudjEuRmlsZSIOCgxDb3B5UmVzcG9uc2UiNAoSRGVsZXRlQWxpYXNSZXF1ZXN0Eh4KBWFsaWFzGAEgASgLMg8uZmlsZXMudjEuQWxpYXMiFQoTRGVsZXRlQWxpYXNSZXNwb25zZSIxCg9BZGRBbGlhc1JlcXVlc3QSHgoFYWxpYXMYASABKAsyDy5maWxlcy52MS5BbGlhcyISChBBZGRBbGlhc1Jlc3BvbnNlIiAKEExpc3RBbGlhc1JlcXVlc3QSDAoEaG9zdBgBIAEoCSI2CgVBbGlhcxINCgVhbGlhcxgBIAEoCRIMCgRob3N0GAIgASgJEhAKCGZ1bGxwYXRoGAMgASgJIjUKEUxpc3RBbGlhc1Jlc3BvbnNlEiAKB2FsaWFzZXMYASADKAsyDy5maWxlcy52MS5BbGlhcyIbCgtMaXN0UmVxdWVzdBIMCgRwYXRoGAEgASgJIjIKDExpc3RSZXNwb25zZRIiCgdlbnRyaWVzGAEgAygLMhEuZmlsZXMudjEuRnNFbnRyeSIhCg1Gb3JtYXRSZXF1ZXN0EhAKCGZpbGVuYW1lGAEgASgJIiIKDkZvcm1hdFJlc3BvbnNlEhAKCGNvbnRlbnRzGAEgASgJInsKB0ZzRW50cnkSEAoIZmlsZW5hbWUYAiABKAkSDQoFaXNEaXIYAyABKAgSIwoIc3ViRmlsZXMYBCADKAsyES5maWxlcy52MS5Gc0VudHJ5EhEKCWlzRmV0Y2hlZBgFIAEoCBIXCg9pc0NvbXBvc2VGb2xkZXIYBiABKAkiNgoKUmVuYW1lRmlsZRITCgtvbGRGaWxlUGF0aBgBIAEoCRITCgtuZXdGaWxlUGF0aBgCIAEoCSInCgRGaWxlEhAKCGZpbGVuYW1lGAEgASgJEg0KBWlzRGlyGAIgASgIIgcKBUVtcHR5IpwDCgtEb2NrbWFuWWFtbBI7CgtjdXN0b21Ub29scxgJIAMoCzImLmZpbGVzLnYxLkRvY2ttYW5ZYW1sLkN1c3RvbVRvb2xzRW50cnkSGQoRdXNlQ29tcG9zZUZvbGRlcnMYASABKAgSIgoaZGlzYWJsZUNvbXBvc2VRdWlja0FjdGlvbnMYByABKAgSEwoLc2VhcmNoTGltaXQYCCABKAUSEAoIdGFiTGltaXQYBiABKAUSLAoLdm9sdW1lc1BhZ2UYAiABKAsyFy5maWxlcy52MS5Wb2x1bWVzQ29uZmlnEiwKC25ldHdvcmtQYWdlGAMgASgLMhcuZmlsZXMudjEuTmV0d29ya0NvbmZpZxIoCglpbWFnZVBhZ2UYBCABKAsyFS5maWxlcy52MS5JbWFnZUNvbmZpZxIwCg1jb250YWluZXJQYWdlGAUgASgLMhkuZmlsZXMudjEuQ29udGFpbmVyQ29uZmlnGjIKEEN1c3RvbVRvb2xzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASItCg1Wb2x1bWVzQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0Ii0KDU5ldHdvcmtDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiKwoLSW1hZ2VDb25maWcSHAoEc29ydBgBIAEoCzIOLmZpbGVzLnYxLlNvcnQiLwoPQ29udGFpbmVyQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0IiwKBFNvcnQSEQoJc29ydE9yZGVyGAEgASgJEhEKCXNvcnRGaWVsZBgCIAEoCTKPBQoLRmlsZVNlcnZpY2USNwoETGlzdBIVLmZpbGVzLnYxLkxpc3RSZXF1ZXN0GhYuZmlsZXMudjEuTGlzdFJlc3BvbnNlIgASKwoGQ3JlYXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASNwoEQ29weRIVLmZpbGVzLnYxLkNvcHlSZXF1ZXN0GhYuZmlsZXMudjEuQ29weVJlc3BvbnNlIgASKwoGRGVsZXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRXhpc3RzEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASMQoGUmVuYW1lEhQuZmlsZXMudjEuUmVuYW1lRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASOgoOR2V0RG9ja21hbllhbWwSDy5maWxlcy52MS5FbXB0eRoVLmZpbGVzLnYxLkRvY2ttYW5ZYW1sIgASPQoGRm9ybWF0EhcuZmlsZXMudjEuRm9ybWF0UmVxdWVzdBoYLmZpbGVzLnYxLkZvcm1hdFJlc3BvbnNlIgASRgoJTGlzdEFsaWFzEhouZmlsZXMudjEuTGlzdEFsaWFzUmVxdWVzdBobLmZpbGVzLnYxLkxpc3RBbGlhc1Jlc3BvbnNlIgASQwoIQWRkQWxpYXMSGS5maWxlcy52MS5BZGRBbGlhc1JlcXVlc3QaGi5maWxlcy52MS5BZGRBbGlhc1Jlc3BvbnNlIgASTAoLRGVsZXRlQWxpYXMSHC5maWxlcy52MS5EZWxldGVBbGlhc1JlcXVlc3QaHS5maWxlcy52MS5EZWxldGVBbGlhc1Jlc3BvbnNlIgBCiAEKDGNvbS5maWxlcy52MUIKRmlsZXNQcm90b1ABWitnaXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2ZpbGVzL3YxogIDRlhYqgIIRmlsZXMuVjHKAghGaWxlc1xWMeICFEZpbGVzXFYxXEdQQk1ldGFkYXRh6gIJRmlsZXM6OlYxYgZwcm90bzM");
+
+/**
+ * @generated from message files.v1.CopyRequest
+ */
+export type CopyRequest = Message<"files.v1.CopyRequest"> & {
+  /**
+   * @generated from field: files.v1.File source = 1;
+   */
+  source?: File;
+
+  /**
+   * @generated from field: files.v1.File dest = 2;
+   */
+  dest?: File;
+};
+
+/**
+ * Describes the message files.v1.CopyRequest.
+ * Use `create(CopyRequestSchema)` to create a new message.
+ */
+export const CopyRequestSchema: GenMessage<CopyRequest> = /*@__PURE__*/
+  messageDesc(file_files_v1_files, 0);
+
+/**
+ * @generated from message files.v1.CopyResponse
+ */
+export type CopyResponse = Message<"files.v1.CopyResponse"> & {
+};
+
+/**
+ * Describes the message files.v1.CopyResponse.
+ * Use `create(CopyResponseSchema)` to create a new message.
+ */
+export const CopyResponseSchema: GenMessage<CopyResponse> = /*@__PURE__*/
+  messageDesc(file_files_v1_files, 1);
 
 /**
  * @generated from message files.v1.DeleteAliasRequest
@@ -27,7 +62,7 @@ export type DeleteAliasRequest = Message<"files.v1.DeleteAliasRequest"> & {
  * Use `create(DeleteAliasRequestSchema)` to create a new message.
  */
 export const DeleteAliasRequestSchema: GenMessage<DeleteAliasRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 0);
+  messageDesc(file_files_v1_files, 2);
 
 /**
  * @generated from message files.v1.DeleteAliasResponse
@@ -40,7 +75,7 @@ export type DeleteAliasResponse = Message<"files.v1.DeleteAliasResponse"> & {
  * Use `create(DeleteAliasResponseSchema)` to create a new message.
  */
 export const DeleteAliasResponseSchema: GenMessage<DeleteAliasResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 1);
+  messageDesc(file_files_v1_files, 3);
 
 /**
  * @generated from message files.v1.AddAliasRequest
@@ -57,7 +92,7 @@ export type AddAliasRequest = Message<"files.v1.AddAliasRequest"> & {
  * Use `create(AddAliasRequestSchema)` to create a new message.
  */
 export const AddAliasRequestSchema: GenMessage<AddAliasRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 2);
+  messageDesc(file_files_v1_files, 4);
 
 /**
  * @generated from message files.v1.AddAliasResponse
@@ -70,7 +105,7 @@ export type AddAliasResponse = Message<"files.v1.AddAliasResponse"> & {
  * Use `create(AddAliasResponseSchema)` to create a new message.
  */
 export const AddAliasResponseSchema: GenMessage<AddAliasResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 3);
+  messageDesc(file_files_v1_files, 5);
 
 /**
  * @generated from message files.v1.ListAliasRequest
@@ -87,7 +122,7 @@ export type ListAliasRequest = Message<"files.v1.ListAliasRequest"> & {
  * Use `create(ListAliasRequestSchema)` to create a new message.
  */
 export const ListAliasRequestSchema: GenMessage<ListAliasRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 4);
+  messageDesc(file_files_v1_files, 6);
 
 /**
  * @generated from message files.v1.Alias
@@ -114,7 +149,7 @@ export type Alias = Message<"files.v1.Alias"> & {
  * Use `create(AliasSchema)` to create a new message.
  */
 export const AliasSchema: GenMessage<Alias> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 5);
+  messageDesc(file_files_v1_files, 7);
 
 /**
  * @generated from message files.v1.ListAliasResponse
@@ -131,7 +166,7 @@ export type ListAliasResponse = Message<"files.v1.ListAliasResponse"> & {
  * Use `create(ListAliasResponseSchema)` to create a new message.
  */
 export const ListAliasResponseSchema: GenMessage<ListAliasResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 6);
+  messageDesc(file_files_v1_files, 8);
 
 /**
  * @generated from message files.v1.ListRequest
@@ -148,7 +183,7 @@ export type ListRequest = Message<"files.v1.ListRequest"> & {
  * Use `create(ListRequestSchema)` to create a new message.
  */
 export const ListRequestSchema: GenMessage<ListRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 7);
+  messageDesc(file_files_v1_files, 9);
 
 /**
  * @generated from message files.v1.ListResponse
@@ -165,7 +200,7 @@ export type ListResponse = Message<"files.v1.ListResponse"> & {
  * Use `create(ListResponseSchema)` to create a new message.
  */
 export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 8);
+  messageDesc(file_files_v1_files, 10);
 
 /**
  * @generated from message files.v1.FormatRequest
@@ -182,7 +217,7 @@ export type FormatRequest = Message<"files.v1.FormatRequest"> & {
  * Use `create(FormatRequestSchema)` to create a new message.
  */
 export const FormatRequestSchema: GenMessage<FormatRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 9);
+  messageDesc(file_files_v1_files, 11);
 
 /**
  * @generated from message files.v1.FormatResponse
@@ -199,7 +234,7 @@ export type FormatResponse = Message<"files.v1.FormatResponse"> & {
  * Use `create(FormatResponseSchema)` to create a new message.
  */
 export const FormatResponseSchema: GenMessage<FormatResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 10);
+  messageDesc(file_files_v1_files, 12);
 
 /**
  * @generated from message files.v1.FsEntry
@@ -238,7 +273,7 @@ export type FsEntry = Message<"files.v1.FsEntry"> & {
  * Use `create(FsEntrySchema)` to create a new message.
  */
 export const FsEntrySchema: GenMessage<FsEntry> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 11);
+  messageDesc(file_files_v1_files, 13);
 
 /**
  * @generated from message files.v1.RenameFile
@@ -260,7 +295,7 @@ export type RenameFile = Message<"files.v1.RenameFile"> & {
  * Use `create(RenameFileSchema)` to create a new message.
  */
 export const RenameFileSchema: GenMessage<RenameFile> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 12);
+  messageDesc(file_files_v1_files, 14);
 
 /**
  * @generated from message files.v1.File
@@ -282,7 +317,7 @@ export type File = Message<"files.v1.File"> & {
  * Use `create(FileSchema)` to create a new message.
  */
 export const FileSchema: GenMessage<File> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 13);
+  messageDesc(file_files_v1_files, 15);
 
 /**
  * @generated from message files.v1.Empty
@@ -295,7 +330,7 @@ export type Empty = Message<"files.v1.Empty"> & {
  * Use `create(EmptySchema)` to create a new message.
  */
 export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 14);
+  messageDesc(file_files_v1_files, 16);
 
 /**
  * @generated from message files.v1.DockmanYaml
@@ -352,7 +387,7 @@ export type DockmanYaml = Message<"files.v1.DockmanYaml"> & {
  * Use `create(DockmanYamlSchema)` to create a new message.
  */
 export const DockmanYamlSchema: GenMessage<DockmanYaml> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 15);
+  messageDesc(file_files_v1_files, 17);
 
 /**
  * @generated from message files.v1.VolumesConfig
@@ -369,7 +404,7 @@ export type VolumesConfig = Message<"files.v1.VolumesConfig"> & {
  * Use `create(VolumesConfigSchema)` to create a new message.
  */
 export const VolumesConfigSchema: GenMessage<VolumesConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 16);
+  messageDesc(file_files_v1_files, 18);
 
 /**
  * @generated from message files.v1.NetworkConfig
@@ -386,7 +421,7 @@ export type NetworkConfig = Message<"files.v1.NetworkConfig"> & {
  * Use `create(NetworkConfigSchema)` to create a new message.
  */
 export const NetworkConfigSchema: GenMessage<NetworkConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 17);
+  messageDesc(file_files_v1_files, 19);
 
 /**
  * @generated from message files.v1.ImageConfig
@@ -403,7 +438,7 @@ export type ImageConfig = Message<"files.v1.ImageConfig"> & {
  * Use `create(ImageConfigSchema)` to create a new message.
  */
 export const ImageConfigSchema: GenMessage<ImageConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 18);
+  messageDesc(file_files_v1_files, 20);
 
 /**
  * @generated from message files.v1.ContainerConfig
@@ -420,7 +455,7 @@ export type ContainerConfig = Message<"files.v1.ContainerConfig"> & {
  * Use `create(ContainerConfigSchema)` to create a new message.
  */
 export const ContainerConfigSchema: GenMessage<ContainerConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 19);
+  messageDesc(file_files_v1_files, 21);
 
 /**
  * @generated from message files.v1.Sort
@@ -442,7 +477,7 @@ export type Sort = Message<"files.v1.Sort"> & {
  * Use `create(SortSchema)` to create a new message.
  */
 export const SortSchema: GenMessage<Sort> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 20);
+  messageDesc(file_files_v1_files, 22);
 
 /**
  * @generated from service files.v1.FileService
@@ -463,6 +498,14 @@ export const FileService: GenService<{
     methodKind: "unary";
     input: typeof FileSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * @generated from rpc files.v1.FileService.Copy
+   */
+  copy: {
+    methodKind: "unary";
+    input: typeof CopyRequestSchema;
+    output: typeof CopyResponseSchema;
   },
   /**
    * @generated from rpc files.v1.FileService.Delete

@@ -13,9 +13,10 @@ import {
 } from '@mui/material'
 import {Search} from '@mui/icons-material'
 import {useNavigate} from 'react-router-dom'
-import {getWSUrl} from "../../../../lib/api.ts";
-import {useFileComponents} from "../../state/state.tsx";
-import {useEditorUrl} from "../../../../lib/editor.ts";
+import {create} from "zustand";
+import {useFileComponents} from "../state/state.tsx";
+import {getWSUrl} from "../../../lib/api.ts";
+import {useEditorUrl} from "../../../lib/editor.ts";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -52,9 +53,33 @@ const HighlightedText = ({text, indices}: { text: string; indices: number[] }) =
     )
 }
 
-function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () => void }) {
+
+export const useFileSearch = create<{
+    isOpen: boolean;
+    open: () => void;
+    close: () => void;
+}>(
+    setState => ({
+        isOpen: false,
+        open: () => {
+            setState({
+                isOpen: true
+            })
+        },
+        close: () => {
+            setState({
+                isOpen: false
+            })
+        }
+    })
+)
+
+function FileSearch() {
     const navigate = useNavigate()
     const {alias: activeAlias} = useFileComponents()
+    
+    const isOpen = useFileSearch(state => state.isOpen)
+    const close = useFileSearch(state => state.close)
 
     const [filteredFiles, setFilteredFiles] = useState<SearchResult[]>([])
     const [error, setError] = useState<string | null>(null)
@@ -70,7 +95,7 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
     const {alias, host} = useFileComponents()
 
     useEffect(() => {
-        if (!isVisible) return
+        if (!isOpen) return
 
         let socket: WebSocket | null = null;
         try {
@@ -113,7 +138,7 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
             }
             ws.current = null
         }
-    }, [isVisible, activeAlias])
+    }, [isOpen, activeAlias])
 
     useEffect(() => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
@@ -134,7 +159,7 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
     const handleClose = () => {
         setSearchQuery('') // Clear input
         setActiveIndex(-1)
-        onDismiss()
+        close()
     }
 
     const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -160,7 +185,7 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
 
     return (
         <Dialog
-            open={isVisible}
+            open={isOpen}
             onClose={handleClose}
             maxWidth="md"
             fullWidth
@@ -185,7 +210,7 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
                 <TextField
                     fullWidth
                     variant="outlined"
-                    placeholder="Search files..."
+                    placeholder="FileSearch files..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
@@ -262,5 +287,5 @@ function SearchUi({isVisible, onDismiss}: { isVisible: boolean, onDismiss: () =>
     )
 }
 
-export default SearchUi
+export default FileSearch
 

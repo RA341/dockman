@@ -114,6 +114,24 @@ func (h *Handler) Create(ctx context.Context, req *connect.Request[v1.File]) (*c
 	return &connect.Response[v1.Empty]{}, nil
 }
 
+func (h *Handler) Copy(ctx context.Context, req *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error) {
+	hostname, err := host.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	dest := req.Msg.Dest.Filename
+	src := req.Msg.Source.Filename
+	isDir := req.Msg.Source.IsDir
+
+	err = h.srv.Copy(src, dest, hostname, isDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return &connect.Response[v1.CopyResponse]{}, nil
+}
+
 func (h *Handler) Exists(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
 	hostname, err := host.GetHost(ctx)
 	if err != nil {

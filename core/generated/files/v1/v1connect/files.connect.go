@@ -37,6 +37,8 @@ const (
 	FileServiceListProcedure = "/files.v1.FileService/List"
 	// FileServiceCreateProcedure is the fully-qualified name of the FileService's Create RPC.
 	FileServiceCreateProcedure = "/files.v1.FileService/Create"
+	// FileServiceCopyProcedure is the fully-qualified name of the FileService's Copy RPC.
+	FileServiceCopyProcedure = "/files.v1.FileService/Copy"
 	// FileServiceDeleteProcedure is the fully-qualified name of the FileService's Delete RPC.
 	FileServiceDeleteProcedure = "/files.v1.FileService/Delete"
 	// FileServiceExistsProcedure is the fully-qualified name of the FileService's Exists RPC.
@@ -60,6 +62,7 @@ const (
 type FileServiceClient interface {
 	List(context.Context, *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error)
 	Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
+	Copy(context.Context, *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error)
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
@@ -91,6 +94,12 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+FileServiceCreateProcedure,
 			connect.WithSchema(fileServiceMethods.ByName("Create")),
+			connect.WithClientOptions(opts...),
+		),
+		copy: connect.NewClient[v1.CopyRequest, v1.CopyResponse](
+			httpClient,
+			baseURL+FileServiceCopyProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("Copy")),
 			connect.WithClientOptions(opts...),
 		),
 		delete: connect.NewClient[v1.File, v1.Empty](
@@ -148,6 +157,7 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type fileServiceClient struct {
 	list           *connect.Client[v1.ListRequest, v1.ListResponse]
 	create         *connect.Client[v1.File, v1.Empty]
+	copy           *connect.Client[v1.CopyRequest, v1.CopyResponse]
 	delete         *connect.Client[v1.File, v1.Empty]
 	exists         *connect.Client[v1.File, v1.Empty]
 	rename         *connect.Client[v1.RenameFile, v1.Empty]
@@ -166,6 +176,11 @@ func (c *fileServiceClient) List(ctx context.Context, req *connect.Request[v1.Li
 // Create calls files.v1.FileService.Create.
 func (c *fileServiceClient) Create(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
 	return c.create.CallUnary(ctx, req)
+}
+
+// Copy calls files.v1.FileService.Copy.
+func (c *fileServiceClient) Copy(ctx context.Context, req *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error) {
+	return c.copy.CallUnary(ctx, req)
 }
 
 // Delete calls files.v1.FileService.Delete.
@@ -212,6 +227,7 @@ func (c *fileServiceClient) DeleteAlias(ctx context.Context, req *connect.Reques
 type FileServiceHandler interface {
 	List(context.Context, *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error)
 	Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
+	Copy(context.Context, *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error)
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
@@ -239,6 +255,12 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 		FileServiceCreateProcedure,
 		svc.Create,
 		connect.WithSchema(fileServiceMethods.ByName("Create")),
+		connect.WithHandlerOptions(opts...),
+	)
+	fileServiceCopyHandler := connect.NewUnaryHandler(
+		FileServiceCopyProcedure,
+		svc.Copy,
+		connect.WithSchema(fileServiceMethods.ByName("Copy")),
 		connect.WithHandlerOptions(opts...),
 	)
 	fileServiceDeleteHandler := connect.NewUnaryHandler(
@@ -295,6 +317,8 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 			fileServiceListHandler.ServeHTTP(w, r)
 		case FileServiceCreateProcedure:
 			fileServiceCreateHandler.ServeHTTP(w, r)
+		case FileServiceCopyProcedure:
+			fileServiceCopyHandler.ServeHTTP(w, r)
 		case FileServiceDeleteProcedure:
 			fileServiceDeleteHandler.ServeHTTP(w, r)
 		case FileServiceExistsProcedure:
@@ -326,6 +350,10 @@ func (UnimplementedFileServiceHandler) List(context.Context, *connect.Request[v1
 
 func (UnimplementedFileServiceHandler) Create(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Create is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) Copy(context.Context, *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Copy is not implemented"))
 }
 
 func (UnimplementedFileServiceHandler) Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {

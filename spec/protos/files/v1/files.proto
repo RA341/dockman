@@ -7,6 +7,8 @@ option go_package = "github.com/RA341/dockman/generated/files/v1";
 service FileService {
   rpc List(ListRequest) returns (ListResponse) {}
   rpc Create(File) returns (Empty) {}
+  rpc Copy(CopyRequest) returns (CopyResponse) {}
+
   rpc Delete(File) returns (Empty) {}
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
@@ -18,6 +20,14 @@ service FileService {
   rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
   rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
 }
+
+message CopyRequest {
+  File source = 1;
+  File dest = 2;
+}
+
+message CopyResponse {}
+
 
 message DeleteAliasRequest {
   Alias alias = 1;

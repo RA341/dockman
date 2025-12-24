@@ -1,45 +1,45 @@
-import React, {useEffect, useState} from 'react'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogTitle from '@mui/material/DialogTitle'
 import {Box} from "@mui/material"
+import {create} from "zustand";
+import {useFiles} from "../../../context/file-context.tsx";
 
-interface FileDialogDeleteProps {
-    fileToDelete: string
-    onClose: () => void
-    handleDelete: (fileName: string) => void
-}
+export const useFileDelete = create<{
+    fileToDelete: string;
+    close: () => void;
+    open: (filename: string) => void;
+}>(set => ({
+    fileToDelete: "",
+    close: () => {
+        set({fileToDelete: ""})
+    },
+    open: (filename: string) => {
+        set({fileToDelete: filename})
+    }
+}))
 
-const FileDialogDelete: React.FC<FileDialogDeleteProps> = (
-    {
-        fileToDelete,
-        onClose,
-        handleDelete,
-    }) => {
+const FileDelete = () => {
+    const fileToDelete = useFileDelete(state => state.fileToDelete)
+    const onClose = useFileDelete(state => state.close)
 
-    const [open, setOpen] = useState(false)
-
-    useEffect(() => {
-        setOpen(!!fileToDelete)
-    }, [fileToDelete]);
+    const {deleteFile} = useFiles()
 
     const onCancel = () => {
-        setOpen(false)
+        onClose()
     }
 
     const onDelete = () => {
         if (fileToDelete) {
-            handleDelete(fileToDelete)
+            deleteFile(fileToDelete).then()
         }
         onCancel()
     }
 
-    const fileName = fileToDelete || ''
-
     return (
         <Dialog
-            open={open}
+            open={!!fileToDelete}
             onClose={onCancel}
             slotProps={{
                 transition: {
@@ -66,7 +66,7 @@ const FileDialogDelete: React.FC<FileDialogDeleteProps> = (
                     color: "#ff6b6b",
                     pl: 1,
                 }}>
-                    {fileName}
+                    {fileToDelete}
                 </Box>
             </DialogTitle>
 
@@ -107,4 +107,4 @@ const FileDialogDelete: React.FC<FileDialogDeleteProps> = (
     )
 }
 
-export default FileDialogDelete
+export default FileDelete
