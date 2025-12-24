@@ -1,6 +1,6 @@
 import type {TabDetails} from "../context/tab-context.tsx";
+import {useHost} from "../pages/home/home.tsx";
 import {useCallback} from "react";
-import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
 
 export const COMPOSE_EXTENSIONS = ['compose.yaml', 'compose.yml']
 
@@ -34,9 +34,7 @@ export const getUsageColor = (value: number): 'success.main' | 'warning.main' | 
 
 
 export const useEditorUrl = () => {
-    const host = useHostStore(state => state.host)
-    const prevAlias = useAliasStore(state => state.alias)
-
+    const host = useHost();
     return useCallback((filename?: string, tabDetail?: TabDetails | number) => {
         let base = `/${host}/files`;
         if (filename) {
@@ -50,11 +48,9 @@ export const useEditorUrl = () => {
                 }
                 base = `${base}?tab=${tabValue}`;
             }
-        } else {
-            base = `${base}/${prevAlias || "compose"}`;
         }
         return base;
-    }, [host, prevAlias]);
+    }, [host]);
 };
 
 export const getLanguageFromExtension = (filename?: string): string => {

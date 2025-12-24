@@ -24,7 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
 import {useAlias} from "../../context/alias-context.tsx";
-import {useHostManager} from "../../context/host-context.tsx";
+import {useHost} from "../../context/host-context.tsx";
 
 
 const TabAliases = () => {
@@ -32,7 +32,7 @@ const TabAliases = () => {
     const [aliasInput, setAliasInput] = useState("");
     const [pathInput, setPathInput] = useState("");
 
-    const {availableHosts} = useHostManager()
+    const {availableHosts} = useHost()
     const [selectedOption, setSelectedOption] = useState(availableHosts[0]);
     useEffect(() => {
         setSelectedOption(availableHosts[0]);

@@ -2,7 +2,7 @@ import {useCallback, useEffect, useState} from 'react'
 import {callRPC, useDockerClient} from "../../lib/api.ts";
 import {type Image} from "../../gen/docker/v1/docker_pb.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {useHostStore} from "../compose/state/files.ts";
+import {useHost} from "../home/home.tsx";
 
 /**
  * Generates a clickable URL for a container image, pointing to its repository.
@@ -63,7 +63,7 @@ export const getImageHomePageUrl = (imageName: string): string => {
 export function useDockerImages() {
     const dockerService = useDockerClient()
     const {showWarning} = useSnackbar()
-    const selectedHost = useHostStore(state => state.host)
+    const selectedHost = useHost()
 
 
     const [images, setImages] = useState<Image[]>([])

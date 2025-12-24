@@ -14,25 +14,37 @@ import {
     StatsIcon,
     VolumeIcon
 } from "../compose/components/file-icon.tsx";
-import {useTabsStore} from "../../context/tab-context.tsx";
+import {useTabs} from "../../context/tab-context.tsx";
 import {useEditorUrl} from "../../lib/editor.ts";
-import {useHostStore} from "../compose/state/files.ts";
+import {create} from "zustand";
 
 const MAIN_SIDEBAR_WIDTH = 72;
 
-export const useHostFromUrl = () => {
+export const useHost = () => {
     const {host} = useParams()
     return host || "local";
 }
+
+export const useActiveHost = create<{
+    activeHost: string;
+    setActiveHost: (activeHost: string | undefined) => void;
+}>((set) => ({
+    activeHost: "local",
+    setActiveHost: (activeHost) => {
+        set({
+            activeHost: activeHost || "local",
+        });
+    }
+}))
 
 export function RootLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const {logout} = useAuth();
-    const {lastOpened, allTabs} = useTabsStore();
+    const {activeTab, tabs} = useTabs();
+    const host = useHost();
+    const setHost = useActiveHost(state => state.setActiveHost)
 
-    const host = useHostFromUrl()
-    const setHost = useHostStore(state => state.setHost)
     useEffect(() => {
         setHost(host)
     }, [host]);
@@ -50,7 +62,7 @@ export function RootLayout() {
             path: editorUrl(),
             icon: DockerFolderIcon,
             onClick: () => {
-                const url = editorUrl(lastOpened, allTabs[lastOpened])
+                const url = editorUrl(activeTab, tabs[activeTab])
                 navigate(url)
             },
         },
@@ -60,7 +72,7 @@ export function RootLayout() {
         {title: 'Volumes', path: `/${host}/volumes`, icon: VolumeIcon},
         {title: 'Networks', path: `/${host}/networks`, icon: NetworkIcon},
         {title: 'Cleaner', path: `/${host}/cleaner`, icon: () => <FolderDelete sx={{color: 'greenyellow'}}/>},
-    ], [lastOpened, host, navigate, editorUrl, allTabs]);
+    ], [activeTab, host, navigate, editorUrl, tabs]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

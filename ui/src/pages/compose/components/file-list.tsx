@@ -2,14 +2,13 @@ import {useCallback, useEffect} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
 import {Add as AddIcon, Refresh, Search as SearchIcon} from '@mui/icons-material'
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
-import {useFileComponents} from "../state/terminal.tsx";
+import {useFileComponents, useSideBarAction} from "../state/state.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
 import {FileItem} from "./file-item.tsx";
 import AliasSelector from "./file-alias-selector.tsx";
 import {useFiles} from "../../../context/file-context.tsx"
 import {useFileSearch} from "../dialogs/file-search.tsx";
 import {useFileCreate} from "../dialogs/file-create.tsx";
-import {useSideBarAction} from "../state/files.ts";
 
 export function FileList() {
     const showSearch = useFileSearch(state => state.open)

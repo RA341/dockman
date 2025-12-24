@@ -1,7 +1,7 @@
 import React, {type ReactElement, type ReactNode, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip, Typography} from '@mui/material';
-import {useFileComponents} from "../state/terminal.tsx";
+import {useFileComponents, useOpenFiles} from "../state/state.tsx";
 import {callRPC, useFileClient} from "../../../lib/api.ts";
 import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
 import {type SaveState, useSaveStatus} from "../hooks/status-hook.ts";
@@ -12,7 +12,6 @@ import {TabStat} from "../tab-stats.tsx";
 import CenteredMessage from "../../../components/centered-message.tsx";
 import {ErrorOutline, RefreshRounded} from "@mui/icons-material";
 import {useConfig} from "../../../hooks/config.ts";
-import {useOpenFiles} from "../state/files.ts";
 
 export enum TabType {
     // noinspection JSUnusedGlobalSymbols

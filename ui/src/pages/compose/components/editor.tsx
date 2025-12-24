@@ -4,7 +4,7 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import * as monacoEditor from "monaco-editor";
 import {callRPC, useFileClient} from "../../../lib/api.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
-import {useTabsStore, useTabs} from "../../../context/tab-context.tsx";
+import {useTabs} from "../../../context/tab-context.tsx";
 
 interface MonacoEditorProps {
     selectedFile: string;
@@ -24,9 +24,8 @@ export function MonacoEditor(
     const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor | null>(null);
     const saveLineNum = useSaveLineNum()
 
+    const {tabs, setTabDetails} = useTabs()
     const [mounted, setMounted] = useState(false);
-    const {setTabDetails} = useTabs()
-    const tabs = useTabsStore(state => state.allTabs)
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;

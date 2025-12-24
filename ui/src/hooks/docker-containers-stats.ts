@@ -2,7 +2,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {callRPC, useDockerClient} from '../lib/api.ts';
 import {type ContainerStats, ORDER, SORT_FIELD} from '../gen/docker/v1/docker_pb.ts';
 import {useSnackbar} from "./snackbar.ts";
-import {useHostStore} from "../pages/compose/state/files.ts";
+import {useHost} from "../pages/home/home.tsx";
 
 // This map remains very useful for clean, client-side sorting.
 const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
@@ -18,7 +18,7 @@ const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
 export function useDockerStats(selectedPage?: string) {
     const dockerService = useDockerClient();
     const {showError} = useSnackbar();
-    const selectedHost = useHostStore(state => state.host)
+    const selectedHost = useHost()
 
     const [rawContainers, setRawContainers] = useState<ContainerStats[]>([]);
     const [loading, setLoading] = useState(true);

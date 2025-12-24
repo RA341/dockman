@@ -4,7 +4,7 @@ import {callRPC, useFileClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
 import {useNavigate} from "react-router-dom";
 import {useEditorUrl} from "../lib/editor.ts";
-import {useHostStore} from "../pages/compose/state/files.ts";
+import {useHost} from "../pages/home/home.tsx";
 
 interface AliasContextType {
     files: Alias[]
@@ -33,7 +33,7 @@ export const COMPOSE_ROOT_ALIAS = "compose";
 const AliasProvider = ({children}: { children: ReactNode }) => {
     const files = useFileClient()
     const {showError} = useSnackbar()
-    const host = useHostStore(state => state.host)
+    const host = useHost()
 
     const [aliases, setAliases] = useState<Alias[]>([])
     const [isLoading, setIsLoading] = useState(false)

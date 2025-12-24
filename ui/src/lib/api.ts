@@ -3,9 +3,9 @@ import {createConnectTransport} from "@connectrpc/connect-web";
 import type {DescService} from "@bufbuild/protobuf";
 import {useEffect, useMemo} from "react";
 import {DockerService} from "../gen/docker/v1/docker_pb.ts";
+import {useHost} from "../pages/home/home.tsx";
 import {FileService} from "../gen/files/v1/files_pb.ts";
 import {CleanerService} from "../gen/cleaner/v1/cleaner_pb.ts";
-import {useHostFromUrl} from "../pages/home/home.tsx";
 
 export const API_URL = import.meta.env.MODE === 'development'
     ? "http://localhost:8866"
@@ -26,7 +26,6 @@ const transport = createConnectTransport({
     baseUrl: API_URL,
     useBinaryFormat: true,
     interceptors: [(next) => async (req) => {
-
         req.header.set(DOCKER_HOST, hosRef.dockerHost);
         return await next(req);
     }],
@@ -41,7 +40,7 @@ export const hosRef = {
 }
 
 export const useCleanerClient = () => {
-    const host = useHostFromUrl()
+    const host = useHost()
     useEffect(() => {
         hosRef.dockerHost = host
     }, [host]);
@@ -49,7 +48,7 @@ export const useCleanerClient = () => {
 };
 
 export const useDockerClient = () => {
-    const host = useHostFromUrl()
+    const host = useHost()
     useEffect(() => {
         hosRef.dockerHost = host
     }, [host]);
@@ -58,7 +57,7 @@ export const useDockerClient = () => {
 };
 
 export const useFileClient = () => {
-    const host = useHostFromUrl()
+    const host = useHost()
     useEffect(() => {
         hosRef.dockerHost = host
     }, [host]);

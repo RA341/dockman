@@ -1,7 +1,6 @@
 import {useDockerClient} from "../../../lib/api.ts";
-import {useFileComponents} from "../state/terminal.tsx";
+import {deployActionsConfig, useComposeAction, useFileComponents} from "../state/state.tsx";
 import {Box, Button, CircularProgress} from "@mui/material";
-import {deployActionsConfig, useComposeAction} from "../state/compose.tsx";
 
 export function ComposeActionHeaders({selectedServices, fetchContainers}: {
     selectedServices: string[];

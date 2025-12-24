@@ -9,14 +9,14 @@ import {LogsPanel} from "./components/logs-panel.tsx";
 import {getExt} from "./components/file-icon.tsx";
 import ViewerSqlite from "./components/viewer-sqlite.tsx";
 import TextEditor from "./components/viewer-text.tsx";
-import {useFileComponents, useTerminalTabs} from "./state/terminal.tsx";
-import {useTabs, useTabsStore} from "../../context/tab-context.tsx";
+import {useFileComponents, useTerminalTabs} from "./state/state.tsx";
+import {useTabs} from "../../context/tab-context.tsx";
 import FilesProvider from "../../context/file-context.tsx";
+import {useHost} from "../home/home.tsx";
 import FileSearch from "./dialogs/file-search.tsx";
 import FileCreate from "./dialogs/file-create.tsx";
 import FileDelete from "./dialogs/file-delete.tsx";
 import FileRename from "./dialogs/file-rename.tsx";
-import {useAliasStore, useHostStore} from "./state/files.ts";
 
 
 export const ComposePage = () => {
@@ -32,15 +32,10 @@ export const ComposePage = () => {
 }
 
 export const ComposePageInner = () => {
-    const {filename, alias} = useFileComponents()
-
-    const setAlias = useAliasStore(state => state.setAlias)
-    useEffect(() => {
-        setAlias(alias)
-    }, [alias]);
+    const {filename} = useFileComponents()
 
     const clearTabs = useTerminalTabs(state => state.clearAll)
-    const host = useHostStore(state => state.host)
+    const host = useHost()
     useEffect(() => {
         clearTabs()
     }, [clearTabs, host]);
@@ -103,14 +98,7 @@ const FileTabBar = () => {
     const {filename} = useFileComponents()
 
     const navigate = useNavigate();
-    const {closeTab, onTabClick} = useTabs();
-
-    const {host} = useHostStore.getState();
-    const {alias} = useAliasStore.getState();
-    const contextKey = `${host}/${alias}`;
-
-    const tabs = useTabsStore(state => state.contextTabs)[contextKey] ?? {}
-    const activeTab = useTabsStore(state => state.lastOpened)
+    const {tabs, closeTab, onTabClick, activeTab} = useTabs();
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -146,7 +134,7 @@ const FileTabBar = () => {
     }, [navigate, tabs, activeTab, onTabClick])
 
     const tablist = useMemo(() => {
-        return Array.from(tabs);
+        return Object.keys(tabs)
     }, [tabs])
 
     return (
@@ -168,7 +156,7 @@ const FileTabBar = () => {
                                 alignItems: 'center',
                                 px: 1
                             }}>
-                                <Tooltip title={tabFilename}>
+                                <Tooltip title={filename}>
                                     <span>{getTabName(tabFilename)}</span>
                                 </Tooltip>
                                 <IconButton

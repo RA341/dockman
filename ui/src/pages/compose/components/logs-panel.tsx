@@ -1,6 +1,6 @@
 import {Box, Divider, IconButton, ListItemButton, Paper, Stack, Typography} from '@mui/material';
 import {Close, ExpandMore, TerminalRounded} from '@mui/icons-material';
-import {useTerminalAction, useTerminalTabs} from "../state/terminal.tsx";
+import {useTerminalAction, useTerminalTabs} from "../state/state.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 import InsertDriveFile from '@mui/icons-material/InsertDriveFile';

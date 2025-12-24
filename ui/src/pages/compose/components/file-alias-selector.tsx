@@ -4,7 +4,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import CheckIcon from '@mui/icons-material/Check';
 import {useAlias} from "../../../context/alias-context.tsx";
-import {useFileComponents} from "../state/terminal.tsx";
+import {useFileComponents} from "../state/state.tsx";
 
 const AliasSelector = () => {
     const {alias, host} = useFileComponents()
