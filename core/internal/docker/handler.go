@@ -10,16 +10,13 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	contSrv "github.com/RA341/dockman/internal/docker/container"
-	"github.com/RA341/dockman/internal/docker/updater"
 	"github.com/RA341/dockman/internal/host"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
-	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/container"
 	"github.com/rs/zerolog/log"
 )
@@ -318,28 +315,6 @@ func toRPCPort(p container.PortSummary) *v1.Port {
 		Private: int32(p.PrivatePort),
 		Host:    p.IP.String(),
 		Type:    p.Type,
-	}
-}
-
-func (h *Handler) toRPContainer(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
-	var ipAddr string
-	for _, netConf := range stack.NetworkSettings.Networks {
-		ipAddr = netConf.IPAddress.String()
-	}
-
-	return &v1.ContainerList{
-		Name:            strings.TrimPrefix(stack.Names[0], "/"),
-		Id:              stack.ID,
-		ImageID:         stack.ImageID,
-		ImageName:       stack.Image,
-		Status:          stack.Status,
-		IPAddress:       ipAddr,
-		UpdateAvailable: update.UpdateRef,
-		Ports:           portSlice,
-		ServiceName:     stack.Labels[api.ServiceLabel],
-		StackName:       stack.Labels[api.ProjectLabel],
-		ServicePath:     h.getComposeFilePath(stack.Labels[api.ConfigFilesLabel]),
-		Created:         time.Unix(stack.Created, 0).UTC().Format(time.RFC3339),
 	}
 }
 

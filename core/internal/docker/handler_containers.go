@@ -7,12 +7,15 @@ import (
 	"io"
 	"net/netip"
 	"slices"
+	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	contSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/updater"
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -229,6 +232,20 @@ func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.Con
 func (h *Handler) containersToRpc(result []container.Summary, host string, srv *Service) ([]*v1.ContainerList, map[string]int32) {
 	var dockerResult []*v1.ContainerList
 	statusCount := map[string]int32{}
+
+	machineAddr := ""
+	if host == contSrv.LocalClient {
+		machineAddr = srv.DaemonAddr
+	} else {
+		// remote hosts
+		machineAddr = srv.Container.Client.DaemonHost()
+	}
+
+	addr, err := netip.ParseAddr(machineAddr)
+	if err != nil {
+		addr, _ = netip.ParseAddr("0.0.0.0")
+	}
+
 	for _, stack := range result {
 		statusCount[string(stack.State)]++
 
@@ -243,11 +260,8 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 		var portSlice []*v1.Port
 		for _, p := range stack.Ports {
 			if p.IP.Is4() {
-				addr, err := netip.ParseAddr(srv.Container.Client.DaemonHost())
-				if err == nil {
-					p.IP = addr
-				}
-
+				// override with custom IP
+				p.IP = addr
 				// ignore ipv6 ports no one uses it anyway
 				portSlice = append(portSlice, toRPCPort(p))
 			}
@@ -261,11 +275,33 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 			return cmp.Compare(port1.Type, port2.Type)
 		})
 
-		dockerResult = append(dockerResult, h.toRPContainer(
+		dockerResult = append(dockerResult, h.ToProto(
 			stack,
 			portSlice,
 			updater.ImageUpdate{},
 		))
 	}
 	return dockerResult, statusCount
+}
+
+func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
+	var ipAddr string
+	for _, netConf := range stack.NetworkSettings.Networks {
+		ipAddr = netConf.IPAddress.String()
+	}
+
+	return &v1.ContainerList{
+		Name:            strings.TrimPrefix(stack.Names[0], "/"),
+		Id:              stack.ID,
+		ImageID:         stack.ImageID,
+		ImageName:       stack.Image,
+		Status:          stack.Status,
+		IPAddress:       ipAddr,
+		UpdateAvailable: update.UpdateRef,
+		Ports:           portSlice,
+		ServiceName:     stack.Labels[api.ServiceLabel],
+		StackName:       stack.Labels[api.ProjectLabel],
+		ServicePath:     h.getComposeFilePath(stack.Labels[api.ConfigFilesLabel]),
+		Created:         time.Unix(stack.Created, 0).UTC().Format(time.RFC3339),
+	}
 }
