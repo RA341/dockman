@@ -217,7 +217,7 @@ export function ContainerTable(
             )
         },
         Ports: {
-            getValue: (v) => v.ports[0].public ?? 0,
+            getValue: (v) => v.ports.at(0)?.public ?? 0,
             header: (label) => {
                 return <TableCell sx={headerStyles}>
                     <TableSortLabel active={sortField === label} direction={sortOrder}
