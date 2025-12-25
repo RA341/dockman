@@ -37,12 +37,9 @@ func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]
 		return nil, err
 	}
 
-	conf := h.srv.dy.GetDockmanYaml()
-
 	var rpcResult = make([]*v1.FsEntry, 0, len(result))
 	for _, entry := range result {
 		var composeFileName = ""
-		multipleComposeFiles := false
 
 		ele := &v1.FsEntry{
 			Filename:  entry.fullpath,
@@ -52,11 +49,7 @@ func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]
 				hasComposeExt := strings.HasSuffix(childEntry.fullpath, "compose.yaml") ||
 					strings.HasSuffix(childEntry.fullpath, "compose.yml")
 
-				if !multipleComposeFiles && conf.UseComposeFolders && !childEntry.isDir && hasComposeExt {
-					if composeFileName != "" {
-						// previously set
-						multipleComposeFiles = true
-					}
+				if !childEntry.isDir && hasComposeExt {
 					composeFileName = childEntry.fullpath
 				}
 
@@ -70,10 +63,7 @@ func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]
 			}),
 		}
 
-		if !multipleComposeFiles {
-			ele.IsComposeFolder = composeFileName
-		}
-
+		ele.IsComposeFolder = composeFileName
 		rpcResult = append(rpcResult, ele)
 	}
 
@@ -200,7 +190,7 @@ func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAlias
 		resp = append(resp, &v1.Alias{
 			Alias:    alias.Alias,
 			Fullpath: alias.Fullpath,
-			// Host:  we only use host to input new aliases it will use FormatAlias before inserting
+			// Config:  we only use host to input new aliases it will use FormatAlias before inserting
 		})
 	}
 
