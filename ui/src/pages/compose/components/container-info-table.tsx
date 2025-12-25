@@ -225,7 +225,7 @@ export function ContainerTable(
                 </TableCell>
             },
             cell: (c) => (
-                <TableCell>
+                <TableCell sx={{maxWidth: 330}}>
                     <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.5}}>{formatPorts(c.ports)}</Box>
                 </TableCell>
             )
