@@ -14,7 +14,7 @@ import {useLocation} from 'react-router-dom'
 import React, {type MouseEvent, useEffect, useState} from 'react'
 import {ExpandLess, ExpandMore, Folder} from '@mui/icons-material'
 import {Link as RouterLink} from "react-router";
-import FileIcon from "./file-icon.tsx";
+import FileIcon, {DockerFolderIcon} from "./file-icon.tsx";
 import {amber} from "@mui/material/colors";
 
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
@@ -26,6 +26,7 @@ import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useFileDelete} from "../dialogs/file-delete.tsx";
 import {useFileRename} from "../dialogs/file-rename.tsx";
 import {useAliasStore, useHostStore, useOpenFiles} from "../state/files.ts";
+import {useConfig} from "../../../hooks/config.ts";
 
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
@@ -112,6 +113,13 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     const openFiles = useOpenFiles(state => state.openFiles)
     const toggle = useOpenFiles(state => state.toggle)
     const {listFiles} = useFiles()
+    const {dockYaml} = useConfig()
+    const editorUrl = useEditorUrl() // Hook to get editor route helper
+
+    const useComposeFolder = (dockYaml?.useComposeFolders ?? false)
+    const isComposeFolder = useComposeFolder && !!entry.isComposeFolder;
+
+    const composeFilePath = isComposeFolder ? editorUrl(entry.isComposeFolder) : "";
 
     const {isDragOver, dndProps} = useFileDnD(entry);
 
@@ -122,28 +130,20 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     const name = entry.filename
     const folderOpen = openFiles[ctxKey]?.has(entry.filename) ?? false
 
-    // todo if a file with same starting letter is open then the folder and
-    //  the file will be highlighted
-    // eg abc <- folder abcx <- file both highlighted if file open
-    // const isSelected = useIsSelected(entry.filename);
-    const isSelected = false;
+    // Highlight if we are currently editing the compose file this folder points to
+    const isSelected = useIsSelected(composeFilePath);
 
-    const handleToggle = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
+    const handleToggle = (_e: React.MouseEvent) => {
+        // If it's a link, we want the navigation to happen,
+        // but we ALSO want to toggle the folder visibility.
         toggle(entry.filename);
     }
-    const displayName = getEntryDisplayName(name);
+
     const [isFetchingMore, setIsFetchingMore] = useState(false)
 
     const fetchMore = async () => {
         setIsFetchingMore(true)
-
-        if (entry.isFetched) {
-            console.log("Folder is already fetched: ", entry);
-            return
-        }
-
+        if (entry.isFetched) return
         await listFiles(name, depthIndex)
         setIsFetchingMore(false)
     }
@@ -156,12 +156,21 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(entry)
 
+    const displayName = getEntryDisplayName(name);
+
     return (
         <>
             <ListItemButton
                 key={entry.filename}
                 {...dndProps}
                 draggable
+
+                {...(isComposeFolder ? {
+                    component: RouterLink,
+                    to: composeFilePath
+                } : {
+                    component: 'div'
+                })}
 
                 selected={isSelected}
                 onContextMenu={handleContextMenu}
@@ -171,23 +180,38 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                     py: 1.25,
                     backgroundColor: isDragOver ? 'action.hover' : 'transparent',
                     outline: isDragOver ? '1px dashed primary.main' : 'none',
-                    outlineOffset: '-2px'
+                    outlineOffset: '-2px',
+                    color: 'inherit',
+                    textDecoration: 'none'
                 }}
             >
                 <ListItemIcon sx={{minWidth: 32}}>
-                    <Folder sx={{color: amber[800], fontSize: '1.1rem'}}/>
+                    {isComposeFolder ?
+                        <DockerFolderIcon/> :
+                        <Folder sx={{color: amber[800], fontSize: '1.1rem'}}/>
+                    }
                 </ListItemIcon>
 
                 <ListItemText
                     primary={displayName}
+                    secondary={isComposeFolder ? getEntryDisplayName(entry.isComposeFolder) : ""}
                     slotProps={{
-                        primary: {sx: {fontSize: '0.85rem'}}
+                        primary: {
+                            sx: {
+                                fontSize: '0.85rem',
+                                fontWeight: 400
+                            }
+                        }
                     }}
                 />
 
                 <IconButton
                     size="small"
-                    onClick={handleToggle}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggle(entry.filename);
+                    }}
                     sx={{ml: 0.5}}
                 >
                     {folderOpen ?
@@ -204,13 +228,16 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                             <CircularProgress size={16}/>
                         </Box>
                     ) : (
-                        entry.subFiles.map((child, index) => (
-                            child.isDir ?
-                                <FolderItemDisplay
-                                    entry={child}
-                                    depthIndex={[...depthIndex, index]}/> :
-                                <FileItemDisplay entry={child}/>
-                        ))
+                        entry.subFiles
+                            .filter(child => !(isComposeFolder && child.filename === entry.isComposeFolder))
+                            .map((child, index) => (
+                                child.isDir ?
+                                    <FolderItemDisplay
+                                        key={child.filename}
+                                        entry={child}
+                                        depthIndex={[...depthIndex, index]}/> :
+                                    <FileItemDisplay key={child.filename} entry={child}/>
+                            ))
                     )}
                 </List>
             </Collapse>
