@@ -5,7 +5,8 @@ import {useSnackbar} from "../hooks/snackbar.ts";
 import {type FsEntry} from '../gen/files/v1/files_pb.ts';
 import {useTabs} from "./tab-context.tsx";
 import {useEditorUrl} from "../lib/editor.ts";
-import {useAliasStore, useHostStore, useOpenFiles} from "../pages/compose/state/files.ts";
+import {useHostStore, useOpenFiles} from "../pages/compose/state/files.ts";
+import {useFileComponents} from "../pages/compose/state/terminal.tsx";
 
 export interface FilesContextType {
     files: FsEntry[]
@@ -45,7 +46,9 @@ function FilesProvider({children}: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true)
 
     const host = useHostStore(state => state.host)
-    const alias = useAliasStore(state => state.alias)
+    // don't use alias store since its dependent on the React lifecycle
+    // const alias = useAliasStore(state => state.alias)
+    const {alias} = useFileComponents()
 
     const fetchFiles = useCallback(async (
         path: string = "",

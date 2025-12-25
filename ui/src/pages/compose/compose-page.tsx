@@ -33,7 +33,6 @@ export const ComposePage = () => {
 
 export const ComposePageInner = () => {
     const {filename, alias} = useFileComponents()
-
     const setAlias = useAliasStore(state => state.setAlias)
     useEffect(() => {
         setAlias(alias)
