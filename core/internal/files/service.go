@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -127,6 +128,13 @@ func (s *Service) List(path string, hostname string) ([]Entry, error) {
 	})
 
 	return result, nil
+}
+
+func (s *Service) FilePicker(host string, path string) ([]Entry, error) {
+	//s.GetFS()
+
+	//cliFs.ReadDir(path)
+	return nil, nil
 }
 
 func (s *Service) listFiles(cliFs filesystem.FileSystem, relDirpath string, displayPath string) ([]Entry, error) {
@@ -317,7 +325,7 @@ func (s *Service) LoadFilePath(filename, hostname string, download bool) (io.Rea
 	if err != nil {
 		// file cannot be opened close it before return the err
 		fileutil.Close(file)
-		return nil, time.Time{}, err
+		return nil, time.Time{}, errors.Join(ErrFileNotSupported, err)
 	}
 
 	// reset seek pointer after checking trghe file mime
@@ -328,6 +336,8 @@ func (s *Service) LoadFilePath(filename, hostname string, download bool) (io.Rea
 
 	return file, t, err
 }
+
+var ErrFileNotSupported = errors.New("file type not supported")
 
 func CheckFileType(reader io.Reader) error {
 	mtype, err := mimetype.DetectReader(reader)

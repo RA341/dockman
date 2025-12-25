@@ -2,6 +2,7 @@ package files
 
 import (
 	b64 "encoding/base64"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -55,6 +56,11 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 	reader, modTime, err := h.srv.LoadFilePath(filename, getHost, download)
 	if err != nil {
 		log.Error().Err(err).Str("path", filename).Msg("Error loading file")
+		if errors.Is(err, ErrFileNotSupported) {
+			http.Error(w, "binary file detected, it will not be opened", http.StatusConflict)
+			return
+		}
+
 		http.Error(w, "Filename not found", http.StatusBadRequest)
 		return
 	}

@@ -25,6 +25,7 @@ export interface FilesContextType {
 }
 
 export const FilesContext = createContext<FilesContextType | undefined>(undefined)
+export const ErrFileNotSupported = "File is not supported"
 
 export function useFiles() {
     const context = useContext(FilesContext)
@@ -219,6 +220,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         await fetchFiles("");
     };
 
+
     async function downloadFile(
         filename: string,
         shouldDownload: boolean = false
@@ -231,8 +233,12 @@ function FilesProvider({children}: { children: ReactNode }) {
                 headers: {DOCKER_HOST: hosRef.dockerHost}
             });
 
+            const bodyText = await response.text();
             if (!response.ok) {
-                return {file: "", err: `Failed to download file: ${response.status} ${response.statusText}`};
+                if (response.status === 409) {
+                    return {file: "", err: `${ErrFileNotSupported}: ${response.status} ${bodyText}`};
+                }
+                return {file: "", err: `Failed to download file: ${response.status} ${bodyText}`};
             }
 
 
@@ -252,9 +258,7 @@ function FilesProvider({children}: { children: ReactNode }) {
                 return {file: "", err: ""};
             }
 
-            const fileData = await response.text();
-            return {file: fileData, err: ""};
-
+            return {file: bodyText, err: ""};
         } catch (error: unknown) {
             console.error(`Error: ${(error as Error).toString()}`);
             return {file: "", err: (error as Error).toString()};
