@@ -202,7 +202,7 @@ function ContainersPage() {
                             <ContainerTable
                                 containers={filteredContainers}
                                 loading={loading}
-                                onShowLogs={onLogs}
+                                onLogs={onLogs}
                                 setSelectedServices={setSelectedContainers}
                                 selectedServices={selectedContainers}
                                 useContainerId={true}

@@ -22,7 +22,6 @@ import {
     InfoOutlined as InspectIcon,
     OpenInNew as OpenIcon,
     Terminal as ExecIcon,
-    TerminalOutlined as ContainerIcon,
     Update as UpdateIcon
 } from '@mui/icons-material'
 import {ContainerInfoPort} from './container-info-port.tsx'
@@ -39,9 +38,9 @@ interface ContainerTableProps {
     containers: ContainerList[],
     loading: boolean,
     selectedServices: string[],
-    onShowLogs: (containerId: string, containerName: string) => void,
     setSelectedServices: (services: string[]) => void,
     useContainerId?: boolean,
+    onLogs?: (containerId: string, containerName: string) => void,
     onExec?: (containerId: string, containerName: string) => void,
     onInspect?: (containerId: string) => void
 }
@@ -49,11 +48,11 @@ interface ContainerTableProps {
 export function ContainerTable(
     {
         containers,
-        onShowLogs,
         loading,
-        setSelectedServices,
         selectedServices,
+        setSelectedServices,
         useContainerId = false,
+        onLogs,
         onExec,
         onInspect
     }: ContainerTableProps) {
@@ -95,7 +94,8 @@ export function ContainerTable(
             getValue: (c) => c.name,
             header: (label) => (
                 <TableCell sx={headerStyles}>
-                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                    <TableSortLabel active={sortField === label}
+                                    direction={sortOrder}
                                     onClick={() => handleSort(label)}>
                         {label}
                     </TableSortLabel>
@@ -104,7 +104,6 @@ export function ContainerTable(
             cell: (c) => (
                 <TableCell>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                        <ContainerIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
                         <Box sx={{minWidth: 0}}>
                             <Typography variant="body2" sx={{fontWeight: 700, lineHeight: 1.2}}>{c.name}</Typography>
                             <Stack direction="row" spacing={0.5} alignItems="center">
@@ -143,12 +142,21 @@ export function ContainerTable(
             cell: (c) => (
                 <TableCell>
                     <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
-                        <ActionBtn icon={<InspectIcon fontSize="inherit"/>} title="Inspect"
-                                   onClick={() => onInspect?.(c.id)}/>
-                        <ActionBtn icon={<LogsIcon fontSize="inherit"/>} title="Logs"
-                                   onClick={() => onShowLogs(c.id, c.name)}/>
-                        <ActionBtn icon={<ExecIcon fontSize="inherit"/>} title="Terminal"
-                                   onClick={() => onExec?.(c.id, c.name)}/>
+                        {onInspect && (<ActionBtn
+                            icon={<InspectIcon fontSize="inherit"/>}
+                            title="Inspect"
+                            onClick={() => onInspect?.(c.id)}
+                        />)}
+                        {onLogs && (<ActionBtn
+                            icon={<LogsIcon fontSize="inherit"/>}
+                            title="Logs"
+                            onClick={() => onLogs?.(c.id, c.name)}
+                        />)}
+                        {onExec && (<ActionBtn
+                            icon={<ExecIcon fontSize="inherit"/>}
+                            title="Terminal"
+                            onClick={() => onExec?.(c.id, c.name)}
+                        />)}
                     </Stack>
                 </TableCell>
             )
