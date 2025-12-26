@@ -26,6 +26,9 @@ export function FileList() {
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+            if ((event.altKey) && event.key === 'r') {
+                listFiles("", []).then()
+            }
             if ((event.altKey) && event.key === 's') {
                 event.preventDefault()
                 showSearch()
