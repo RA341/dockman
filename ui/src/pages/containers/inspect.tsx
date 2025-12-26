@@ -100,7 +100,7 @@ const ContainerInspect = () => {
                         <Box sx={{ml: 1}}>
                             <Breadcrumbs aria-label="breadcrumb" sx={{'& .MuiBreadcrumbs-separator': {mx: 0.5}}}>
                                 <MuiLink underline="hover" color="inherit" sx={{cursor: 'pointer', fontSize: '0.8rem'}}
-                                         onClick={() => navigate('/containers')}>
+                                         onClick={() => navigate(`/${host}/containers`)}>
                                     Containers
                                 </MuiLink>
                                 <Typography color="text.primary" sx={{fontSize: '0.8rem', fontWeight: 700}}>

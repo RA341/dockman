@@ -1,18 +1,22 @@
 import React, {useEffect, useRef, useState} from "react"
 import {
-    Alert,
     Box,
     Button,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
+    Divider,
+    InputAdornment,
+    Paper,
+    Stack,
     TextField,
     Typography
 } from "@mui/material"
-import {Cancel, DriveFileRenameOutline, DriveFileRenameOutlineRounded, ErrorOutline} from "@mui/icons-material"
+import {Cancel, ChevronRight, DriveFileRenameOutline, EditOutlined} from "@mui/icons-material"
 import {create} from "zustand";
 import {useFiles} from "../../../context/file-context.tsx";
+import {grey} from "@mui/material/colors";
 
 export const useFileRename = create<{
     filename: string
@@ -31,6 +35,7 @@ export const useFileRename = create<{
 function FileRename() {
     const filename = useFileRename(state => state.filename)
     const close = useFileRename(state => state.close)
+    const {renameFile} = useFiles()
 
     const [name, setName] = useState('')
     const [error, setError] = useState('')
@@ -41,172 +46,158 @@ function FileRename() {
         if (filename) {
             setName(filename)
             setError('')
-            inputRef.current?.focus()
+            // Small timeout to ensure the dialog is mounted before focusing
+            setTimeout(() => inputRef.current?.focus(), 100)
         }
     }, [filename])
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        // Check for Alt+B shortcut to go back to preset selection (only if no parent)
-        if (e.altKey && e.key.toLowerCase() === 'b' && !filename) {
-            e.preventDefault()
-            setName('')
-            setError('')
-            return
-        }
-        switch (e.key) {
-            case 'Enter':
-                e.preventDefault()
-                handleConfirm()
-                break
-        }
-    }
-
-    const {renameFile} = useFiles()
-
     const handleConfirm = () => {
-        let newFilename = name.trim()
-        if (!newFilename) return
+        const newFilename = name.trim()
+        if (!newFilename || newFilename === filename) return
 
         renameFile(filename, newFilename).then()
         close()
     }
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value
-        setName(value)
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleConfirm()
+        }
+        if (e.key === 'Escape') close()
     }
 
-    const getPreviewText = () => {
-        if (!name.trim()) return ""
-        return `${name}`
-    }
-
-    const isCreateDisabled = () => {
-        return !name.trim() || !!error
-    }
+    // Disable button if name is empty, has error, or is identical to the old name
+    const isRenameDisabled = !name.trim() || !!error || name.trim() === filename
 
     return (
         <Dialog
             open={!!filename}
             onClose={close}
             fullWidth
-            maxWidth="md"
+            maxWidth="sm"
             onKeyDown={handleKeyDown}
             slotProps={{
                 paper: {
-                    sx: {minHeight: '500px'}
+                    sx: {borderRadius: 3, backgroundImage: 'none'}
                 }
             }}
         >
-            <DialogTitle sx={{display: 'flex', alignItems: 'center', gap: 1, pb: 1}}>
-                <DriveFileRenameOutline color="primary" sx={{fontSize: '1.5rem'}}/>
-                <Typography variant="h6">{`Rename "${filename}"`}</Typography>
+            <DialogTitle sx={{p: 3, pb: 2}}>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Box sx={{
+                        p: 1,
+                        borderRadius: 1.5,
+                        bgcolor: 'primary.lighter',
+                        color: 'primary.main',
+                        display: 'flex'
+                    }}>
+                        <DriveFileRenameOutline fontSize="small"/>
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" sx={{fontWeight: 800, lineHeight: 1.2}}>
+                            Rename Item
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            Original: <code style={{color: grey[700]}}>{filename}</code>
+                        </Typography>
+                    </Box>
+                </Stack>
             </DialogTitle>
 
-            <DialogContent dividers sx={{pt: 3, pb: 3, minHeight: '350px'}}>
-                {(
+            <DialogContent sx={{p: 3, pt: 1}}>
+                <Stack spacing={3} sx={{mt: 1}}>
                     <Box>
-                        <Box sx={{position: 'relative', mb: 3}}>
-                            <TextField
-                                ref={inputRef}
-                                autoFocus
-                                fullWidth
-                                label="Name"
-                                variant="outlined"
-                                value={name}
-                                onChange={handleChange}
-                                error={!!error}
-                                helperText={error}
-                                size="medium"
-                                sx={{
-                                    '& .MuiInputBase-root': {
-                                        fontSize: '1.1rem'
-                                    }
-                                }}
-                            />
-                        </Box>
+                        <Typography variant="overline" sx={{color: 'text.secondary', fontWeight: 700}}>
+                            New Name
+                        </Typography>
+                        <TextField
+                            inputRef={inputRef}
+                            fullWidth
+                            variant="outlined"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            error={!!error}
+                            helperText={error}
+                            sx={{mt: 0.5}}
+                            slotProps={{
+                                input: {
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <EditOutlined fontSize="small" color="action"/>
+                                        </InputAdornment>
+                                    ),
+                                }
+                            }}
+                        />
+                    </Box>
 
-                        {/* Preview Section */}
-                        {getPreviewText() && (
-                            <Alert
-                                severity="warning"
-                                icon={<DriveFileRenameOutlineRounded/>}
+                    {name.trim() && name.trim() !== filename && (
+                        <Box>
+                            <Typography variant="overline" sx={{color: 'text.secondary', fontWeight: 700}}>
+                                Change Preview
+                            </Typography>
+                            <Paper
+                                variant="outlined"
                                 sx={{
-                                    mb: 2,
-                                    '& .MuiAlert-message': {
-                                        width: '100%'
-                                    }
+                                    p: 2,
+                                    mt: 0.5,
+                                    borderStyle: 'dashed',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 1.5
                                 }}
                             >
-                                <Typography variant="subtitle2" sx={{mb: 0.5}}>
-                                    Rename:
+                                <Typography variant="caption" sx={{
+                                    fontFamily: 'monospace',
+                                    color: 'text.disabled',
+                                    textDecoration: 'line-through'
+                                }}>
+                                    {filename}
                                 </Typography>
-
-                                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap'}}>
-                                    <Typography
-                                        variant="h6"
-                                        sx={{
-                                            // textDecoration: 'line-through',
-                                            fontFamily: 'monospace',
-                                            fontWeight: 'bold',
-                                            color: 'primary.warn'
-                                        }}
-                                    >
-                                        {filename}
-                                    </Typography>
-
-                                    <Typography variant="h6" sx={{
-                                        fontFamily: 'monospace',
-                                        fontWeight: 'bold',
-                                        color: 'primary.warn'
-                                    }}>
-                                        {"->"}
-                                    </Typography>
-
-                                    <Typography
-                                        variant="h6"
-                                        sx={{
-                                            fontFamily: 'monospace',
-                                            fontWeight: 'bold',
-                                            color: 'primary.warn'
-                                        }}
-                                    >
-                                        {getPreviewText()}
-                                    </Typography>
-                                </Box>
-                            </Alert>
-                        )}
-
-                        {error && (
-                            <Alert severity="error" icon={<ErrorOutline/>} sx={{mb: 2}}>
-                                {error}
-                            </Alert>
-                        )}
-                    </Box>
-                )}
+                                <ChevronRight sx={{color: 'text.disabled', fontSize: 16}}/>
+                                <Typography variant="subtitle2"
+                                            sx={{fontFamily: 'monospace', fontWeight: 700, color: 'primary.main'}}>
+                                    {name}
+                                </Typography>
+                            </Paper>
+                        </Box>
+                    )}
+                </Stack>
             </DialogContent>
 
-            <DialogActions sx={{px: 3, py: 2.5, gap: 2}}>
+            <Divider/>
+
+            <DialogActions sx={{p: 2.5}}>
                 <Button
+                    variant="outlined"
+                    color="inherit"
                     onClick={close}
                     startIcon={<Cancel/>}
-                    size="large"
+                    sx={{borderRadius: 2, textTransform: 'none', fontWeight: 700}}
                 >
-                    {'Cancel'}
+                    Cancel
                 </Button>
 
-                {(
-                    <Button
-                        onClick={handleConfirm}
-                        variant="contained"
-                        disabled={isCreateDisabled()}
-                        startIcon={<DriveFileRenameOutline/>}
-                        size="large"
-                        sx={{minWidth: '120px'}}
-                    >
-                        Rename
-                    </Button>
-                )}
+                <Box sx={{flex: 1}}/>
+
+                <Button
+                    variant="contained"
+                    disabled={isRenameDisabled}
+                    onClick={handleConfirm}
+                    startIcon={<DriveFileRenameOutline/>}
+                    sx={{
+                        borderRadius: 2,
+                        px: 4,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        boxShadow: 'none',
+                        '&:hover': {boxShadow: 'none'}
+                    }}
+                >
+                    Rename
+                </Button>
             </DialogActions>
         </Dialog>
     )
