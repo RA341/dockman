@@ -36,6 +36,9 @@ const (
 	// HostManagerServiceToggleClientProcedure is the fully-qualified name of the HostManagerService's
 	// ToggleClient RPC.
 	HostManagerServiceToggleClientProcedure = "/host.v1.HostManagerService/ToggleClient"
+	// HostManagerServiceBrowseFilesProcedure is the fully-qualified name of the HostManagerService's
+	// BrowseFiles RPC.
+	HostManagerServiceBrowseFilesProcedure = "/host.v1.HostManagerService/BrowseFiles"
 	// HostManagerServiceListAllHostsProcedure is the fully-qualified name of the HostManagerService's
 	// ListAllHosts RPC.
 	HostManagerServiceListAllHostsProcedure = "/host.v1.HostManagerService/ListAllHosts"
@@ -68,6 +71,7 @@ const (
 // HostManagerServiceClient is a client for the host.v1.HostManagerService service.
 type HostManagerServiceClient interface {
 	ToggleClient(context.Context, *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error)
+	BrowseFiles(context.Context, *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error)
 	ListAllHosts(context.Context, *connect.Request[v1.ListClientRequest]) (*connect.Response[v1.ListClientsResponse], error)
 	ListConnectedHosts(context.Context, *connect.Request[v1.ListConnectedHostRequest]) (*connect.Response[v1.ListConnectedHostResponse], error)
 	CreateHost(context.Context, *connect.Request[v1.CreateHostRequest]) (*connect.Response[v1.CreateHostResponse], error)
@@ -94,6 +98,12 @@ func NewHostManagerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			httpClient,
 			baseURL+HostManagerServiceToggleClientProcedure,
 			connect.WithSchema(hostManagerServiceMethods.ByName("ToggleClient")),
+			connect.WithClientOptions(opts...),
+		),
+		browseFiles: connect.NewClient[v1.BrowseFilesRequest, v1.BrowseFilesResponse](
+			httpClient,
+			baseURL+HostManagerServiceBrowseFilesProcedure,
+			connect.WithSchema(hostManagerServiceMethods.ByName("BrowseFiles")),
 			connect.WithClientOptions(opts...),
 		),
 		listAllHosts: connect.NewClient[v1.ListClientRequest, v1.ListClientsResponse](
@@ -156,6 +166,7 @@ func NewHostManagerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 // hostManagerServiceClient implements HostManagerServiceClient.
 type hostManagerServiceClient struct {
 	toggleClient       *connect.Client[v1.ToggleRequest, v1.ToggleResponse]
+	browseFiles        *connect.Client[v1.BrowseFilesRequest, v1.BrowseFilesResponse]
 	listAllHosts       *connect.Client[v1.ListClientRequest, v1.ListClientsResponse]
 	listConnectedHosts *connect.Client[v1.ListConnectedHostRequest, v1.ListConnectedHostResponse]
 	createHost         *connect.Client[v1.CreateHostRequest, v1.CreateHostResponse]
@@ -170,6 +181,11 @@ type hostManagerServiceClient struct {
 // ToggleClient calls host.v1.HostManagerService.ToggleClient.
 func (c *hostManagerServiceClient) ToggleClient(ctx context.Context, req *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error) {
 	return c.toggleClient.CallUnary(ctx, req)
+}
+
+// BrowseFiles calls host.v1.HostManagerService.BrowseFiles.
+func (c *hostManagerServiceClient) BrowseFiles(ctx context.Context, req *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error) {
+	return c.browseFiles.CallUnary(ctx, req)
 }
 
 // ListAllHosts calls host.v1.HostManagerService.ListAllHosts.
@@ -220,6 +236,7 @@ func (c *hostManagerServiceClient) DeleteAlias(ctx context.Context, req *connect
 // HostManagerServiceHandler is an implementation of the host.v1.HostManagerService service.
 type HostManagerServiceHandler interface {
 	ToggleClient(context.Context, *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error)
+	BrowseFiles(context.Context, *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error)
 	ListAllHosts(context.Context, *connect.Request[v1.ListClientRequest]) (*connect.Response[v1.ListClientsResponse], error)
 	ListConnectedHosts(context.Context, *connect.Request[v1.ListConnectedHostRequest]) (*connect.Response[v1.ListConnectedHostResponse], error)
 	CreateHost(context.Context, *connect.Request[v1.CreateHostRequest]) (*connect.Response[v1.CreateHostResponse], error)
@@ -242,6 +259,12 @@ func NewHostManagerServiceHandler(svc HostManagerServiceHandler, opts ...connect
 		HostManagerServiceToggleClientProcedure,
 		svc.ToggleClient,
 		connect.WithSchema(hostManagerServiceMethods.ByName("ToggleClient")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hostManagerServiceBrowseFilesHandler := connect.NewUnaryHandler(
+		HostManagerServiceBrowseFilesProcedure,
+		svc.BrowseFiles,
+		connect.WithSchema(hostManagerServiceMethods.ByName("BrowseFiles")),
 		connect.WithHandlerOptions(opts...),
 	)
 	hostManagerServiceListAllHostsHandler := connect.NewUnaryHandler(
@@ -302,6 +325,8 @@ func NewHostManagerServiceHandler(svc HostManagerServiceHandler, opts ...connect
 		switch r.URL.Path {
 		case HostManagerServiceToggleClientProcedure:
 			hostManagerServiceToggleClientHandler.ServeHTTP(w, r)
+		case HostManagerServiceBrowseFilesProcedure:
+			hostManagerServiceBrowseFilesHandler.ServeHTTP(w, r)
 		case HostManagerServiceListAllHostsProcedure:
 			hostManagerServiceListAllHostsHandler.ServeHTTP(w, r)
 		case HostManagerServiceListConnectedHostsProcedure:
@@ -331,6 +356,10 @@ type UnimplementedHostManagerServiceHandler struct{}
 
 func (UnimplementedHostManagerServiceHandler) ToggleClient(context.Context, *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("host.v1.HostManagerService.ToggleClient is not implemented"))
+}
+
+func (UnimplementedHostManagerServiceHandler) BrowseFiles(context.Context, *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("host.v1.HostManagerService.BrowseFiles is not implemented"))
 }
 
 func (UnimplementedHostManagerServiceHandler) ListAllHosts(context.Context, *connect.Request[v1.ListClientRequest]) (*connect.Response[v1.ListClientsResponse], error) {

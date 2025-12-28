@@ -2,6 +2,8 @@ package host
 
 import (
 	"fmt"
+	fs2 "io/fs"
+	"slices"
 	"strings"
 	"sync"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/RA341/dockman/internal/host/filesystem"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/RA341/dockman/pkg/listutils"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/moby/moby/client"
 	"github.com/pkg/sftp"
@@ -112,7 +115,7 @@ func (s *Service) GetFileSystem(host, alias string) (filesystem.FileSystem, erro
 	if !ok {
 		return nil, fmt.Errorf("host %s is not found in connected clients", host)
 	}
-	return val.FS.LoadFS(alias)
+	return val.FS.LoadAlias(alias)
 }
 
 func (s *Service) GetDockerService(name string) (*docker.Service, error) {
@@ -148,7 +151,7 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 				return compose.Host{}, err
 			}
 
-			fs, err := val.FS.LoadFS(pathAlias)
+			fs, err := val.FS.LoadAlias(pathAlias)
 			if err != nil {
 				return compose.Host{}, err
 			}
@@ -162,6 +165,54 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 	)
 
 	return service, nil
+}
+
+type BrowseItem struct {
+	name string
+	dir  bool
+}
+
+func (s *Service) Browse(host string, dir string) ([]BrowseItem, error) {
+	val, ok := s.activeClients.Load(host)
+	if !ok {
+		return nil, fmt.Errorf("host not found in connected clients")
+	}
+
+	fs, err := val.FS.LoadDirect("/")
+	if err != nil {
+		return nil, err
+	}
+
+	dir, err = fs.Abs(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	readDir, err := fs.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	results := listutils.ToMap(readDir, func(t fs2.DirEntry) BrowseItem {
+		return BrowseItem{
+			name: fs.Join(dir, t.Name()),
+			dir:  t.IsDir(),
+		}
+	})
+
+	slices.SortFunc(results, func(e1, e2 BrowseItem) int {
+		// Directories come before files
+		if e1.dir && !e2.dir {
+			return -1 // e1 (dir) comes before e2 (file)
+		}
+		if !e1.dir && e2.dir {
+			return 1 // e2 (dir) comes before e1 (file)
+		}
+		// Both are same type (both dirs or both files), sort alphabetically
+		return strings.Compare(e1.name, e2.name)
+	})
+
+	return results, nil
 }
 
 func (s *Service) Toggle(hostname string, enabled bool) error {
@@ -357,12 +408,7 @@ func (s *Service) Delete(hostname string) error {
 func (s *Service) Edit(config *Config) error {
 	// do not update aliases we do that separately
 	config.FolderAliases = nil
-	err := s.store.Update(config)
-	if err != nil {
-		return err
-	}
-
-	return s.Add(config, true)
+	return s.store.Update(config)
 }
 
 // GetSSH will return nil,nil for ActiveHost.Kind != SSH

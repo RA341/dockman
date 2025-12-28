@@ -21,6 +21,27 @@ func NewHandler(srv *Service) *Handler {
 	}
 }
 
+func (h *Handler) BrowseFiles(ctx context.Context, req *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error) {
+	dir := req.Msg.Dir
+	host := req.Msg.Host
+
+	res, err := h.srv.Browse(host, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	result := listutils.ToMap(res, func(t BrowseItem) *v1.BrowseItem {
+		return &v1.BrowseItem{
+			Fullpath: t.name,
+			IsDir:    t.dir,
+		}
+	})
+
+	return connect.NewResponse(&v1.BrowseFilesResponse{
+		Files: result,
+	}), nil
+}
+
 func (h *Handler) ToggleClient(ctx context.Context, req *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error) {
 	name := req.Msg.Name
 	tog := req.Msg.Enable
@@ -197,10 +218,11 @@ func (c *Config) ToProto() *v1.Host {
 	p := &v1.Host{
 		Id:           uint32(c.ID),
 		Name:         c.Name,
+		HostAddr:     c.MachineAddr,
 		Enable:       c.Enable,
 		DockerSocket: c.DockerSocket,
 		// Map the Enum
-		Kind: v1.ClientType(v1.ClientType_value[string(c.Type)]),
+		Kind: v1.ClientType(v1.ClientType_value[strings.ToUpper(string(c.Type))]),
 	}
 
 	// Map Belongs To
@@ -208,8 +230,9 @@ func (c *Config) ToProto() *v1.Host {
 		p.SshOptions = SSHConfigToProto(c.SSHOptions)
 	}
 
-	// Map Has Many using your ToMap func
-	p.FolderAliases = listutils.ToMap(c.FolderAliases, FolderAliasToProto)
+	if c.FolderAliases != nil {
+		p.FolderAliasesCount = int32(len(c.FolderAliases))
+	}
 
 	return p
 }
@@ -227,10 +250,6 @@ func ConfigFromProto(p *v1.Host) *Config {
 		c.SSHOptions = SSHConfigFromProto(p.SshOptions)
 		c.SSHID = uint(p.SshOptions.Id)
 	}
-
-	c.FolderAliases = listutils.ToMap(p.FolderAliases, func(fa *v1.FolderAlias) FolderAlias {
-		return FolderAliasFromProto(fa)
-	})
 
 	return c
 }

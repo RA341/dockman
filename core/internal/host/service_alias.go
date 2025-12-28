@@ -31,12 +31,17 @@ func NewAliasService(
 	}
 }
 
-func (as *AliasService) LoadFS(alias string) (filesystem.FileSystem, error) {
+func (as *AliasService) LoadAlias(alias string) (filesystem.FileSystem, error) {
 	root, err := as.resolveAlias(alias)
 	if err != nil {
 		return nil, err
 	}
 
+	return as.LoadDirect(root)
+}
+
+// LoadDirect loads a filesystem directly without checking db
+func (as *AliasService) LoadDirect(root string) (filesystem.FileSystem, error) {
 	switch as.kind {
 	case SSH:
 		if as.sftpProvider == nil {

@@ -57,6 +57,7 @@ func (g *GormStore) EditAlias(hostId uint, id uint, updatedData *FolderAlias) er
 func (g *GormStore) List(hostId uint) ([]FolderAlias, error) {
 	var aliases []FolderAlias
 	err := g.db.
+		Order("created_at ASC").
 		Where("config_id = ?", hostId).
 		Find(&aliases).Error
 	return aliases, err

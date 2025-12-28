@@ -46,6 +46,7 @@ func (s *gormStore) List() ([]Config, error) {
 	err := s.db.
 		Preload("SSHOptions").
 		Preload("FolderAliases").
+		Order("created_at ASC").
 		Find(&configs).Error
 	return configs, err
 }

@@ -17,9 +17,9 @@ import {Add, DeleteOutline, DnsOutlined, EditOutlined, FolderSpecialOutlined, Re
 import {callRPC, useClient} from "../../lib/api.ts";
 import {ClientType, type Host, HostManagerService} from "../../gen/host/v1/host_pb.ts";
 import EmptyHostDisplay from "./tab-host-empty.tsx";
-import HostWizardDialog from "./tab-host-wizard.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {useHostManager} from "../../context/host-context.tsx";
+import HostWizardDialog from "./components/host-wizard.tsx";
 
 function TabDockerHosts() {
     const hostClient = useClient(HostManagerService);
@@ -115,7 +115,14 @@ function TabDockerHosts() {
             ) : hosts.length > 0 ? (
                 <Grid container spacing={3}>
                     {hosts.map((h) => (
-                        <Grid size={{xs: 12, sm: 3, md: 2}} key={h.id.toString()}>
+                        <Grid
+                            key={h.id.toString()}
+                            size={{xs: 12, sm: 3, md: 2}}
+                            onClick={() => {
+                                setSelectedHost(h);
+                                setDialogOpen(true);
+                            }}
+                        >
                             <HostCard
                                 host={h}
                                 onEdit={() => {
@@ -152,13 +159,15 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
 
     const kind = ClientType[host.kind].toLowerCase();
     return (
-        <Paper variant="outlined" sx={{
-            p: 2,
-            borderRadius: 3,
-            position: 'relative',
-            transition: 'all 0.2s',
-            '&:hover': {borderColor: 'primary.main', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}
-        }}>
+        <Paper variant="outlined"
+               sx={{
+                   p: 2,
+                   borderRadius: 3,
+                   position: 'relative',
+                   transition: 'all 0.2s',
+
+                   '&:hover': {borderColor: 'primary.main', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}
+               }}>
             <Stack spacing={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Stack direction="row" spacing={1.5} alignItems="center">
@@ -172,9 +181,29 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                             <DnsOutlined/>
                         </Box>
                         <Box>
-                            <Typography variant="subtitle1" sx={{fontWeight: 800}}>{host.name}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{fontFamily: 'monospace'}}>
-                                Type:{kind}
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{mb: 0.5}}>
+                                <Typography variant="subtitle1" sx={{fontWeight: 800, lineHeight: 1}}>
+                                    {host.name}
+                                </Typography>
+                                <Chip
+                                    label={kind}
+                                    size="small"
+                                    variant="outlined"
+                                    color='primary'
+                                    sx={{
+                                        height: 18,
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.04em',
+                                        borderRadius: 1,
+                                        borderWidth: 1,
+                                        bgcolor: 'transparent'
+                                    }}
+                                />
+                            </Stack>
+                            <Typography variant="caption" sx={{fontFamily: 'monospace', color: 'text.disabled'}}>
+                                {host.sshOptions?.host || host.hostAddr || ''}
                             </Typography>
                         </Box>
                     </Stack>
@@ -205,7 +234,7 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                     <Chip
                         size="small"
                         icon={<FolderSpecialOutlined sx={{fontSize: '14px !important'}}/>}
-                        label={`${host.folderAliases?.length || 0} Alias`}
+                        label={`${host.folderAliasesCount || 0} Alias`}
                         variant="outlined"
                     />
                 </Stack>

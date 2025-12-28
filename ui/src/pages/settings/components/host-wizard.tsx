@@ -28,15 +28,18 @@ import {
     DnsOutlined,
     Done,
     EditOutlined,
+    Folder as FolderIcon,
     FolderSpecialOutlined,
     InfoOutlined,
     LanguageOutlined,
     SaveOutlined
 } from '@mui/icons-material';
-import {ClientType, type FolderAlias, type Host, HostManagerService} from "../../gen/host/v1/host_pb.ts";
-import {callRPC, useClient} from "../../lib/api.ts";
-import {useSnackbar} from "../../hooks/snackbar.ts";
-import scrollbarStyles from "../../components/scrollbar-style.tsx";
+import {amber} from "@mui/material/colors";
+import FolderPickerDialog from "./file-picker.tsx";
+import {ClientType, type FolderAlias, type Host, HostManagerService} from "../../../gen/host/v1/host_pb.ts";
+import {callRPC, useClient} from "../../../lib/api.ts";
+import {useSnackbar} from "../../../hooks/snackbar.ts";
+import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 
 const publicKeyHelperText = [
     "When PublicKey is enabled, Dockman installs its public key automatically.",
@@ -54,10 +57,11 @@ type CleanHost = Omit<Host, '$typeName' | '$unknown'>;
 const createDefaultHost = (existing?: Partial<CleanHost>): CleanHost => ({
     id: existing?.id ?? 0,
     name: existing?.name ?? "",
+    hostAddr: existing?.hostAddr ?? "",
     kind: existing?.kind ?? ClientType.LOCAL,
     enable: existing?.enable ?? true,
     dockerSocket: existing?.dockerSocket ?? "",
-    folderAliases: existing?.folderAliases ?? [],
+    folderAliasesCount: existing?.folderAliasesCount ?? 0,
     sshOptions: existing?.sshOptions ?? {
         id: 0, host: "", port: 22, user: "", password: "",
         remotePublicKey: "", usePublicKeyAuth: true,
@@ -264,10 +268,13 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
     const [aliases, setAliases] = useState<FolderAlias[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Form States
     const [newAlias, setNewAlias] = useState({alias: '', path: ''});
-
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editData, setEditData] = useState({alias: '', path: ''});
+
+    // Picker State: Tracks if we are picking for the 'new' row or a specific alias 'id'
+    const [pickerTarget, setPickerTarget] = useState<'new' | number | null>(null);
 
     const fetchAliases = useCallback(async () => {
         setLoading(true);
@@ -275,7 +282,7 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
         if (err) showError(err);
         else setAliases(val?.aliases || []);
         setLoading(false);
-    }, [hostname, hostId]);
+    }, [hostname]);
 
     useEffect(() => {
         fetchAliases().then();
@@ -284,10 +291,7 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
     const handleAdd = async () => {
         const {err} = await callRPC(() => hostManager.addAlias({
             hostId: hostId,
-            alias: {
-                alias: newAlias.alias,
-                fullpath: newAlias.path,
-            },
+            alias: {alias: newAlias.alias, fullpath: newAlias.path},
         }));
         if (err) showError(err);
         else {
@@ -298,10 +302,7 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
     };
 
     const handleDelete = async (name: string) => {
-        const {err} = await callRPC(() => hostManager.deleteAlias({
-            alias: name,
-            hostId: hostId
-        }));
+        const {err} = await callRPC(() => hostManager.deleteAlias({alias: name, hostId}));
         if (err) showError(err);
         else {
             showSuccess("Alias removed");
@@ -312,11 +313,7 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
     const handleSaveEdit = async (aliasId: number) => {
         const {err} = await callRPC(() => hostManager.editAlias({
             hostId: hostId,
-            alias: {
-                id: aliasId,
-                alias: editData.alias,
-                fullpath: editData.path
-            },
+            alias: {id: aliasId, alias: editData.alias, fullpath: editData.path},
         }));
         if (err) showError(err);
         else {
@@ -326,11 +323,17 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
         }
     };
 
+    // Helper to determine which path to send to the picker as starting point
+    const getInitialPath = () => {
+        if (pickerTarget === 'new') return newAlias.path || "/";
+        if (typeof pickerTarget === 'number') return editData.path || "/";
+        return "/";
+    };
+
     return (
         <Stack spacing={2} sx={{mt: 1}}>
             <SectionHeader icon={<FolderSpecialOutlined/>} title="Manage Path Aliases"/>
 
-            {/* ADD ROW */}
             <Paper variant="outlined" sx={{p: 2, borderStyle: 'dashed'}}>
                 <Typography variant="caption" sx={{fontWeight: 700, mb: 1, display: 'block', color: 'text.secondary'}}>
                     ADD NEW ALIAS
@@ -343,80 +346,144 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
                         sx={{width: '140px', bgcolor: 'background.paper'}}
                         slotProps={{
                             input: {
-                                startAdornment: <InputAdornment position="start">@</InputAdornment>
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Typography variant="caption" sx={{fontWeight: 800}}>
+                                            @
+                                        </Typography>
+                                    </InputAdornment>
+                                )
                             }
                         }}
                     />
                     <TextField
-                        size="small" fullWidth placeholder="/var/lib/docker/..."
+                        size="small" fullWidth placeholder="Select path..."
                         value={newAlias.path}
-                        onChange={e => setNewAlias({...newAlias, path: e.target.value})}
-                        sx={{bgcolor: 'background.paper', '& input': {fontFamily: 'monospace', fontSize: '0.8rem'}}}
+                        onClick={() => setPickerTarget('new')}
+                        sx={{
+                            bgcolor: 'background.paper',
+                            cursor: 'pointer',
+                            '& input': {fontFamily: 'monospace', fontSize: '0.8rem', cursor: 'pointer'}
+                        }}
+                        slotProps={{
+                            input: {
+                                readOnly: true,
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton size="small" onClick={() => setPickerTarget('new')}>
+                                            <FolderIcon fontSize="small" sx={{color: amber[700]}}/>
+                                        </IconButton>
+                                    </InputAdornment>
+                                )
+                            }
+                        }}
                     />
-                    <Button variant="contained" onClick={handleAdd} disabled={!newAlias.alias || !newAlias.path}>
+                    <Button variant="contained" onClick={handleAdd} disabled={!newAlias.alias || !newAlias.path}
+                            sx={{fontWeight: 700}}>
                         Add
                     </Button>
                 </Stack>
             </Paper>
 
-            <Divider/>
+            <Divider sx={{my: 1}}/>
 
             {/* LIST */}
             <Stack spacing={1}>
-                {loading && <CircularProgress size={20} sx={{alignSelf: 'center', my: 2}}/>}
+                {loading &&
+                    <Box sx={{display: 'flex', justifyContent: 'center', py: 2}}><CircularProgress size={24}/></Box>}
                 {!loading && aliases.length === 0 && (
-                    <Typography variant="body2" color="text.disabled" sx={{textAlign: 'center', py: 2}}>
-                        No aliases configured for this host.
+                    <Typography variant="body2" color="text.disabled"
+                                sx={{textAlign: 'center', py: 4, fontStyle: 'italic'}}>
+                        No aliases configured for this node.
                     </Typography>
                 )}
-                {aliases.map((a) => (
-                    <Paper key={a.id} variant="outlined"
-                           sx={{p: 1.5, bgcolor: editingId === Number(a.id) ? 'primary.lighter' : 'background.paper'}}>
-                        {editingId === Number(a.id) ? (
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <TextField
-                                    size="small" value={editData.alias}
-                                    onChange={e => setEditData({...editData, alias: e.target.value})}
-                                    sx={{width: '120px'}}
-                                />
-                                <TextField
-                                    size="small" fullWidth value={editData.path}
-                                    onChange={e => setEditData({...editData, path: e.target.value})}
-                                    sx={{'& input': {fontFamily: 'monospace', fontSize: '0.8rem'}}}
-                                />
-                                <IconButton color="primary"
-                                            onClick={() => handleSaveEdit(Number(a.id))}><Done/></IconButton>
-                                <IconButton onClick={() => setEditingId(null)}><Close/></IconButton>
-                            </Stack>
-                        ) : (
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography variant="subtitle2"
-                                            sx={{fontWeight: 700, minWidth: 80}}>@{a.alias}</Typography>
-                                <ChevronRight sx={{color: 'text.disabled', fontSize: 16}}/>
-                                <Typography variant="body2" sx={{
-                                    fontFamily: 'monospace',
-                                    flex: 1,
-                                    color: 'text.secondary',
-                                    fontSize: '0.8rem'
-                                }}>
-                                    {a.fullpath}
-                                </Typography>
-                                <IconButton size="small" onClick={() => {
-                                    setEditingId(Number(a.id));
-                                    setEditData({alias: a.alias, path: a.fullpath});
-                                }}><EditOutlined fontSize="small"/></IconButton>
-                                <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => handleDelete(a.alias)}
-                                >
-                                    <DeleteOutline fontSize="small"/>
-                                </IconButton>
-                            </Stack>
-                        )}
-                    </Paper>
-                ))}
+                {aliases.map((a) => {
+                    const isEditing = editingId === Number(a.id);
+                    return (
+                        <Paper key={a.id} variant="outlined" sx={{
+                            p: 1.5,
+                            transition: 'all 0.2s',
+                            bgcolor: isEditing ? 'primary.lighter' : 'background.paper',
+                            borderColor: isEditing ? 'primary.main' : 'divider'
+                        }}>
+                            {isEditing ? (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <TextField
+                                        size="small" value={editData.alias}
+                                        onChange={e => setEditData({...editData, alias: e.target.value})}
+                                        sx={{width: '120px', bgcolor: 'background.paper'}}
+                                    />
+                                    <TextField
+                                        size="small" fullWidth value={editData.path}
+                                        onClick={() => setPickerTarget(Number(a.id))}
+                                        sx={{
+                                            bgcolor: 'background.paper',
+                                            cursor: 'pointer',
+                                            '& input': {fontFamily: 'monospace', fontSize: '0.8rem', cursor: 'pointer'}
+                                        }}
+                                        slotProps={{
+                                            input: {
+                                                readOnly: true,
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton size="small" onClick={() => setPickerTarget('new')}>
+                                                            <FolderIcon fontSize="small" sx={{color: amber[700]}}/>
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                )
+                                            }
+                                        }}
+                                    />
+                                    <IconButton color="primary" onClick={() => handleSaveEdit(Number(a.id))}
+                                                size="small"><Done/></IconButton>
+                                    <IconButton onClick={() => setEditingId(null)} size="small"><Close/></IconButton>
+                                </Stack>
+                            ) : (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="subtitle2" sx={{
+                                        fontWeight: 700,
+                                        minWidth: 80,
+                                        color: 'primary.main'
+                                    }}>@{a.alias}</Typography>
+                                    <ChevronRight sx={{color: 'text.disabled', fontSize: 16}}/>
+                                    <Typography variant="body2" sx={{
+                                        fontFamily: 'monospace',
+                                        flex: 1,
+                                        color: 'text.secondary',
+                                        fontSize: '0.8rem',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                    }}>
+                                        {a.fullpath}
+                                    </Typography>
+                                    <IconButton size="small" onClick={() => {
+                                        setEditingId(Number(a.id));
+                                        setEditData({alias: a.alias, path: a.fullpath});
+                                    }}><EditOutlined fontSize="small"/></IconButton>
+                                    <IconButton size="small" color="error"
+                                                onClick={() => handleDelete(a.alias)}><DeleteOutline fontSize="small"/></IconButton>
+                                </Stack>
+                            )}
+                        </Paper>
+                    );
+                })}
             </Stack>
+
+            {/* SHARED FOLDER PICKER */}
+            <FolderPickerDialog
+                open={pickerTarget !== null}
+                hostname={hostname}
+                initialPath={getInitialPath()}
+                onClose={() => setPickerTarget(null)}
+                onSelect={(pickedPath) => {
+                    if (pickerTarget === 'new') {
+                        setNewAlias(prev => ({...prev, path: pickedPath}));
+                    } else if (typeof pickerTarget === 'number') {
+                        setEditData(prev => ({...prev, path: pickedPath}));
+                    }
+                    setPickerTarget(null);
+                }}
+            />
         </Stack>
     );
 }

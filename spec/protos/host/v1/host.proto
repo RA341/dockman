@@ -6,6 +6,8 @@ option go_package = "github.com/RA341/dockman/generated/host/v1";
 
 service HostManagerService {
   rpc ToggleClient(ToggleRequest) returns (ToggleResponse) {}
+  rpc BrowseFiles(BrowseFilesRequest) returns (BrowseFilesResponse) {}
+
 
   rpc ListAllHosts(ListClientRequest) returns (ListClientsResponse) {}
   rpc ListConnectedHosts(ListConnectedHostRequest) returns (ListConnectedHostResponse) {}
@@ -23,6 +25,21 @@ service HostManagerService {
 
 //////////////////////////////////////////////////////////////////////
 // Host messages
+
+
+message BrowseFilesRequest {
+  string host = 1;
+  string dir = 2;
+}
+
+message BrowseItem {
+  string fullpath = 1;
+  bool isDir = 2;
+}
+
+message BrowseFilesResponse {
+  repeated BrowseItem files = 1;
+}
 
 message ListConnectedHostRequest {}
 
@@ -119,11 +136,12 @@ message SSHConfig {
 message Host {
   uint32 id = 1;
   string name = 2;
+  string hostAddr = 8;
   ClientType kind = 3;
   bool enable = 4;
   string docker_socket = 5;
   SSHConfig ssh_options = 6;
-  repeated FolderAlias folder_aliases = 7;
+  int32 folder_aliases_count = 7;
 }
 
 enum ClientType {
