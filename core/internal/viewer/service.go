@@ -3,12 +3,9 @@ package viewer
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/RA341/dockman/internal/docker"
-	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/container"
@@ -60,58 +57,6 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	}
 
 	var netConf *network.NetworkingConfig
-
-	if info.IsDocker() {
-		//log.Debug().Msg("docker detected inspecting container")
-
-		filterArgs := client.Filters{}
-		filterArgs.Add("label", "dockman.container=true")
-
-		list, err := cont.ContainerList(ctx, client.ContainerListOptions{
-			Filters: filterArgs,
-		})
-		if err != nil {
-			return "", nil, err
-		}
-
-		done := false
-		for _, cont := range list.Items {
-			//log.Debug().Str("co", cont.Image).Msg("Checking container")
-			if done {
-				break
-			}
-			for _, m := range cont.Mounts {
-				log.Debug().Any("mount", m).Str("fullpath", fullpath).Msg("Checking mount")
-				if strings.HasPrefix(fullpath, m.Destination) {
-					fullpath = filepath.Join(m.Source, relPath)
-					log.Debug().Any("fullpath", fullpath).Str("rel", relPath).Msg("fullpath")
-					done = true
-
-					var netName string
-					for name := range cont.NetworkSettings.Networks {
-						netName = name
-						break
-					}
-
-					netConf = &network.NetworkingConfig{
-						EndpointsConfig: map[string]*network.EndpointSettings{
-							netName: {},
-						},
-					}
-
-					log.Debug().Str("path", fullpath).
-						Str("netname", netName).
-						Msg("found mounted path")
-					break
-				}
-			}
-		}
-
-		if !done {
-			return "", nil, fmt.Errorf("could not find dockman container")
-		}
-	}
-
 	image := "ghcr.io/coleifer/sqlite-web:latest"
 	progress, err := cont.ImagePull(ctx, image, client.ImagePullOptions{})
 	if err != nil {
