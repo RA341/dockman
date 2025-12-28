@@ -88,9 +88,13 @@ export const VolumeTable = ({
             cell: (volume) => (
                 <TableCell>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Box sx={{minWidth: 0}}>
-                            <Typography variant="body2" sx={{fontWeight: 200, lineHeight: 1.2, wordBreak: 'break-all'}}>
-                                {volume.name}
+                        <Box sx={{minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5}}>
+                            <Typography variant="body2" sx={{
+                                fontWeight: 500,
+                                lineHeight: 1.2,
+                                wordBreak: 'break-all'
+                            }}>
+                                {volume.name.slice(0, 12)}
                             </Typography>
                             <CopyButton
                                 handleCopy={handleCopy}

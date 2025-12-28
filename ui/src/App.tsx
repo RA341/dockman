@@ -351,7 +351,15 @@ const darkTheme = createTheme({
     components: {
         MuiCssBaseline: {
             styleOverrides: {
-                body: scrollbarStyles,
+                html: {
+                    height: '100%',
+                    overflow: 'hidden',
+                },
+                body: {
+                    height: '100%',
+                    overflow: 'hidden',
+                    ...scrollbarStyles,
+                },
                 '*': scrollbarStyles,
             },
         },
