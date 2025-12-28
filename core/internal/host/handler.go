@@ -81,6 +81,18 @@ func (h *Handler) DeleteHost(_ context.Context, req *connect.Request[v1.DeleteHo
 	return connect.NewResponse(&v1.DeleteHostResponse{}), nil
 }
 
+func (h *Handler) DeleteAlias(ctx context.Context, c *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
+	hostId := c.Msg.HostId
+	alias := c.Msg.Alias
+
+	err := h.srv.aliasStore.RemoveAlias(uint(hostId), alias)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.DeleteAliasResponse{}), nil
+}
+
 func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
 	host := req.Msg.Host
 
@@ -101,7 +113,7 @@ func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAlias
 func (h *Handler) AddAlias(_ context.Context, req *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
 	alias := req.Msg.Alias.Alias
 	fullpath := req.Msg.Alias.Fullpath
-	hostId := req.Msg.Alias.Id
+	hostId := req.Msg.HostId
 
 	err := h.srv.aliasStore.AddAlias(uint(hostId), alias, fullpath)
 	if err != nil {
@@ -110,16 +122,22 @@ func (h *Handler) AddAlias(_ context.Context, req *connect.Request[v1.AddAliasRe
 	return connect.NewResponse(&v1.AddAliasResponse{}), nil
 }
 
-func (h *Handler) DeleteAlias(_ context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
+func (h *Handler) EditAlias(ctx context.Context, req *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error) {
 	alias := req.Msg.Alias.Alias
-	hostId := req.Msg.Alias.Id
+	fullpath := req.Msg.Alias.Fullpath
+	id := req.Msg.Alias.Id
 
-	err := h.srv.aliasStore.RemoveAlias(uint(hostId), alias)
+	hostId := req.Msg.HostId
+
+	err := h.srv.aliasStore.EditAlias(uint(hostId), uint(id), &FolderAlias{
+		Alias:    alias,
+		Fullpath: fullpath,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&v1.DeleteAliasResponse{}), nil
+	return connect.NewResponse(&v1.EditAliasResponse{}), nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -127,7 +145,7 @@ func (h *Handler) DeleteAlias(_ context.Context, req *connect.Request[v1.DeleteA
 
 func FolderAliasToProto(m FolderAlias) *v1.FolderAlias {
 	return &v1.FolderAlias{
-		Id:       uint32(m.ConfigID),
+		Id:       uint32(m.ID),
 		Alias:    m.Alias,
 		Fullpath: m.Fullpath,
 	}
@@ -149,7 +167,6 @@ func SSHConfigToProto(m *ssh.MachineOptions) *v1.SSHConfig {
 	}
 	return &v1.SSHConfig{
 		Id:               uint32(m.ID),
-		Name:             m.Name,
 		Host:             m.Host,
 		Port:             int32(m.Port),
 		User:             m.User,
@@ -165,7 +182,6 @@ func SSHConfigFromProto(p *v1.SSHConfig) *ssh.MachineOptions {
 	}
 	return &ssh.MachineOptions{
 		Model:            gorm.Model{ID: uint(p.Id)},
-		Name:             p.Name,
 		Host:             p.Host,
 		Port:             int(p.Port),
 		User:             p.User,

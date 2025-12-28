@@ -35,21 +35,12 @@ func (m *Service) ListConfig() ([]MachineOptions, error) {
 	return m.machines.List()
 }
 
-func (m *Service) Create(machine *MachineOptions) (*ssh.Client, *sftp.Client, error) {
-	_, err := m.machines.Get(machine.Name)
-	if err == nil {
-		return nil, nil, fmt.Errorf("machine %s already exists use a different name", machine.Name)
-	}
-	return m.LoadClient(machine, true)
-}
-
 func (m *Service) LoadClient(machine *MachineOptions, create bool) (*ssh.Client, *sftp.Client, error) {
 	cli, err := m.newClient(machine)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s unable to connect: %w", machine.Name, err)
+		return nil, nil, err
 	}
 
-	// use a closure to capture the variable by reference
 	defer func() {
 		fileutil.CloseIfErr(err, cli)
 	}()
@@ -58,9 +49,11 @@ func (m *Service) LoadClient(machine *MachineOptions, create bool) (*ssh.Client,
 	// and use the password only on first connect
 	transferKeyOnFirstConnect := machine.UsePublicKeyAuth && machine.Password != ""
 	if transferKeyOnFirstConnect {
-		if err = m.transferPublicKey(cli, machine); err != nil {
-			return nil, nil, fmt.Errorf("unable to transfer public key for %s: %w", machine.Name, err)
+		err = m.transferPublicKey(cli, machine)
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to transfer public key: %w", err)
 		}
+
 		// remove password so that public key auth is used on subsequent connections
 		machine.Password = ""
 	}
@@ -99,27 +92,22 @@ func (m *Service) getAuthMethod(machine *MachineOptions) (ssh.AuthMethod, error)
 
 	// final fallback use .ssh in user dir
 	// should fail on docker containers
-	log.Debug().Str("client", machine.Name).Msg("falling back to SSH keys from home directory")
+	log.Debug().Msg("falling back to SSH keys from home directory")
 	return withKeyPairFromHome()
 
 }
 
 func (m *Service) saveHostKey(machine *MachineOptions) func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-		log.Debug().Str("name", machine.Name).Msg("Empty public key for, public key will be saved on connect")
+		log.Debug().Msg("Empty public key for, public key will be saved on connect")
 
-		comment := fmt.Sprintf("added by dockman for machine %s on %s", machine.Name, time.Now().Format(time.RFC3339))
+		comment := fmt.Sprintf("added by dockman for on %s", time.Now().Format(time.RFC3339))
 		stringKey, err := publicKeyToString(key, comment)
 		if err != nil {
-			return fmt.Errorf("unable to convert public key for machine %s: %w", machine.Name, err)
+			return fmt.Errorf("unable to convert public key for machine: %w", err)
 		}
 
 		machine.RemotePublicKey = stringKey
-		err = m.machines.Save(machine)
-		if err != nil {
-			return err
-		}
-
 		return nil
 	}
 }
@@ -150,7 +138,7 @@ func (m *Service) transferPublicKey(client *ssh.Client, machine *MachineOptions)
 	}
 	log.Debug().Str("out", out.String()).Msg("Remote command ran with the following output")
 
-	log.Info().Str("machine", machine.Name).Msg("Public key transferred successfully.")
+	log.Info().Msg("Public key transferred successfully.")
 	return nil
 }
 
@@ -160,7 +148,15 @@ func (m *Service) newClient(machine *MachineOptions) (*ssh.Client, error) {
 		return nil, fmt.Errorf("failed to load auth method for host: %w", err)
 	}
 
-	return createSSHClient(machine, auth, m.saveHostKey(machine))
+	client, err := createSSHClient(machine, auth, m.saveHostKey(machine))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSH client: %w", err)
+	}
+	defer func() {
+		fileutil.CloseIfErr(err, client)
+	}()
+
+	return client, err
 }
 
 // The command will be executed on the remote server.

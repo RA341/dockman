@@ -52,7 +52,6 @@ function EmptyHostDisplay({onAdd}: { onAdd: () => void }) {
                     Add
                 </Button>
 
-                {/* Optional secondary button for documentation */}
                 <Button
                     variant="outlined"
                     color="inherit"

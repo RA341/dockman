@@ -46,9 +46,6 @@ func TestTransferKey(t *testing.T) {
 		UsePublicKeyAuth: true,
 	}
 
-	_, _, err = service.Create(machineOpts)
-	require.NoError(t, err)
-
 	// new service will create a new key at DefaultKeyName get it
 	key, err := service.keys.GetKey(DefaultKeyName)
 	require.NoError(t, err)

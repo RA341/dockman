@@ -57,6 +57,9 @@ const (
 	// HostManagerServiceAddAliasProcedure is the fully-qualified name of the HostManagerService's
 	// AddAlias RPC.
 	HostManagerServiceAddAliasProcedure = "/host.v1.HostManagerService/AddAlias"
+	// HostManagerServiceEditAliasProcedure is the fully-qualified name of the HostManagerService's
+	// EditAlias RPC.
+	HostManagerServiceEditAliasProcedure = "/host.v1.HostManagerService/EditAlias"
 	// HostManagerServiceDeleteAliasProcedure is the fully-qualified name of the HostManagerService's
 	// DeleteAlias RPC.
 	HostManagerServiceDeleteAliasProcedure = "/host.v1.HostManagerService/DeleteAlias"
@@ -72,6 +75,7 @@ type HostManagerServiceClient interface {
 	DeleteHost(context.Context, *connect.Request[v1.DeleteHostRequest]) (*connect.Response[v1.DeleteHostResponse], error)
 	ListAlias(context.Context, *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error)
 	AddAlias(context.Context, *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error)
+	EditAlias(context.Context, *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error)
 	DeleteAlias(context.Context, *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error)
 }
 
@@ -134,6 +138,12 @@ func NewHostManagerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(hostManagerServiceMethods.ByName("AddAlias")),
 			connect.WithClientOptions(opts...),
 		),
+		editAlias: connect.NewClient[v1.EditAliasRequest, v1.EditAliasResponse](
+			httpClient,
+			baseURL+HostManagerServiceEditAliasProcedure,
+			connect.WithSchema(hostManagerServiceMethods.ByName("EditAlias")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteAlias: connect.NewClient[v1.DeleteAliasRequest, v1.DeleteAliasResponse](
 			httpClient,
 			baseURL+HostManagerServiceDeleteAliasProcedure,
@@ -153,6 +163,7 @@ type hostManagerServiceClient struct {
 	deleteHost         *connect.Client[v1.DeleteHostRequest, v1.DeleteHostResponse]
 	listAlias          *connect.Client[v1.ListAliasRequest, v1.ListAliasResponse]
 	addAlias           *connect.Client[v1.AddAliasRequest, v1.AddAliasResponse]
+	editAlias          *connect.Client[v1.EditAliasRequest, v1.EditAliasResponse]
 	deleteAlias        *connect.Client[v1.DeleteAliasRequest, v1.DeleteAliasResponse]
 }
 
@@ -196,6 +207,11 @@ func (c *hostManagerServiceClient) AddAlias(ctx context.Context, req *connect.Re
 	return c.addAlias.CallUnary(ctx, req)
 }
 
+// EditAlias calls host.v1.HostManagerService.EditAlias.
+func (c *hostManagerServiceClient) EditAlias(ctx context.Context, req *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error) {
+	return c.editAlias.CallUnary(ctx, req)
+}
+
 // DeleteAlias calls host.v1.HostManagerService.DeleteAlias.
 func (c *hostManagerServiceClient) DeleteAlias(ctx context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
 	return c.deleteAlias.CallUnary(ctx, req)
@@ -211,6 +227,7 @@ type HostManagerServiceHandler interface {
 	DeleteHost(context.Context, *connect.Request[v1.DeleteHostRequest]) (*connect.Response[v1.DeleteHostResponse], error)
 	ListAlias(context.Context, *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error)
 	AddAlias(context.Context, *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error)
+	EditAlias(context.Context, *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error)
 	DeleteAlias(context.Context, *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error)
 }
 
@@ -269,6 +286,12 @@ func NewHostManagerServiceHandler(svc HostManagerServiceHandler, opts ...connect
 		connect.WithSchema(hostManagerServiceMethods.ByName("AddAlias")),
 		connect.WithHandlerOptions(opts...),
 	)
+	hostManagerServiceEditAliasHandler := connect.NewUnaryHandler(
+		HostManagerServiceEditAliasProcedure,
+		svc.EditAlias,
+		connect.WithSchema(hostManagerServiceMethods.ByName("EditAlias")),
+		connect.WithHandlerOptions(opts...),
+	)
 	hostManagerServiceDeleteAliasHandler := connect.NewUnaryHandler(
 		HostManagerServiceDeleteAliasProcedure,
 		svc.DeleteAlias,
@@ -293,6 +316,8 @@ func NewHostManagerServiceHandler(svc HostManagerServiceHandler, opts ...connect
 			hostManagerServiceListAliasHandler.ServeHTTP(w, r)
 		case HostManagerServiceAddAliasProcedure:
 			hostManagerServiceAddAliasHandler.ServeHTTP(w, r)
+		case HostManagerServiceEditAliasProcedure:
+			hostManagerServiceEditAliasHandler.ServeHTTP(w, r)
 		case HostManagerServiceDeleteAliasProcedure:
 			hostManagerServiceDeleteAliasHandler.ServeHTTP(w, r)
 		default:
@@ -334,6 +359,10 @@ func (UnimplementedHostManagerServiceHandler) ListAlias(context.Context, *connec
 
 func (UnimplementedHostManagerServiceHandler) AddAlias(context.Context, *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("host.v1.HostManagerService.AddAlias is not implemented"))
+}
+
+func (UnimplementedHostManagerServiceHandler) EditAlias(context.Context, *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("host.v1.HostManagerService.EditAlias is not implemented"))
 }
 
 func (UnimplementedHostManagerServiceHandler) DeleteAlias(context.Context, *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {

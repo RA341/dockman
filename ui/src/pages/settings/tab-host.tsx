@@ -13,25 +13,19 @@ import {
     Tooltip,
     Typography
 } from "@mui/material";
-import {
-    Add,
-    DeleteOutline,
-    DnsOutlined,
-    EditOutlined,
-    FolderSpecialOutlined,
-    LinkOffOutlined,
-    LinkOutlined,
-    Refresh
-} from '@mui/icons-material';
+import {Add, DeleteOutline, DnsOutlined, EditOutlined, FolderSpecialOutlined, Refresh} from '@mui/icons-material';
 import {callRPC, useClient} from "../../lib/api.ts";
 import {ClientType, type Host, HostManagerService} from "../../gen/host/v1/host_pb.ts";
 import EmptyHostDisplay from "./tab-host-empty.tsx";
 import HostWizardDialog from "./tab-host-wizard.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
+import {useHostManager} from "../../context/host-context.tsx";
 
 function TabDockerHosts() {
     const hostClient = useClient(HostManagerService);
     const {showError} = useSnackbar()
+
+    const {fetchHosts} = useHostManager()
 
     const [hosts, setHosts] = useState<Host[]>([]);
     const [loading, setLoading] = useState(false);
@@ -58,9 +52,11 @@ function TabDockerHosts() {
         loadHosts().then();
     }, []);
 
-    const handleToggle = async (host: Host) => {
-        // Placeholder for Toggle Logic
-        console.log("Toggle host:", host.id);
+    const handleToggle = async (host: Host, val: boolean) => {
+        const {err} = await callRPC(() => hostClient.toggleClient({name: host.name, enable: val}))
+        if (err) showError(`Failed to toggle host ${host.name}`);
+
+        await loadHosts()
     };
 
     const handleDelete = async (hostname: string) => {
@@ -72,42 +68,49 @@ function TabDockerHosts() {
         await loadHosts()
     };
 
+    function onClose() {
+        loadHosts().then()
+        fetchHosts().then()
+        setDialogOpen(false)
+    }
+
     return (
         <Box sx={{p: 3}}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{mb: 4}}>
-                <Box>
+            <Stack direction="row" justifyContent="" alignItems="center" sx={{mb: 4}}>
+                <Box sx={{pr: 3}}>
                     <Typography variant="h5" sx={{fontWeight: 800}}>Hosts</Typography>
                     <Typography variant="body2" color="text.secondary">
                         Manage local and remote Docker engines
                     </Typography>
+                </Box>
 
+                <Stack direction="row" spacing={2}>
                     <Button
                         variant="contained"
-                        startIcon={<Refresh/>}
                         onClick={() => {
                             loadHosts().then()
                         }}
+                        sx={{borderRadius: 2, minWidth: 'auto', px: 1.5, py: 1}}
+                    >
+                        <Refresh/>
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Add/>}
+                        onClick={() => {
+                            setSelectedHost(null);
+                            setDialogOpen(true);
+                        }}
                         sx={{borderRadius: 2, px: 3}}
                     >
-                        Reload
+                        Add Host
                     </Button>
-                </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<Add/>}
-                    onClick={() => {
-                        setSelectedHost(null);
-                        setDialogOpen(true);
-                    }}
-                    sx={{borderRadius: 2, px: 3}}
-                >
-                    Add Host
-                </Button>
+                </Stack>
             </Stack>
 
             {err && <Chip label={err} color="error" variant="outlined" sx={{mb: 2}}/>}
 
-            {loading ? (
+            {loading && hosts.length === 0 ? (
                 <Box sx={{display: 'flex', justifyContent: 'center', py: 8}}><CircularProgress/></Box>
             ) : hosts.length > 0 ? (
                 <Grid container spacing={3}>
@@ -120,7 +123,7 @@ function TabDockerHosts() {
                                     setDialogOpen(true);
                                 }}
                                 onDelete={() => handleDelete((h.name))}
-                                onToggle={() => handleToggle(h)}
+                                onToggle={(val: boolean) => handleToggle(h, val)}
                             />
                         </Grid>
                     ))}
@@ -131,7 +134,7 @@ function TabDockerHosts() {
 
             <HostWizardDialog
                 open={dialogOpen}
-                onClose={() => setDialogOpen(false)}
+                onClose={onClose}
                 host={selectedHost ?? undefined}
                 onSuccess={loadHosts}
             />
@@ -143,8 +146,10 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
     host: Host,
     onEdit: () => void,
     onDelete: () => void,
-    onToggle: () => void
+    onToggle: (val: boolean) => Promise<void>
 }) {
+    const [isToggling, setIsToggling] = useState(false)
+
     const kind = ClientType[host.kind].toLowerCase();
     return (
         <Paper variant="outlined" sx={{
@@ -159,7 +164,7 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <Box sx={{
                             p: 1,
-                            bgcolor: host.enable ? 'primary.lighter' : 'grey.100',
+                            bgcolor: host.enable ? 'primary.lighter' : 'primary.darker',
                             borderRadius: 2,
                             color: host.enable ? 'primary.main' : 'text.disabled',
                             display: 'flex'
@@ -173,16 +178,30 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                             </Typography>
                         </Box>
                     </Stack>
-                    <Switch checked={host.enable} onChange={onToggle} size="small"/>
+                    {isToggling ? (
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 58,
+                            height: 38
+                        }}>
+                            <CircularProgress size={20}/>
+                        </Box>
+                    ) : (
+                        <Switch
+                            checked={host.enable}
+                            onChange={async event => {
+                                setIsToggling(true)
+                                await onToggle(event.target.checked)
+                                setIsToggling(false)
+                            }}
+                            size="small"
+                        />
+                    )}
                 </Stack>
 
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    <Chip
-                        size="small"
-                        icon={host.enable ? <LinkOutlined/> : <LinkOffOutlined/>}
-                        label={host.enable ? "Enabled" : "Disabled"}
-                        color={host.enable ? "success" : "default"}
-                    />
                     <Chip
                         size="small"
                         icon={<FolderSpecialOutlined sx={{fontSize: '14px !important'}}/>}
@@ -194,16 +213,16 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                 <Divider/>
 
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="caption"
-                                sx={{color: 'text.disabled', display: 'flex', alignItems: 'center', gap: 0.5}}>
-
-                    </Typography>
                     <Box>
-                        <Tooltip title="Edit Configuration">
-                            <IconButton size="small" onClick={onEdit}><EditOutlined fontSize="small"/></IconButton>
+                        <Tooltip title="Edit Host">
+                            <IconButton size="small" onClick={onEdit}>
+                                <EditOutlined fontSize="small"/>
+                            </IconButton>
                         </Tooltip>
                         <Tooltip title="Remove Host">
-                            <IconButton size="small" color="error" onClick={onDelete}><DeleteOutline fontSize="small"/></IconButton>
+                            <IconButton size="small" color="error" onClick={onDelete}>
+                                <DeleteOutline fontSize="small"/>
+                            </IconButton>
                         </Tooltip>
                     </Box>
                 </Stack>

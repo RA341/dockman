@@ -355,10 +355,13 @@ func (s *Service) Delete(hostname string) error {
 }
 
 func (s *Service) Edit(config *Config) error {
-	err := s.Delete(config.Name)
+	// do not update aliases we do that separately
+	config.FolderAliases = nil
+	err := s.store.Update(config)
 	if err != nil {
 		return err
 	}
+
 	return s.Add(config, true)
 }
 

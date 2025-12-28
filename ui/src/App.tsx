@@ -14,7 +14,7 @@ import {
     Typography
 } from '@mui/material';
 import {SnackbarProvider} from "./context/snackbar-context.tsx";
-import {BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useParams} from "react-router-dom";
+import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams} from "react-router-dom";
 import {AuthProvider} from "./context/auth-context.tsx";
 import React from 'react';
 import {useAuth} from "./hooks/auth.ts";
@@ -145,8 +145,11 @@ const PrivateRoute = () => {
 function HostGuard() {
     const {availableHosts, isLoading} = useHostManager()
     const {host} = useParams()
+    const {pathname} = useLocation()
 
-    if (isLoading) {
+    const isSettingsPage = pathname === "/settings";
+
+    if (isLoading && !isSettingsPage) {
         return (
             <Box sx={{
                 display: 'flex',

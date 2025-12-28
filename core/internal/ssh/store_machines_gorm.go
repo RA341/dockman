@@ -43,10 +43,3 @@ func (m *MachineManagerDB) GetByID(id uint) (MachineOptions, error) {
 	result := m.db.First(&machine, id)
 	return machine, result.Error
 }
-
-// Get retrieves a single machine option by its name.
-func (m *MachineManagerDB) Get(machName string) (MachineOptions, error) {
-	var machine MachineOptions
-	result := m.db.Where("name = ?", machName).First(&machine)
-	return machine, result.Error
-}

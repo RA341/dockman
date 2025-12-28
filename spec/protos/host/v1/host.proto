@@ -17,6 +17,7 @@ service HostManagerService {
 
   rpc ListAlias(ListAliasRequest) returns (ListAliasResponse) {}
   rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
+  rpc EditAlias(EditAliasRequest) returns (EditAliasResponse) {}
   rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
 }
 
@@ -58,8 +59,17 @@ message CreateHostResponse {}
 //////////////////////////////////////////////////////////////////////
 // aliases
 
+message EditAliasRequest {
+  uint32 hostId  = 1;
+  FolderAlias alias = 2;
+}
+
+message EditAliasResponse {}
+
+
 message AddAliasRequest {
-  FolderAlias alias = 1;
+  uint32 hostId  = 1;
+  FolderAlias alias = 2;
 }
 
 message AddAliasResponse {}
@@ -73,7 +83,8 @@ message ListAliasResponse {
 }
 
 message DeleteAliasRequest {
-  FolderAlias alias = 1;
+  uint32 hostId  = 1;
+  string alias  = 2;
 }
 
 message DeleteAliasResponse {}
@@ -97,7 +108,6 @@ message FolderAlias {
 
 message SSHConfig {
   uint32 id = 1;
-  string name = 2;
   string host = 3;
   int32  port = 4;
   string user = 5;

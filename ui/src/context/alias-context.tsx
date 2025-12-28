@@ -75,7 +75,7 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
     }
 
     const deleteAlias = async (host: number, alias: string) => {
-        const {err} = await callRPC(() => hostmanager.deleteAlias({alias: {alias, id: host}}))
+        const {err} = await callRPC(() => hostmanager.deleteAlias({alias: alias, hostId: host}))
         if (err) {
             showError(`Unable to delete file alias\n${err}`)
         }
