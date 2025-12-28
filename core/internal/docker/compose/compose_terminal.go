@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	"github.com/RA341/dockman/internal/docker/container"
-	"github.com/RA341/dockman/internal/files/filesystem"
+	"github.com/RA341/dockman/internal/host/filesystem"
+
 	"github.com/fatih/color"
 	container2 "github.com/moby/moby/api/types/container"
 	"golang.org/x/crypto/ssh"

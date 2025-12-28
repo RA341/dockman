@@ -7,7 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/RA341/dockman/generated/files/v1"
-	"github.com/RA341/dockman/internal/host"
+	"github.com/RA341/dockman/internal/host/middleware"
 )
 
 type Handler struct {
@@ -27,7 +27,7 @@ func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
 }
 
 func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]
 }
 
 func (h *Handler) Format(ctx context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (h *Handler) Format(ctx context.Context, req *connect.Request[v1.FormatRequ
 }
 
 func (h *Handler) Create(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (h *Handler) Create(ctx context.Context, req *connect.Request[v1.File]) (*c
 }
 
 func (h *Handler) Copy(ctx context.Context, req *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (h *Handler) Copy(ctx context.Context, req *connect.Request[v1.CopyRequest]
 }
 
 func (h *Handler) Exists(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (h *Handler) Exists(ctx context.Context, req *connect.Request[v1.File]) (*c
 }
 
 func (h *Handler) Delete(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (h *Handler) Delete(ctx context.Context, req *connect.Request[v1.File]) (*c
 }
 
 func (h *Handler) Rename(ctx context.Context, req *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -177,42 +177,4 @@ func getFile(c *v1.File, hostname string) (string, error) {
 func (h *Handler) GetDockmanYaml(_ context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
 	conf := h.srv.dy.GetDockmanYaml()
 	return connect.NewResponse(conf.ToProto()), nil
-}
-
-func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
-	list, err := h.srv.store.List(req.Msg.Host)
-	if err != nil {
-		return nil, err
-	}
-
-	var resp = make([]*v1.Alias, 0, len(list))
-	for _, alias := range list {
-		resp = append(resp, &v1.Alias{
-			Alias:    alias.Alias,
-			Fullpath: alias.Fullpath,
-			// Config:  we only use host to input new aliases it will use FormatAlias before inserting
-		})
-	}
-
-	return connect.NewResponse(&v1.ListAliasResponse{
-		Aliases: resp,
-	}), nil
-}
-
-func (h *Handler) AddAlias(_ context.Context, req *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
-	alias := req.Msg.Alias
-	err := h.srv.store.AddAlias(FormatAlias(alias.Alias, alias.Host), alias.Fullpath)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(&v1.AddAliasResponse{}), nil
-}
-
-func (h *Handler) DeleteAlias(_ context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
-	err := h.srv.store.RemoveAlias(req.Msg.Alias.Alias)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(&v1.DeleteAliasResponse{}), nil
 }

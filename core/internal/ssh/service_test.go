@@ -3,14 +3,15 @@ package ssh
 import (
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
+	"testing"
+
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/logger"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/gliderlabs/ssh"
 	"github.com/stretchr/testify/require"
-	"net"
-	"strconv"
-	"testing"
 )
 
 func init() {
@@ -45,7 +46,7 @@ func TestTransferKey(t *testing.T) {
 		UsePublicKeyAuth: true,
 	}
 
-	err = service.AddClient(machineOpts)
+	_, _, err = service.Create(machineOpts)
 	require.NoError(t, err)
 
 	// new service will create a new key at DefaultKeyName get it

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RA341/dockman/internal/host"
+	"github.com/RA341/dockman/internal/host/middleware"
 	fu "github.com/RA341/dockman/pkg/fileutil"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -41,7 +41,7 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Filename not provided", http.StatusBadRequest)
 		return
 	}
-	getHost, err := host.GetHost(r.Context())
+	getHost, err := middleware.GetHost(r.Context())
 	if err != nil {
 		http.Error(w, "host not provided", http.StatusBadRequest)
 		return
@@ -77,7 +77,7 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getHost, err := host.GetHost(r.Context())
+	getHost, err := middleware.GetHost(r.Context())
 	if err != nil {
 		http.Error(w, "host not provided", http.StatusBadRequest)
 		return

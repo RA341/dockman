@@ -1,75 +1,71 @@
 package database
 
 import (
+	"fmt"
+	"path/filepath"
 	"reflect"
 
-	"github.com/RA341/dockman/internal/config"
-	"github.com/RA341/dockman/internal/database/impl"
-	"github.com/RA341/dockman/internal/docker/updater"
-	"github.com/RA341/dockman/internal/info"
-	"github.com/RA341/dockman/internal/ssh"
 	"github.com/rs/zerolog/log"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-type Service struct {
-	SshKeyDB      ssh.KeyManager
-	MachineDB     ssh.MachineManager
-	InfoDB        *impl.VersionDB
-	UserConfigDB  *impl.UserConfigDB
-	ImageUpdateDB *updater.ImageUpdateDB
-}
+const dockmanDB = "dockman.db"
 
-func NewService(basepath string) (*gorm.DB, *Service) {
-	gormDB, err := connect(basepath)
+func New(basepath string, devMode bool) *gorm.DB {
+	gormDB, err := connect(basepath, devMode)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Unable to connect to database")
 	}
-
-	// todo make model migration with unified with impl inits
-	tables := []interface{}{
-		&ssh.MachineOptions{},
-		&ssh.KeyConfig{},
-		&info.VersionHistory{},
-		&config.UserConfig{},
-		&updater.ImageUpdate{},
-	}
-	if err = gormDB.AutoMigrate(tables...); err != nil {
-		log.Fatal().Err(err).Msg("failed to auto migrate DB")
-	}
-
-	userMan := impl.NewUserConfigDB(gormDB)
-	keyman := ssh.NewKeyManagerDB(gormDB)
-	macMan := ssh.NewMachineManagerDB(gormDB)
-	verMan := impl.NewVersionHistoryManager(gormDB)
-	imgMan := updater.NewImageUpdateDB(gormDB)
-
-	return gormDB, &Service{
-		SshKeyDB:      keyman,
-		MachineDB:     macMan,
-		InfoDB:        verMan,
-		UserConfigDB:  userMan,
-		ImageUpdateDB: imgMan,
-	}
+	return gormDB
 }
 
-func (s *Service) Close() error {
-	return nil
+func getStructName(table interface{}) string {
+	t := reflect.TypeOf(table)
+	if t.Kind() == reflect.Ptr {
+		return t.Elem().Name()
+	}
+	return t.Name()
 }
 
-func MustMigrate(db *gorm.DB, tables ...interface{}) {
-	err := db.AutoMigrate(tables...)
+func Migrate(db *gorm.DB, table ...interface{}) {
+	err := db.AutoMigrate(table...)
 	if err != nil {
-		var tableNames []string
-		for _, table := range tables {
-			t := reflect.TypeOf(table)
-			if t.Kind() == reflect.Ptr {
-				table = append(tableNames, t.Elem().Name())
-			}
+		base := log.Fatal().Err(err)
+		for _, t := range table {
+			base.Str("table", getStructName(t))
 		}
-
-		log.Fatal().
-			Err(err).Strs("tables", tableNames).
-			Msg("failed to auto migrate tables")
+		base.Msg("failed to auto-migrate table(s)")
 	}
+}
+
+func connect(basepath string, devMode bool) (*gorm.DB, error) {
+	basepath = filepath.Join(basepath, dockmanDB)
+	dbpath, err := filepath.Abs(basepath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get abs path of %s: %w", basepath, err)
+	}
+
+	// Configure SQLite to use WAL mode
+	connectionStr := dbpath + "?_journal_mode=WAL&_busy_timeout=5000"
+	conn := sqlite.Open(connectionStr)
+	conf := &gorm.Config{
+		Logger:      logger.Default.LogMode(logger.Silent),
+		PrepareStmt: true,
+	}
+	if devMode {
+		conf = &gorm.Config{
+			//Logger:      logger.Default.LogMode(logger.Info),
+			PrepareStmt: true,
+		}
+	}
+
+	db, err := gorm.Open(conn, conf)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info().Str("path", dbpath).Msg("Connected to database")
+	return db, nil
 }

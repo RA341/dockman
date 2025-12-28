@@ -11,12 +11,13 @@ import (
 	"strings"
 	"sync"
 
-	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	contSrv "github.com/RA341/dockman/internal/docker/container"
-	"github.com/RA341/dockman/internal/host"
+	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
+
+	"connectrpc.com/connect"
 	"github.com/moby/moby/api/types/container"
 	"github.com/rs/zerolog/log"
 )
@@ -39,7 +40,7 @@ type HostGetter interface {
 }
 
 func (h *Handler) getHost(ctx context.Context) (string, *Service, error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := hm.GetHost(ctx)
 	if err != nil {
 		return "", nil, err
 	}

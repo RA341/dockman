@@ -28,7 +28,7 @@ import {useHostManager} from "../../context/host-context.tsx";
 
 
 const TabAliases = () => {
-    const {files, isLoading, addAlias, deleteAlias} = useAlias();
+    const {aliases, isLoading, addAlias, deleteAlias} = useAlias();
     const [aliasInput, setAliasInput] = useState("");
     const [pathInput, setPathInput] = useState("");
 
@@ -127,7 +127,7 @@ const TabAliases = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {files.length === 0 && !isLoading ? (
+                            {aliases.length === 0 && !isLoading ? (
                                 <TableRow>
                                     <TableCell colSpan={3} align="center" sx={{py: 4, color: 'text.secondary'}}>
                                         <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
@@ -137,7 +137,7 @@ const TabAliases = () => {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                files.map((row) => (
+                                aliases.map((row) => (
                                     <TableRow
                                         key={row.alias}
                                         hover

@@ -15,8 +15,7 @@ type MachineManager interface {
 type MachineOptions struct {
 	gorm.Model
 
-	Name             string `gorm:"not null;uniqueIndex"`
-	Enable           bool   `gorm:"not null;default:false"`
+	Name             string `gorm:"unique;not null;uniqueIndex"`
 	Host             string `gorm:"not null"`
 	Port             int    `gorm:"not null;default:22"`
 	User             string `gorm:"not null"`
@@ -27,5 +26,5 @@ type MachineOptions struct {
 
 // TableName specifies the custom table name for the model.
 func (m *MachineOptions) TableName() string {
-	return "machine_options"
+	return "ssh_config"
 }

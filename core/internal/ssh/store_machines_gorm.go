@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -9,8 +10,9 @@ type MachineManagerDB struct {
 	db *gorm.DB
 }
 
-// NewMachineManagerDB creates a new instance of MachineManagerDB.
-func NewMachineManagerDB(db *gorm.DB) *MachineManagerDB {
+// NewGormMachineManger creates a new instance of MachineManagerDB.
+func NewGormMachineManger(db *gorm.DB) *MachineManagerDB {
+	database.Migrate(db, &MachineOptions{})
 	return &MachineManagerDB{db: db}
 }
 

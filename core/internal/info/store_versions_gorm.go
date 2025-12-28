@@ -1,8 +1,9 @@
-package impl
+package info
 
 import (
 	"errors"
-	"github.com/RA341/dockman/internal/info"
+
+	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -12,12 +13,13 @@ type VersionDB struct {
 
 // NewVersionHistoryManager creates a new instance of VersionHistoryManager
 func NewVersionHistoryManager(db *gorm.DB) *VersionDB {
+	database.Migrate(db, &VersionHistory{})
 	return &VersionDB{db: db}
 }
 
 // FindLastVersion returns the most recently created version record
-func (v *VersionDB) FindLastVersion() (*info.VersionHistory, error) {
-	var versionHistory info.VersionHistory
+func (v *VersionDB) FindLastVersion() (*VersionHistory, error) {
+	var versionHistory VersionHistory
 
 	err := v.db.Order("created_at DESC").First(&versionHistory).Error
 	if err != nil {
@@ -31,7 +33,7 @@ func (v *VersionDB) FindLastVersion() (*info.VersionHistory, error) {
 }
 
 func (v *VersionDB) IsVersionRead(version string) (bool, error) {
-	var versionHistory info.VersionHistory
+	var versionHistory VersionHistory
 
 	err := v.db.Select("read").Where("version = ?", version).First(&versionHistory).Error
 	if err != nil {
@@ -44,8 +46,8 @@ func (v *VersionDB) IsVersionRead(version string) (bool, error) {
 	return versionHistory.Read, nil
 }
 
-func (v *VersionDB) GetUnreadVersions() ([]info.VersionHistory, error) {
-	var versions []info.VersionHistory
+func (v *VersionDB) GetUnreadVersions() ([]VersionHistory, error) {
+	var versions []VersionHistory
 
 	err := v.db.Where("read = ?", false).Order("created_at DESC").Find(&versions).Error
 	if err != nil {
@@ -56,7 +58,7 @@ func (v *VersionDB) GetUnreadVersions() ([]info.VersionHistory, error) {
 }
 
 func (v *VersionDB) MarkVersionAsRead(version string) error {
-	result := v.db.Model(&info.VersionHistory{}).
+	result := v.db.Model(&VersionHistory{}).
 		Where("version = ?", version).
 		Update("read", true)
 
@@ -74,7 +76,7 @@ func (v *VersionDB) MarkVersionAsRead(version string) error {
 
 // CreateVersionEntry creates a new version entry with read status set to false
 func (v *VersionDB) CreateVersionEntry(version string) error {
-	versionHistory := info.VersionHistory{
+	versionHistory := VersionHistory{
 		Version: version,
 		Read:    false,
 	}
@@ -85,8 +87,8 @@ func (v *VersionDB) CreateVersionEntry(version string) error {
 // Additional helper methods that might be useful
 
 // GetVersionByVersion fun name
-func (v *VersionDB) GetVersionByVersion(version string) (*info.VersionHistory, error) {
-	var versionHistory info.VersionHistory
+func (v *VersionDB) GetVersionByVersion(version string) (*VersionHistory, error) {
+	var versionHistory VersionHistory
 
 	err := v.db.Where("version = ?", version).First(&versionHistory).Error
 	if err != nil {
@@ -99,8 +101,8 @@ func (v *VersionDB) GetVersionByVersion(version string) (*info.VersionHistory, e
 	return &versionHistory, nil
 }
 
-func (v *VersionDB) GetAllVersions() ([]info.VersionHistory, error) {
-	var versions []info.VersionHistory
+func (v *VersionDB) GetAllVersions() ([]VersionHistory, error) {
+	var versions []VersionHistory
 
 	err := v.db.Order("created_at DESC").Find(&versions).Error
 	if err != nil {
@@ -113,7 +115,7 @@ func (v *VersionDB) GetAllVersions() ([]info.VersionHistory, error) {
 func (v *VersionDB) VersionExists(version string) (bool, error) {
 	var count int64
 
-	err := v.db.Model(&info.VersionHistory{}).Where("version = ?", version).Count(&count).Error
+	err := v.db.Model(&VersionHistory{}).Where("version = ?", version).Count(&count).Error
 	if err != nil {
 		return false, err
 	}
@@ -122,7 +124,7 @@ func (v *VersionDB) VersionExists(version string) (bool, error) {
 }
 
 func (v *VersionDB) DeleteVersion(version string) error {
-	result := v.db.Where("version = ?", version).Delete(&info.VersionHistory{})
+	result := v.db.Where("version = ?", version).Delete(&VersionHistory{})
 
 	if result.Error != nil {
 		return result.Error
@@ -144,7 +146,7 @@ func (v *VersionDB) CleanupOldVersions(keepCount int) error {
 
 	// Get IDs of versions to keep (most recent ones)
 	var idsToKeep []uint
-	err := v.db.Model(&info.VersionHistory{}).
+	err := v.db.Model(&VersionHistory{}).
 		Select("id").
 		Order("created_at DESC").
 		Limit(keepCount).
@@ -159,9 +161,9 @@ func (v *VersionDB) CleanupOldVersions(keepCount int) error {
 	}
 
 	// Delete versions not in the keep list
-	return v.db.Where("id NOT IN ?", idsToKeep).Delete(&info.VersionHistory{}).Error
+	return v.db.Where("id NOT IN ?", idsToKeep).Delete(&VersionHistory{}).Error
 }
 
 func (v *VersionDB) MarkAllAsRead() error {
-	return v.db.Model(&info.VersionHistory{}).Update("read", true).Error
+	return v.db.Model(&VersionHistory{}).Update("read", true).Error
 }

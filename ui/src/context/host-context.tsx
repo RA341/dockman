@@ -1,8 +1,8 @@
 import {createContext, type ReactNode, useCallback, useContext, useEffect, useState} from 'react'
 import {callRPC, useClient} from '../lib/api'
 import {useSnackbar} from '../hooks/snackbar'
-import {DockerManagerService} from "../gen/docker_manager/v1/docker_manager_pb.ts";
 import {useLocation, useNavigate} from "react-router-dom";
+import {HostManagerService} from "../gen/host/v1/host_pb.ts";
 
 interface HostContextType {
     getHost: () => string;
@@ -25,7 +25,7 @@ export function useHostManager() {
 const HostKey = 'host';
 
 function HostProvider({children}: { children: ReactNode }) {
-    const hostManagerClient = useClient(DockerManagerService)
+    const hostManagerClient = useClient(HostManagerService)
     const {showError} = useSnackbar()
 
     const [availableHosts, setAvailableHosts] = useState<string[]>([])
@@ -34,14 +34,14 @@ function HostProvider({children}: { children: ReactNode }) {
 
     const fetchHosts = useCallback(async () => {
         setLoading(true)
-        const {val, err} = await callRPC(() => hostManagerClient.listClients({}))
+        const {val, err} = await callRPC(() => hostManagerClient.listConnectedHosts({}))
         if (err) {
             showError(err)
             setLoading(false)
             return
         }
 
-        setAvailableHosts(val?.clients.map(value => value) || [])
+        setAvailableHosts(val?.hosts || [])
         setLoading(false)
     }, [hostManagerClient]);
 

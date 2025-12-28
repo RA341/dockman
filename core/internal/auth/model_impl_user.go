@@ -13,7 +13,7 @@ type UserGormDB struct {
 }
 
 func NewUserGormDB(db *gorm.DB) UserStore {
-	database.MustMigrate(db, &Session{})
+	database.Migrate(db, &Session{})
 	return &UserGormDB{db: db}
 }
 

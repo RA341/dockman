@@ -1,9 +1,9 @@
-package impl
+package config
 
 import (
 	"errors"
 
-	"github.com/RA341/dockman/internal/config"
+	"github.com/RA341/dockman/internal/database"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
@@ -17,10 +17,12 @@ type UserConfigDB struct {
 
 // NewUserConfigDB creates a new instance of UserConfigDB.
 func NewUserConfigDB(db *gorm.DB) *UserConfigDB {
+	database.Migrate(db, &UserConfig{})
+
 	u := &UserConfigDB{db: db}
 	if _, err := u.GetConfig(); errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Debug().Msg("empty user config, setting default value")
-		if err = u.SetConfig(&config.UserConfig{}); err != nil {
+		if err = u.SetConfig(&UserConfig{}); err != nil {
 			log.Fatal().Err(err).Msg("Unable to create initial user config")
 		}
 	} else {
@@ -32,15 +34,15 @@ func NewUserConfigDB(db *gorm.DB) *UserConfigDB {
 	return u
 }
 
-func (m *UserConfigDB) SetConfig(user *config.UserConfig) error {
+func (m *UserConfigDB) SetConfig(user *UserConfig) error {
 	user.ID = defaultUserID
 
 	result := m.db.Save(user)
 	return result.Error
 }
 
-func (m *UserConfigDB) GetConfig() (*config.UserConfig, error) {
-	var user config.UserConfig
+func (m *UserConfigDB) GetConfig() (*UserConfig, error) {
+	var user UserConfig
 	result := m.db.First(&user, defaultUserID)
 	return &user, result.Error
 }

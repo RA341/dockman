@@ -12,71 +12,57 @@ import (
 	"time"
 
 	"github.com/RA341/dockman/internal/config"
-	"github.com/RA341/dockman/internal/docker/container"
 	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
-	"github.com/RA341/dockman/internal/files/filesystem"
+	"github.com/RA341/dockman/internal/files/utils"
+	"github.com/RA341/dockman/internal/host/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
 
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"github.com/sahilm/fuzzy"
 )
 
-type ActiveMachineFolderProvider func() string
-type ActiveFS func(client, root string) (filesystem.FileSystem, error)
-type SFTPProvider func(client string) (*sftp.Client, error)
+type GetFS func(host, alias string) (filesystem.FileSystem, error)
 
 type Service struct {
+	Fs     GetFS
 	config *config.FilePerms
-	store  Store
-	GetFS  ActiveFS
 	dy     *dockmanYaml.Service
 }
 
-// RootAlias default file location alias for compose root
-const RootAlias = "compose"
-
-func FormatAlias(alias string, host string) string {
-	return fmt.Sprintf("%s/%s", host, alias)
-}
-
 func New(
-	store Store,
-	getSSH SFTPProvider,
+	fs GetFS,
 	dy *dockmanYaml.Service,
-	localComposeRoot string,
 	config *config.FilePerms,
 ) *Service {
-	alias := FormatAlias(RootAlias, container.LocalClient)
-	val, err := store.Get(alias)
-	if err != nil {
-		err = store.AddAlias(alias, localComposeRoot)
-	} else {
-		val.Fullpath = localComposeRoot
-		err = store.EditAlias(val.ID, &val)
-	}
-	if err != nil {
-		log.Fatal().Err(err).
-			Str("alias", RootAlias).
-			Msg("could not setup alias for local compose root")
-	}
-
-	var activeFs ActiveFS = func(client, root string) (filesystem.FileSystem, error) {
-		if client == container.LocalClient {
-			return filesystem.NewLocal(root), nil
-		}
-		mach, err := getSSH(client)
-		if err != nil {
-			return nil, err
-		}
-		return filesystem.NewSftp(mach, root), nil
-	}
+	//alias := FormatAlias(RootAlias, container.LocalClient)
+	//val, err := store.Get(alias)
+	//if err != nil {
+	//	err = store.AddAlias(alias, localComposeRoot)
+	//} else {
+	//	val.Fullpath = localComposeRoot
+	//	err = store.EditAlias(val.ID, &val)
+	//}
+	//if err != nil {
+	//	log.Fatal().Err(err).
+	//		Str("alias", RootAlias).
+	//		Msg("could not setup alias for local compose root")
+	//}
+	//
+	//var activeFs GetFS = func(client, root string) (filesystem.FileSystem, error) {
+	//	if client == container.LocalClient {
+	//		return filesystem.NewLocal(root), nil
+	//	}
+	//	mach, err := getSSH(client)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	return filesystem.NewSftp(mach, root), nil
+	//}
 	srv := &Service{
 		config: config,
-		store:  store,
-		GetFS:  activeFs,
 		dy:     dy,
+		Fs:     fs,
 	}
 
 	log.Debug().Msg("File service loaded successfully")
@@ -367,45 +353,27 @@ func CheckFileType(reader io.Reader) error {
 	return nil
 }
 
-// LoadAll todo refactor too many returns
-func (s *Service) LoadAll(filename string, hostname string) (fs filesystem.FileSystem, relpath string, root string, err error) {
-	filename, pathAlias, err := s.extractMeta(filename)
+func (s *Service) LoadAll(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
+	filename, pathAlias, err := utils.ExtractMeta(filename)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
-	alias, err := s.store.Get(FormatAlias(pathAlias, hostname))
+	fsCli, err := s.Fs(hostname, pathAlias)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("could not find path for alias %s", pathAlias)
+		return nil, "", err
 	}
 
-	fsCli, err := s.GetFS(hostname, alias.Fullpath)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	return fsCli, filename, alias.Fullpath, nil
+	return fsCli, filename, nil
 }
 
 // LoadFs FS gets the correct client -> alias -> path
 func (s *Service) LoadFs(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
-	fsCli, relpath, _, err := s.LoadAll(filename, hostname)
+	fsCli, relpath, err := s.LoadAll(filename, hostname)
 	if err != nil {
 		return nil, "", err
 	}
 	return fsCli, relpath, nil
-}
-
-func (s *Service) extractMeta(filename string) (relpath string, pathAlias string, err error) {
-	filename = filepath.Clean(filename) + "/" // empty trailing "/" is stripped by clean
-	parts := strings.SplitN(filename, "/", 2)
-	if len(parts) < 2 {
-		return "", "", fmt.Errorf("invalid filename: %s", filename)
-	}
-	pathAlias = parts[0]
-	relpath = filepath.Clean(parts[1])
-
-	return relpath, pathAlias, nil
 }
 
 func (s *Service) Format(filename string, hostname string) ([]byte, error) {
@@ -453,10 +421,12 @@ func (s *Service) search(query string, allPaths []string) []SearchResult {
 }
 
 func (s *Service) listAll(dirPath string, hostname string) ([]string, error) {
-	fsCli, rel, root, err := s.LoadAll(dirPath, hostname)
+	fsCli, rel, err := s.LoadAll(dirPath, hostname)
 	if err != nil {
 		return nil, err
 	}
+
+	root := fsCli.Root()
 
 	var filez []string
 	err = fsCli.WalkDir(rel, func(path string, d fs.DirEntry, err error) error {

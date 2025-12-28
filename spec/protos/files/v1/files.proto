@@ -15,10 +15,6 @@ service FileService {
 
   rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
   rpc Format(FormatRequest) returns (FormatResponse) {}
-
-  rpc ListAlias(ListAliasRequest) returns (ListAliasResponse) {}
-  rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
-  rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
 }
 
 message CopyRequest {
@@ -27,35 +23,6 @@ message CopyRequest {
 }
 
 message CopyResponse {}
-
-
-message DeleteAliasRequest {
-  Alias alias = 1;
-}
-
-message DeleteAliasResponse {}
-
-
-message AddAliasRequest {
-  Alias alias = 1;
-}
-
-message AddAliasResponse {}
-
-
-message ListAliasRequest {
-  string host = 1;
-}
-
-message Alias {
-  string alias = 1;
-  string host = 2;
-  string fullpath = 3;
-}
-
-message ListAliasResponse {
-  repeated Alias aliases = 1;
-}
 
 message ListRequest {
   string path = 1;

@@ -3,7 +3,7 @@ package listutils
 import "sync"
 
 func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
-	var result []Q
+	var result = make([]Q, 0, len(input))
 	for _, t := range input {
 		result = append(result, mapper(t))
 	}

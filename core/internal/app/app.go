@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -12,7 +13,8 @@ import (
 	"github.com/RA341/dockman/generated/cleaner/v1/v1connect"
 	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
-	dockermanagerrpc "github.com/RA341/dockman/generated/docker_manager/v1/v1connect"
+	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
+
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
@@ -21,27 +23,23 @@ import (
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/database"
 	"github.com/RA341/dockman/internal/docker"
-	"github.com/RA341/dockman/internal/docker/compose"
-	"github.com/RA341/dockman/internal/docker/container"
-	dm "github.com/RA341/dockman/internal/docker_manager"
 	"github.com/RA341/dockman/internal/files"
 	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/host"
+	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/internal/viewer"
-	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
-	ssh2 "golang.org/x/crypto/ssh"
 )
 
 type App struct {
+	Config *config.AppConfig
+
 	Auth          *auth.Service
-	Config        *config.AppConfig
-	DockerManager *dm.Service
+	HostManager   *host.Service
 	File          *files.Service
-	DB            *database.Service
 	Info          *info.Service
 	SSH           *ssh.Service
 	UserConfigSrv *config.Service
@@ -49,10 +47,28 @@ type App struct {
 	Viewer        *viewer.Service
 }
 
-func NewApp(conf *config.AppConfig) (app *App, err error) {
+func (a *App) VerifyServices() error {
+	val := reflect.ValueOf(a).Elem()
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		fieldName := typ.Field(i).Name
+
+		// We only care about pointers (services)
+		if field.Kind() == reflect.Ptr && field.IsNil() {
+			return fmt.Errorf("critical error: service '%s' was not initialized", fieldName)
+		}
+	}
+	return nil
+}
+
+func NewApp(conf *config.AppConfig) (app *App) {
 	// db and info setup
-	gormDB, dbSrv := database.NewService(conf.ConfigDir)
-	infoSrv := info.NewService(dbSrv.InfoDB)
+	gormDB := database.New(conf.ConfigDir, info.IsDev())
+	userDb := config.NewUserConfigDB(gormDB)
+	infoDb := info.NewVersionHistoryManager(gormDB)
+	infoSrv := info.NewService(infoDb)
 
 	// auth setup
 	sessionsDB := auth.NewSessionGormDB(gormDB, uint(conf.Auth.MaxSessions))
@@ -68,99 +84,78 @@ func NewApp(conf *config.AppConfig) (app *App, err error) {
 	composeRoot := setupComposeRoot(conf.ComposeRoot)
 
 	// docker manager setup
-	sshSrv := ssh.NewService(dbSrv.SshKeyDB, dbSrv.MachineDB)
-	fileStore := files.NewGormStore(gormDB)
+	sshDb := ssh.NewGormKeyManager(gormDB)
+	machDb := ssh.NewGormMachineManger(gormDB)
+	sshSrv := ssh.NewService(sshDb, machDb)
 	dockYamlSrv := dockmanYaml.NewDockmanYaml(conf.DockYaml, func() string {
 		// todo host aware
 		return conf.ComposeRoot
 	})
-	fileSrv := files.New(
-		fileStore,
-		func(name string) (*sftp.Client, error) {
-			val, ok := sshSrv.Get(name)
-			if !ok {
-				return nil, fmt.Errorf("ssh host %s not found", name)
-			}
-			return val.Sftp, nil
-		},
-		dockYamlSrv,
+
+	aliasStore := host.NewAliasStore(gormDB)
+	hostStore := host.NewStore(gormDB)
+	hostManager := host.NewService(
+		hostStore,
+		aliasStore,
+		sshSrv,
 		conf.ComposeRoot,
+		conf.LocalAddr,
+	)
+
+	fileSrv := files.New(
+		hostManager.GetFileSystem,
+		dockYamlSrv,
 		&conf.Perms,
 	)
 
-	dockerManagerSrv := dm.NewService(
-		sshSrv,
-		dbSrv.UserConfigDB,
-		func() string { return conf.ComposeRoot },
-		func() string {
-			return conf.LocalAddr
-		},
-		func(filename, host string) (compose.Host, error) {
-			fsCli, relpath, root, err := fileSrv.LoadAll(filename, host)
-			if err != nil {
-				return compose.Host{}, err
-			}
-
-			return compose.Host{
-				Fs:      fsCli,
-				Root:    root,
-				Relpath: relpath,
-			}, nil
-		},
-	)
-
-	err = git.NewMigrator(composeRoot)
+	err := git.NewMigrator(composeRoot)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to complete git migration")
 	}
 
 	userConfigSrv := config.NewService(
-		dbSrv.UserConfigDB,
+		userDb,
 		func() {},
 	)
 
 	cleanerStore := cleaner.NewStore(gormDB)
 	cleanerSrv := cleaner.NewService(
-		dockerManagerSrv.GetService,
+		hostManager.GetDockerService,
 		cleanerStore,
 	)
 
 	viewerSrv := viewer.New(
-		dockerManagerSrv.GetService,
+		hostManager.GetDockerService,
 		func(input, host string) (root string, relpath string, err error) {
-			_, relpath, root, err = fileSrv.LoadAll(input, host)
+			fs, relpath, err := fileSrv.LoadAll(input, host)
 			if err != nil {
 				return "", "", err
 			}
 
-			join := filepath.Join(root, relpath)
+			join := filepath.Join(fs.Root(), relpath)
 			return join, relpath, nil
 		},
-		func(host string) (*ssh2.Client, error) {
-			if host == container.LocalClient {
-				return nil, nil
-			}
-			mac, ok := sshSrv.Get(host)
-			if !ok {
-				return nil, fmt.Errorf("ssh host %s not found", host)
-			}
-			return mac.SshClient, nil
-		},
+		hostManager.GetSSH,
 	)
 
-	log.Info().Msg("Dockman initialized successfully")
-	return &App{
+	app = &App{
 		Config:        conf,
 		Auth:          authSrv,
 		File:          fileSrv,
-		DockerManager: dockerManagerSrv,
-		DB:            dbSrv,
+		HostManager:   hostManager,
 		Info:          infoSrv,
 		SSH:           sshSrv,
 		UserConfigSrv: userConfigSrv,
 		CleanerSrv:    cleanerSrv,
 		Viewer:        viewerSrv,
-	}, nil
+	}
+	err = app.VerifyServices()
+	if err != nil {
+		log.Fatal().Err(err).Msg("error occurred while verifying services")
+	}
+
+	log.Info().Msg("Dockman initialized successfully")
+	return app
 }
 
 func setupComposeRoot(composeRoot string) (cr string) {
@@ -191,7 +186,7 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 
 	}
 
-	hostInterceptor := connect.WithInterceptors(host.NewHostInterceptor())
+	hostInterceptor := connect.WithInterceptors(hm.NewHostInterceptor())
 
 	handlers := []func() (string, http.Handler){
 		// auth
@@ -212,6 +207,13 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 				interceptors,
 			)
 		},
+		// host_manager
+		func() (string, http.Handler) {
+			return hostrpc.NewHostManagerServiceHandler(
+				host.NewHandler(a.HostManager),
+				interceptors,
+			)
+		},
 		// files
 		func() (string, http.Handler) {
 			return filesrpc.NewFileServiceHandler(
@@ -225,12 +227,13 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 			return a.registerHttpHandler(
 				"/api/file",
 				files.NewFileHandler(a.File),
-				host.HttpMiddleware,
+				hm.HttpMiddleware,
 			)
 		},
 		// docker
 		func() (string, http.Handler) {
-			return dockerpc.NewDockerServiceHandler(docker.NewConnectHandler(a.DockerManager.GetService),
+			return dockerpc.NewDockerServiceHandler(
+				docker.NewConnectHandler(a.HostManager.GetDockerService),
 				interceptors,
 				hostInterceptor,
 			)
@@ -239,8 +242,8 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		func() (string, http.Handler) {
 			return a.registerHttpHandler(
 				"/api/docker",
-				docker.NewHandlerHttp(a.DockerManager.GetService),
-				host.HttpMiddleware,
+				docker.NewHandlerHttp(a.HostManager.GetDockerService),
+				hm.HttpMiddleware,
 			)
 		},
 		// cleaner
@@ -257,7 +260,7 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 		//},
 		//func() (string, http.Handler) {
 		//	return a.registerHttpHandler("/api/git", git.NewFileHandler(a.Git))
-		//},l
+		//},
 		// auth shit
 		func() (string, http.Handler) {
 			return a.registerHttpHandler("/auth/ping", http.HandlerFunc(
@@ -267,10 +270,6 @@ func (a *App) registerApiRoutes(mux *http.ServeMux) {
 					}
 				}),
 			)
-		},
-		// host_manager
-		func() (string, http.Handler) {
-			return dockermanagerrpc.NewDockerManagerServiceHandler(dm.NewConnectHandler(a.DockerManager), interceptors)
 		},
 		func() (string, http.Handler) {
 			return viewerrpc.NewViewerServiceHandler(
@@ -337,12 +336,4 @@ func (a *App) registerHttpHandler(basePath string, subMux http.Handler, middlewa
 	}
 
 	return basePath, baseHandler
-}
-
-func (a *App) Close() error {
-	err := a.DB.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close database service: %w", err)
-	}
-	return nil
 }

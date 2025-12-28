@@ -1,12 +1,10 @@
-package host
+package middleware
 
 import (
 	"context"
 
 	"connectrpc.com/connect"
 )
-
-const HeaderDockerHost = "DOCKER_HOST"
 
 type Interceptor struct {
 }

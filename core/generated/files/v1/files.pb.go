@@ -109,314 +109,6 @@ func (*CopyResponse) Descriptor() ([]byte, []int) {
 	return file_files_v1_files_proto_rawDescGZIP(), []int{1}
 }
 
-type DeleteAliasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Alias         *Alias                 `protobuf:"bytes,1,opt,name=alias,proto3" json:"alias,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteAliasRequest) Reset() {
-	*x = DeleteAliasRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteAliasRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteAliasRequest) ProtoMessage() {}
-
-func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteAliasRequest.ProtoReflect.Descriptor instead.
-func (*DeleteAliasRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *DeleteAliasRequest) GetAlias() *Alias {
-	if x != nil {
-		return x.Alias
-	}
-	return nil
-}
-
-type DeleteAliasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteAliasResponse) Reset() {
-	*x = DeleteAliasResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteAliasResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteAliasResponse) ProtoMessage() {}
-
-func (x *DeleteAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteAliasResponse.ProtoReflect.Descriptor instead.
-func (*DeleteAliasResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{3}
-}
-
-type AddAliasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Alias         *Alias                 `protobuf:"bytes,1,opt,name=alias,proto3" json:"alias,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AddAliasRequest) Reset() {
-	*x = AddAliasRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddAliasRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddAliasRequest) ProtoMessage() {}
-
-func (x *AddAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddAliasRequest.ProtoReflect.Descriptor instead.
-func (*AddAliasRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *AddAliasRequest) GetAlias() *Alias {
-	if x != nil {
-		return x.Alias
-	}
-	return nil
-}
-
-type AddAliasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AddAliasResponse) Reset() {
-	*x = AddAliasResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddAliasResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddAliasResponse) ProtoMessage() {}
-
-func (x *AddAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddAliasResponse.ProtoReflect.Descriptor instead.
-func (*AddAliasResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{5}
-}
-
-type ListAliasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListAliasRequest) Reset() {
-	*x = ListAliasRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListAliasRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListAliasRequest) ProtoMessage() {}
-
-func (x *ListAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListAliasRequest.ProtoReflect.Descriptor instead.
-func (*ListAliasRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *ListAliasRequest) GetHost() string {
-	if x != nil {
-		return x.Host
-	}
-	return ""
-}
-
-type Alias struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Alias         string                 `protobuf:"bytes,1,opt,name=alias,proto3" json:"alias,omitempty"`
-	Host          string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
-	Fullpath      string                 `protobuf:"bytes,3,opt,name=fullpath,proto3" json:"fullpath,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Alias) Reset() {
-	*x = Alias{}
-	mi := &file_files_v1_files_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Alias) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Alias) ProtoMessage() {}
-
-func (x *Alias) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Alias.ProtoReflect.Descriptor instead.
-func (*Alias) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *Alias) GetAlias() string {
-	if x != nil {
-		return x.Alias
-	}
-	return ""
-}
-
-func (x *Alias) GetHost() string {
-	if x != nil {
-		return x.Host
-	}
-	return ""
-}
-
-func (x *Alias) GetFullpath() string {
-	if x != nil {
-		return x.Fullpath
-	}
-	return ""
-}
-
-type ListAliasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Aliases       []*Alias               `protobuf:"bytes,1,rep,name=aliases,proto3" json:"aliases,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListAliasResponse) Reset() {
-	*x = ListAliasResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListAliasResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListAliasResponse) ProtoMessage() {}
-
-func (x *ListAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListAliasResponse.ProtoReflect.Descriptor instead.
-func (*ListAliasResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ListAliasResponse) GetAliases() []*Alias {
-	if x != nil {
-		return x.Aliases
-	}
-	return nil
-}
-
 type ListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
@@ -426,7 +118,7 @@ type ListRequest struct {
 
 func (x *ListRequest) Reset() {
 	*x = ListRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[9]
+	mi := &file_files_v1_files_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -438,7 +130,7 @@ func (x *ListRequest) String() string {
 func (*ListRequest) ProtoMessage() {}
 
 func (x *ListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[9]
+	mi := &file_files_v1_files_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -451,7 +143,7 @@ func (x *ListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRequest.ProtoReflect.Descriptor instead.
 func (*ListRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{9}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ListRequest) GetPath() string {
@@ -470,7 +162,7 @@ type ListResponse struct {
 
 func (x *ListResponse) Reset() {
 	*x = ListResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[10]
+	mi := &file_files_v1_files_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -482,7 +174,7 @@ func (x *ListResponse) String() string {
 func (*ListResponse) ProtoMessage() {}
 
 func (x *ListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[10]
+	mi := &file_files_v1_files_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -495,7 +187,7 @@ func (x *ListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListResponse.ProtoReflect.Descriptor instead.
 func (*ListResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{10}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListResponse) GetEntries() []*FsEntry {
@@ -514,7 +206,7 @@ type FormatRequest struct {
 
 func (x *FormatRequest) Reset() {
 	*x = FormatRequest{}
-	mi := &file_files_v1_files_proto_msgTypes[11]
+	mi := &file_files_v1_files_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -526,7 +218,7 @@ func (x *FormatRequest) String() string {
 func (*FormatRequest) ProtoMessage() {}
 
 func (x *FormatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[11]
+	mi := &file_files_v1_files_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +231,7 @@ func (x *FormatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FormatRequest.ProtoReflect.Descriptor instead.
 func (*FormatRequest) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{11}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *FormatRequest) GetFilename() string {
@@ -558,7 +250,7 @@ type FormatResponse struct {
 
 func (x *FormatResponse) Reset() {
 	*x = FormatResponse{}
-	mi := &file_files_v1_files_proto_msgTypes[12]
+	mi := &file_files_v1_files_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -570,7 +262,7 @@ func (x *FormatResponse) String() string {
 func (*FormatResponse) ProtoMessage() {}
 
 func (x *FormatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[12]
+	mi := &file_files_v1_files_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -583,7 +275,7 @@ func (x *FormatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FormatResponse.ProtoReflect.Descriptor instead.
 func (*FormatResponse) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{12}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *FormatResponse) GetContents() string {
@@ -607,7 +299,7 @@ type FsEntry struct {
 
 func (x *FsEntry) Reset() {
 	*x = FsEntry{}
-	mi := &file_files_v1_files_proto_msgTypes[13]
+	mi := &file_files_v1_files_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +311,7 @@ func (x *FsEntry) String() string {
 func (*FsEntry) ProtoMessage() {}
 
 func (x *FsEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[13]
+	mi := &file_files_v1_files_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +324,7 @@ func (x *FsEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FsEntry.ProtoReflect.Descriptor instead.
 func (*FsEntry) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{13}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *FsEntry) GetFilename() string {
@@ -680,7 +372,7 @@ type RenameFile struct {
 
 func (x *RenameFile) Reset() {
 	*x = RenameFile{}
-	mi := &file_files_v1_files_proto_msgTypes[14]
+	mi := &file_files_v1_files_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -692,7 +384,7 @@ func (x *RenameFile) String() string {
 func (*RenameFile) ProtoMessage() {}
 
 func (x *RenameFile) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[14]
+	mi := &file_files_v1_files_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -705,7 +397,7 @@ func (x *RenameFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameFile.ProtoReflect.Descriptor instead.
 func (*RenameFile) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{14}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RenameFile) GetOldFilePath() string {
@@ -732,7 +424,7 @@ type File struct {
 
 func (x *File) Reset() {
 	*x = File{}
-	mi := &file_files_v1_files_proto_msgTypes[15]
+	mi := &file_files_v1_files_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +436,7 @@ func (x *File) String() string {
 func (*File) ProtoMessage() {}
 
 func (x *File) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[15]
+	mi := &file_files_v1_files_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -757,7 +449,7 @@ func (x *File) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use File.ProtoReflect.Descriptor instead.
 func (*File) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{15}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *File) GetFilename() string {
@@ -782,7 +474,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_files_v1_files_proto_msgTypes[16]
+	mi := &file_files_v1_files_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -794,7 +486,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[16]
+	mi := &file_files_v1_files_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -807,7 +499,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{16}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{9}
 }
 
 type DockmanYaml struct {
@@ -827,7 +519,7 @@ type DockmanYaml struct {
 
 func (x *DockmanYaml) Reset() {
 	*x = DockmanYaml{}
-	mi := &file_files_v1_files_proto_msgTypes[17]
+	mi := &file_files_v1_files_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -839,7 +531,7 @@ func (x *DockmanYaml) String() string {
 func (*DockmanYaml) ProtoMessage() {}
 
 func (x *DockmanYaml) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[17]
+	mi := &file_files_v1_files_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -852,7 +544,7 @@ func (x *DockmanYaml) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DockmanYaml.ProtoReflect.Descriptor instead.
 func (*DockmanYaml) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{17}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DockmanYaml) GetCustomTools() map[string]string {
@@ -927,7 +619,7 @@ type VolumesConfig struct {
 
 func (x *VolumesConfig) Reset() {
 	*x = VolumesConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[18]
+	mi := &file_files_v1_files_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -939,7 +631,7 @@ func (x *VolumesConfig) String() string {
 func (*VolumesConfig) ProtoMessage() {}
 
 func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[18]
+	mi := &file_files_v1_files_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -952,7 +644,7 @@ func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumesConfig.ProtoReflect.Descriptor instead.
 func (*VolumesConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{18}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *VolumesConfig) GetSort() *Sort {
@@ -971,7 +663,7 @@ type NetworkConfig struct {
 
 func (x *NetworkConfig) Reset() {
 	*x = NetworkConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[19]
+	mi := &file_files_v1_files_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -983,7 +675,7 @@ func (x *NetworkConfig) String() string {
 func (*NetworkConfig) ProtoMessage() {}
 
 func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[19]
+	mi := &file_files_v1_files_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -996,7 +688,7 @@ func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkConfig.ProtoReflect.Descriptor instead.
 func (*NetworkConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{19}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *NetworkConfig) GetSort() *Sort {
@@ -1015,7 +707,7 @@ type ImageConfig struct {
 
 func (x *ImageConfig) Reset() {
 	*x = ImageConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[20]
+	mi := &file_files_v1_files_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1027,7 +719,7 @@ func (x *ImageConfig) String() string {
 func (*ImageConfig) ProtoMessage() {}
 
 func (x *ImageConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[20]
+	mi := &file_files_v1_files_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1040,7 +732,7 @@ func (x *ImageConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageConfig.ProtoReflect.Descriptor instead.
 func (*ImageConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{20}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ImageConfig) GetSort() *Sort {
@@ -1059,7 +751,7 @@ type ContainerConfig struct {
 
 func (x *ContainerConfig) Reset() {
 	*x = ContainerConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[21]
+	mi := &file_files_v1_files_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1071,7 +763,7 @@ func (x *ContainerConfig) String() string {
 func (*ContainerConfig) ProtoMessage() {}
 
 func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[21]
+	mi := &file_files_v1_files_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1084,7 +776,7 @@ func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerConfig.ProtoReflect.Descriptor instead.
 func (*ContainerConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{21}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ContainerConfig) GetSort() *Sort {
@@ -1104,7 +796,7 @@ type Sort struct {
 
 func (x *Sort) Reset() {
 	*x = Sort{}
-	mi := &file_files_v1_files_proto_msgTypes[22]
+	mi := &file_files_v1_files_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1116,7 +808,7 @@ func (x *Sort) String() string {
 func (*Sort) ProtoMessage() {}
 
 func (x *Sort) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[22]
+	mi := &file_files_v1_files_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1129,7 +821,7 @@ func (x *Sort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sort.ProtoReflect.Descriptor instead.
 func (*Sort) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{22}
+	return file_files_v1_files_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Sort) GetSortOrder() string {
@@ -1154,21 +846,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\vCopyRequest\x12&\n" +
 	"\x06source\x18\x01 \x01(\v2\x0e.files.v1.FileR\x06source\x12\"\n" +
 	"\x04dest\x18\x02 \x01(\v2\x0e.files.v1.FileR\x04dest\"\x0e\n" +
-	"\fCopyResponse\";\n" +
-	"\x12DeleteAliasRequest\x12%\n" +
-	"\x05alias\x18\x01 \x01(\v2\x0f.files.v1.AliasR\x05alias\"\x15\n" +
-	"\x13DeleteAliasResponse\"8\n" +
-	"\x0fAddAliasRequest\x12%\n" +
-	"\x05alias\x18\x01 \x01(\v2\x0f.files.v1.AliasR\x05alias\"\x12\n" +
-	"\x10AddAliasResponse\"&\n" +
-	"\x10ListAliasRequest\x12\x12\n" +
-	"\x04host\x18\x01 \x01(\tR\x04host\"M\n" +
-	"\x05Alias\x12\x14\n" +
-	"\x05alias\x18\x01 \x01(\tR\x05alias\x12\x12\n" +
-	"\x04host\x18\x02 \x01(\tR\x04host\x12\x1a\n" +
-	"\bfullpath\x18\x03 \x01(\tR\bfullpath\">\n" +
-	"\x11ListAliasResponse\x12)\n" +
-	"\aaliases\x18\x01 \x03(\v2\x0f.files.v1.AliasR\aaliases\"!\n" +
+	"\fCopyResponse\"!\n" +
 	"\vListRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\";\n" +
 	"\fListResponse\x12+\n" +
@@ -1214,7 +892,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"B\n" +
 	"\x04Sort\x12\x1c\n" +
 	"\tsortOrder\x18\x01 \x01(\tR\tsortOrder\x12\x1c\n" +
-	"\tsortField\x18\x02 \x01(\tR\tsortField2\x8f\x05\n" +
+	"\tsortField\x18\x02 \x01(\tR\tsortField2\xb4\x03\n" +
 	"\vFileService\x127\n" +
 	"\x04List\x12\x15.files.v1.ListRequest\x1a\x16.files.v1.ListResponse\"\x00\x12+\n" +
 	"\x06Create\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x127\n" +
@@ -1223,10 +901,7 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x06Exists\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x121\n" +
 	"\x06Rename\x12\x14.files.v1.RenameFile\x1a\x0f.files.v1.Empty\"\x00\x12:\n" +
 	"\x0eGetDockmanYaml\x12\x0f.files.v1.Empty\x1a\x15.files.v1.DockmanYaml\"\x00\x12=\n" +
-	"\x06Format\x12\x17.files.v1.FormatRequest\x1a\x18.files.v1.FormatResponse\"\x00\x12F\n" +
-	"\tListAlias\x12\x1a.files.v1.ListAliasRequest\x1a\x1b.files.v1.ListAliasResponse\"\x00\x12C\n" +
-	"\bAddAlias\x12\x19.files.v1.AddAliasRequest\x1a\x1a.files.v1.AddAliasResponse\"\x00\x12L\n" +
-	"\vDeleteAlias\x12\x1c.files.v1.DeleteAliasRequest\x1a\x1d.files.v1.DeleteAliasResponse\"\x00B\x88\x01\n" +
+	"\x06Format\x12\x17.files.v1.FormatRequest\x1a\x18.files.v1.FormatResponse\"\x00B\x88\x01\n" +
 	"\fcom.files.v1B\n" +
 	"FilesProtoP\x01Z+github.com/RA341/dockman/generated/files/v1\xa2\x02\x03FXX\xaa\x02\bFiles.V1\xca\x02\bFiles\\V1\xe2\x02\x14Files\\V1\\GPBMetadata\xea\x02\tFiles::V1b\x06proto3"
 
@@ -1242,77 +917,61 @@ func file_files_v1_files_proto_rawDescGZIP() []byte {
 	return file_files_v1_files_proto_rawDescData
 }
 
-var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_files_v1_files_proto_goTypes = []any{
-	(*CopyRequest)(nil),         // 0: files.v1.CopyRequest
-	(*CopyResponse)(nil),        // 1: files.v1.CopyResponse
-	(*DeleteAliasRequest)(nil),  // 2: files.v1.DeleteAliasRequest
-	(*DeleteAliasResponse)(nil), // 3: files.v1.DeleteAliasResponse
-	(*AddAliasRequest)(nil),     // 4: files.v1.AddAliasRequest
-	(*AddAliasResponse)(nil),    // 5: files.v1.AddAliasResponse
-	(*ListAliasRequest)(nil),    // 6: files.v1.ListAliasRequest
-	(*Alias)(nil),               // 7: files.v1.Alias
-	(*ListAliasResponse)(nil),   // 8: files.v1.ListAliasResponse
-	(*ListRequest)(nil),         // 9: files.v1.ListRequest
-	(*ListResponse)(nil),        // 10: files.v1.ListResponse
-	(*FormatRequest)(nil),       // 11: files.v1.FormatRequest
-	(*FormatResponse)(nil),      // 12: files.v1.FormatResponse
-	(*FsEntry)(nil),             // 13: files.v1.FsEntry
-	(*RenameFile)(nil),          // 14: files.v1.RenameFile
-	(*File)(nil),                // 15: files.v1.File
-	(*Empty)(nil),               // 16: files.v1.Empty
-	(*DockmanYaml)(nil),         // 17: files.v1.DockmanYaml
-	(*VolumesConfig)(nil),       // 18: files.v1.VolumesConfig
-	(*NetworkConfig)(nil),       // 19: files.v1.NetworkConfig
-	(*ImageConfig)(nil),         // 20: files.v1.ImageConfig
-	(*ContainerConfig)(nil),     // 21: files.v1.ContainerConfig
-	(*Sort)(nil),                // 22: files.v1.Sort
-	nil,                         // 23: files.v1.DockmanYaml.CustomToolsEntry
+	(*CopyRequest)(nil),     // 0: files.v1.CopyRequest
+	(*CopyResponse)(nil),    // 1: files.v1.CopyResponse
+	(*ListRequest)(nil),     // 2: files.v1.ListRequest
+	(*ListResponse)(nil),    // 3: files.v1.ListResponse
+	(*FormatRequest)(nil),   // 4: files.v1.FormatRequest
+	(*FormatResponse)(nil),  // 5: files.v1.FormatResponse
+	(*FsEntry)(nil),         // 6: files.v1.FsEntry
+	(*RenameFile)(nil),      // 7: files.v1.RenameFile
+	(*File)(nil),            // 8: files.v1.File
+	(*Empty)(nil),           // 9: files.v1.Empty
+	(*DockmanYaml)(nil),     // 10: files.v1.DockmanYaml
+	(*VolumesConfig)(nil),   // 11: files.v1.VolumesConfig
+	(*NetworkConfig)(nil),   // 12: files.v1.NetworkConfig
+	(*ImageConfig)(nil),     // 13: files.v1.ImageConfig
+	(*ContainerConfig)(nil), // 14: files.v1.ContainerConfig
+	(*Sort)(nil),            // 15: files.v1.Sort
+	nil,                     // 16: files.v1.DockmanYaml.CustomToolsEntry
 }
 var file_files_v1_files_proto_depIdxs = []int32{
-	15, // 0: files.v1.CopyRequest.source:type_name -> files.v1.File
-	15, // 1: files.v1.CopyRequest.dest:type_name -> files.v1.File
-	7,  // 2: files.v1.DeleteAliasRequest.alias:type_name -> files.v1.Alias
-	7,  // 3: files.v1.AddAliasRequest.alias:type_name -> files.v1.Alias
-	7,  // 4: files.v1.ListAliasResponse.aliases:type_name -> files.v1.Alias
-	13, // 5: files.v1.ListResponse.entries:type_name -> files.v1.FsEntry
-	13, // 6: files.v1.FsEntry.subFiles:type_name -> files.v1.FsEntry
-	23, // 7: files.v1.DockmanYaml.customTools:type_name -> files.v1.DockmanYaml.CustomToolsEntry
-	18, // 8: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
-	19, // 9: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
-	20, // 10: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
-	21, // 11: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
-	22, // 12: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
-	22, // 13: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
-	22, // 14: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
-	22, // 15: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
-	9,  // 16: files.v1.FileService.List:input_type -> files.v1.ListRequest
-	15, // 17: files.v1.FileService.Create:input_type -> files.v1.File
-	0,  // 18: files.v1.FileService.Copy:input_type -> files.v1.CopyRequest
-	15, // 19: files.v1.FileService.Delete:input_type -> files.v1.File
-	15, // 20: files.v1.FileService.Exists:input_type -> files.v1.File
-	14, // 21: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
-	16, // 22: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
-	11, // 23: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
-	6,  // 24: files.v1.FileService.ListAlias:input_type -> files.v1.ListAliasRequest
-	4,  // 25: files.v1.FileService.AddAlias:input_type -> files.v1.AddAliasRequest
-	2,  // 26: files.v1.FileService.DeleteAlias:input_type -> files.v1.DeleteAliasRequest
-	10, // 27: files.v1.FileService.List:output_type -> files.v1.ListResponse
-	16, // 28: files.v1.FileService.Create:output_type -> files.v1.Empty
-	1,  // 29: files.v1.FileService.Copy:output_type -> files.v1.CopyResponse
-	16, // 30: files.v1.FileService.Delete:output_type -> files.v1.Empty
-	16, // 31: files.v1.FileService.Exists:output_type -> files.v1.Empty
-	16, // 32: files.v1.FileService.Rename:output_type -> files.v1.Empty
-	17, // 33: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
-	12, // 34: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
-	8,  // 35: files.v1.FileService.ListAlias:output_type -> files.v1.ListAliasResponse
-	5,  // 36: files.v1.FileService.AddAlias:output_type -> files.v1.AddAliasResponse
-	3,  // 37: files.v1.FileService.DeleteAlias:output_type -> files.v1.DeleteAliasResponse
-	27, // [27:38] is the sub-list for method output_type
-	16, // [16:27] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	8,  // 0: files.v1.CopyRequest.source:type_name -> files.v1.File
+	8,  // 1: files.v1.CopyRequest.dest:type_name -> files.v1.File
+	6,  // 2: files.v1.ListResponse.entries:type_name -> files.v1.FsEntry
+	6,  // 3: files.v1.FsEntry.subFiles:type_name -> files.v1.FsEntry
+	16, // 4: files.v1.DockmanYaml.customTools:type_name -> files.v1.DockmanYaml.CustomToolsEntry
+	11, // 5: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
+	12, // 6: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
+	13, // 7: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
+	14, // 8: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
+	15, // 9: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
+	15, // 10: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
+	15, // 11: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
+	15, // 12: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
+	2,  // 13: files.v1.FileService.List:input_type -> files.v1.ListRequest
+	8,  // 14: files.v1.FileService.Create:input_type -> files.v1.File
+	0,  // 15: files.v1.FileService.Copy:input_type -> files.v1.CopyRequest
+	8,  // 16: files.v1.FileService.Delete:input_type -> files.v1.File
+	8,  // 17: files.v1.FileService.Exists:input_type -> files.v1.File
+	7,  // 18: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
+	9,  // 19: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
+	4,  // 20: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
+	3,  // 21: files.v1.FileService.List:output_type -> files.v1.ListResponse
+	9,  // 22: files.v1.FileService.Create:output_type -> files.v1.Empty
+	1,  // 23: files.v1.FileService.Copy:output_type -> files.v1.CopyResponse
+	9,  // 24: files.v1.FileService.Delete:output_type -> files.v1.Empty
+	9,  // 25: files.v1.FileService.Exists:output_type -> files.v1.Empty
+	9,  // 26: files.v1.FileService.Rename:output_type -> files.v1.Empty
+	10, // 27: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
+	5,  // 28: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
+	21, // [21:29] is the sub-list for method output_type
+	13, // [13:21] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }
@@ -1326,7 +985,7 @@ func file_files_v1_files_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_files_v1_files_proto_rawDesc), len(file_files_v1_files_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

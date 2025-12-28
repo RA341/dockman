@@ -6,7 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/viewer/v1"
-	"github.com/RA341/dockman/internal/host"
+	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,7 +19,7 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) StartSqliteSession(ctx context.Context, req *connect.Request[v1.StartSqliteSessionRequest], stream *connect.ServerStream[v1.StartSqliteSessionResponse]) error {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := hm.GetHost(ctx)
 	if err != nil {
 		return err
 	}

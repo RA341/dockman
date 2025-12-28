@@ -5,8 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/RA341/dockman/pkg/fileutil"
 )
 
 // gzipResponseWriter wraps an http.ResponseWriter, compressing writes with gzip.
@@ -27,10 +25,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("Content-Encoding", "gzip")
-
 		gz := gzip.NewWriter(w)
-		defer fileutil.Close(gz)
-
 		gzw := &gzipResponseWriter{Writer: gz, ResponseWriter: w}
 		next.ServeHTTP(gzw, r)
 	})

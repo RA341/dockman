@@ -13,7 +13,7 @@ type GormStore struct {
 }
 
 func NewStore(db *gorm.DB) *GormStore {
-	database.MustMigrate(db, &PruneConfig{}, &PruneResult{})
+	database.Migrate(db, &PruneConfig{}, &PruneResult{})
 	return &GormStore{db: db}
 }
 

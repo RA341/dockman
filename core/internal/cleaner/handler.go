@@ -8,7 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/cleaner/v1"
-	"github.com/RA341/dockman/internal/host"
+	"github.com/RA341/dockman/internal/host/middleware"
+
 	"github.com/dustin/go-humanize"
 )
 
@@ -21,7 +22,7 @@ func NewHandler(srv *Service) *Handler {
 }
 
 func (h *Handler) ListHistory(ctx context.Context, _ *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func (h *Handler) ListHistory(ctx context.Context, _ *connect.Request[v1.ListHis
 }
 
 func (h *Handler) SpaceStatus(ctx context.Context, req *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +118,7 @@ func (h *Handler) SpaceStatus(ctx context.Context, req *connect.Request[v1.Space
 }
 
 func (h *Handler) RunCleaner(ctx context.Context, _ *connect.Request[v1.RunCleanerRequest]) (*connect.Response[v1.RunCleanerResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func (h *Handler) RunCleaner(ctx context.Context, _ *connect.Request[v1.RunClean
 }
 
 func (h *Handler) GetConfig(ctx context.Context, _ *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (h *Handler) GetConfig(ctx context.Context, _ *connect.Request[v1.GetConfig
 }
 
 func (h *Handler) EditConfig(ctx context.Context, req *connect.Request[v1.EditConfigRequest]) (*connect.Response[v1.EditConfigResponse], error) {
-	hostname, err := host.GetHost(ctx)
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}

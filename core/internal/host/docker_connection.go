@@ -1,8 +1,7 @@
-package docker_manager
+package host
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	"github.com/moby/moby/api/types/system"
@@ -11,52 +10,33 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// NewLocalClient connects to the local docker host.
-//
-// It is assumed the docker daemon is running and is accessible
-func NewLocalClient() (*client.Client, error) {
-	dockerClient, err := newDockerClient(client.FromEnv)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create docker client: %w", err)
-	}
-	return dockerClient, nil
-}
-
-// newDockerSSHClient establishes an SSH connection to a Docker host
-func newDockerSSHClient(sshClient *ssh.Client) (*client.Client, error) {
-	// Create a Docker client using the custom dialer.
-	newClient, err := newDockerClient(
-		client.WithDialContext(dockerSSHDialer(sshClient)),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to docker client: %w", err)
-	}
-
-	return newClient, nil
-}
-
-// thin wrapper around client.NewClientWithOpts, to load common options
-// between the connection methods
-func newDockerClient(opts ...client.Opt) (*client.Client, error) {
-	// enabled by default on moby
-	//opts = append(opts, client.WithAPIVersionNegotiation())
-	return client.New(opts...)
-}
-
 func testDockerConnection(cli *client.Client) (system.Info, error) {
 	cliInfo, err := cli.Info(context.Background(), client.InfoOptions{})
 	if err != nil {
 		return system.Info{}, err
 	}
-
-	log.Info().
-		Str("ID", cliInfo.Info.ID).Str("Kernel", cliInfo.Info.KernelVersion).
-		Str("name", cliInfo.Info.Name).Msg("Connected to client")
-
 	return cliInfo.Info, nil
 }
 
+// NewDockerLocalClient connects to the local docker host.
+//
+// It is assumed the docker daemon is running and is accessible
+func NewDockerLocalClient() (*client.Client, error) {
+	return client.New(
+		client.FromEnv,
+	)
+}
+
+// newDockerSSHClient establishes an SSH connection to a Docker host
+func newDockerSSHClient(cli *ssh.Client) (*client.Client, error) {
+	// Create a Docker client using the custom dialer.
+	return client.New(
+		client.WithDialContext(dockerSSHDialer(cli)),
+	)
+}
+
 // dockerSSHDialer custom dialer that uses docker using an SSH connection.
+// todo pass custom host path
 func dockerSSHDialer(sshClient *ssh.Client) func(ctx context.Context, network string, addr string) (net.Conn, error) {
 	return func(ctx context.Context, network string, addr string) (net.Conn, error) {
 		dockerUnix := "/var/run/docker.sock"

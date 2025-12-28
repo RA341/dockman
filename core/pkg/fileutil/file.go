@@ -43,6 +43,12 @@ func StatFileIfExists(filename string) os.FileInfo {
 	return stat
 }
 
+func CloseIfErr(err error, c io.Closer) {
+	if err != nil {
+		Close(c)
+	}
+}
+
 func Close(rw io.Closer) {
 	err := rw.Close()
 	if err != nil && !errors.Is(err, io.EOF) {

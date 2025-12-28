@@ -1,6 +1,20 @@
-import {createTheme, CssBaseline, ThemeProvider} from '@mui/material';
+import {
+    Box,
+    Button,
+    CircularProgress,
+    Container,
+    createTheme,
+    CssBaseline,
+    Link as MuiLink,
+    MenuItem,
+    Paper,
+    Stack,
+    TextField,
+    ThemeProvider,
+    Typography
+} from '@mui/material';
 import {SnackbarProvider} from "./context/snackbar-context.tsx";
-import {BrowserRouter, Navigate, Outlet, Route, Routes} from "react-router-dom";
+import {BrowserRouter, Navigate, Outlet, Route, Routes, useNavigate, useParams} from "react-router-dom";
 import {AuthProvider} from "./context/auth-context.tsx";
 import React from 'react';
 import {useAuth} from "./hooks/auth.ts";
@@ -10,9 +24,7 @@ import {ChangelogProvider} from "./context/changelog-context.tsx";
 import NotFoundPage from "./pages/home/not-found.tsx";
 import RootLayout from "./pages/home/home.tsx";
 import {UserConfigProvider} from "./context/config-context.tsx";
-import AliasProvider from "./context/alias-context.tsx";
-import {TabsProvider, useTabsStore} from "./context/tab-context.tsx";
-import HostProvider from "./context/host-context.tsx";
+import HostProvider, {useHostManager} from "./context/host-context.tsx";
 import ContainersPage from "./pages/containers/containers.tsx";
 import ImagesPage from "./pages/images/images.tsx";
 import ImageInspectPage from "./pages/images/inspect.tsx";
@@ -20,13 +32,14 @@ import VolumesPage from "./pages/volumes/volumes.tsx";
 import NetworksPage from "./pages/networks/networks.tsx";
 import NetworksInspect from "./pages/networks/networks-inspect.tsx";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
-import {ComposePage} from "./pages/compose/compose-page.tsx";
-import {useEditorUrl} from "./lib/editor.ts";
+import {ComposePage, FileIndexRedirect, FilesLayout} from "./pages/compose/compose-page.tsx";
 import ContainerInspectPage from "./pages/containers/inspect.tsx";
 import scrollbarStyles from "./components/scrollbar-style.tsx";
 import StatsPage from "./pages/stats/stats-page.tsx";
 import {useHostStore} from "./pages/compose/state/files.ts";
 import {enableMapSet} from "immer";
+import {SettingsOutlined as SettingsIcon} from '@mui/icons-material';
+import FolderIcon from "@mui/icons-material/Folder";
 
 export function App() {
     enableMapSet()
@@ -42,18 +55,15 @@ export function App() {
                             {/*providers that need auth need to be injected inside private route not here */}
                             <Route element={<PrivateRoute/>}>
                                 <Route path="/" element={<RootLayout/>}>
-                                    {/*todo*/}
-                                    {/*<Route path="/" element={<HomeRedirect/>}/>*/}
-                                    <Route index element={<Navigate to="local" replace/>}/>
+                                    <Route index element={<HomeIndexRedirect/>}/>
 
                                     <Route path=":host">
                                         <Route index element={<Navigate to="files" replace/>}/>
 
                                         <Route path="test" element={<TestPage/>}/>
 
-                                        <Route path="files">
-                                            <Route index element={<HomeRedirect/>}/>
-                                            {/*<Route index element={<ComposePage/>}/>*/}
+                                        <Route path="files" element={<FilesLayout/>}>
+                                            <Route index element={<FileIndexRedirect/>}/>
                                             <Route path="*" element={<ComposePage/>}/>
                                         </Route>
 
@@ -98,20 +108,13 @@ export function App() {
     );
 }
 
-// Redirect component that reads from TabsProvider
-// todo
-function HomeRedirect() {
-    const lastOpened = useTabsStore(state => state.lastOpened);
-    const tabs = useTabsStore(state => state.allTabs);
 
-    const editorUrl = useEditorUrl()
-
-    const path = lastOpened
-        ? editorUrl(lastOpened, tabs[lastOpened])
-        : `compose`;
-
-    return <Navigate to={path} replace/>;
+function HomeIndexRedirect() {
+    const {availableHosts} = useHostManager()
+    const at = availableHosts.at(0);
+    return <Navigate to={`/${at}`} replace/>;
 }
+
 
 const PrivateRoute = () => {
     const {isAuthenticated, isLoading} = useAuth();
@@ -131,19 +134,193 @@ const PrivateRoute = () => {
 
     // Once authenticated, render with providers that need auth
     return (
-        <HostProvider>
-            <AliasProvider>
-                <UserConfigProvider>
-                    <ChangelogProvider>
-                        <TabsProvider>
-                            <Outlet/>
-                        </TabsProvider>
-                    </ChangelogProvider>
-                </UserConfigProvider>
-            </AliasProvider>
-        </HostProvider>
+        <ChangelogProvider>
+            <HostProvider>
+                <HostGuard/>
+            </HostProvider>
+        </ChangelogProvider>
     );
 };
+
+function HostGuard() {
+    const {availableHosts, isLoading} = useHostManager()
+    const {host} = useParams()
+
+    if (isLoading) {
+        return (
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100vh',
+            }}>
+                <CircularProgress size={40} thickness={5}/>
+                <Typography variant="body2" sx={{mt: 2, fontWeight: 700}} color="text.secondary">
+                    Loading hosts...
+                </Typography>
+            </Box>
+        )
+    }
+
+    const emptyHostList = !availableHosts || availableHosts.length === 0;
+    const validHost = availableHosts.includes(host ?? "")
+    if (host !== undefined && (emptyHostList || !validHost)) {
+        return <EmptyHost hostname={host ?? ""}/>
+    }
+
+    return (
+        <UserConfigProvider>
+            <Outlet/>;
+        </UserConfigProvider>
+    )
+}
+
+const EmptyHost = ({hostname}: {
+    hostname?: string;
+}) => {
+    const navigate = useNavigate();
+    const isInvalid = Boolean(hostname);
+    const {availableHosts} = useHostManager()
+
+    return (
+        <Box sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 3
+        }}>
+            <Container maxWidth="sm">
+                <Paper
+                    variant="outlined"
+                    sx={{
+                        p: {xs: 4, md: 8},
+                        textAlign: 'center',
+                        borderRadius: 4,
+                        borderStyle: 'dashed',
+                        borderWidth: 2,
+                        bgcolor: 'background.paper',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                    }}
+                >
+                    {/* Icon Well */}
+                    <Box
+                        sx={{
+                            mb: 3,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            transition: 'transform 0.2s',
+                        }}
+                    >
+                        <Box component="img" sx={{height: 150, width: 150}} alt="host not found"
+                             src="/host-not-found.svg"/>
+                    </Box>
+
+                    {/* Content */}
+                    <Typography variant="h4" sx={{fontWeight: 800, mb: 1, letterSpacing: '-0.5px'}}>
+                        {isInvalid ? "Host Not Found" : "No Hosts Configured"}
+                    </Typography>
+
+                    {isInvalid ? (
+                        <Box sx={{mb: 3}}>
+                            <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                                The hostname provided does not match any configured hosts.
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontSize: 20,
+                                    fontFamily: 'monospace',
+                                    bgcolor: 'error.lighter',
+                                    color: 'error.main',
+                                    px: 1.5,
+                                    py: 0.5,
+                                    borderRadius: 1,
+                                    fontWeight: 700
+                                }}
+                            >
+                                {hostname}
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 4, maxWidth: 350}}>
+                            It looks like you haven't added any Docker Hosts yet.
+                            Configure your first node to start managing containers.
+                        </Typography>
+                    )}
+
+                    {/* Action Buttons */}
+                    <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}
+                           sx={{width: '100%', justifyContent: 'center'}}>
+                        <Button
+                            variant="contained"
+                            size="medium"
+                            startIcon={<SettingsIcon/>}
+                            onClick={() => navigate('/settings')}
+                            sx={{
+                                borderRadius: 2,
+                                px: 4,
+                                fontWeight: 500,
+                                boxShadow: 'none',
+                                '&:hover': {boxShadow: 'none'}
+                            }}
+                        >
+                            Settings
+                        </Button>
+
+                        <TextField
+                            select
+                            label="Switch Host"
+                            value={""}
+                            onChange={(e) => navigate(`/${e.target.value}`)}
+                            size="small"
+                            sx={{
+                                minWidth: 200,
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 2,
+                                    fontWeight: 700,
+                                    bgcolor: 'background.paper'
+                                }
+                            }}
+                            slotProps={{
+                                select: {
+                                    displayEmpty: true,
+                                }
+                            }}
+                        >
+                            {availableHosts.map((f) => (
+                                <MenuItem key={f} value={f}>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <FolderIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
+                                        <Typography variant="body2" sx={{fontWeight: 600}}>
+                                            {f}
+                                        </Typography>
+                                    </Stack>
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    </Stack>
+
+                    {/* Footer Link */}
+                    <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{mt: 4, display: 'block', textAlign: 'center'}}
+                    >
+                        Need help? Check the <MuiLink href="https://dockman.radn.dev/" target="_blank"
+                                                      color="inherit"
+                                                      sx={{fontWeight: 700}}>Documentation</MuiLink>
+                    </Typography>
+                </Paper>
+            </Container>
+        </Box>
+    );
+};
+
 
 const TestPage = () => {
     const host = useHostStore(state => state.host)

@@ -7,15 +7,14 @@ import (
 	"time"
 
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/RA341/dockman/pkg/syncmap"
+	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh"
 )
 
 type Service struct {
-	machines         MachineManager
-	keys             KeyManager
-	connectedClients syncmap.Map[string, *ConnectedMachine]
+	machines MachineManager
+	keys     KeyManager
 }
 
 func NewService(keyMan KeyManager, machManager MachineManager) *Service {
@@ -24,98 +23,35 @@ func NewService(keyMan KeyManager, machManager MachineManager) *Service {
 	}
 
 	srv := &Service{
-		machines:         machManager,
-		keys:             keyMan,
-		connectedClients: syncmap.Map[string, *ConnectedMachine]{},
-	}
-
-	if err := srv.loadEnabled(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to load SSH keys")
+		machines: machManager,
+		keys:     keyMan,
 	}
 
 	log.Debug().Msg("SSH service loaded successfully")
 	return srv
 }
 
-func (m *Service) Get(name string) (*ConnectedMachine, bool) {
-	return m.connectedClients.Load(name)
-}
-
-func (m *Service) GetMach(name string) (MachineOptions, error) {
-	return m.machines.Get(name)
-}
-
-func (m *Service) GetMachByID(id uint) (MachineOptions, error) {
-	return m.machines.GetByID(id)
-}
-
-func (m *Service) ListConnected() map[string]*ConnectedMachine {
-	var clientMap = make(map[string]*ConnectedMachine)
-	m.connectedClients.Range(func(k string, c *ConnectedMachine) bool {
-		clientMap[k] = c
-		return true
-	})
-	return clientMap
-}
-
 func (m *Service) ListConfig() ([]MachineOptions, error) {
 	return m.machines.List()
 }
 
-func (m *Service) EnableClient(machine *MachineOptions) error {
-	log.Info().Str("client", machine.Name).Msg("Enabling client")
-
-	machine.Enable = true
-	if err := m.machines.Save(machine); err != nil {
-		return fmt.Errorf("failed to update client info in DB: %w", err)
+func (m *Service) Create(machine *MachineOptions) (*ssh.Client, *sftp.Client, error) {
+	_, err := m.machines.Get(machine.Name)
+	if err == nil {
+		return nil, nil, fmt.Errorf("machine %s already exists use a different name", machine.Name)
 	}
-
-	if err := m.LoadClient(machine, false); err != nil {
-		return fmt.Errorf("failed to enable client: %w", err)
-	}
-	return nil
-}
-
-func (m *Service) DisableClient(machine *MachineOptions) error {
-	log.Info().Str("client", machine.Name).Msg("Disabling client")
-	machine.Enable = false
-
-	if conn, ok := m.connectedClients.Load(machine.Name); ok {
-		fileutil.Close(conn)
-		m.connectedClients.Delete(machine.Name)
-	}
-
-	if err := m.machines.Save(machine); err != nil {
-		return fmt.Errorf("failed to save client: %w", err)
-	}
-
-	return nil
-}
-
-func (m *Service) AddClient(machine *MachineOptions) (err error) {
-	if _, err = m.machines.Get(machine.Name); err == nil {
-		return fmt.Errorf("machine %s already exists use a different name", machine.Name)
-	}
-
 	return m.LoadClient(machine, true)
 }
 
-func (m *Service) LoadClient(machine *MachineOptions, newClient bool) error {
-	if !newClient && !machine.Enable {
-		log.Info().Str("client", machine.Name).Msg("machine is disabled")
-		return nil
-	}
-
+func (m *Service) LoadClient(machine *MachineOptions, create bool) (*ssh.Client, *sftp.Client, error) {
 	cli, err := m.newClient(machine)
 	if err != nil {
-		return fmt.Errorf("%s unable to connect: %w", machine.Name, err)
+		return nil, nil, fmt.Errorf("%s unable to connect: %w", machine.Name, err)
 	}
 
+	// use a closure to capture the variable by reference
 	defer func() {
-		// if the function returns with an error close client
-		if err != nil {
-			fileutil.Close(cli)
-		}
+		fileutil.CloseIfErr(err, cli)
 	}()
 
 	// user has requested keys to be transferred,
@@ -123,52 +59,28 @@ func (m *Service) LoadClient(machine *MachineOptions, newClient bool) error {
 	transferKeyOnFirstConnect := machine.UsePublicKeyAuth && machine.Password != ""
 	if transferKeyOnFirstConnect {
 		if err = m.transferPublicKey(cli, machine); err != nil {
-			return fmt.Errorf("unable to transfer public key for %s: %w", machine.Name, err)
+			return nil, nil, fmt.Errorf("unable to transfer public key for %s: %w", machine.Name, err)
 		}
 		// remove password so that public key auth is used on subsequent connections
 		machine.Password = ""
 	}
 
-	sftpCli, err := NewSFTPFromSSH(cli)
+	sftpCli, err := sftp.NewClient(cli)
 	if err != nil {
-		return fmt.Errorf("failed to create sftp client: %w", err)
+		return nil, nil, err
 	}
 
-	if newClient {
+	if create {
 		if err = m.machines.Save(machine); err != nil {
-			return err
+			return nil, nil, err
 		}
 	}
 
-	// we check enable again because if a new client is
-	// created we need to check if they want to enable it or not
-	if machine.Enable {
-		m.connectedClients.Store(
-			machine.Name,
-			NewConnectedMachine(
-				cli,
-				sftpCli.sfCli,
-				sftpCli,
-			),
-		)
-	} else {
-		fileutil.Close(cli)
-	}
-
-	return nil
+	return cli, sftpCli, nil
 }
 
-func (m *Service) DeleteMachine(machine *MachineOptions) error {
-	if conn, ok := m.connectedClients.Load(machine.Name); ok {
-		fileutil.Close(conn)
-		m.connectedClients.Delete(machine.Name)
-	}
-
-	if err := m.machines.Delete(machine); err != nil {
-		return err
-	}
-
-	return nil
+func (m *Service) Delete(machine *MachineOptions) error {
+	return m.machines.Delete(machine)
 }
 
 func (m *Service) getAuthMethod(machine *MachineOptions) (ssh.AuthMethod, error) {
@@ -212,23 +124,6 @@ func (m *Service) saveHostKey(machine *MachineOptions) func(hostname string, rem
 	}
 }
 
-func (m *Service) loadEnabled() error {
-	configs, err := m.machines.List()
-	if err != nil {
-		return fmt.Errorf("failed to list machine configs: %s", err)
-	}
-
-	for _, machine := range configs {
-		if err = m.LoadClient(&machine, false); err != nil {
-			log.Warn().Err(err).
-				Str("machine", machine.Name).Msg("Failed to add client")
-			continue
-		}
-	}
-
-	return nil
-}
-
 // transferPublicKey transfers the local public key to a remote server.
 func (m *Service) transferPublicKey(client *ssh.Client, machine *MachineOptions) error {
 	keys, err := m.keys.GetKey(DefaultKeyName)
@@ -267,36 +162,6 @@ func (m *Service) newClient(machine *MachineOptions) (*ssh.Client, error) {
 
 	return createSSHClient(machine, auth, m.saveHostKey(machine))
 }
-
-//func (m *Service) loadClients() error {
-//	list, err := m.machines.List()
-//	if err != nil {
-//		return err
-//	}
-//
-//	for _, machine := range list {
-//		sshClient, err := m.newClient(&machine)
-//		if err != nil {
-//			log.Warn().Err(err).Str("client", machine.Name).Msg("Failed to setup ssh client")
-//			continue
-//		}
-//
-//		sftpClient, err := sftp.NewClient(sshClient)
-//		if err != nil {
-//			log.Error().Err(err).Str("client", machine.Name).Msg("Failed to setup sftp client")
-//			continue
-//		}
-//
-//		cl := &SftpClient{sfCli: sftpClient}
-//
-//		m.connectedClients.Store(
-//			machine.Name,
-//			NewConnectedMachine(sshClient, sftpClient, cl),
-//		)
-//	}
-//
-//	return nil
-//}
 
 // The command will be executed on the remote server.
 // This command creates the .ssh directory if it doesn't exist,

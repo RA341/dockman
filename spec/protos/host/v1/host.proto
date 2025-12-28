@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package host.v1;
+
+option go_package = "github.com/RA341/dockman/generated/host/v1";
+
+service HostManagerService {
+  rpc ToggleClient(ToggleRequest) returns (ToggleResponse) {}
+
+  rpc ListAllHosts(ListClientRequest) returns (ListClientsResponse) {}
+  rpc ListConnectedHosts(ListConnectedHostRequest) returns (ListConnectedHostResponse) {}
+
+  rpc CreateHost(CreateHostRequest) returns (CreateHostResponse) {}
+  rpc EditHost(EditHostRequest) returns (EditHostResponse) {}
+  rpc DeleteHost(DeleteHostRequest) returns (DeleteHostResponse) {}
+
+
+  rpc ListAlias(ListAliasRequest) returns (ListAliasResponse) {}
+  rpc AddAlias(AddAliasRequest) returns (AddAliasResponse) {}
+  rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
+}
+
+//////////////////////////////////////////////////////////////////////
+// Host messages
+
+message ListConnectedHostRequest {}
+
+message ListConnectedHostResponse {
+  repeated string hosts = 1;
+}
+
+message ListClientRequest {}
+
+message ListClientsResponse {
+  repeated Host hosts = 1;
+}
+
+message EditHostRequest {
+  Host host = 1;
+}
+
+message EditHostResponse {}
+
+message DeleteHostRequest {
+  string host = 1;
+}
+
+message DeleteHostResponse {}
+
+message CreateHostRequest {
+  Host host = 1;
+}
+
+message CreateHostResponse {}
+
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// aliases
+
+message AddAliasRequest {
+  FolderAlias alias = 1;
+}
+
+message AddAliasResponse {}
+
+message ListAliasRequest {
+  string host = 1;
+}
+
+message ListAliasResponse {
+  repeated FolderAlias aliases = 1;
+}
+
+message DeleteAliasRequest {
+  FolderAlias alias = 1;
+}
+
+message DeleteAliasResponse {}
+
+//////////////////////////////////////////////////////////////////////
+
+message ToggleRequest {
+  bool enable = 1;
+  string name = 2;
+}
+
+message ToggleResponse{}
+
+//////////////////////////////////////////////////////////////////////
+
+message FolderAlias {
+  uint32 id = 1;
+  string alias = 2;
+  string fullpath = 3;
+}
+
+message SSHConfig {
+  uint32 id = 1;
+  string name = 2;
+  string host = 3;
+  int32  port = 4;
+  string user = 5;
+  string password = 6;
+  string remote_public_key = 7;
+  bool   use_public_key_auth = 8;
+}
+
+message Host {
+  uint32 id = 1;
+  string name = 2;
+  ClientType kind = 3;
+  bool enable = 4;
+  string docker_socket = 5;
+  SSHConfig ssh_options = 6;
+  repeated FolderAlias folder_aliases = 7;
+}
+
+enum ClientType {
+  LOCAL = 0;
+  SSH = 1;
+}

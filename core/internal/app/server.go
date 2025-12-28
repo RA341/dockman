@@ -11,9 +11,8 @@ import (
 	connectcors "connectrpc.com/cors"
 	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/config"
-	"github.com/RA341/dockman/internal/host"
+	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/internal/info"
-	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/logger"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog/log"
@@ -33,11 +32,7 @@ func StartServer(opt ...config.ServerOpt) {
 	}
 	logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
 
-	app, err := NewApp(conf)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed initializing services")
-	}
-	defer fileutil.Close(app)
+	app := NewApp(conf)
 
 	router := http.NewServeMux()
 	app.registerApiRoutes(router)
@@ -50,7 +45,7 @@ func StartServer(opt ...config.ServerOpt) {
 		AllowedHeaders: append(
 			connectcors.AllowedHeaders(),
 			auth.CookieHeaderAuth,
-			host.HeaderDockerHost,
+			hm.HeaderDockerHost,
 		),
 		ExposedHeaders: connectcors.ExposedHeaders(),
 	})

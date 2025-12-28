@@ -8,7 +8,7 @@ import {useFileComponents} from "../state/terminal.tsx";
 
 const AliasSelector = () => {
     const {alias, host} = useFileComponents()
-    const {files, setAlias} = useAlias();
+    const {aliases, setAlias} = useAlias();
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
@@ -65,7 +65,7 @@ const AliasSelector = () => {
                 transformOrigin={{horizontal: 'left', vertical: 'top'}}
                 anchorOrigin={{horizontal: 'left', vertical: 'bottom'}}
             >
-                {files.map((file) => {
+                {aliases.map((file) => {
                     const fullAlias = file.alias;
                     const displayAlias = fullAlias.split("/").pop()!
 

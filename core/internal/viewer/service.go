@@ -19,8 +19,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type GetFullPath func(relPath, alias string) (root string, relpath string, err error)
-type ClientProvider func(host string) (*docker.Service, error)
+type AliasResolver func(relPath, alias string) (root string, relpath string, err error)
+type DockerProvider func(host string) (*docker.Service, error)
 type SSHProvider func(host string) (*ssh.Client, error)
 
 type Session struct {
@@ -29,23 +29,23 @@ type Session struct {
 }
 
 type Service struct {
-	getPath  GetFullPath
-	cli      ClientProvider
-	sshCli   SSHProvider
-	sessions syncmap.Map[string, Session]
+	pathResolver AliasResolver
+	dockerCli    DockerProvider
+	sshCli       SSHProvider
+	sessions     syncmap.Map[string, Session]
 }
 
-func New(cli ClientProvider, getPath GetFullPath, sshCli SSHProvider) *Service {
+func New(cli DockerProvider, getPath AliasResolver, sshCli SSHProvider) *Service {
 	return &Service{
-		cli:      cli,
-		sshCli:   sshCli,
-		getPath:  getPath,
-		sessions: syncmap.Map[string, Session]{},
+		dockerCli:    cli,
+		sshCli:       sshCli,
+		pathResolver: getPath,
+		sessions:     syncmap.Map[string, Session]{},
 	}
 }
 
 func (s *Service) StartSession(ctx context.Context, relPath string, alias string, hostname string) (string, func(), error) {
-	cli, err := s.cli(hostname)
+	cli, err := s.dockerCli(hostname)
 	if err != nil {
 		return "", nil, err
 	}
@@ -54,7 +54,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	sessionID := uuid.New().String()
 	urlPrefix := "/api/viewer/view/" + sessionID + "/"
 
-	fullpath, _, err := s.getPath(relPath, hostname)
+	fullpath, _, err := s.pathResolver(relPath, hostname)
 	if err != nil {
 		return "", nil, fmt.Errorf("could not get path for %s: %w", alias, err)
 	}
