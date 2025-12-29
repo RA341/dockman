@@ -12,7 +12,7 @@ import {
     Typography
 } from '@mui/material';
 import {ContainerTable} from './components/container-info-table';
-import {getWSUrl} from "../../lib/api.ts";
+import {getWSUrl, useHostUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
 import {useContainerExec} from "./state/terminal.tsx";
 import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
@@ -37,9 +37,10 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
     const selectedHost = useHostStore(state => state.host)
+    const getBase = useHostUrl()
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const url = getWSUrl(`api/docker/logs/${containerId}/${encodeURIComponent(selectedHost)}`)
+        const url = getWSUrl(getBase(`/docker/logs/${containerId}/${encodeURIComponent(selectedHost)}`))
         execContainer(`${selectedPage}: logs-${containerName}`, url, false)
     };
 
@@ -68,7 +69,7 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const handleConnect = (containerId: string, containerName: string, cmd: string) => {
         const encodedCmd = encodeURIComponent(cmd);
-        let url = getWSUrl(`api/docker/exec/${containerId}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`)
+        let url = getBase(`/docker/exec/${containerId}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`);
         if (debuggerImage) {
             console.log("using dockman debug with debuggerImage", debuggerImage);
             url += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec

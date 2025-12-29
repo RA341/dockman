@@ -37,6 +37,8 @@ func (h *Handler) StartSqliteSession(ctx context.Context, req *connect.Request[v
 	}
 	defer closer()
 
+	log.Debug().Str("url", sessionUrl).Msg("session started")
+
 	err = stream.Send(&v1.StartSqliteSessionResponse{
 		Url: sessionUrl,
 	})

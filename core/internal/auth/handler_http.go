@@ -12,8 +12,14 @@ type HandlerHttp struct {
 	srv *Service
 }
 
-func NewHandlerHttp(srv *Service) *HandlerHttp {
-	return &HandlerHttp{srv: srv}
+func NewHandlerHttp(srv *Service) http.Handler {
+	hand := &HandlerHttp{srv: srv}
+
+	subMux := http.NewServeMux()
+	subMux.HandleFunc("GET /oidc", hand.OIDCLogin)
+	subMux.HandleFunc("GET /oidc/callback", hand.OIDCCallback)
+
+	return subMux
 }
 
 // OIDCLogin GET /auth/login/google

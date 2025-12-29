@@ -1,13 +1,14 @@
-import {useDockerClient} from "../../../lib/api.ts";
+import {useHostClient} from "../../../lib/api.ts";
 import {useFileComponents} from "../state/terminal.tsx";
 import {Box, Button, CircularProgress} from "@mui/material";
 import {deployActionsConfig, useComposeAction} from "../state/compose.tsx";
+import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
 
 export function ComposeActionHeaders({selectedServices, fetchContainers}: {
     selectedServices: string[];
     fetchContainers: () => Promise<void>
 }) {
-    const dockerService = useDockerClient();
+    const dockerService = useHostClient(DockerService);
 
     const runAction = useComposeAction(state => state.runAction)
     const activeAction = useComposeAction(state => state.activeAction)

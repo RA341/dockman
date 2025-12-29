@@ -1,16 +1,18 @@
-import {Box, Link, Typography} from '@mui/material';
-import {useClient} from "../../../lib/api.ts";
+import {Box, Button, Link, Typography} from '@mui/material';
+import {useHostClient} from "../../../lib/api.ts";
 import {ViewerService} from "../../../gen/viewer/v1/viewer_pb.ts";
 import {useEffect, useState} from "react";
 import {useFileComponents} from "../state/terminal.tsx";
 
 const ViewerSqlite = () => {
-    const viewerClient = useClient(ViewerService)
+    const viewerClient = useHostClient(ViewerService)
 
     const {filename, alias: activeAlias} = useFileComponents()
 
     const [iframeUrl, setIframeUrl] = useState("")
     const [sessionErr, setSessionErr] = useState("")
+    const [reload, setReload] = useState(false)
+
 
     useEffect(() => {
         const controller = new AbortController();
@@ -50,7 +52,7 @@ const ViewerSqlite = () => {
         return () => {
             controller.abort();
         }
-    }, [filename, activeAlias, viewerClient]);
+    }, [filename, activeAlias, viewerClient, reload]);
 
     return (
         <Box sx={{
@@ -62,9 +64,18 @@ const ViewerSqlite = () => {
             p: 1
         }}>
             {sessionErr ? (
-                <Typography variant="h6">
-                    {sessionErr}
-                </Typography>
+                <Box>
+                    <Typography variant="h6">
+                        {sessionErr}
+                    </Typography>
+
+                    <Button onClick={() => setReload(prevState => !prevState)}>
+                        Retry
+                    </Button>
+                </Box>
+
+
+
             ) : (
                 iframeUrl ? (
                     <Box

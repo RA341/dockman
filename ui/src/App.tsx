@@ -174,7 +174,7 @@ function HostGuard() {
 
     return (
         <UserConfigProvider>
-            <Outlet/>;
+           <Outlet/>
         </UserConfigProvider>
     )
 }

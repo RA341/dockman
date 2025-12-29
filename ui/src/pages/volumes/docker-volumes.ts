@@ -1,11 +1,11 @@
 import {useCallback, useEffect, useState} from 'react'
-import {type Volume} from "../../gen/docker/v1/docker_pb.ts";
-import {callRPC, useDockerClient} from "../../lib/api";
+import {DockerService, type Volume} from "../../gen/docker/v1/docker_pb.ts";
+import {callRPC, useHostClient} from "../../lib/api";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {useHostStore} from "../compose/state/files.ts";
 
 export function useDockerVolumes() {
-    const dockerService = useDockerClient()
+    const dockerService = useHostClient(DockerService)
     const {showWarning} = useSnackbar()
 
     const selectedHost = useHostStore(state => state.host)

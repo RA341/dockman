@@ -43,6 +43,15 @@ func New(
 	}
 }
 
+func createViewerUrl(sessionId string) string {
+	return "/api/protected/viewer/view/" + sessionId + `/`
+}
+
+// expects /view/{someId}
+func recreateViewerUrl(strippedUrl string) string {
+	return fmt.Sprintf("/api/protected/viewer%s/", strippedUrl)
+}
+
 func (s *Service) StartSession(ctx context.Context, relPath string, alias string, hostname string) (string, func(), error) {
 	cli, err := s.dockerCli(hostname)
 	if err != nil {
@@ -51,7 +60,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	cont := cli.Container.Client
 
 	sessionID := uuid.New().String()
-	urlPrefix := "/api/viewer/view/" + sessionID + "/"
+	urlPrefix := createViewerUrl(sessionID)
 
 	fullpath, _, err := s.pathResolver(relPath, hostname)
 	if err != nil {

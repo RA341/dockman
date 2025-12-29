@@ -1,6 +1,6 @@
-import {Alert, AlertTitle, Box, Fade, IconButton, Link, Tooltip, Typography} from "@mui/material";
+import {Alert, AlertTitle, Box, Button, Fade, IconButton, Link, Tooltip, Typography} from "@mui/material";
 import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
-import {callRPC, useDockerClient} from "../../lib/api";
+import {callRPC, useHostClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {type SaveState} from "./hooks/status-hook.ts";
@@ -9,7 +9,8 @@ import {
     ConstructionRounded,
     ErrorOutline,
     ErrorOutlineOutlined,
-    MoveDownRounded, WarningAmber
+    MoveDownRounded,
+    WarningAmber
 } from "@mui/icons-material";
 import {isComposeFile} from "../../lib/editor.ts";
 import useResizeBar from "./hooks/resize-hook.ts";
@@ -19,6 +20,7 @@ import ComposerizeWidget from "./editor-widgets/composerize.tsx";
 import EditorErrorWidget from "./editor-widgets/errors.tsx";
 import EditorDeployWidget from "./editor-widgets/deploy.tsx";
 import ItToolsWidget from "./editor-widgets/it-tools.tsx";
+import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 
 interface EditorProps {
     selectedPage: string;
@@ -34,7 +36,7 @@ type ActionItem = {
 
 function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) {
     const {showError, showWarning} = useSnackbar();
-    const dockerClient = useDockerClient()
+    const dockerClient = useHostClient(DockerService)
     const {uploadFile, downloadFile} = useFiles()
 
     const [fileDownloadErr, setFileDownloadErr] = useState("")
@@ -46,6 +48,8 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
 
     const fetchDataCallback = useCallback(async () => {
         if (selectedPage !== "") {
+            setFileDownloadErr("")
+
             const {file, err} = await downloadFile(selectedPage)
             if (err) {
                 setFileDownloadErr(err)
@@ -191,10 +195,12 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
                             <Typography variant="body2">
                                 An error occurred while trying to retrieve the file content.
                             </Typography>
+                            <Button variant='outlined' onClick={fetchDataCallback}>
+                                Reload
+                            </Button>
                             <Box sx={{
                                 mt: 1,
                                 p: 1,
-                                bgcolor: 'grey.50',
                                 borderRadius: 1,
                                 fontFamily: 'monospace',
                                 fontSize: '0.7rem'

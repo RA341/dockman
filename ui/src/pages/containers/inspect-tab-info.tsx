@@ -1,6 +1,6 @@
-import {callRPC, useDockerClient} from "../../lib/api.ts";
+import {callRPC, useHostClient} from "../../lib/api.ts";
 import {useCallback, useEffect, useState} from "react";
-import type {ContainerInspectMessage} from "../../gen/docker/v1/docker_pb.ts";
+import {type ContainerInspectMessage, DockerService} from "../../gen/docker/v1/docker_pb.ts";
 import {
     Alert,
     Box,
@@ -62,7 +62,7 @@ const InfoRow = ({icon: Icon, label, value, mono = false}: {
 );
 
 function InspectTabInfo({containerId}: { containerId: string }) {
-    const dockerClient = useDockerClient()
+    const dockerClient = useHostClient(DockerService)
     const [inspect, setInspect] = useState<ContainerInspectMessage | null>(null)
     const [err, setErr] = useState("")
     const [loading, setLoading] = useState(false)

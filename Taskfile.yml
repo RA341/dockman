@@ -193,6 +193,7 @@ tasks:
         -e TZ=America/New_York
         -e DOCKMAN_LOG_LEVEL=debug
         -e DOCKMAN_LOG_VERBOSE=true
+        -e DOCKMAN_LOG_HTTP=false
         -e DOCKMAN_AUTH_ENABLE=false
         -e DOCKMAN_AUTH_USERNAME=wow
         -e DOCKMAN_AUTH_PASSWORD=wow

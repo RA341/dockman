@@ -25,7 +25,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {FitAddon} from "@xterm/addon-fit";
 import {createTab} from "../compose/state/terminal.tsx";
-import {getWSUrl} from "../../lib/api.ts";
+import {getWSUrl, useHostUrl} from "../../lib/api.ts";
 import AppTerminal from "../compose/components/logs-terminal.tsx";
 import {useHostStore} from "../compose/state/files.ts";
 
@@ -53,9 +53,11 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
         setIsConnected(true);
     };
 
+    const getBase = useHostUrl()
+
     const setupExec = useCallback(() => {
         const encodedCmd = encodeURIComponent(selectedCmd);
-        let base = `api/docker/exec/${containerID}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`;
+        let base = getBase(`/docker/exec/${containerID}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`);
 
         if (debuggerImage) {
             base += "&debug=true";

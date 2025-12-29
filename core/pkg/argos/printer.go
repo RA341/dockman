@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 )
 
-// --- ANSI Color Constants ---
 const (
 	ColorReset     = "\033[0m"
 	ColorBold      = "\033[1m"
@@ -58,7 +57,7 @@ func PrettyPrint(c interface{}, baseEnv string) {
 	}
 
 	// Format each pair into a colored, aligned string.
-	redEnvLabel := colorize("Env:", ColorRed+ColorUnderline)
+	redEnvLabel := Colorize("Env:", ColorRed+ColorUnderline)
 	var contentBuilder strings.Builder
 	for i, p := range pairs {
 		// Calculate padding for the key column
@@ -69,7 +68,7 @@ func PrettyPrint(c interface{}, baseEnv string) {
 		valuePadding := strings.Repeat(" ", maxValueLength-len(cleanValue))
 
 		// Colorize parts for readability
-		coloredKey := colorize(p.Key, ColorBlue+ColorBold)
+		coloredKey := Colorize(p.Key, ColorBlue+ColorBold)
 
 		cleanHelp := ansiRegex.ReplaceAllString(p.HelpMessage, "")
 		helpPadding := strings.Repeat(" ", maxHelpLength-len(cleanHelp))
@@ -96,7 +95,7 @@ func PrettyPrint(c interface{}, baseEnv string) {
 		}
 	}
 
-	ms := colorize("To modify config, set the respective", ColorMagenta+ColorBold)
+	ms := Colorize("To modify config, set the respective", ColorMagenta+ColorBold)
 	contentBuilder.WriteString(fmt.Sprintf("\n\n%s %s", ms, redEnvLabel))
 
 	printInBox("Config", contentBuilder.String())
@@ -137,8 +136,8 @@ func flattenStruct(v reflect.Value, prefix, baseEnv string) []KeyValue {
 		configTags := parseTag(configTag)
 		usage := configTags["usage"]
 		hide := configTags["hide"]
-		envName := colorize(prefixer(configTags["env"]), ColorCyan)
-		message := fmt.Sprintf("%s", colorize(usage, ColorBlue))
+		envName := Colorize(prefixer(configTags["env"]), ColorCyan)
+		message := fmt.Sprintf("%s", Colorize(usage, ColorBlue))
 
 		var val KeyValue
 		switch fieldV.Kind() {
@@ -165,7 +164,7 @@ func flattenStruct(v reflect.Value, prefix, baseEnv string) []KeyValue {
 		}
 
 		if hide != "" {
-			val.Value = colorize("*REDACTED* ^_^", ColorRed)
+			val.Value = Colorize("*REDACTED* ^_^", ColorRed)
 		}
 		pairs = append(pairs, val)
 	}
@@ -182,21 +181,20 @@ func Prefixer(baseEnv string) func(env string) string {
 func formatSimpleValue(v reflect.Value) string {
 	switch v.Kind() {
 	case reflect.String:
-		return colorize(v.String(), ColorGreen)
+		return Colorize(v.String(), ColorGreen)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return colorize(strconv.FormatInt(v.Int(), 10), ColorMagenta)
+		return Colorize(strconv.FormatInt(v.Int(), 10), ColorMagenta)
 	case reflect.Bool:
-		return colorize(strconv.FormatBool(v.Bool()), ColorYellow)
+		return Colorize(strconv.FormatBool(v.Bool()), ColorYellow)
 	default:
 		if v.IsValid() {
 			return v.String()
 		}
-		return colorize("null", "red") // Should not happen with valid structs
+		return Colorize("null", "red") // Should not happen with valid structs
 	}
 }
 
-// A simple helper to wrap a string in a color and reset it.
-func colorize(s, color string) string {
+func Colorize(s, color string) string {
 	return color + s + ColorReset
 }
 
@@ -212,7 +210,6 @@ const (
 	vPadding    = 1 // Vertical padding (empty lines top/bottom)
 )
 
-// --- Box Drawing Code (Unchanged) ---
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[mK]`)
 
 func printInBox(title, content string) {

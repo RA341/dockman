@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {callRPC, useDockerClient} from '../lib/api.ts';
-import {type ContainerStats, ORDER, SORT_FIELD} from '../gen/docker/v1/docker_pb.ts';
+import {callRPC, useHostClient} from '../lib/api.ts';
+import {type ContainerStats, DockerService, ORDER, SORT_FIELD} from '../gen/docker/v1/docker_pb.ts';
 import {useSnackbar} from "./snackbar.ts";
 import {useHostStore} from "../pages/compose/state/files.ts";
 
@@ -16,7 +16,7 @@ const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
 };
 
 export function useDockerStats(selectedPage?: string) {
-    const dockerService = useDockerClient();
+    const dockerService = useHostClient(DockerService)
     const {showError} = useSnackbar();
     const selectedHost = useHostStore(state => state.host)
 

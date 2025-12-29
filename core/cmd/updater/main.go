@@ -1,16 +1,10 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
-	"net/http"
 
 	"github.com/RA341/dockman/internal/config"
-	"github.com/RA341/dockman/internal/docker"
-	"github.com/RA341/dockman/internal/docker_manager"
 	"github.com/RA341/dockman/pkg/argos"
-	"github.com/RA341/dockman/pkg/logger"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,31 +28,31 @@ type UpdaterConfig struct {
 }
 
 func main() {
-	logger.DefaultConfig()
-	conf := LoadConfig()
-	logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
-
-	client, err := docker_manager.NewLocalClient()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to connect to local docker client")
-		return
-	}
-	srv := docker.NewUpdaterService(client)
-
-	http.HandleFunc("/{contID}", func(w http.ResponseWriter, r *http.Request) {
-		contID := r.PathValue("contID")
-		log.Print("Handling request for contID:", contID)
-
-		err = srv.ContainersUpdateDockman(context.Background(), contID)
-		if err != nil {
-			log.Print(err)
-			return
-		}
-	})
-
-	log.Info().Int("port", conf.Port).Msg("Dockman updater service started successfully")
-	err = http.ListenAndServe(fmt.Sprintf(":%d", conf.Port), nil)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Error starting server")
-	}
+	//logger.DefaultConfig()
+	//conf := LoadConfig()
+	//logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
+	//
+	//client, err := host.NewLocalClient()
+	//if err != nil {
+	//	log.Fatal().Err(err).Msg("Unable to connect to local docker client")
+	//	return
+	//}
+	//srv := docker.NewUpdaterService(client)
+	//
+	//http.HandleFunc("/{contID}", func(w http.ResponseWriter, r *http.Request) {
+	//	contID := r.PathValue("contID")
+	//	log.Print("Handling request for contID:", contID)
+	//
+	//	err = srv.ContainersUpdateDockman(context.Background(), contID)
+	//	if err != nil {
+	//		log.Print(err)
+	//		return
+	//	}
+	//})
+	//
+	//log.Info().Int("port", conf.Port).Msg("Dockman updater service started successfully")
+	//err = http.ListenAndServe(fmt.Sprintf(":%d", conf.Port), nil)
+	//if err != nil {
+	//	log.Fatal().Err(err).Msg("Error starting server")
+	//}
 }

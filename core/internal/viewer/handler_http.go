@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type HandlerHttp struct {
@@ -22,30 +22,18 @@ func NewHandlerHttp(service *Service) http.Handler {
 
 func (h *HandlerHttp) register() http.Handler {
 	subMux := http.NewServeMux()
-	subMux.HandleFunc("/api/viewer/view/", h.proxySession)
-
+	subMux.HandleFunc("/view/{sessionId}/", h.proxySession)
 	return subMux
 }
 
 func (h *HandlerHttp) proxySession(w http.ResponseWriter, r *http.Request) {
-	// 1. Force Trailing Slash
-	// sqlite-web fails if the url doesn't end in a slash (it triggers a redirect loop)
-	if !strings.HasSuffix(r.URL.Path, "/") && !strings.Contains(filepath.Base(r.URL.Path), ".") {
-		http.Redirect(w, r, r.URL.Path+"/", http.StatusTemporaryRedirect)
+	sessionId := r.PathValue("sessionId")
+	if sessionId == "" {
+		http.Error(w, "sessionId not found", http.StatusBadRequest)
 		return
 	}
 
-	// 2. Parse ID from full path: /api/viewer/view/<id>/...
-	parts := strings.Split(r.URL.Path, "/")
-	// ["", "api", "viewer", "view", "db-123", ...]
-	// Index: 0    1       2       3       4
-	if len(parts) < 5 {
-		http.Error(w, "Invalid path", 404)
-		return
-	}
-	sessionID := parts[4]
-
-	session, exists := h.srv.sessions.Load(sessionID)
+	session, exists := h.srv.sessions.Load(sessionId)
 	if !exists {
 		http.Error(w, "Session expired", 404)
 		return
@@ -56,6 +44,8 @@ func (h *HandlerHttp) proxySession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid URL: "+err.Error(), 400)
 		return
 	}
+	log.Debug().Str("url", targetURL.String()).
+		Msg("Using the reverse proxy url")
 
 	cli, err := h.srv.sshCli(session.host)
 	if err != nil {
@@ -77,6 +67,19 @@ func (h *HandlerHttp) proxySession(w http.ResponseWriter, r *http.Request) {
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
 		req.Host = targetURL.Host
+
+		// RESTORE THE PREFIX:
+		// By the time the request hits this handler, middlewares have stripped:
+		// /api, /protected, and /viewer.
+		// req.URL.Path is currently: "/view/{sessionId}/..."
+		// We must put the prefix back so it matches what sqlite-web expects.
+		req.URL.Path = recreateViewerUrl(req.URL.Path)
+		// If URL has encoded characters, also fix RawPath
+		if req.URL.RawPath != "" {
+			req.URL.Path = recreateViewerUrl(req.URL.RawPath)
+		}
+
+		log.Debug().Str("url", req.URL.Path).Str("raw", req.URL.RawPath).Msg("reverse proxy path")
 	}
 
 	proxy.FlushInterval = 100 * time.Millisecond

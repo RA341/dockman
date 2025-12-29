@@ -6,18 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
-	"connectrpc.com/connect"
 	authrpc "github.com/RA341/dockman/generated/auth/v1/v1connect"
-	"github.com/RA341/dockman/generated/cleaner/v1/v1connect"
+	cleanerrpc "github.com/RA341/dockman/generated/cleaner/v1/v1connect"
 	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
-	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
-
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
+	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
+	mid "github.com/RA341/dockman/internal/app/middleware"
+	"github.com/RA341/dockman/internal/app/ui"
 	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/cleaner"
 	"github.com/RA341/dockman/internal/config"
@@ -27,10 +28,12 @@ import (
 	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
 	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/host"
-	hm "github.com/RA341/dockman/internal/host/middleware"
+	hostMid "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/internal/viewer"
+	"github.com/RA341/dockman/pkg/argos"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -180,161 +183,310 @@ func setupComposeRoot(composeRoot string) (cr string) {
 	return composeRoot
 }
 
-func (a *App) registerApiRoutes(mux *http.ServeMux) {
-	interceptors := connect.WithInterceptors()
-	if a.Config.Auth.Enable {
-		interceptors = connect.WithInterceptors(auth.NewInterceptor(a.Auth))
+//type connectHandler func() (string, http.Handler)
+//
+//type Middleware func(http.Handler) http.Handler
+//
+//func (a *App) registerHttpHandler(basePath string, subMux http.Handler, middleware ...Middleware) (string, http.Handler) {
+//	if !strings.HasSuffix(basePath, "/") {
+//		basePath = basePath + "/"
+//	}
+//
+//	baseHandler := http.StripPrefix(strings.TrimSuffix(basePath, "/"), subMux)
+//
+//	if a.Config.Auth.Enable {
+//		httpAuth := auth.NewHttpAuthMiddleware(a.Auth)
+//		baseHandler = httpAuth(baseHandler)
+//	}
+//
+//	for _, mid := range middleware {
+//		baseHandler = mid(baseHandler)
+//	}
+//
+//	return basePath, baseHandler
+//}
 
+/*
+Registers all routes required by dockman with the following hierarchy
+
+	/ <- UI files
+	/api
+	|-----/ <- public endpoints
+	|-----/auth <- auth endpoints
+	|-----/protec <- protected paths
+	|-----|-----/ 	     <- normal endpoints
+	|-----|-----/:host/* <- endpoints require hosts info
+*/
+func (a *App) registerRoutes(mux *http.ServeMux) {
+	// /api
+	apiRouter := http.NewServeMux()
+	a.registerApiRoutes(apiRouter)
+	withSubRouter(mux, "/api", a.withLogger(apiRouter))
+
+	// / UI (Catch-all)
+	a.registerFrontend(mux)
+}
+
+func (a *App) registerFrontend(router *http.ServeMux) {
+	var uiHandler http.Handler
+
+	if a.Config.UIFS == nil {
+		log.Warn().Msg("no ui files found, setting default page")
+		uiHandler = ui.NewDefaultUIHandler()
+	} else {
+		uiHandler = ui.NewSpaHandler(a.Config.UIFS)
 	}
 
-	hostInterceptor := connect.WithInterceptors(hm.NewHostInterceptor())
+	router.Handle("/", mid.GzipMiddleware(uiHandler))
+}
 
-	handlers := []func() (string, http.Handler){
-		// auth
-		func() (string, http.Handler) {
-			return authrpc.NewAuthServiceHandler(auth.NewConnectHandler(a.Auth))
-		},
-		// info
-		func() (string, http.Handler) {
-			return inforpc.NewInfoServiceHandler(
-				info.NewConnectHandler(a.Info),
-				interceptors,
-			)
-		},
-		// user config
-		func() (string, http.Handler) {
-			return configrpc.NewConfigServiceHandler(
-				config.NewConnectHandler(a.UserConfigSrv),
-				interceptors,
-			)
-		},
-		// host_manager
-		func() (string, http.Handler) {
-			return hostrpc.NewHostManagerServiceHandler(
-				host.NewHandler(a.HostManager),
-				interceptors,
-			)
-		},
-		// files
-		func() (string, http.Handler) {
-			return filesrpc.NewFileServiceHandler(
-				files.NewConnectHandler(a.File),
-				interceptors,
-				hostInterceptor,
-			)
-		},
-		// files http
-		func() (string, http.Handler) {
-			return a.registerHttpHandler(
-				"/api/file",
-				files.NewFileHandler(a.File),
-				hm.HttpMiddleware,
-			)
-		},
-		// docker
-		func() (string, http.Handler) {
-			return dockerpc.NewDockerServiceHandler(
-				docker.NewConnectHandler(a.HostManager.GetDockerService),
-				interceptors,
-				hostInterceptor,
-			)
-		},
-		// docker http
-		func() (string, http.Handler) {
-			return a.registerHttpHandler(
-				"/api/docker",
-				docker.NewHandlerHttp(a.HostManager.GetDockerService),
-				hm.HttpMiddleware,
-			)
-		},
-		// cleaner
-		func() (string, http.Handler) {
-			return v1connect.NewCleanerServiceHandler(
-				cleaner.NewHandler(a.CleanerSrv),
-				interceptors,
-				hostInterceptor,
-			)
-		},
-		// git
-		//func() (string, http.Handler) {
-		//	return gitrpc.NewGitServiceHandler(git.NewConnectHandler(a.Git), authInterceptor)
-		//},
-		//func() (string, http.Handler) {
-		//	return a.registerHttpHandler("/api/git", git.NewFileHandler(a.Git))
-		//},
-		// auth shit
-		func() (string, http.Handler) {
-			return a.registerHttpHandler("/auth/ping", http.HandlerFunc(
-				func(w http.ResponseWriter, r *http.Request) {
-					if _, err := w.Write([]byte("pong")); err != nil {
-						return
-					}
-				}),
-			)
-		},
-		func() (string, http.Handler) {
-			return viewerrpc.NewViewerServiceHandler(
-				viewer.NewHandler(a.Viewer),
-				interceptors,
-				hostInterceptor,
-			)
-		},
-		func() (string, http.Handler) {
-			basePath := "/api/viewer/"
-			handler := viewer.NewHandlerHttp(a.Viewer)
-			if a.Config.Auth.Enable {
-				authMiddleware := auth.NewHttpAuthMiddleware(a.Auth)
-				handler = authMiddleware(handler)
-			}
-			// we need this because the reverse proxy expects a full path
-			// The router will match "/api/viewer/" and pass the full path to the handler
-			return basePath, handler
-		},
-		// lsp
-		//func() (string, http.Handler) {
-		//	wsFunc := lsp.WebSocketHandler(lsp.DefaultUpgrader)
-		//	return a.registerHttpHandler("/ws/lsp", wsFunc)
-		//},
+func (a *App) registerApiAuthRoutes(authRouter *http.ServeMux) {
+	if !a.Config.Auth.Enable {
+		return
 	}
 
-	for _, hand := range handlers {
-		path, handler := hand()
-		mux.Handle(path, handler)
-	}
+	authRouter.Handle(
+		authrpc.NewAuthServiceHandler(
+			auth.NewConnectHandler(a.Auth),
+		),
+	)
 
-	oidcHandlers := auth.NewHandlerHttp(a.Auth)
 	if a.Config.Auth.EnableOidc {
-		mux.HandleFunc("GET /auth/login/oidc", oidcHandlers.OIDCLogin)
-		mux.HandleFunc("GET /auth/login/oidc/callback", oidcHandlers.OIDCCallback)
+		withSubRouter(
+			authRouter,
+			"/login",
+			auth.NewHandlerHttp(a.Auth),
+		)
 	}
 }
 
-type Middleware func(http.Handler) http.Handler
+func (a *App) registerApiRoutes(publicApiMux *http.ServeMux) {
+	publicApiMux.HandleFunc(
+		"/hola",
+		func(writer http.ResponseWriter, request *http.Request) {
+			_, err := writer.Write([]byte("Fuck you"))
+			if err != nil {
+				return
+			}
+		},
+	)
 
-func (a *App) registerHttpHandler(basePath string, subMux http.Handler, middleware ...Middleware) (string, http.Handler) {
-	if !strings.HasSuffix(basePath, "/") {
-		basePath = basePath + "/"
+	// /auth
+	authRouter := http.NewServeMux()
+	a.registerApiAuthRoutes(authRouter)
+	withSubRouter(publicApiMux, "/auth", authRouter)
+
+	protectedApiMux := http.NewServeMux()
+	a.registerApiProtectedRoutes(protectedApiMux)
+
+	withSubRouter(
+		publicApiMux,
+		"/protected",
+		a.withAuth(protectedApiMux),
+	)
+}
+
+// /api/protected
+func (a *App) registerApiProtectedRoutes(protectedApiMux *http.ServeMux) {
+	// penger
+	protectedApiMux.HandleFunc(
+		"/ping",
+		func(w http.ResponseWriter, r *http.Request) {
+			_, err := w.Write([]byte("pong"))
+			if err != nil {
+				log.Warn().Err(err).Msg("unable to write pong")
+				return
+			}
+		},
+	)
+
+	// info
+	protectedApiMux.Handle(
+		inforpc.NewInfoServiceHandler(
+			info.NewConnectHandler(a.Info),
+		),
+	)
+	// user config
+	protectedApiMux.Handle(
+		configrpc.NewConfigServiceHandler(
+			config.NewConnectHandler(a.UserConfigSrv),
+		),
+	)
+	// host manager
+	protectedApiMux.Handle(
+		hostrpc.NewHostManagerServiceHandler(
+			host.NewHandler(a.HostManager),
+		),
+	)
+
+	// viewer http doesnt need hosts uses uuid
+	withSubRouter(
+		protectedApiMux,
+		"/viewer",
+		viewer.NewHandlerHttp(a.Viewer),
+	)
+
+	// /:host
+	// Host-specific sub-router
+	hostMux := http.NewServeMux()
+	a.registerApiHostRoutes(hostMux)
+	protectedApiMux.Handle(
+		"/{host}/",
+		a.HostPathMiddleware(hostMux),
+	)
+}
+
+func withSubRouter(parent *http.ServeMux, path string, child http.Handler) {
+	if strings.HasSuffix(path, "/") {
+		panic(fmt.Sprintf("path must not end with /: %s", path))
 	}
 
-	baseHandler := http.StripPrefix(strings.TrimSuffix(basePath, "/"), subMux)
-	if a.Config.Log.HttpLogger {
-		var logger Middleware = func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				log.Debug().Str("url", r.URL.String()).Msg("path")
-				next.ServeHTTP(w, r)
-			})
+	basepath := path + "/"
+	parent.Handle(
+		basepath,
+		http.StripPrefix(path, child),
+	)
+}
+
+// /api/protected/:host
+func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
+	// files
+	hostMux.Handle(
+		filesrpc.NewFileServiceHandler(
+			files.NewConnectHandler(a.File),
+		),
+	)
+	// files http handlers
+	hostMux.Handle(
+		"/file/",
+		http.StripPrefix("/file",
+			files.NewFileHandler(a.File),
+		),
+	)
+	// docker
+	hostMux.Handle(
+		dockerpc.NewDockerServiceHandler(
+			docker.NewConnectHandler(
+				a.HostManager.GetDockerService,
+			),
+		),
+	)
+	// docker http
+	withSubRouter(
+		hostMux,
+		"/docker",
+		docker.NewHandlerHttp(a.HostManager.GetDockerService),
+	)
+	// cleaner
+	hostMux.Handle(
+		cleanerrpc.NewCleanerServiceHandler(
+			cleaner.NewHandler(a.CleanerSrv),
+		),
+	)
+	// viewer
+	hostMux.Handle(
+		viewerrpc.NewViewerServiceHandler(
+			viewer.NewHandler(a.Viewer),
+		),
+	)
+
+}
+
+func (a *App) HostPathMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hostname := r.PathValue("host")
+		if hostname == "" {
+			http.Error(w, "Hostname is missing: "+r.URL.String(), http.StatusBadRequest)
+			return
 		}
-		baseHandler = logger(baseHandler)
+
+		hostCtx := hostMid.SetHost(
+			r.Context(),
+			hostname,
+		)
+
+		// Strip the dynamic prefix
+		// Eg: /server-1/files.FileService/GetFile
+		// Becomes: /files.FileService/GetFile
+		prefix := "/" + hostname
+		strippedHandler := http.StripPrefix(prefix, next)
+		strippedHandler.ServeHTTP(w, r.WithContext(hostCtx))
+	})
+}
+
+func (a *App) withLogger(mux http.Handler) http.Handler {
+	var apiHandler = mux
+	if a.Config.Log.HttpLogger {
+		apiHandler = mid.LoggingMiddleware(apiHandler)
+	}
+	return apiHandler
+}
+
+func (a *App) withAuth(mux http.Handler) http.Handler {
+	if !a.Config.Auth.Enable {
+		if !info.IsDev() {
+			printAuthWarning()
+		}
+
+		return mux
+	}
+	return auth.Middleware(a.Auth, mux)
+}
+
+// visualWidth calculates the length of the string without ANSI color codes
+func visualWidth(s string) int {
+	re := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+	plain := re.ReplaceAllString(s, "")
+	return len(plain)
+}
+
+func printAuthWarning() {
+	boxWidth := 50
+
+	// List of message lines
+	messages := []string{
+		argos.Colorize("Warning: Authentication Disabled", argos.ColorYellow),
+		argos.Colorize("Running without auth is fine for testing", argos.ColorCyan),
+		argos.Colorize("but you should enable it before exposing Dockman", argos.ColorCyan),
+		argos.Colorize("to a network or using it regularly.", argos.ColorCyan),
+		"",
+		argos.Colorize("Why this matters:", argos.ColorYellow),
+		argos.Colorize("Dockman has root-level access to manage", argos.ColorCyan),
+		argos.Colorize("Docker containers and system resources.", argos.ColorCyan),
+		"",
+		argos.Colorize("Guide:", argos.ColorYellow),
+		argos.Colorize("https://dockman.radn.dev/docs/authentication/", argos.ColorGreen),
 	}
 
-	if a.Config.Auth.Enable {
-		httpAuth := auth.NewHttpAuthMiddleware(a.Auth)
-		baseHandler = httpAuth(baseHandler)
+	var sb strings.Builder
+	topBorder := argos.Colorize("╔"+strings.Repeat("═", boxWidth+4)+"╗", argos.ColorRed)
+	bottomBorder := argos.Colorize("╚"+strings.Repeat("═", boxWidth+4)+"╝", argos.ColorRed)
+	emptyLine := argos.Colorize("║"+argos.ColorReset+strings.Repeat(" ", boxWidth+4)+argos.ColorRed+"║", argos.ColorRed)
+
+	sb.WriteString("\n" + topBorder + "\n")
+	sb.WriteString(emptyLine + "\n")
+
+	for _, msg := range messages {
+		if msg == "" {
+			sb.WriteString(emptyLine + "\n")
+			continue
+		}
+
+		// Calculate padding
+		contentWidth := visualWidth(msg)
+		padding := boxWidth - contentWidth
+		if padding < 0 {
+			padding = 0
+		}
+
+		// Border + 2 space margin + Text + Remaining Padding + Border
+		sb.WriteString(argos.Colorize("║", argos.ColorRed))
+		sb.WriteString("  " + msg + strings.Repeat(" ", padding+2))
+		sb.WriteString(argos.Colorize("║"+argos.ColorReset+"\n", argos.ColorRed))
 	}
 
-	for _, mid := range middleware {
-		baseHandler = mid(baseHandler)
-	}
+	sb.WriteString(emptyLine + "\n")
+	sb.WriteString(bottomBorder + "\n\n")
 
-	return basePath, baseHandler
+	fmt.Print(sb.String())
 }

@@ -14,8 +14,8 @@ import {
     Tooltip,
     Typography
 } from "@mui/material";
-import {callRPC, useCleanerClient} from "../../lib/api.ts";
-import {type PruneHistory} from "../../gen/cleaner/v1/cleaner_pb.ts";
+import {callRPC, useHostClient} from "../../lib/api.ts";
+import {CleanerService, type PruneHistory} from "../../gen/cleaner/v1/cleaner_pb.ts";
 import {formatTimeAgo, type TableInfo} from "../../lib/table.ts";
 
 function formatCleanerData(data: string) {
@@ -28,7 +28,7 @@ function formatCleanerData(data: string) {
 
 const CleanerHistory = () => {
     // const {showError, showSuccess} = useSnackbar()
-    const cleaner = useCleanerClient()
+    const cleaner = useHostClient(CleanerService)
     const [historyErr, setHistoryErr] = useState<string | null>()
     const [history, setHistory] = useState<PruneHistory[]>([])
 

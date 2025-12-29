@@ -39,15 +39,23 @@ or [Authentik](https://goauthentik.io/)).
 Create a new application in your OIDC provider. When asked for the **Callback** or **Redirect URL**, use the following
 format:
 
+In dockman v3+ use
+
+`http://<your-dockman-url>/api/auth/login/oidc/callback`
+
+In dockman v2 use
+
+Note the `/api` is removed
+
 `http://<your-dockman-url>/auth/login/oidc/callback`
 
 #### Examples
 
 * ```
-  http://localhost:8866/auth/login/oidc/callback
+  http://localhost:8866/api/auth/login/oidc/callback
   ```
 * ```
-  https://dockman.test.com/auth/login/oidc/callback
+  https://dockman.test.com/api/auth/login/oidc/callback
   ```
 
 It is important that the above url is also the same when setting the `DOCKMAN_AUTH_OIDC_REDIRECT_URL` env
@@ -71,14 +79,14 @@ DOCKMAN_AUTH_OIDC_ENABLE: "true"
 DOCKMAN_AUTH_OIDC_ISSUER: "https://auth.example.com"
 DOCKMAN_AUTH_OIDC_CLIENT_ID: "a56d5b8f-1801-4311-a6e6-ce69b4b1d7d2"
 DOCKMAN_AUTH_OIDC_CLIENT_SECRET: "lUZvQ914A4YzdrONc3mCYrtXUoObYetl"
-DOCKMAN_AUTH_OIDC_REDIRECT_URL: "http://localhost:8866/auth/login/oidc/callback"
+DOCKMAN_AUTH_OIDC_REDIRECT_URL: "http://localhost:8866/api/auth/login/oidc/callback"
 ```
 
 If you encounter issues, please open a [discussion on GitHub](https://github.com/RA341/dockman/discussions).
 
 ## Customizing sessions
 
-There are some more env you can set to curomize a auth session
+You can further customize auth sessions using the following envs
 
 1. Set the max cookie validity for a session
     * A duration string consists of a possibly signed sequence of decimal numbers,
@@ -87,10 +95,10 @@ There are some more env you can set to curomize a auth session
       m`, and `h`.
     *
       ```
-      DOCKMAN_AUTH_EXPIRY = 23h 
+      DOCKMAN_AUTH_EXPIRY = 24h # logged out after a day 
       ```
 2. Maximum concurrent sessions for a user
    ```
-    DOCKMAN_AUTH_MAX_SESSIONS = 5
+    DOCKMAN_AUTH_MAX_SESSIONS = 5 # oldest session is automtially removed
    ```
 

@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useState} from 'react';
-import {callRPC, useCleanerClient} from "../../lib/api.ts";
-import {type SpaceStat, type SpaceStatusResponse} from "../../gen/cleaner/v1/cleaner_pb.ts";
+import {callRPC, useHostClient} from "../../lib/api.ts";
+import {CleanerService, type SpaceStat, type SpaceStatusResponse} from "../../gen/cleaner/v1/cleaner_pb.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {
     Box,
@@ -17,7 +17,7 @@ import {
 import {type CleanerConfig, useCleanerConfig} from "./state.ts";
 
 function StorageInuse({refetch}: { refetch: boolean }) {
-    const cleaner = useCleanerClient()
+    const cleaner = useHostClient(CleanerService)
     const {showError} = useSnackbar()
 
     const [storage, setStorage] = useState<SpaceStatusResponse | null>(null)

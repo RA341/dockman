@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import {LockOutlined, LoginOutlined, PersonOutline} from '@mui/icons-material';
 import {useNavigate} from "react-router-dom";
-import {callRPC, useClient} from "../../lib/api.ts";
+import {callRPC, useAuthClient} from "../../lib/api.ts";
 import {AuthService} from '../../gen/auth/v1/auth_pb.ts';
 import {useAuth} from '../../hooks/auth.ts';
 import {useSnackbar} from "../../hooks/snackbar.ts";
@@ -23,7 +23,7 @@ export function AuthPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const authClient = useClient(AuthService);
+    const authClient = useAuthClient(AuthService);
     const {showError} = useSnackbar();
     const navigate = useNavigate();
     const {refreshAuthStatus} = useAuth();

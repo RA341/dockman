@@ -1,4 +1,4 @@
-package app
+package middleware
 
 import (
 	"compress/gzip"
@@ -28,7 +28,6 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			_ = gz.Close()
 		}()
-
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Del("Content-Length")
 

@@ -28,6 +28,10 @@ func (h *FileHandler) register() http.Handler {
 	subMux.HandleFunc("POST /save", h.saveFile)
 	subMux.HandleFunc("GET /load/{filename}", h.loadFile)
 	subMux.HandleFunc("GET /search/{host}/{root}", h.searchFile)
+	subMux.HandleFunc("Get /*", func(writer http.ResponseWriter, request *http.Request) {
+		log.Error().Msg("file handler not yet implemented")
+		return
+	})
 
 	return subMux
 }

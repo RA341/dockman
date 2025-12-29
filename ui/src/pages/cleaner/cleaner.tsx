@@ -13,16 +13,17 @@ import {
     Typography
 } from '@mui/material';
 import {PlayArrow, Save} from '@mui/icons-material';
-import {callRPC, useCleanerClient} from "../../lib/api.ts";
+import {callRPC, useHostClient} from "../../lib/api.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import StorageInuse from "./storage-inuse.tsx";
 import {type CleanerConfig, useCleanerConfig} from "./state.ts";
 import CleanerHistory from "./history.tsx";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
+import {CleanerService} from "../../gen/cleaner/v1/cleaner_pb.ts";
 
 function DockerCleanerPage() {
     const {showError, showSuccess} = useSnackbar()
-    const cleaner = useCleanerClient()
+    const cleaner = useHostClient(CleanerService)
 
     const configErr = useCleanerConfig(state => state.err)
     const isLoading = useCleanerConfig(state => state.isLoading)

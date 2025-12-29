@@ -14,7 +14,7 @@ import {Delete, DnsOutlined, PlayArrow, Refresh, RestartAlt, Stop,} from '@mui/i
 import {ContainerTable} from '../compose/components/container-info-table';
 import {useMemo, useState} from "react";
 import {useDockerContainers} from "../../hooks/docker-containers.ts";
-import {callRPC, useDockerClient} from "../../lib/api.ts";
+import {callRPC, useHostClient} from "../../lib/api.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import SearchBar from "../../components/search-bar.tsx";
 import useSearch from "../../hooks/search.ts";
@@ -23,9 +23,10 @@ import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import {ContainersLoading} from "./containers-loading.tsx";
 import {useNavigate} from "react-router-dom";
 import {useHostStore} from "../compose/state/files.ts";
+import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 
 function ContainersPage() {
-    const dockerService = useDockerClient();
+    const dockerService = useHostClient(DockerService);
     const {containers, loading, refreshContainers, fetchContainers} = useDockerContainers();
     const {showSuccess, showError} = useSnackbar();
     const {search, setSearch, searchInputRef} = useSearch();

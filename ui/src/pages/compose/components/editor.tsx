@@ -2,9 +2,10 @@ import {Editor, type Monaco} from "@monaco-editor/react";
 import {getLanguageFromExtension} from "../../../lib/editor";
 import {useCallback, useEffect, useRef, useState} from "react";
 import * as monacoEditor from "monaco-editor";
-import {callRPC, useFileClient} from "../../../lib/api.ts";
+import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
-import {useTabsStore, useTabs} from "../../../context/tab-context.tsx";
+import {useTabs, useTabsStore} from "../../../context/tab-context.tsx";
+import {FileService} from "../../../gen/files/v1/files_pb.ts";
 
 interface MonacoEditorProps {
     selectedFile: string;
@@ -18,7 +19,7 @@ export function MonacoEditor(
         fileContent,
         handleEditorChange,
     }: MonacoEditorProps) {
-    const file = useFileClient()
+    const file = useHostClient(FileService)
     const {showError} = useSnackbar()
 
     const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor | null>(null);

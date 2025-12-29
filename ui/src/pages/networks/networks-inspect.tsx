@@ -1,5 +1,5 @@
-import {callRPC, useDockerClient} from "../../lib/api.ts";
-import {type NetworkInspectInfo} from "../../gen/docker/v1/docker_pb.ts";
+import {callRPC, useHostClient} from "../../lib/api.ts";
+import {DockerService, type NetworkInspectInfo} from "../../gen/docker/v1/docker_pb.ts";
 import {useParams} from "react-router-dom";
 import {useCallback, useEffect, useState} from "react";
 import {
@@ -26,7 +26,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 const NetworksInspect = () => {
-    const dockerService = useDockerClient()
+    const dockerService = useHostClient(DockerService)
     const {id} = useParams()
 
     const [inspect, setInspect] = useState<NetworkInspectInfo | null>(null)

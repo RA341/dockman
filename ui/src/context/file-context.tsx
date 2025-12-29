@@ -1,8 +1,8 @@
 import {createContext, type ReactNode, useCallback, useContext, useEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
-import {API_URL, callRPC, hosRef, useFileClient} from "../lib/api.ts";
+import {callRPC, useHostClient, useHostUrl,} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
-import {type FsEntry} from '../gen/files/v1/files_pb.ts';
+import {FileService, type FsEntry} from '../gen/files/v1/files_pb.ts';
 import {useTabs} from "./tab-context.tsx";
 import {useEditorUrl} from "../lib/editor.ts";
 import {useHostStore, useOpenFiles} from "../pages/compose/state/files.ts";
@@ -36,7 +36,7 @@ export function useFiles() {
 }
 
 function FilesProvider({children}: { children: ReactNode }) {
-    const client = useFileClient()
+    const client = useHostClient(FileService)
     const {showError, showSuccess} = useSnackbar()
     const navigate = useNavigate()
     const location = useLocation()
@@ -168,9 +168,10 @@ function FilesProvider({children}: { children: ReactNode }) {
         await fetchFiles()
     }
 
+    const getUrl = useHostUrl()
 
     async function uploadFile(fullPath: string, content: File | string, isNew: boolean = false): Promise<string> {
-        const url = `${API_URL}/api/file/save${isNew ? '?create=true' : ''}`;
+        const url = getUrl(`/file/save${isNew ? '?create=true' : ''}`)
 
         try {
             const formData = new FormData();
@@ -186,9 +187,6 @@ function FilesProvider({children}: { children: ReactNode }) {
             const response = await fetch(url, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'DOCKER_HOST': hosRef.dockerHost
-                }
             });
 
             if (!response.ok) {
@@ -225,12 +223,11 @@ function FilesProvider({children}: { children: ReactNode }) {
         filename: string,
         shouldDownload: boolean = false
     ): Promise<{ file: string; err: string }> {
-        const subPath = `api/file/load/${encodeURIComponent(filename)}?download=${shouldDownload}`;
+        const url = getUrl(`/file/load/${encodeURIComponent(filename)}?download=${shouldDownload}`)
 
         try {
-            const response = await fetch(`${API_URL}/${subPath}`, {
+            const response = await fetch(url, {
                 cache: 'no-cache',
-                headers: {DOCKER_HOST: hosRef.dockerHost}
             });
 
             const bodyText = await response.text();
