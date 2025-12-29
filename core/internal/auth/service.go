@@ -117,7 +117,7 @@ func (auth *Service) CreateSession(user *User) (session *Session, rawSessionToke
 	session = &Session{}
 	session.UserID = user.ID
 	session.User = *user
-	session.Expires = time.Now().Add(auth.config.GetCookieExpiryLimitOrDefault())
+	session.Expires = time.Now().Add(auth.config.GetCookieExpiry())
 	session.HashedToken = hashString(rawSessionToken)
 
 	err = auth.sessionStore.NewSession(session)

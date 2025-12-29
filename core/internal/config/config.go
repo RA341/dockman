@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"github.com/RA341/dockman/internal/viewer"
+	"github.com/RA341/dockman/pkg/fileutil"
 )
 
 const EnvPrefix = "DOCKMAN"
@@ -24,6 +25,7 @@ type AppConfig struct {
 	Auth           Auth          `config:""`
 	Updater        UpdaterConfig `config:""`
 	Log            Logger        `config:""`
+	Viewer         viewer.Config `config:""`
 	UIFS           fs.FS         // UIFS has no 'config' tag, so it will be ignored
 }
 
@@ -60,20 +62,8 @@ type Auth struct {
 
 const defaultCookieExpiry = time.Hour * 24
 
-func (d *Auth) GetCookieExpiryLimitOrDefault() time.Duration {
-	dur, err := time.ParseDuration(d.CookieExpiry)
-	if err != nil {
-		log.Warn().Err(err).
-			Str("cookieExpiry", d.CookieExpiry).
-			Dur("default", defaultCookieExpiry).
-			Msg(`"Couldn't parse cookie expiry
-				check docs: https://www.geeksforgeeks.org/go-language/time-parseduration-function-in-golang-with-examples
-				using default value`,
-			)
-		return defaultCookieExpiry
-	}
-
-	return dur
+func (d *Auth) GetCookieExpiry() time.Duration {
+	return fileutil.GetDurOrDefault(d.CookieExpiry, defaultCookieExpiry)
 }
 
 type UpdaterConfig struct {

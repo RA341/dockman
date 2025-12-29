@@ -48,7 +48,7 @@ WORKDIR /download
 
 RUN apk --no-cache add curl ca-certificates
 
-ARG COMPOSE_VERSION=v5.0.0
+ARG COMPOSE_VERSION=v5.0.1
 
 # $(uname -m) to automatically detect x86_64 or aarch64 (ARM)
 RUN curl -SL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"  \

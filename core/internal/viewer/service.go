@@ -3,7 +3,6 @@ package viewer
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/pkg/syncmap"
@@ -20,23 +19,25 @@ type AliasResolver func(relPath, alias string) (root string, relpath string, err
 type DockerProvider func(host string) (*docker.Service, error)
 type SSHProvider func(host string) (*ssh.Client, error)
 
-type Session struct {
-	host string
-	addr string
-}
-
 type Service struct {
 	pathResolver AliasResolver
 	dockerCli    DockerProvider
 	sshCli       SSHProvider
+	config       *Config
 	sessions     syncmap.Map[string, Session]
 }
 
-func New(cli DockerProvider, getPath AliasResolver, sshCli SSHProvider) *Service {
+func New(
+	cli DockerProvider,
+	getPath AliasResolver,
+	sshCli SSHProvider,
+	config *Config,
+) *Service {
 	return &Service{
 		dockerCli:    cli,
 		sshCli:       sshCli,
 		pathResolver: getPath,
+		config:       config,
 		sessions:     syncmap.Map[string, Session]{},
 	}
 }
@@ -119,7 +120,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	}
 
 	targetAddr := fmt.Sprintf("%s:8080", containerIP)
-	if !waitForPort(targetAddr, 5*time.Second) {
+	if !waitForPort(targetAddr, s.config.GetDur()) {
 		// If it fails, maybe kill the container and return error
 		return "", nil, fmt.Errorf("container started but port 8080 did not open, this is likely a networking issue")
 	}

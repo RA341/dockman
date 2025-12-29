@@ -136,6 +136,7 @@ func NewApp(conf *config.AppConfig) (app *App) {
 			return join, relpath, nil
 		},
 		hostManager.GetSSH,
+		&conf.Viewer,
 	)
 
 	app = &App{
