@@ -85,10 +85,10 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 					netName: {},
 				},
 			}
+			done = true
 			log.Debug().Str("path", fullpath).
 				Str("netname", netName).
 				Msg("using network")
-
 			// we only care about the first dockman container multiple instances are not supported
 			break
 		}
