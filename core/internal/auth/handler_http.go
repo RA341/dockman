@@ -3,10 +3,10 @@ package auth
 import (
 	"fmt"
 	"net/http"
-)
 
-// TODO use a random string and store it in a secure cookie to verify later
-const csrfState = "random-state-to-protect-against-csrf"
+	"github.com/RA341/dockman/internal/info"
+	"github.com/google/uuid"
+)
 
 type HandlerHttp struct {
 	srv *Service
@@ -24,7 +24,19 @@ func NewHandlerHttp(srv *Service) http.Handler {
 
 // OIDCLogin GET /auth/login/google
 func (h *HandlerHttp) OIDCLogin(w http.ResponseWriter, r *http.Request) {
-	url := h.srv.GetOIDCLoginURL(csrfState)
+	state := uuid.New().String()
+	http.SetCookie(w, &http.Cookie{
+		Name:     "oidc_state",
+		Value:    state,
+		Path:     "/",
+		MaxAge:   300,
+		HttpOnly: true,
+		Secure:   !info.IsDev(),
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	url := h.srv.GetOIDCLoginURL(state)
+
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
@@ -38,9 +50,15 @@ func (h *HandlerHttp) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state := query.Get("state")
-	if state != csrfState {
-		http.Error(w, "error: Invalid state parameter", http.StatusUnauthorized)
+	cookie, err := r.Cookie("oidc_state")
+	if err != nil {
+		http.Error(w, "State cookie missing", http.StatusBadRequest)
+		return
+	}
+
+	returnedState := query.Get("state")
+	if returnedState == "" || returnedState != cookie.Value {
+		http.Error(w, "Invalid state parameter (CSRF detected)", http.StatusUnauthorized)
 		return
 	}
 

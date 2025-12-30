@@ -37,8 +37,8 @@ func main() {
 
 		"AUTH_OIDC_ENABLE":        "true",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
-		"AUTH_OIDC_CLIENT_ID":     "281f381d-125b-42bf-af1f-1a19a6ee551a",
-		"AUTH_OIDC_CLIENT_SECRET": "DqcZBDBCU02skj0ypyvxRITIeNBEMnXD",
+		"AUTH_OIDC_CLIENT_ID":     "ce5ab220-d534-4929-b30e-2661dc4a108a",
+		"AUTH_OIDC_CLIENT_SECRET": "HO5GcdofvZ8VSr9EVdRelbNeS9IChusw",
 		"AUTH_OIDC_REDIRECT_URL":  "http://localhost:8866/api/auth/login/oidc/callback",
 	}
 
