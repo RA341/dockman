@@ -27,11 +27,7 @@ func (h *FileHandler) register() http.Handler {
 	subMux := http.NewServeMux()
 	subMux.HandleFunc("POST /save", h.saveFile)
 	subMux.HandleFunc("GET /load/{filename}", h.loadFile)
-	subMux.HandleFunc("GET /search/{host}/{root}", h.searchFile)
-	subMux.HandleFunc("Get /*", func(writer http.ResponseWriter, request *http.Request) {
-		log.Error().Msg("file handler not yet implemented")
-		return
-	})
+	subMux.HandleFunc("GET /search/{root}", h.searchFile)
 
 	return subMux
 }
@@ -131,14 +127,15 @@ type SearchResponse struct {
 }
 
 func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
+	getHost, err := middleware.GetHost(r.Context())
+	if err != nil {
+		http.Error(w, "host not provided", http.StatusBadRequest)
+		return
+	}
+
 	filename := r.PathValue("root")
 	if filename == "" {
 		http.Error(w, "root not provided for search", http.StatusBadRequest)
-		return
-	}
-	getHost := r.PathValue("host")
-	if getHost == "" {
-		http.Error(w, "host not provided", http.StatusBadRequest)
 		return
 	}
 

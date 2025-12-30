@@ -22,6 +22,8 @@ func Middleware(service *Service, next http.Handler) http.Handler {
 	})
 }
 
+const oidcPage = "/api/auth/login/oidc"
+
 func CheckAuth(w http.ResponseWriter, r *http.Request, srv *Service) (ok bool) {
 	u, err := verifyCookie(r.Cookies(), srv)
 	if err == nil {
@@ -32,11 +34,10 @@ func CheckAuth(w http.ResponseWriter, r *http.Request, srv *Service) (ok bool) {
 		return true
 	}
 
-	if srv.config.EnableOidc {
+	if srv.config.OIDCEnable && srv.config.OIDCAutoRedirect {
 		// IMPORTANT BEFORE CHANGING THE STATUS CODE HERE
 		// update the code here as well: ui/src/lib/api.ts:82
 		w.WriteHeader(http.StatusFound)
-		oidcPage := "/api/auth/login/oidc"
 		_, err = w.Write([]byte(oidcPage))
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to write response")

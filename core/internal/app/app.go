@@ -251,7 +251,7 @@ func (a *App) registerApiAuthRoutes(authRouter *http.ServeMux) {
 		),
 	)
 
-	if a.Config.Auth.EnableOidc {
+	if a.Config.Auth.OIDCEnable {
 		withSubRouter(
 			authRouter,
 			"/login",

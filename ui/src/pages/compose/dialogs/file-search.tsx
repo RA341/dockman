@@ -14,7 +14,7 @@ import {InsertDriveFileOutlined, Search, SubdirectoryArrowRight} from '@mui/icon
 import {useNavigate} from 'react-router-dom'
 import {create} from "zustand";
 import {useFileComponents} from "../state/terminal.tsx";
-import {getWSUrl} from "../../../lib/api.ts";
+import {getBaseUrl, getWSUrl} from "../../../lib/api.ts";
 import {useEditorUrl} from "../../../lib/editor.ts";
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 
@@ -75,7 +75,8 @@ function FileSearch() {
 
         let socket: WebSocket | null = null;
         try {
-            socket = new WebSocket(getWSUrl(`api/file/search/${host}/${activeAlias}`))
+            const base = getBaseUrl('host', host)
+            socket = new WebSocket(getWSUrl(`${base}/file/search/${activeAlias}`))
             socket.onopen = () => {
                 setError(null)
                 if (debouncedSearchQuery) socket?.send(debouncedSearchQuery)

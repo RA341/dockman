@@ -7,6 +7,18 @@ option go_package = "github.com/RA341/dockman/generated/auth/v1";
 service AuthService {
   rpc Login(User) returns (Empty) {}
   rpc Logout(Empty) returns (Empty) {}
+  rpc Config(ConfigRequest) returns (ConfigResponse) {}
+}
+
+// checks auth configs if any
+message Config {
+  string oidcUrl = 1;
+}
+
+message ConfigRequest {}
+
+message ConfigResponse {
+  Config conf = 1;
 }
 
 message User {

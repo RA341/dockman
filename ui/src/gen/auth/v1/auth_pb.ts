@@ -2,15 +2,63 @@
 // @generated from file auth/v1/auth.proto (package auth.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type {GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
+import {fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
+import type {Message} from "@bufbuild/protobuf";
 
 /**
  * Describes the file auth/v1/auth.proto.
  */
 export const file_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChJhdXRoL3YxL2F1dGgucHJvdG8SB2F1dGgudjEiKgoEVXNlchIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSIHCgVFbXB0eTJjCgtBdXRoU2VydmljZRIoCgVMb2dpbhINLmF1dGgudjEuVXNlchoOLmF1dGgudjEuRW1wdHkiABIqCgZMb2dvdXQSDi5hdXRoLnYxLkVtcHR5Gg4uYXV0aC52MS5FbXB0eSIAQoEBCgtjb20uYXV0aC52MUIJQXV0aFByb3RvUAFaKmdpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvYXV0aC92MaICA0FYWKoCB0F1dGguVjHKAgdBdXRoXFYx4gITQXV0aFxWMVxHUEJNZXRhZGF0YeoCCEF1dGg6OlYxYgZwcm90bzM");
+    fileDesc("ChJhdXRoL3YxL2F1dGgucHJvdG8SB2F1dGgudjEiGQoGQ29uZmlnEg8KB29pZGNVcmwYASABKAkiDwoNQ29uZmlnUmVxdWVzdCIvCg5Db25maWdSZXNwb25zZRIdCgRjb25mGAEgASgLMg8uYXV0aC52MS5Db25maWciKgoEVXNlchIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSIHCgVFbXB0eTKgAQoLQXV0aFNlcnZpY2USKAoFTG9naW4SDS5hdXRoLnYxLlVzZXIaDi5hdXRoLnYxLkVtcHR5IgASKgoGTG9nb3V0Eg4uYXV0aC52MS5FbXB0eRoOLmF1dGgudjEuRW1wdHkiABI7CgZDb25maWcSFi5hdXRoLnYxLkNvbmZpZ1JlcXVlc3QaFy5hdXRoLnYxLkNvbmZpZ1Jlc3BvbnNlIgBCgQEKC2NvbS5hdXRoLnYxQglBdXRoUHJvdG9QAVoqZ2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9hdXRoL3YxogIDQVhYqgIHQXV0aC5WMcoCB0F1dGhcVjHiAhNBdXRoXFYxXEdQQk1ldGFkYXRh6gIIQXV0aDo6VjFiBnByb3RvMw");
+
+/**
+ * checks auth configs if any
+ *
+ * @generated from message auth.v1.Config
+ */
+export type Config = Message<"auth.v1.Config"> & {
+    /**
+     * @generated from field: string oidcUrl = 1;
+     */
+    oidcUrl: string;
+};
+
+/**
+ * Describes the message auth.v1.Config.
+ * Use `create(ConfigSchema)` to create a new message.
+ */
+export const ConfigSchema: GenMessage<Config> = /*@__PURE__*/
+    messageDesc(file_auth_v1_auth, 0);
+
+/**
+ * @generated from message auth.v1.ConfigRequest
+ */
+export type ConfigRequest = Message<"auth.v1.ConfigRequest"> & {};
+
+/**
+ * Describes the message auth.v1.ConfigRequest.
+ * Use `create(ConfigRequestSchema)` to create a new message.
+ */
+export const ConfigRequestSchema: GenMessage<ConfigRequest> = /*@__PURE__*/
+    messageDesc(file_auth_v1_auth, 1);
+
+/**
+ * @generated from message auth.v1.ConfigResponse
+ */
+export type ConfigResponse = Message<"auth.v1.ConfigResponse"> & {
+    /**
+     * @generated from field: auth.v1.Config conf = 1;
+     */
+    conf?: Config;
+};
+
+/**
+ * Describes the message auth.v1.ConfigResponse.
+ * Use `create(ConfigResponseSchema)` to create a new message.
+ */
+export const ConfigResponseSchema: GenMessage<ConfigResponse> = /*@__PURE__*/
+    messageDesc(file_auth_v1_auth, 2);
 
 /**
  * @generated from message auth.v1.User
@@ -32,7 +80,7 @@ export type User = Message<"auth.v1.User"> & {
  * Use `create(UserSchema)` to create a new message.
  */
 export const UserSchema: GenMessage<User> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 0);
+    messageDesc(file_auth_v1_auth, 3);
 
 /**
  * @generated from message auth.v1.Empty
@@ -45,7 +93,7 @@ export type Empty = Message<"auth.v1.Empty"> & {
  * Use `create(EmptySchema)` to create a new message.
  */
 export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
-  messageDesc(file_auth_v1_auth, 1);
+    messageDesc(file_auth_v1_auth, 4);
 
 /**
  * @generated from service auth.v1.AuthService
@@ -67,6 +115,14 @@ export const AuthService: GenService<{
     input: typeof EmptySchema;
     output: typeof EmptySchema;
   },
+    /**
+     * @generated from rpc auth.v1.AuthService.Config
+     */
+    config: {
+        methodKind: "unary";
+        input: typeof ConfigRequestSchema;
+        output: typeof ConfigResponseSchema;
+    },
 }> = /*@__PURE__*/
   serviceDesc(file_auth_v1_auth, 0);
 

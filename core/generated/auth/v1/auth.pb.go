@@ -21,6 +21,131 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// checks auth configs if any
+type Config struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OidcUrl       string                 `protobuf:"bytes,1,opt,name=oidcUrl,proto3" json:"oidcUrl,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Config) Reset() {
+	*x = Config{}
+	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Config) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Config) ProtoMessage() {}
+
+func (x *Config) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Config.ProtoReflect.Descriptor instead.
+func (*Config) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Config) GetOidcUrl() string {
+	if x != nil {
+		return x.OidcUrl
+	}
+	return ""
+}
+
+type ConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfigRequest) Reset() {
+	*x = ConfigRequest{}
+	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigRequest) ProtoMessage() {}
+
+func (x *ConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigRequest.ProtoReflect.Descriptor instead.
+func (*ConfigRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{1}
+}
+
+type ConfigResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Conf          *Config                `protobuf:"bytes,1,opt,name=conf,proto3" json:"conf,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfigResponse) Reset() {
+	*x = ConfigResponse{}
+	mi := &file_auth_v1_auth_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigResponse) ProtoMessage() {}
+
+func (x *ConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigResponse.ProtoReflect.Descriptor instead.
+func (*ConfigResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ConfigResponse) GetConf() *Config {
+	if x != nil {
+		return x.Conf
+	}
+	return nil
+}
+
 type User struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
@@ -31,7 +156,7 @@ type User struct {
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	mi := &file_auth_v1_auth_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +168,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[0]
+	mi := &file_auth_v1_auth_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +181,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{0}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *User) GetUsername() string {
@@ -81,7 +206,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	mi := &file_auth_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -93,7 +218,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[1]
+	mi := &file_auth_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -106,21 +231,27 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{1}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
 var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\">\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\"\"\n" +
+	"\x06Config\x12\x18\n" +
+	"\aoidcUrl\x18\x01 \x01(\tR\aoidcUrl\"\x0f\n" +
+	"\rConfigRequest\"5\n" +
+	"\x0eConfigResponse\x12#\n" +
+	"\x04conf\x18\x01 \x01(\v2\x0f.auth.v1.ConfigR\x04conf\">\n" +
 	"\x04User\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"\a\n" +
-	"\x05Empty2c\n" +
+	"\x05Empty2\xa0\x01\n" +
 	"\vAuthService\x12(\n" +
 	"\x05Login\x12\r.auth.v1.User\x1a\x0e.auth.v1.Empty\"\x00\x12*\n" +
-	"\x06Logout\x12\x0e.auth.v1.Empty\x1a\x0e.auth.v1.Empty\"\x00B\x81\x01\n" +
+	"\x06Logout\x12\x0e.auth.v1.Empty\x1a\x0e.auth.v1.Empty\"\x00\x12;\n" +
+	"\x06Config\x12\x16.auth.v1.ConfigRequest\x1a\x17.auth.v1.ConfigResponse\"\x00B\x81\x01\n" +
 	"\vcom.auth.v1B\tAuthProtoP\x01Z*github.com/RA341/dockman/generated/auth/v1\xa2\x02\x03AXX\xaa\x02\aAuth.V1\xca\x02\aAuth\\V1\xe2\x02\x13Auth\\V1\\GPBMetadata\xea\x02\bAuth::V1b\x06proto3"
 
 var (
@@ -135,21 +266,27 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_auth_v1_auth_proto_goTypes = []any{
-	(*User)(nil),  // 0: auth.v1.User
-	(*Empty)(nil), // 1: auth.v1.Empty
+	(*Config)(nil),         // 0: auth.v1.Config
+	(*ConfigRequest)(nil),  // 1: auth.v1.ConfigRequest
+	(*ConfigResponse)(nil), // 2: auth.v1.ConfigResponse
+	(*User)(nil),           // 3: auth.v1.User
+	(*Empty)(nil),          // 4: auth.v1.Empty
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
-	0, // 0: auth.v1.AuthService.Login:input_type -> auth.v1.User
-	1, // 1: auth.v1.AuthService.Logout:input_type -> auth.v1.Empty
-	1, // 2: auth.v1.AuthService.Login:output_type -> auth.v1.Empty
-	1, // 3: auth.v1.AuthService.Logout:output_type -> auth.v1.Empty
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: auth.v1.ConfigResponse.conf:type_name -> auth.v1.Config
+	3, // 1: auth.v1.AuthService.Login:input_type -> auth.v1.User
+	4, // 2: auth.v1.AuthService.Logout:input_type -> auth.v1.Empty
+	1, // 3: auth.v1.AuthService.Config:input_type -> auth.v1.ConfigRequest
+	4, // 4: auth.v1.AuthService.Login:output_type -> auth.v1.Empty
+	4, // 5: auth.v1.AuthService.Logout:output_type -> auth.v1.Empty
+	2, // 6: auth.v1.AuthService.Config:output_type -> auth.v1.ConfigResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_auth_proto_init() }
@@ -163,7 +300,7 @@ func file_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

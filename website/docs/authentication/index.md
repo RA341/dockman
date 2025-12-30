@@ -84,6 +84,20 @@ DOCKMAN_AUTH_OIDC_REDIRECT_URL: "http://localhost:8866/api/auth/login/oidc/callb
 
 If you encounter issues, please open a [discussion on GitHub](https://github.com/RA341/dockman/discussions).
 
+### Prevent auto redirect
+
+By default, once OIDC is enabled dockman will automatically redirect you to your provider
+
+You can disable this by setting
+
+```
+DOCKMAN_AUTH_OIDC_AUTO_REDIRECT: false
+```
+
+Once set you choose which method to use on the login page
+
+![oidc-login](img/oidc.png)
+
 ## Customizing sessions
 
 You can further customize auth sessions using the following envs

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Box,
     Button,
@@ -11,10 +11,10 @@ import {
     TextField,
     Typography
 } from '@mui/material';
-import {LockOutlined, LoginOutlined, PersonOutline} from '@mui/icons-material';
+import {LockOutlined, LoginOutlined, PersonOutline, PublicRounded} from '@mui/icons-material';
 import {useNavigate} from "react-router-dom";
 import {callRPC, useAuthClient} from "../../lib/api.ts";
-import {AuthService} from '../../gen/auth/v1/auth_pb.ts';
+import {AuthService, type Config} from '../../gen/auth/v1/auth_pb.ts';
 import {useAuth} from '../../hooks/auth.ts';
 import {useSnackbar} from "../../hooks/snackbar.ts";
 
@@ -24,9 +24,28 @@ export function AuthPage() {
     const [loading, setLoading] = useState(false);
 
     const authClient = useAuthClient(AuthService);
-    const {showError} = useSnackbar();
+    const {showError} = useSnackbar()
     const navigate = useNavigate();
     const {refreshAuthStatus} = useAuth();
+    const [authConfig, setAuthConfig] = useState<Config | null>(null)
+    const [isConfigLoading, setIsConfigLoading] = useState(false)
+
+    useEffect(() => {
+        const getConfig = async () => {
+            setIsConfigLoading(true)
+
+            const {val, err} = await callRPC(() => authClient.config({}))
+            if (err) {
+                showError(`could not get auth config: ${err}`)
+            } else {
+                setAuthConfig(val?.conf ?? null)
+            }
+
+            setIsConfigLoading(false)
+        }
+
+        getConfig().then()
+    }, []);
 
     const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -94,12 +113,14 @@ export function AuthPage() {
                                 autoFocus
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <PersonOutline fontSize="small" color="action"/>
-                                        </InputAdornment>
-                                    ),
+                                slotProps={{
+                                    input: {
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <PersonOutline fontSize="small" color="action"/>
+                                            </InputAdornment>
+                                        ),
+                                    }
                                 }}
                             />
                             <TextField
@@ -109,12 +130,14 @@ export function AuthPage() {
                                 autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <LockOutlined fontSize="small" color="action"/>
-                                        </InputAdornment>
-                                    ),
+                                slotProps={{
+                                    input: {
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <LockOutlined fontSize="small" color="action"/>
+                                            </InputAdornment>
+                                        ),
+                                    }
                                 }}
                             />
 
@@ -137,6 +160,32 @@ export function AuthPage() {
                             >
                                 {loading ? 'Signing in...' : 'Sign In'}
                             </Button>
+
+                            {authConfig?.oidcUrl && (
+                                <Button
+                                    type="submit"
+                                    fullWidth
+                                    variant="contained"
+                                    size="large"
+                                    disabled={isConfigLoading}
+                                    startIcon={isConfigLoading ?
+                                        <CircularProgress size={20} color="inherit"/> :
+                                        <PublicRounded/>
+                                    }
+                                    onClick={() => window.location.assign(authConfig!.oidcUrl!)}
+                                    sx={{
+                                        mt: 1,
+                                        py: 1.5,
+                                        borderRadius: 2,
+                                        fontWeight: 700,
+                                        textTransform: 'none',
+                                        boxShadow: 'none',
+                                        '&:hover': {boxShadow: 'none'}
+                                    }}
+                                >
+                                    OIDC Login
+                                </Button>
+                            )}
                         </Stack>
                     </Box>
                 </Paper>
