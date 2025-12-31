@@ -55,7 +55,7 @@ func (h *Handler) ToggleClient(_ context.Context, req *connect.Request[v1.Toggle
 }
 
 func (h *Handler) ListAllHosts(context.Context, *connect.Request[v1.ListClientRequest]) (*connect.Response[v1.ListClientsResponse], error) {
-	all, err := h.srv.ListAll()
+	all, err := h.srv.store.List()
 	if err != nil {
 		return nil, err
 	}

@@ -40,11 +40,21 @@ func (s *gormStore) Update(conf *Config) error {
 	return s.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(conf).Error
 }
 
+func (s *gormStore) ListEnabled() ([]Config, error) {
+	var configs []Config
+	err := s.db.
+		Where("enable = ?", true).
+		Preload("SSHOptions").
+		Preload("FolderAliases").
+		Order("created_at ASC").
+		Find(&configs).Error
+	return configs, err
+}
+
 // List returns all host configurations with their preloaded associations
 func (s *gormStore) List() ([]Config, error) {
 	var configs []Config
 	err := s.db.
-		Where("enable = ?", true).
 		Preload("SSHOptions").
 		Preload("FolderAliases").
 		Order("created_at ASC").

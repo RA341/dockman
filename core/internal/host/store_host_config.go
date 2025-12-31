@@ -12,6 +12,7 @@ type Store interface {
 	Delete(conf *Config) error
 	Update(conf *Config) error
 	List() ([]Config, error)
+	ListEnabled() ([]Config, error)
 }
 
 type ClientType string
