@@ -12,61 +12,34 @@ import (
 	"time"
 
 	"github.com/RA341/dockman/internal/config"
-	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
+	"github.com/RA341/dockman/internal/dockyaml"
 	"github.com/RA341/dockman/internal/files/utils"
 	"github.com/RA341/dockman/internal/host/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
 
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/rs/zerolog/log"
 	"github.com/sahilm/fuzzy"
 )
 
-type GetFS func(host, alias string) (filesystem.FileSystem, error)
+type FSProvider func(host, alias string) (filesystem.FileSystem, error)
+type DockyamlProvider func(host string) *dockyaml.DockmanYaml
 
 type Service struct {
-	Fs     GetFS
-	config *config.FilePerms
-	dy     *dockmanYaml.Service
+	Fs      FSProvider
+	dockYml DockyamlProvider
+	config  *config.FilePerms
 }
 
 func New(
-	fs GetFS,
-	dy *dockmanYaml.Service,
+	fs FSProvider,
 	config *config.FilePerms,
+	dockYml DockyamlProvider,
 ) *Service {
-	//alias := FormatAlias(RootAlias, container.LocalClient)
-	//val, err := store.Get(alias)
-	//if err != nil {
-	//	err = store.AddAlias(alias, localComposeRoot)
-	//} else {
-	//	val.Fullpath = localComposeRoot
-	//	err = store.EditAlias(val.ID, &val)
-	//}
-	//if err != nil {
-	//	log.Fatal().Err(err).
-	//		Str("alias", RootAlias).
-	//		Msg("could not setup alias for local compose root")
-	//}
-	//
-	//var activeFs GetFS = func(client, root string) (filesystem.FileSystem, error) {
-	//	if client == container.LocalClient {
-	//		return filesystem.NewLocal(root), nil
-	//	}
-	//	mach, err := getSSH(client)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	return filesystem.NewSftp(mach, root), nil
-	//}
-	srv := &Service{
-		config: config,
-		dy:     dy,
-		Fs:     fs,
+	return &Service{
+		config:  config,
+		Fs:      fs,
+		dockYml: dockYml,
 	}
-
-	log.Debug().Msg("File service loaded successfully")
-	return srv
 }
 
 type Entry struct {
@@ -99,7 +72,7 @@ func (s *Service) List(path string, hostname string) ([]Entry, error) {
 		}
 
 		if isDir {
-			children, err := s.listFiles(cliFs, fullRelpath, displayPath)
+			children, err := s.listFiles(cliFs, fullRelpath, displayPath, hostname)
 			if err != nil {
 				return nil, err
 			}
@@ -110,20 +83,18 @@ func (s *Service) List(path string, hostname string) ([]Entry, error) {
 	}
 
 	slices.SortFunc(result, func(a, b Entry) int {
-		return s.sortFiles(&a, &b)
+		return s.sortFiles(&a, &b, hostname)
 	})
 
 	return result, nil
 }
 
-func (s *Service) FilePicker(host string, path string) ([]Entry, error) {
-	//s.GetFS()
-
-	//cliFs.ReadDir(path)
-	return nil, nil
-}
-
-func (s *Service) listFiles(cliFs filesystem.FileSystem, relDirpath string, displayPath string) ([]Entry, error) {
+func (s *Service) listFiles(
+	cliFs filesystem.FileSystem,
+	relDirpath string,
+	displayPath string,
+	hostname string,
+) ([]Entry, error) {
 	subEntries, err := cliFs.ReadDir(relDirpath)
 	if err != nil {
 		return nil, err
@@ -142,7 +113,7 @@ func (s *Service) listFiles(cliFs filesystem.FileSystem, relDirpath string, disp
 	}
 
 	slices.SortFunc(filesInSubDir, func(a, b Entry) int {
-		return s.sortFiles(&a, &b)
+		return s.sortFiles(&a, &b, hostname)
 	})
 
 	return filesInSubDir, nil
@@ -401,8 +372,8 @@ type SearchResult struct {
 	Indexes []int
 }
 
-func (s *Service) search(query string, allPaths []string) []SearchResult {
-	limit := s.dy.GetDockmanYaml().SearchLimit
+func (s *Service) search(hostname string, query string, allPaths []string) []SearchResult {
+	limit := s.dockYml(hostname).SearchLimit
 
 	matches := fuzzy.Find(query, allPaths)
 
@@ -441,9 +412,9 @@ func (s *Service) listAll(dirPath string, hostname string) ([]string, error) {
 	return filez, err
 }
 
-func (s *Service) sortFiles(a, b *Entry) int {
-	ra := s.getSortRank(a)
-	rb := s.getSortRank(b)
+func (s *Service) sortFiles(a, b *Entry, host string) int {
+	ra := s.getSortRank(a, host)
+	rb := s.getSortRank(b, host)
 
 	if ra < rb {
 		return -1
@@ -455,8 +426,8 @@ func (s *Service) sortFiles(a, b *Entry) int {
 }
 
 // getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
-func (s *Service) getSortRank(entry *Entry) int {
-	conf := s.dy.GetDockmanYaml()
+func (s *Service) getSortRank(entry *Entry, host string) int {
+	conf := s.dockYml(host)
 
 	base := filepath.Base(entry.fullpath)
 	// -1: pinned files (highest priority)

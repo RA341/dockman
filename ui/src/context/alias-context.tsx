@@ -27,8 +27,6 @@ export function useAlias() {
     return context
 }
 
-export const COMPOSE_ROOT_ALIAS = "compose";
-
 const AliasProvider = ({children}: { children: ReactNode }) => {
     const hostmanager = useClient(HostManagerService)
     const {showError} = useSnackbar()
@@ -75,7 +73,7 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
     }
 
     const deleteAlias = async (host: number, alias: string) => {
-        const {err} = await callRPC(() => hostmanager.deleteAlias({alias: alias, hostId: host}))
+        const {err} = await callRPC(() => hostmanager.deleteAlias({alias: alias, host: {hostId: host}}))
         if (err) {
             showError(`Unable to delete file alias\n${err}`)
         }

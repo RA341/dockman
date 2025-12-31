@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package dockyaml.v1;
+
+option go_package = "github.com/RA341/dockman/generated/dockyaml/v1";
+
+service DockyamlService {
+  rpc Get(GetRequest) returns (GetResponse) {}
+  rpc Save(SaveRequest) returns (SaveResponse) {}
+  rpc GetYaml(GetYamlRequest) returns (GetYamlResponse) {}
+
+}
+
+message SaveRequest {
+  bytes contents = 2;
+}
+
+message SaveResponse {}
+
+message GetRequest {}
+
+message GetResponse {
+  bytes contents = 1;
+}
+
+message GetYamlRequest {}
+
+message GetYamlResponse {
+  DockmanYaml dock = 1;
+}
+
+message DockmanYaml {
+  map<string, string> customTools = 9;
+  bool useComposeFolders = 1;
+  bool disableComposeQuickActions = 7;
+  int32 searchLimit = 8;
+  int32 tabLimit = 6;
+  VolumesConfig volumesPage = 2;
+  NetworkConfig networkPage = 3;
+  ImageConfig imagePage = 4;
+  ContainerConfig containerPage = 5;
+}
+
+message VolumesConfig {
+  Sort sort = 1;
+}
+
+message NetworkConfig {
+  Sort sort = 1;
+}
+
+message ImageConfig {
+  Sort sort = 1;
+}
+
+message ContainerConfig {
+  Sort sort = 1;
+}
+
+
+message Sort {
+  string sortOrder = 1;
+  string sortField = 2;
+}
+

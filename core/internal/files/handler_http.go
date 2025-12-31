@@ -127,7 +127,7 @@ type SearchResponse struct {
 }
 
 func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
-	getHost, err := middleware.GetHost(r.Context())
+	hostname, err := middleware.GetHost(r.Context())
 	if err != nil {
 		http.Error(w, "host not provided", http.StatusBadRequest)
 		return
@@ -148,7 +148,7 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 
 	var response SearchResponse
 
-	all, err := h.srv.listAll(filename, getHost)
+	all, err := h.srv.listAll(filename, hostname)
 	if err != nil {
 		response.Error = err.Error()
 		writeJason(ws, response)
@@ -163,7 +163,7 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 		}
 		query := string(msg)
 
-		results := h.srv.search(query, all)
+		results := h.srv.search(hostname, query, all)
 		response.Results = results
 
 		writeJason(ws, response)

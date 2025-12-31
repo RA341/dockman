@@ -1,24 +1,28 @@
 import {useCallback, useEffect} from 'react'
-import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip} from '@mui/material'
-import {Add as AddIcon, Refresh, Search as SearchIcon} from '@mui/icons-material'
+import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip, Typography} from '@mui/material'
+import {Add as AddIcon, Cached, Search as SearchIcon} from '@mui/icons-material'
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
 import {useFileComponents} from "../state/terminal.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
 import {FileItem} from "./file-item.tsx";
-import AliasSelector from "./file-alias-selector.tsx";
 import {useFiles} from "../../../context/file-context.tsx"
 import {useFileSearch} from "../dialogs/file-search.tsx";
 import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useSideBarAction} from "../state/files.ts";
+import {YamlIcon} from "./file-icon.tsx";
+import {useNavigate} from "react-router-dom";
+import {useEditorUrl} from "../../../lib/editor.ts";
+import {formatDockyaml} from "./viewer-dockyml.tsx";
 
 export function FileList() {
     const showSearch = useFileSearch(state => state.open)
     const fileCreate = useFileCreate(state => state.open)
+    const nav = useNavigate()
 
     const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
 
     const {listFiles} = useFiles()
-    const {alias} = useFileComponents()
+    const {host, alias} = useFileComponents()
 
     const showFileAdd = useCallback(() => {
         fileCreate(`${alias}`)
@@ -46,6 +50,11 @@ export function FileList() {
     }, [])
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
+    const editUrl = useEditorUrl()
+
+    function openDockyaml() {
+        nav(editUrl(formatDockyaml(alias, host)))
+    }
 
     return (
         <>
@@ -56,74 +65,78 @@ export function FileList() {
                      flexShrink: 0,
                      borderRight: isSidebarCollapsed ? 0 : 1,
                      borderColor: 'divider',
-                     overflowY: 'auto',
                      transition: isResizing ? 'none' : 'width 0.1s ease-in-out',
-                     // transition: isSidebarCollapsed ? 'width 0.15s ease' : 'width 0.15s ease',
-                     overflow: 'hidden',
                      display: 'flex',
                      flexDirection: 'column',
                      height: '100%',
                      position: 'relative',
+                     overflow: 'hidden', // Keeps the header and resize handle fixed
                  }}
             >
-                <Toolbar>
-                    <AliasSelector/>
+                {/* HEADER AREA */}
+                <Toolbar variant="dense" sx={{px: 1, gap: 1}}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            minWidth: 0,
+                            gap: 0.5,
+                            opacity: 0.9,
+                            '&:hover': {opacity: 1}
+                        }}
+                    >
+                        <Typography variant="subtitle1" fontWeight="bold" noWrap>
+                            {alias}
+                        </Typography>
+                    </Box>
 
                     <Box sx={{flexGrow: 1}}/>
 
-                    <Tooltip arrow title={
-                        <ShortcutFormatter
-                            title="Reload List"
-                            keyCombo={["ALT", "R"]}
-                        />
-                    }>
-                        <IconButton
-                            size="small"
-                            onClick={() => listFiles("", [])}
-                            color="primary"
-                            aria-label="FileSearch"
-                        >
-                            <Refresh fontSize="small"/>
-                        </IconButton>
-                    </Tooltip>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
+                        <Tooltip arrow title={<ShortcutFormatter title="Reload" keyCombo={["ALT", "R"]}/>}>
+                            <IconButton size="small"
+                                        onClick={() => listFiles("", [])}
+                                        color="primary">
+                                <Cached fontSize="small"/>
+                            </IconButton>
+                        </Tooltip>
 
-                    <Tooltip arrow title={
-                        <ShortcutFormatter
-                            title="FileSearch"
-                            keyCombo={["ALT", "S"]}
-                        />
-                    }>
-                        <IconButton
-                            size="small"
-                            onClick={() => showSearch()}
-                            color="primary"
-                            aria-label="FileSearch"
-                        >
-                            <SearchIcon fontSize="small"/>
-                        </IconButton>
-                    </Tooltip>
+                        <Tooltip arrow title={<ShortcutFormatter title="Search" keyCombo={["ALT", "S"]}/>}>
+                            <IconButton
+                                size="small" onClick={showSearch} color="secondary">
+                                <SearchIcon fontSize="small"/>
+                            </IconButton>
+                        </Tooltip>
 
-                    <Tooltip arrow title={
-                        <ShortcutFormatter
-                            title="Add"
-                            keyCombo={["ALT", "A"]}
-                        />
-                    }>
-                        <IconButton
-                            size="small"
-                            onClick={() => showFileAdd()}
-                            color="success"
-                            sx={{ml: 1}}
-                            aria-label="Add"
-                        >
-                            <AddIcon fontSize="small"/>
-                        </IconButton>
-                    </Tooltip>
+                        <Tooltip arrow title={<ShortcutFormatter title="Add" keyCombo={["ALT", "A"]}/>}>
+                            <IconButton size="small" onClick={showFileAdd} color="success">
+                                <AddIcon fontSize="small"/>
+                            </IconButton>
+                        </Tooltip>
+
+                        {/* Added an extra icon just to match your snippet's count */}
+                        <Tooltip arrow title={<ShortcutFormatter title="Edit dockman.yaml" keyCombo={["ALT", "E"]}/>}>
+                            <IconButton size="small" onClick={openDockyaml} color="success">
+                                <YamlIcon/>
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
                 </Toolbar>
 
                 <Divider/>
 
-                <FileListInner/>
+                {/* SCROLLABLE CONTENT AREA */}
+                <Box sx={{
+                    flexGrow: 1,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    // Optional: styling scrollbar to look more like an IDE
+                    '&::-webkit-scrollbar': {width: '6px'},
+                    '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
+                }}>
+                    <FileListInner/>
+                </Box>
 
                 {/* Resize Handle */}
                 {!isSidebarCollapsed && (

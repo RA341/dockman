@@ -3,7 +3,7 @@ import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
 import {callRPC, useHostClient} from "../../lib/api";
 import {MonacoEditor} from "./components/editor.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {type SaveState} from "./hooks/status-hook.ts";
+import {type SaveCallback, type SaveState} from "./hooks/status-hook.tsx";
 import {
     CloudUploadOutlined,
     ConstructionRounded,
@@ -24,8 +24,7 @@ import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 
 interface EditorProps {
     selectedPage: string;
-    setStatus: (status: SaveState) => void;
-    handleContentChange: (value: string, onSave: (value: string) => void) => void;
+    handleContentChange: SaveCallback;
 }
 
 type ActionItem = {
@@ -34,7 +33,7 @@ type ActionItem = {
     label: string;
 };
 
-function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) {
+function TabEditor({selectedPage, handleContentChange}: EditorProps) {
     const {showError, showWarning} = useSnackbar();
     const dockerClient = useHostClient(DockerService)
     const {uploadFile, downloadFile} = useFiles()
@@ -97,15 +96,7 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
 
     const [activeAction, setActiveAction] = useState<keyof typeof actions | null>(null);
 
-    const saveFile = useCallback(async (val: string) => {
-        const err = await uploadFile(selectedPage, val);
-        if (err) {
-            setStatus('error');
-            showError(`Autosave failed: ${err}`);
-        } else {
-            setStatus('success');
-        }
-
+    async function validateFile() {
         if (isComposeFile(selectedPage)) {
             const {val: errs, err: err2} = await callRPC(() =>
                 dockerClient.composeValidate({
@@ -130,14 +121,24 @@ function TabEditor({selectedPage, setStatus, handleContentChange}: EditorProps) 
                 })
             }
         }
+    }
+
+    const saveFile = useCallback(async (val: string): Promise<SaveState> => {
+        const err = await uploadFile(selectedPage, val);
+        if (err) {
+            showError(`Autosave failed: ${err}`);
+            return 'error';
+        }
+        await validateFile();
+        return 'success'
         // eslint-disable-next-line
-    }, [selectedPage, activeAlias, setStatus]);
+    }, [selectedPage, activeAlias]);
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left', 450)
 
     function handleEditorChange(value: string | undefined): void {
-        const newValue = value!
-        handleContentChange(newValue, saveFile)
+        if (!value) return
+        handleContentChange(value, saveFile)
     }
 
     return (

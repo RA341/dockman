@@ -2,15 +2,15 @@
 // @generated from file files/v1/files.proto (package files.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type {GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
+import {fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
+import type {Message} from "@bufbuild/protobuf";
 
 /**
  * Describes the file files/v1/files.proto.
  */
 export const file_files_v1_files: GenFile = /*@__PURE__*/
-  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiSwoLQ29weVJlcXVlc3QSHgoGc291cmNlGAEgASgLMg4uZmlsZXMudjEuRmlsZRIcCgRkZXN0GAIgASgLMg4uZmlsZXMudjEuRmlsZSIOCgxDb3B5UmVzcG9uc2UiGwoLTGlzdFJlcXVlc3QSDAoEcGF0aBgBIAEoCSIyCgxMaXN0UmVzcG9uc2USIgoHZW50cmllcxgBIAMoCzIRLmZpbGVzLnYxLkZzRW50cnkiIQoNRm9ybWF0UmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSIiCg5Gb3JtYXRSZXNwb25zZRIQCghjb250ZW50cxgBIAEoCSJ7CgdGc0VudHJ5EhAKCGZpbGVuYW1lGAIgASgJEg0KBWlzRGlyGAMgASgIEiMKCHN1YkZpbGVzGAQgAygLMhEuZmlsZXMudjEuRnNFbnRyeRIRCglpc0ZldGNoZWQYBSABKAgSFwoPaXNDb21wb3NlRm9sZGVyGAYgASgJIjYKClJlbmFtZUZpbGUSEwoLb2xkRmlsZVBhdGgYASABKAkSEwoLbmV3RmlsZVBhdGgYAiABKAkiJwoERmlsZRIQCghmaWxlbmFtZRgBIAEoCRINCgVpc0RpchgCIAEoCCIHCgVFbXB0eSKcAwoLRG9ja21hbllhbWwSOwoLY3VzdG9tVG9vbHMYCSADKAsyJi5maWxlcy52MS5Eb2NrbWFuWWFtbC5DdXN0b21Ub29sc0VudHJ5EhkKEXVzZUNvbXBvc2VGb2xkZXJzGAEgASgIEiIKGmRpc2FibGVDb21wb3NlUXVpY2tBY3Rpb25zGAcgASgIEhMKC3NlYXJjaExpbWl0GAggASgFEhAKCHRhYkxpbWl0GAYgASgFEiwKC3ZvbHVtZXNQYWdlGAIgASgLMhcuZmlsZXMudjEuVm9sdW1lc0NvbmZpZxIsCgtuZXR3b3JrUGFnZRgDIAEoCzIXLmZpbGVzLnYxLk5ldHdvcmtDb25maWcSKAoJaW1hZ2VQYWdlGAQgASgLMhUuZmlsZXMudjEuSW1hZ2VDb25maWcSMAoNY29udGFpbmVyUGFnZRgFIAEoCzIZLmZpbGVzLnYxLkNvbnRhaW5lckNvbmZpZxoyChBDdXN0b21Ub29sc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiLQoNVm9sdW1lc0NvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCItCg1OZXR3b3JrQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0IisKC0ltYWdlQ29uZmlnEhwKBHNvcnQYASABKAsyDi5maWxlcy52MS5Tb3J0Ii8KD0NvbnRhaW5lckNvbmZpZxIcCgRzb3J0GAEgASgLMg4uZmlsZXMudjEuU29ydCIsCgRTb3J0EhEKCXNvcnRPcmRlchgBIAEoCRIRCglzb3J0RmllbGQYAiABKAkytAMKC0ZpbGVTZXJ2aWNlEjcKBExpc3QSFS5maWxlcy52MS5MaXN0UmVxdWVzdBoWLmZpbGVzLnYxLkxpc3RSZXNwb25zZSIAEisKBkNyZWF0ZRIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjcKBENvcHkSFS5maWxlcy52MS5Db3B5UmVxdWVzdBoWLmZpbGVzLnYxLkNvcHlSZXNwb25zZSIAEisKBkRlbGV0ZRIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEisKBkV4aXN0cxIOLmZpbGVzLnYxLkZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjEKBlJlbmFtZRIULmZpbGVzLnYxLlJlbmFtZUZpbGUaDy5maWxlcy52MS5FbXB0eSIAEjoKDkdldERvY2ttYW5ZYW1sEg8uZmlsZXMudjEuRW1wdHkaFS5maWxlcy52MS5Eb2NrbWFuWWFtbCIAEj0KBkZvcm1hdBIXLmZpbGVzLnYxLkZvcm1hdFJlcXVlc3QaGC5maWxlcy52MS5Gb3JtYXRSZXNwb25zZSIAQogBCgxjb20uZmlsZXMudjFCCkZpbGVzUHJvdG9QAVorZ2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9maWxlcy92MaICA0ZYWKoCCEZpbGVzLlYxygIIRmlsZXNcVjHiAhRGaWxlc1xWMVxHUEJNZXRhZGF0YeoCCUZpbGVzOjpWMWIGcHJvdG8z");
+    fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiSwoLQ29weVJlcXVlc3QSHgoGc291cmNlGAEgASgLMg4uZmlsZXMudjEuRmlsZRIcCgRkZXN0GAIgASgLMg4uZmlsZXMudjEuRmlsZSIOCgxDb3B5UmVzcG9uc2UiGwoLTGlzdFJlcXVlc3QSDAoEcGF0aBgBIAEoCSIyCgxMaXN0UmVzcG9uc2USIgoHZW50cmllcxgBIAMoCzIRLmZpbGVzLnYxLkZzRW50cnkiIQoNRm9ybWF0UmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSIiCg5Gb3JtYXRSZXNwb25zZRIQCghjb250ZW50cxgBIAEoCSJ7CgdGc0VudHJ5EhAKCGZpbGVuYW1lGAIgASgJEg0KBWlzRGlyGAMgASgIEiMKCHN1YkZpbGVzGAQgAygLMhEuZmlsZXMudjEuRnNFbnRyeRIRCglpc0ZldGNoZWQYBSABKAgSFwoPaXNDb21wb3NlRm9sZGVyGAYgASgJIjYKClJlbmFtZUZpbGUSEwoLb2xkRmlsZVBhdGgYASABKAkSEwoLbmV3RmlsZVBhdGgYAiABKAkiJwoERmlsZRIQCghmaWxlbmFtZRgBIAEoCRINCgVpc0RpchgCIAEoCCIHCgVFbXB0eTL4AgoLRmlsZVNlcnZpY2USNwoETGlzdBIVLmZpbGVzLnYxLkxpc3RSZXF1ZXN0GhYuZmlsZXMudjEuTGlzdFJlc3BvbnNlIgASKwoGQ3JlYXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASNwoEQ29weRIVLmZpbGVzLnYxLkNvcHlSZXF1ZXN0GhYuZmlsZXMudjEuQ29weVJlc3BvbnNlIgASKwoGRGVsZXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRXhpc3RzEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASMQoGUmVuYW1lEhQuZmlsZXMudjEuUmVuYW1lRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASPQoGRm9ybWF0EhcuZmlsZXMudjEuRm9ybWF0UmVxdWVzdBoYLmZpbGVzLnYxLkZvcm1hdFJlc3BvbnNlIgBCiAEKDGNvbS5maWxlcy52MUIKRmlsZXNQcm90b1ABWitnaXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2ZpbGVzL3YxogIDRlhYqgIIRmlsZXMuVjHKAghGaWxlc1xWMeICFEZpbGVzXFYxXEdQQk1ldGFkYXRh6gIJRmlsZXM6OlYxYgZwcm90bzM");
 
 /**
  * @generated from message files.v1.CopyRequest
@@ -212,153 +212,6 @@ export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
   messageDesc(file_files_v1_files, 9);
 
 /**
- * @generated from message files.v1.DockmanYaml
- */
-export type DockmanYaml = Message<"files.v1.DockmanYaml"> & {
-  /**
-   * @generated from field: map<string, string> customTools = 9;
-   */
-  customTools: { [key: string]: string };
-
-  /**
-   * @generated from field: bool useComposeFolders = 1;
-   */
-  useComposeFolders: boolean;
-
-  /**
-   * @generated from field: bool disableComposeQuickActions = 7;
-   */
-  disableComposeQuickActions: boolean;
-
-  /**
-   * @generated from field: int32 searchLimit = 8;
-   */
-  searchLimit: number;
-
-  /**
-   * @generated from field: int32 tabLimit = 6;
-   */
-  tabLimit: number;
-
-  /**
-   * @generated from field: files.v1.VolumesConfig volumesPage = 2;
-   */
-  volumesPage?: VolumesConfig;
-
-  /**
-   * @generated from field: files.v1.NetworkConfig networkPage = 3;
-   */
-  networkPage?: NetworkConfig;
-
-  /**
-   * @generated from field: files.v1.ImageConfig imagePage = 4;
-   */
-  imagePage?: ImageConfig;
-
-  /**
-   * @generated from field: files.v1.ContainerConfig containerPage = 5;
-   */
-  containerPage?: ContainerConfig;
-};
-
-/**
- * Describes the message files.v1.DockmanYaml.
- * Use `create(DockmanYamlSchema)` to create a new message.
- */
-export const DockmanYamlSchema: GenMessage<DockmanYaml> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 10);
-
-/**
- * @generated from message files.v1.VolumesConfig
- */
-export type VolumesConfig = Message<"files.v1.VolumesConfig"> & {
-  /**
-   * @generated from field: files.v1.Sort sort = 1;
-   */
-  sort?: Sort;
-};
-
-/**
- * Describes the message files.v1.VolumesConfig.
- * Use `create(VolumesConfigSchema)` to create a new message.
- */
-export const VolumesConfigSchema: GenMessage<VolumesConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 11);
-
-/**
- * @generated from message files.v1.NetworkConfig
- */
-export type NetworkConfig = Message<"files.v1.NetworkConfig"> & {
-  /**
-   * @generated from field: files.v1.Sort sort = 1;
-   */
-  sort?: Sort;
-};
-
-/**
- * Describes the message files.v1.NetworkConfig.
- * Use `create(NetworkConfigSchema)` to create a new message.
- */
-export const NetworkConfigSchema: GenMessage<NetworkConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 12);
-
-/**
- * @generated from message files.v1.ImageConfig
- */
-export type ImageConfig = Message<"files.v1.ImageConfig"> & {
-  /**
-   * @generated from field: files.v1.Sort sort = 1;
-   */
-  sort?: Sort;
-};
-
-/**
- * Describes the message files.v1.ImageConfig.
- * Use `create(ImageConfigSchema)` to create a new message.
- */
-export const ImageConfigSchema: GenMessage<ImageConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 13);
-
-/**
- * @generated from message files.v1.ContainerConfig
- */
-export type ContainerConfig = Message<"files.v1.ContainerConfig"> & {
-  /**
-   * @generated from field: files.v1.Sort sort = 1;
-   */
-  sort?: Sort;
-};
-
-/**
- * Describes the message files.v1.ContainerConfig.
- * Use `create(ContainerConfigSchema)` to create a new message.
- */
-export const ContainerConfigSchema: GenMessage<ContainerConfig> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 14);
-
-/**
- * @generated from message files.v1.Sort
- */
-export type Sort = Message<"files.v1.Sort"> & {
-  /**
-   * @generated from field: string sortOrder = 1;
-   */
-  sortOrder: string;
-
-  /**
-   * @generated from field: string sortField = 2;
-   */
-  sortField: string;
-};
-
-/**
- * Describes the message files.v1.Sort.
- * Use `create(SortSchema)` to create a new message.
- */
-export const SortSchema: GenMessage<Sort> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 15);
-
-/**
  * @generated from service files.v1.FileService
  */
 export const FileService: GenService<{
@@ -409,14 +262,6 @@ export const FileService: GenService<{
     methodKind: "unary";
     input: typeof RenameFileSchema;
     output: typeof EmptySchema;
-  },
-  /**
-   * @generated from rpc files.v1.FileService.GetDockmanYaml
-   */
-  getDockmanYaml: {
-    methodKind: "unary";
-    input: typeof EmptySchema;
-    output: typeof DockmanYamlSchema;
   },
   /**
    * @generated from rpc files.v1.FileService.Format

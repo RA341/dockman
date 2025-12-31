@@ -502,342 +502,6 @@ func (*Empty) Descriptor() ([]byte, []int) {
 	return file_files_v1_files_proto_rawDescGZIP(), []int{9}
 }
 
-type DockmanYaml struct {
-	state                      protoimpl.MessageState `protogen:"open.v1"`
-	CustomTools                map[string]string      `protobuf:"bytes,9,rep,name=customTools,proto3" json:"customTools,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	UseComposeFolders          bool                   `protobuf:"varint,1,opt,name=useComposeFolders,proto3" json:"useComposeFolders,omitempty"`
-	DisableComposeQuickActions bool                   `protobuf:"varint,7,opt,name=disableComposeQuickActions,proto3" json:"disableComposeQuickActions,omitempty"`
-	SearchLimit                int32                  `protobuf:"varint,8,opt,name=searchLimit,proto3" json:"searchLimit,omitempty"`
-	TabLimit                   int32                  `protobuf:"varint,6,opt,name=tabLimit,proto3" json:"tabLimit,omitempty"`
-	VolumesPage                *VolumesConfig         `protobuf:"bytes,2,opt,name=volumesPage,proto3" json:"volumesPage,omitempty"`
-	NetworkPage                *NetworkConfig         `protobuf:"bytes,3,opt,name=networkPage,proto3" json:"networkPage,omitempty"`
-	ImagePage                  *ImageConfig           `protobuf:"bytes,4,opt,name=imagePage,proto3" json:"imagePage,omitempty"`
-	ContainerPage              *ContainerConfig       `protobuf:"bytes,5,opt,name=containerPage,proto3" json:"containerPage,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
-}
-
-func (x *DockmanYaml) Reset() {
-	*x = DockmanYaml{}
-	mi := &file_files_v1_files_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DockmanYaml) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DockmanYaml) ProtoMessage() {}
-
-func (x *DockmanYaml) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DockmanYaml.ProtoReflect.Descriptor instead.
-func (*DockmanYaml) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *DockmanYaml) GetCustomTools() map[string]string {
-	if x != nil {
-		return x.CustomTools
-	}
-	return nil
-}
-
-func (x *DockmanYaml) GetUseComposeFolders() bool {
-	if x != nil {
-		return x.UseComposeFolders
-	}
-	return false
-}
-
-func (x *DockmanYaml) GetDisableComposeQuickActions() bool {
-	if x != nil {
-		return x.DisableComposeQuickActions
-	}
-	return false
-}
-
-func (x *DockmanYaml) GetSearchLimit() int32 {
-	if x != nil {
-		return x.SearchLimit
-	}
-	return 0
-}
-
-func (x *DockmanYaml) GetTabLimit() int32 {
-	if x != nil {
-		return x.TabLimit
-	}
-	return 0
-}
-
-func (x *DockmanYaml) GetVolumesPage() *VolumesConfig {
-	if x != nil {
-		return x.VolumesPage
-	}
-	return nil
-}
-
-func (x *DockmanYaml) GetNetworkPage() *NetworkConfig {
-	if x != nil {
-		return x.NetworkPage
-	}
-	return nil
-}
-
-func (x *DockmanYaml) GetImagePage() *ImageConfig {
-	if x != nil {
-		return x.ImagePage
-	}
-	return nil
-}
-
-func (x *DockmanYaml) GetContainerPage() *ContainerConfig {
-	if x != nil {
-		return x.ContainerPage
-	}
-	return nil
-}
-
-type VolumesConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sort          *Sort                  `protobuf:"bytes,1,opt,name=sort,proto3" json:"sort,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VolumesConfig) Reset() {
-	*x = VolumesConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VolumesConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VolumesConfig) ProtoMessage() {}
-
-func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VolumesConfig.ProtoReflect.Descriptor instead.
-func (*VolumesConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *VolumesConfig) GetSort() *Sort {
-	if x != nil {
-		return x.Sort
-	}
-	return nil
-}
-
-type NetworkConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sort          *Sort                  `protobuf:"bytes,1,opt,name=sort,proto3" json:"sort,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NetworkConfig) Reset() {
-	*x = NetworkConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NetworkConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NetworkConfig) ProtoMessage() {}
-
-func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NetworkConfig.ProtoReflect.Descriptor instead.
-func (*NetworkConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *NetworkConfig) GetSort() *Sort {
-	if x != nil {
-		return x.Sort
-	}
-	return nil
-}
-
-type ImageConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sort          *Sort                  `protobuf:"bytes,1,opt,name=sort,proto3" json:"sort,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ImageConfig) Reset() {
-	*x = ImageConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ImageConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ImageConfig) ProtoMessage() {}
-
-func (x *ImageConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ImageConfig.ProtoReflect.Descriptor instead.
-func (*ImageConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *ImageConfig) GetSort() *Sort {
-	if x != nil {
-		return x.Sort
-	}
-	return nil
-}
-
-type ContainerConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sort          *Sort                  `protobuf:"bytes,1,opt,name=sort,proto3" json:"sort,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ContainerConfig) Reset() {
-	*x = ContainerConfig{}
-	mi := &file_files_v1_files_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ContainerConfig) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ContainerConfig) ProtoMessage() {}
-
-func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ContainerConfig.ProtoReflect.Descriptor instead.
-func (*ContainerConfig) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *ContainerConfig) GetSort() *Sort {
-	if x != nil {
-		return x.Sort
-	}
-	return nil
-}
-
-type Sort struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SortOrder     string                 `protobuf:"bytes,1,opt,name=sortOrder,proto3" json:"sortOrder,omitempty"`
-	SortField     string                 `protobuf:"bytes,2,opt,name=sortField,proto3" json:"sortField,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Sort) Reset() {
-	*x = Sort{}
-	mi := &file_files_v1_files_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Sort) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Sort) ProtoMessage() {}
-
-func (x *Sort) ProtoReflect() protoreflect.Message {
-	mi := &file_files_v1_files_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Sort.ProtoReflect.Descriptor instead.
-func (*Sort) Descriptor() ([]byte, []int) {
-	return file_files_v1_files_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *Sort) GetSortOrder() string {
-	if x != nil {
-		return x.SortOrder
-	}
-	return ""
-}
-
-func (x *Sort) GetSortField() string {
-	if x != nil {
-		return x.SortField
-	}
-	return ""
-}
-
 var File_files_v1_files_proto protoreflect.FileDescriptor
 
 const file_files_v1_files_proto_rawDesc = "" +
@@ -868,39 +532,14 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\x04File\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05isDir\x18\x02 \x01(\bR\x05isDir\"\a\n" +
-	"\x05Empty\"\xaf\x04\n" +
-	"\vDockmanYaml\x12H\n" +
-	"\vcustomTools\x18\t \x03(\v2&.files.v1.DockmanYaml.CustomToolsEntryR\vcustomTools\x12,\n" +
-	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +
-	"\x1adisableComposeQuickActions\x18\a \x01(\bR\x1adisableComposeQuickActions\x12 \n" +
-	"\vsearchLimit\x18\b \x01(\x05R\vsearchLimit\x12\x1a\n" +
-	"\btabLimit\x18\x06 \x01(\x05R\btabLimit\x129\n" +
-	"\vvolumesPage\x18\x02 \x01(\v2\x17.files.v1.VolumesConfigR\vvolumesPage\x129\n" +
-	"\vnetworkPage\x18\x03 \x01(\v2\x17.files.v1.NetworkConfigR\vnetworkPage\x123\n" +
-	"\timagePage\x18\x04 \x01(\v2\x15.files.v1.ImageConfigR\timagePage\x12?\n" +
-	"\rcontainerPage\x18\x05 \x01(\v2\x19.files.v1.ContainerConfigR\rcontainerPage\x1a>\n" +
-	"\x10CustomToolsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"3\n" +
-	"\rVolumesConfig\x12\"\n" +
-	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"3\n" +
-	"\rNetworkConfig\x12\"\n" +
-	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"1\n" +
-	"\vImageConfig\x12\"\n" +
-	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"5\n" +
-	"\x0fContainerConfig\x12\"\n" +
-	"\x04sort\x18\x01 \x01(\v2\x0e.files.v1.SortR\x04sort\"B\n" +
-	"\x04Sort\x12\x1c\n" +
-	"\tsortOrder\x18\x01 \x01(\tR\tsortOrder\x12\x1c\n" +
-	"\tsortField\x18\x02 \x01(\tR\tsortField2\xb4\x03\n" +
+	"\x05Empty2\xf8\x02\n" +
 	"\vFileService\x127\n" +
 	"\x04List\x12\x15.files.v1.ListRequest\x1a\x16.files.v1.ListResponse\"\x00\x12+\n" +
 	"\x06Create\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x127\n" +
 	"\x04Copy\x12\x15.files.v1.CopyRequest\x1a\x16.files.v1.CopyResponse\"\x00\x12+\n" +
 	"\x06Delete\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x12+\n" +
 	"\x06Exists\x12\x0e.files.v1.File\x1a\x0f.files.v1.Empty\"\x00\x121\n" +
-	"\x06Rename\x12\x14.files.v1.RenameFile\x1a\x0f.files.v1.Empty\"\x00\x12:\n" +
-	"\x0eGetDockmanYaml\x12\x0f.files.v1.Empty\x1a\x15.files.v1.DockmanYaml\"\x00\x12=\n" +
+	"\x06Rename\x12\x14.files.v1.RenameFile\x1a\x0f.files.v1.Empty\"\x00\x12=\n" +
 	"\x06Format\x12\x17.files.v1.FormatRequest\x1a\x18.files.v1.FormatResponse\"\x00B\x88\x01\n" +
 	"\fcom.files.v1B\n" +
 	"FilesProtoP\x01Z+github.com/RA341/dockman/generated/files/v1\xa2\x02\x03FXX\xaa\x02\bFiles.V1\xca\x02\bFiles\\V1\xe2\x02\x14Files\\V1\\GPBMetadata\xea\x02\tFiles::V1b\x06proto3"
@@ -917,61 +556,43 @@ func file_files_v1_files_proto_rawDescGZIP() []byte {
 	return file_files_v1_files_proto_rawDescData
 }
 
-var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_files_v1_files_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_files_v1_files_proto_goTypes = []any{
-	(*CopyRequest)(nil),     // 0: files.v1.CopyRequest
-	(*CopyResponse)(nil),    // 1: files.v1.CopyResponse
-	(*ListRequest)(nil),     // 2: files.v1.ListRequest
-	(*ListResponse)(nil),    // 3: files.v1.ListResponse
-	(*FormatRequest)(nil),   // 4: files.v1.FormatRequest
-	(*FormatResponse)(nil),  // 5: files.v1.FormatResponse
-	(*FsEntry)(nil),         // 6: files.v1.FsEntry
-	(*RenameFile)(nil),      // 7: files.v1.RenameFile
-	(*File)(nil),            // 8: files.v1.File
-	(*Empty)(nil),           // 9: files.v1.Empty
-	(*DockmanYaml)(nil),     // 10: files.v1.DockmanYaml
-	(*VolumesConfig)(nil),   // 11: files.v1.VolumesConfig
-	(*NetworkConfig)(nil),   // 12: files.v1.NetworkConfig
-	(*ImageConfig)(nil),     // 13: files.v1.ImageConfig
-	(*ContainerConfig)(nil), // 14: files.v1.ContainerConfig
-	(*Sort)(nil),            // 15: files.v1.Sort
-	nil,                     // 16: files.v1.DockmanYaml.CustomToolsEntry
+	(*CopyRequest)(nil),    // 0: files.v1.CopyRequest
+	(*CopyResponse)(nil),   // 1: files.v1.CopyResponse
+	(*ListRequest)(nil),    // 2: files.v1.ListRequest
+	(*ListResponse)(nil),   // 3: files.v1.ListResponse
+	(*FormatRequest)(nil),  // 4: files.v1.FormatRequest
+	(*FormatResponse)(nil), // 5: files.v1.FormatResponse
+	(*FsEntry)(nil),        // 6: files.v1.FsEntry
+	(*RenameFile)(nil),     // 7: files.v1.RenameFile
+	(*File)(nil),           // 8: files.v1.File
+	(*Empty)(nil),          // 9: files.v1.Empty
 }
 var file_files_v1_files_proto_depIdxs = []int32{
 	8,  // 0: files.v1.CopyRequest.source:type_name -> files.v1.File
 	8,  // 1: files.v1.CopyRequest.dest:type_name -> files.v1.File
 	6,  // 2: files.v1.ListResponse.entries:type_name -> files.v1.FsEntry
 	6,  // 3: files.v1.FsEntry.subFiles:type_name -> files.v1.FsEntry
-	16, // 4: files.v1.DockmanYaml.customTools:type_name -> files.v1.DockmanYaml.CustomToolsEntry
-	11, // 5: files.v1.DockmanYaml.volumesPage:type_name -> files.v1.VolumesConfig
-	12, // 6: files.v1.DockmanYaml.networkPage:type_name -> files.v1.NetworkConfig
-	13, // 7: files.v1.DockmanYaml.imagePage:type_name -> files.v1.ImageConfig
-	14, // 8: files.v1.DockmanYaml.containerPage:type_name -> files.v1.ContainerConfig
-	15, // 9: files.v1.VolumesConfig.sort:type_name -> files.v1.Sort
-	15, // 10: files.v1.NetworkConfig.sort:type_name -> files.v1.Sort
-	15, // 11: files.v1.ImageConfig.sort:type_name -> files.v1.Sort
-	15, // 12: files.v1.ContainerConfig.sort:type_name -> files.v1.Sort
-	2,  // 13: files.v1.FileService.List:input_type -> files.v1.ListRequest
-	8,  // 14: files.v1.FileService.Create:input_type -> files.v1.File
-	0,  // 15: files.v1.FileService.Copy:input_type -> files.v1.CopyRequest
-	8,  // 16: files.v1.FileService.Delete:input_type -> files.v1.File
-	8,  // 17: files.v1.FileService.Exists:input_type -> files.v1.File
-	7,  // 18: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
-	9,  // 19: files.v1.FileService.GetDockmanYaml:input_type -> files.v1.Empty
-	4,  // 20: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
-	3,  // 21: files.v1.FileService.List:output_type -> files.v1.ListResponse
-	9,  // 22: files.v1.FileService.Create:output_type -> files.v1.Empty
-	1,  // 23: files.v1.FileService.Copy:output_type -> files.v1.CopyResponse
-	9,  // 24: files.v1.FileService.Delete:output_type -> files.v1.Empty
-	9,  // 25: files.v1.FileService.Exists:output_type -> files.v1.Empty
-	9,  // 26: files.v1.FileService.Rename:output_type -> files.v1.Empty
-	10, // 27: files.v1.FileService.GetDockmanYaml:output_type -> files.v1.DockmanYaml
-	5,  // 28: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
-	21, // [21:29] is the sub-list for method output_type
-	13, // [13:21] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	2,  // 4: files.v1.FileService.List:input_type -> files.v1.ListRequest
+	8,  // 5: files.v1.FileService.Create:input_type -> files.v1.File
+	0,  // 6: files.v1.FileService.Copy:input_type -> files.v1.CopyRequest
+	8,  // 7: files.v1.FileService.Delete:input_type -> files.v1.File
+	8,  // 8: files.v1.FileService.Exists:input_type -> files.v1.File
+	7,  // 9: files.v1.FileService.Rename:input_type -> files.v1.RenameFile
+	4,  // 10: files.v1.FileService.Format:input_type -> files.v1.FormatRequest
+	3,  // 11: files.v1.FileService.List:output_type -> files.v1.ListResponse
+	9,  // 12: files.v1.FileService.Create:output_type -> files.v1.Empty
+	1,  // 13: files.v1.FileService.Copy:output_type -> files.v1.CopyResponse
+	9,  // 14: files.v1.FileService.Delete:output_type -> files.v1.Empty
+	9,  // 15: files.v1.FileService.Exists:output_type -> files.v1.Empty
+	9,  // 16: files.v1.FileService.Rename:output_type -> files.v1.Empty
+	5,  // 17: files.v1.FileService.Format:output_type -> files.v1.FormatResponse
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_files_v1_files_proto_init() }
@@ -985,7 +606,7 @@ func file_files_v1_files_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_files_v1_files_proto_rawDesc), len(file_files_v1_files_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

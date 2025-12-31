@@ -1,6 +1,7 @@
 package host
 
 import (
+	"github.com/RA341/dockman/internal/dockyaml"
 	"github.com/RA341/dockman/internal/ssh"
 	"gorm.io/gorm"
 )
@@ -31,6 +32,8 @@ type Config struct {
 	// If SSHID is 0, Preload will simply return nil for SSHOptions
 	SSHID      uint                `gorm:"default:null"`
 	SSHOptions *ssh.MachineOptions `gorm:"foreignKey:SSHID"`
+
+	Dockyaml dockyaml.DockContent `gorm:"foreignKey:ConfigID"`
 
 	// Has Many Relationship (FolderAliases)
 	FolderAliases []FolderAlias `gorm:"foreignKey:ConfigID"`

@@ -615,182 +615,6 @@ func (*CreateHostResponse) Descriptor() ([]byte, []int) {
 	return file_host_v1_host_proto_rawDescGZIP(), []int{12}
 }
 
-type EditAliasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	HostId        uint32                 `protobuf:"varint,1,opt,name=hostId,proto3" json:"hostId,omitempty"`
-	Alias         *FolderAlias           `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EditAliasRequest) Reset() {
-	*x = EditAliasRequest{}
-	mi := &file_host_v1_host_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EditAliasRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EditAliasRequest) ProtoMessage() {}
-
-func (x *EditAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EditAliasRequest.ProtoReflect.Descriptor instead.
-func (*EditAliasRequest) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *EditAliasRequest) GetHostId() uint32 {
-	if x != nil {
-		return x.HostId
-	}
-	return 0
-}
-
-func (x *EditAliasRequest) GetAlias() *FolderAlias {
-	if x != nil {
-		return x.Alias
-	}
-	return nil
-}
-
-type EditAliasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *EditAliasResponse) Reset() {
-	*x = EditAliasResponse{}
-	mi := &file_host_v1_host_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *EditAliasResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*EditAliasResponse) ProtoMessage() {}
-
-func (x *EditAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use EditAliasResponse.ProtoReflect.Descriptor instead.
-func (*EditAliasResponse) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{14}
-}
-
-type AddAliasRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	HostId        uint32                 `protobuf:"varint,1,opt,name=hostId,proto3" json:"hostId,omitempty"`
-	Alias         *FolderAlias           `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AddAliasRequest) Reset() {
-	*x = AddAliasRequest{}
-	mi := &file_host_v1_host_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddAliasRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddAliasRequest) ProtoMessage() {}
-
-func (x *AddAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddAliasRequest.ProtoReflect.Descriptor instead.
-func (*AddAliasRequest) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *AddAliasRequest) GetHostId() uint32 {
-	if x != nil {
-		return x.HostId
-	}
-	return 0
-}
-
-func (x *AddAliasRequest) GetAlias() *FolderAlias {
-	if x != nil {
-		return x.Alias
-	}
-	return nil
-}
-
-type AddAliasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AddAliasResponse) Reset() {
-	*x = AddAliasResponse{}
-	mi := &file_host_v1_host_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AddAliasResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AddAliasResponse) ProtoMessage() {}
-
-func (x *AddAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AddAliasResponse.ProtoReflect.Descriptor instead.
-func (*AddAliasResponse) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{16}
-}
-
 type ListAliasRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
@@ -800,7 +624,7 @@ type ListAliasRequest struct {
 
 func (x *ListAliasRequest) Reset() {
 	*x = ListAliasRequest{}
-	mi := &file_host_v1_host_proto_msgTypes[17]
+	mi := &file_host_v1_host_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -812,7 +636,7 @@ func (x *ListAliasRequest) String() string {
 func (*ListAliasRequest) ProtoMessage() {}
 
 func (x *ListAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[17]
+	mi := &file_host_v1_host_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -825,7 +649,7 @@ func (x *ListAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasRequest.ProtoReflect.Descriptor instead.
 func (*ListAliasRequest) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{17}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListAliasRequest) GetHost() string {
@@ -844,7 +668,7 @@ type ListAliasResponse struct {
 
 func (x *ListAliasResponse) Reset() {
 	*x = ListAliasResponse{}
-	mi := &file_host_v1_host_proto_msgTypes[18]
+	mi := &file_host_v1_host_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -856,7 +680,7 @@ func (x *ListAliasResponse) String() string {
 func (*ListAliasResponse) ProtoMessage() {}
 
 func (x *ListAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[18]
+	mi := &file_host_v1_host_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -869,7 +693,7 @@ func (x *ListAliasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAliasResponse.ProtoReflect.Descriptor instead.
 func (*ListAliasResponse) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{18}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListAliasResponse) GetAliases() []*FolderAlias {
@@ -879,9 +703,239 @@ func (x *ListAliasResponse) GetAliases() []*FolderAlias {
 	return nil
 }
 
-type DeleteAliasRequest struct {
+// can either use id or name
+// prefer id first
+type AliasHost struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HostId        uint32                 `protobuf:"varint,1,opt,name=hostId,proto3" json:"hostId,omitempty"`
+	Hostname      string                 `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AliasHost) Reset() {
+	*x = AliasHost{}
+	mi := &file_host_v1_host_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AliasHost) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AliasHost) ProtoMessage() {}
+
+func (x *AliasHost) ProtoReflect() protoreflect.Message {
+	mi := &file_host_v1_host_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AliasHost.ProtoReflect.Descriptor instead.
+func (*AliasHost) Descriptor() ([]byte, []int) {
+	return file_host_v1_host_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *AliasHost) GetHostId() uint32 {
+	if x != nil {
+		return x.HostId
+	}
+	return 0
+}
+
+func (x *AliasHost) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+type EditAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          *AliasHost             `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Alias         *FolderAlias           `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EditAliasRequest) Reset() {
+	*x = EditAliasRequest{}
+	mi := &file_host_v1_host_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EditAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EditAliasRequest) ProtoMessage() {}
+
+func (x *EditAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_host_v1_host_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EditAliasRequest.ProtoReflect.Descriptor instead.
+func (*EditAliasRequest) Descriptor() ([]byte, []int) {
+	return file_host_v1_host_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *EditAliasRequest) GetHost() *AliasHost {
+	if x != nil {
+		return x.Host
+	}
+	return nil
+}
+
+func (x *EditAliasRequest) GetAlias() *FolderAlias {
+	if x != nil {
+		return x.Alias
+	}
+	return nil
+}
+
+type EditAliasResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EditAliasResponse) Reset() {
+	*x = EditAliasResponse{}
+	mi := &file_host_v1_host_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EditAliasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EditAliasResponse) ProtoMessage() {}
+
+func (x *EditAliasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_host_v1_host_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EditAliasResponse.ProtoReflect.Descriptor instead.
+func (*EditAliasResponse) Descriptor() ([]byte, []int) {
+	return file_host_v1_host_proto_rawDescGZIP(), []int{17}
+}
+
+type AddAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          *AliasHost             `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Alias         *FolderAlias           `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddAliasRequest) Reset() {
+	*x = AddAliasRequest{}
+	mi := &file_host_v1_host_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddAliasRequest) ProtoMessage() {}
+
+func (x *AddAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_host_v1_host_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddAliasRequest.ProtoReflect.Descriptor instead.
+func (*AddAliasRequest) Descriptor() ([]byte, []int) {
+	return file_host_v1_host_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *AddAliasRequest) GetHost() *AliasHost {
+	if x != nil {
+		return x.Host
+	}
+	return nil
+}
+
+func (x *AddAliasRequest) GetAlias() *FolderAlias {
+	if x != nil {
+		return x.Alias
+	}
+	return nil
+}
+
+type AddAliasResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddAliasResponse) Reset() {
+	*x = AddAliasResponse{}
+	mi := &file_host_v1_host_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddAliasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddAliasResponse) ProtoMessage() {}
+
+func (x *AddAliasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_host_v1_host_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddAliasResponse.ProtoReflect.Descriptor instead.
+func (*AddAliasResponse) Descriptor() ([]byte, []int) {
+	return file_host_v1_host_proto_rawDescGZIP(), []int{19}
+}
+
+type DeleteAliasRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          *AliasHost             `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
 	Alias         string                 `protobuf:"bytes,2,opt,name=alias,proto3" json:"alias,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -889,7 +943,7 @@ type DeleteAliasRequest struct {
 
 func (x *DeleteAliasRequest) Reset() {
 	*x = DeleteAliasRequest{}
-	mi := &file_host_v1_host_proto_msgTypes[19]
+	mi := &file_host_v1_host_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -901,7 +955,7 @@ func (x *DeleteAliasRequest) String() string {
 func (*DeleteAliasRequest) ProtoMessage() {}
 
 func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[19]
+	mi := &file_host_v1_host_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -914,14 +968,14 @@ func (x *DeleteAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAliasRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAliasRequest) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{19}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{20}
 }
 
-func (x *DeleteAliasRequest) GetHostId() uint32 {
+func (x *DeleteAliasRequest) GetHost() *AliasHost {
 	if x != nil {
-		return x.HostId
+		return x.Host
 	}
-	return 0
+	return nil
 }
 
 func (x *DeleteAliasRequest) GetAlias() string {
@@ -939,7 +993,7 @@ type DeleteAliasResponse struct {
 
 func (x *DeleteAliasResponse) Reset() {
 	*x = DeleteAliasResponse{}
-	mi := &file_host_v1_host_proto_msgTypes[20]
+	mi := &file_host_v1_host_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1005,7 @@ func (x *DeleteAliasResponse) String() string {
 func (*DeleteAliasResponse) ProtoMessage() {}
 
 func (x *DeleteAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[20]
+	mi := &file_host_v1_host_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -964,7 +1018,7 @@ func (x *DeleteAliasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAliasResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAliasResponse) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{20}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{21}
 }
 
 type ToggleRequest struct {
@@ -977,7 +1031,7 @@ type ToggleRequest struct {
 
 func (x *ToggleRequest) Reset() {
 	*x = ToggleRequest{}
-	mi := &file_host_v1_host_proto_msgTypes[21]
+	mi := &file_host_v1_host_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -989,7 +1043,7 @@ func (x *ToggleRequest) String() string {
 func (*ToggleRequest) ProtoMessage() {}
 
 func (x *ToggleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[21]
+	mi := &file_host_v1_host_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1002,7 +1056,7 @@ func (x *ToggleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleRequest.ProtoReflect.Descriptor instead.
 func (*ToggleRequest) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{21}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ToggleRequest) GetEnable() bool {
@@ -1027,7 +1081,7 @@ type ToggleResponse struct {
 
 func (x *ToggleResponse) Reset() {
 	*x = ToggleResponse{}
-	mi := &file_host_v1_host_proto_msgTypes[22]
+	mi := &file_host_v1_host_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1039,7 +1093,7 @@ func (x *ToggleResponse) String() string {
 func (*ToggleResponse) ProtoMessage() {}
 
 func (x *ToggleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[22]
+	mi := &file_host_v1_host_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1052,7 +1106,7 @@ func (x *ToggleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleResponse.ProtoReflect.Descriptor instead.
 func (*ToggleResponse) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{22}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{23}
 }
 
 type FolderAlias struct {
@@ -1066,7 +1120,7 @@ type FolderAlias struct {
 
 func (x *FolderAlias) Reset() {
 	*x = FolderAlias{}
-	mi := &file_host_v1_host_proto_msgTypes[23]
+	mi := &file_host_v1_host_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1078,7 +1132,7 @@ func (x *FolderAlias) String() string {
 func (*FolderAlias) ProtoMessage() {}
 
 func (x *FolderAlias) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[23]
+	mi := &file_host_v1_host_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1091,7 +1145,7 @@ func (x *FolderAlias) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FolderAlias.ProtoReflect.Descriptor instead.
 func (*FolderAlias) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{23}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *FolderAlias) GetId() uint32 {
@@ -1130,7 +1184,7 @@ type SSHConfig struct {
 
 func (x *SSHConfig) Reset() {
 	*x = SSHConfig{}
-	mi := &file_host_v1_host_proto_msgTypes[24]
+	mi := &file_host_v1_host_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1142,7 +1196,7 @@ func (x *SSHConfig) String() string {
 func (*SSHConfig) ProtoMessage() {}
 
 func (x *SSHConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[24]
+	mi := &file_host_v1_host_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1155,7 +1209,7 @@ func (x *SSHConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SSHConfig.ProtoReflect.Descriptor instead.
 func (*SSHConfig) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{24}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SSHConfig) GetId() uint32 {
@@ -1223,7 +1277,7 @@ type Host struct {
 
 func (x *Host) Reset() {
 	*x = Host{}
-	mi := &file_host_v1_host_proto_msgTypes[25]
+	mi := &file_host_v1_host_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1289,7 @@ func (x *Host) String() string {
 func (*Host) ProtoMessage() {}
 
 func (x *Host) ProtoReflect() protoreflect.Message {
-	mi := &file_host_v1_host_proto_msgTypes[25]
+	mi := &file_host_v1_host_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1302,7 @@ func (x *Host) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Host.ProtoReflect.Descriptor instead.
 func (*Host) Descriptor() ([]byte, []int) {
-	return file_host_v1_host_proto_rawDescGZIP(), []int{25}
+	return file_host_v1_host_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *Host) GetId() uint32 {
@@ -1335,21 +1389,24 @@ const file_host_v1_host_proto_rawDesc = "" +
 	"\x12DeleteHostResponse\"6\n" +
 	"\x11CreateHostRequest\x12!\n" +
 	"\x04host\x18\x01 \x01(\v2\r.host.v1.HostR\x04host\"\x14\n" +
-	"\x12CreateHostResponse\"V\n" +
-	"\x10EditAliasRequest\x12\x16\n" +
-	"\x06hostId\x18\x01 \x01(\rR\x06hostId\x12*\n" +
-	"\x05alias\x18\x02 \x01(\v2\x14.host.v1.FolderAliasR\x05alias\"\x13\n" +
-	"\x11EditAliasResponse\"U\n" +
-	"\x0fAddAliasRequest\x12\x16\n" +
-	"\x06hostId\x18\x01 \x01(\rR\x06hostId\x12*\n" +
-	"\x05alias\x18\x02 \x01(\v2\x14.host.v1.FolderAliasR\x05alias\"\x12\n" +
-	"\x10AddAliasResponse\"&\n" +
+	"\x12CreateHostResponse\"&\n" +
 	"\x10ListAliasRequest\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\"C\n" +
 	"\x11ListAliasResponse\x12.\n" +
-	"\aaliases\x18\x01 \x03(\v2\x14.host.v1.FolderAliasR\aaliases\"B\n" +
-	"\x12DeleteAliasRequest\x12\x16\n" +
-	"\x06hostId\x18\x01 \x01(\rR\x06hostId\x12\x14\n" +
+	"\aaliases\x18\x01 \x03(\v2\x14.host.v1.FolderAliasR\aaliases\"?\n" +
+	"\tAliasHost\x12\x16\n" +
+	"\x06hostId\x18\x01 \x01(\rR\x06hostId\x12\x1a\n" +
+	"\bhostname\x18\x02 \x01(\tR\bhostname\"f\n" +
+	"\x10EditAliasRequest\x12&\n" +
+	"\x04host\x18\x01 \x01(\v2\x12.host.v1.AliasHostR\x04host\x12*\n" +
+	"\x05alias\x18\x02 \x01(\v2\x14.host.v1.FolderAliasR\x05alias\"\x13\n" +
+	"\x11EditAliasResponse\"e\n" +
+	"\x0fAddAliasRequest\x12&\n" +
+	"\x04host\x18\x01 \x01(\v2\x12.host.v1.AliasHostR\x04host\x12*\n" +
+	"\x05alias\x18\x02 \x01(\v2\x14.host.v1.FolderAliasR\x05alias\"\x12\n" +
+	"\x10AddAliasResponse\"R\n" +
+	"\x12DeleteAliasRequest\x12&\n" +
+	"\x04host\x18\x01 \x01(\v2\x12.host.v1.AliasHostR\x04host\x12\x14\n" +
 	"\x05alias\x18\x02 \x01(\tR\x05alias\"\x15\n" +
 	"\x13DeleteAliasResponse\";\n" +
 	"\rToggleRequest\x12\x16\n" +
@@ -1411,7 +1468,7 @@ func file_host_v1_host_proto_rawDescGZIP() []byte {
 }
 
 var file_host_v1_host_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_host_v1_host_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_host_v1_host_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_host_v1_host_proto_goTypes = []any{
 	(ClientType)(0),                   // 0: host.v1.ClientType
 	(*BrowseFilesRequest)(nil),        // 1: host.v1.BrowseFilesRequest
@@ -1427,57 +1484,61 @@ var file_host_v1_host_proto_goTypes = []any{
 	(*DeleteHostResponse)(nil),        // 11: host.v1.DeleteHostResponse
 	(*CreateHostRequest)(nil),         // 12: host.v1.CreateHostRequest
 	(*CreateHostResponse)(nil),        // 13: host.v1.CreateHostResponse
-	(*EditAliasRequest)(nil),          // 14: host.v1.EditAliasRequest
-	(*EditAliasResponse)(nil),         // 15: host.v1.EditAliasResponse
-	(*AddAliasRequest)(nil),           // 16: host.v1.AddAliasRequest
-	(*AddAliasResponse)(nil),          // 17: host.v1.AddAliasResponse
-	(*ListAliasRequest)(nil),          // 18: host.v1.ListAliasRequest
-	(*ListAliasResponse)(nil),         // 19: host.v1.ListAliasResponse
-	(*DeleteAliasRequest)(nil),        // 20: host.v1.DeleteAliasRequest
-	(*DeleteAliasResponse)(nil),       // 21: host.v1.DeleteAliasResponse
-	(*ToggleRequest)(nil),             // 22: host.v1.ToggleRequest
-	(*ToggleResponse)(nil),            // 23: host.v1.ToggleResponse
-	(*FolderAlias)(nil),               // 24: host.v1.FolderAlias
-	(*SSHConfig)(nil),                 // 25: host.v1.SSHConfig
-	(*Host)(nil),                      // 26: host.v1.Host
+	(*ListAliasRequest)(nil),          // 14: host.v1.ListAliasRequest
+	(*ListAliasResponse)(nil),         // 15: host.v1.ListAliasResponse
+	(*AliasHost)(nil),                 // 16: host.v1.AliasHost
+	(*EditAliasRequest)(nil),          // 17: host.v1.EditAliasRequest
+	(*EditAliasResponse)(nil),         // 18: host.v1.EditAliasResponse
+	(*AddAliasRequest)(nil),           // 19: host.v1.AddAliasRequest
+	(*AddAliasResponse)(nil),          // 20: host.v1.AddAliasResponse
+	(*DeleteAliasRequest)(nil),        // 21: host.v1.DeleteAliasRequest
+	(*DeleteAliasResponse)(nil),       // 22: host.v1.DeleteAliasResponse
+	(*ToggleRequest)(nil),             // 23: host.v1.ToggleRequest
+	(*ToggleResponse)(nil),            // 24: host.v1.ToggleResponse
+	(*FolderAlias)(nil),               // 25: host.v1.FolderAlias
+	(*SSHConfig)(nil),                 // 26: host.v1.SSHConfig
+	(*Host)(nil),                      // 27: host.v1.Host
 }
 var file_host_v1_host_proto_depIdxs = []int32{
 	2,  // 0: host.v1.BrowseFilesResponse.files:type_name -> host.v1.BrowseItem
-	26, // 1: host.v1.ListClientsResponse.hosts:type_name -> host.v1.Host
-	26, // 2: host.v1.EditHostRequest.host:type_name -> host.v1.Host
-	26, // 3: host.v1.CreateHostRequest.host:type_name -> host.v1.Host
-	24, // 4: host.v1.EditAliasRequest.alias:type_name -> host.v1.FolderAlias
-	24, // 5: host.v1.AddAliasRequest.alias:type_name -> host.v1.FolderAlias
-	24, // 6: host.v1.ListAliasResponse.aliases:type_name -> host.v1.FolderAlias
-	0,  // 7: host.v1.Host.kind:type_name -> host.v1.ClientType
-	25, // 8: host.v1.Host.ssh_options:type_name -> host.v1.SSHConfig
-	22, // 9: host.v1.HostManagerService.ToggleClient:input_type -> host.v1.ToggleRequest
-	1,  // 10: host.v1.HostManagerService.BrowseFiles:input_type -> host.v1.BrowseFilesRequest
-	6,  // 11: host.v1.HostManagerService.ListAllHosts:input_type -> host.v1.ListClientRequest
-	4,  // 12: host.v1.HostManagerService.ListConnectedHosts:input_type -> host.v1.ListConnectedHostRequest
-	12, // 13: host.v1.HostManagerService.CreateHost:input_type -> host.v1.CreateHostRequest
-	8,  // 14: host.v1.HostManagerService.EditHost:input_type -> host.v1.EditHostRequest
-	10, // 15: host.v1.HostManagerService.DeleteHost:input_type -> host.v1.DeleteHostRequest
-	18, // 16: host.v1.HostManagerService.ListAlias:input_type -> host.v1.ListAliasRequest
-	16, // 17: host.v1.HostManagerService.AddAlias:input_type -> host.v1.AddAliasRequest
-	14, // 18: host.v1.HostManagerService.EditAlias:input_type -> host.v1.EditAliasRequest
-	20, // 19: host.v1.HostManagerService.DeleteAlias:input_type -> host.v1.DeleteAliasRequest
-	23, // 20: host.v1.HostManagerService.ToggleClient:output_type -> host.v1.ToggleResponse
-	3,  // 21: host.v1.HostManagerService.BrowseFiles:output_type -> host.v1.BrowseFilesResponse
-	7,  // 22: host.v1.HostManagerService.ListAllHosts:output_type -> host.v1.ListClientsResponse
-	5,  // 23: host.v1.HostManagerService.ListConnectedHosts:output_type -> host.v1.ListConnectedHostResponse
-	13, // 24: host.v1.HostManagerService.CreateHost:output_type -> host.v1.CreateHostResponse
-	9,  // 25: host.v1.HostManagerService.EditHost:output_type -> host.v1.EditHostResponse
-	11, // 26: host.v1.HostManagerService.DeleteHost:output_type -> host.v1.DeleteHostResponse
-	19, // 27: host.v1.HostManagerService.ListAlias:output_type -> host.v1.ListAliasResponse
-	17, // 28: host.v1.HostManagerService.AddAlias:output_type -> host.v1.AddAliasResponse
-	15, // 29: host.v1.HostManagerService.EditAlias:output_type -> host.v1.EditAliasResponse
-	21, // 30: host.v1.HostManagerService.DeleteAlias:output_type -> host.v1.DeleteAliasResponse
-	20, // [20:31] is the sub-list for method output_type
-	9,  // [9:20] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	27, // 1: host.v1.ListClientsResponse.hosts:type_name -> host.v1.Host
+	27, // 2: host.v1.EditHostRequest.host:type_name -> host.v1.Host
+	27, // 3: host.v1.CreateHostRequest.host:type_name -> host.v1.Host
+	25, // 4: host.v1.ListAliasResponse.aliases:type_name -> host.v1.FolderAlias
+	16, // 5: host.v1.EditAliasRequest.host:type_name -> host.v1.AliasHost
+	25, // 6: host.v1.EditAliasRequest.alias:type_name -> host.v1.FolderAlias
+	16, // 7: host.v1.AddAliasRequest.host:type_name -> host.v1.AliasHost
+	25, // 8: host.v1.AddAliasRequest.alias:type_name -> host.v1.FolderAlias
+	16, // 9: host.v1.DeleteAliasRequest.host:type_name -> host.v1.AliasHost
+	0,  // 10: host.v1.Host.kind:type_name -> host.v1.ClientType
+	26, // 11: host.v1.Host.ssh_options:type_name -> host.v1.SSHConfig
+	23, // 12: host.v1.HostManagerService.ToggleClient:input_type -> host.v1.ToggleRequest
+	1,  // 13: host.v1.HostManagerService.BrowseFiles:input_type -> host.v1.BrowseFilesRequest
+	6,  // 14: host.v1.HostManagerService.ListAllHosts:input_type -> host.v1.ListClientRequest
+	4,  // 15: host.v1.HostManagerService.ListConnectedHosts:input_type -> host.v1.ListConnectedHostRequest
+	12, // 16: host.v1.HostManagerService.CreateHost:input_type -> host.v1.CreateHostRequest
+	8,  // 17: host.v1.HostManagerService.EditHost:input_type -> host.v1.EditHostRequest
+	10, // 18: host.v1.HostManagerService.DeleteHost:input_type -> host.v1.DeleteHostRequest
+	14, // 19: host.v1.HostManagerService.ListAlias:input_type -> host.v1.ListAliasRequest
+	19, // 20: host.v1.HostManagerService.AddAlias:input_type -> host.v1.AddAliasRequest
+	17, // 21: host.v1.HostManagerService.EditAlias:input_type -> host.v1.EditAliasRequest
+	21, // 22: host.v1.HostManagerService.DeleteAlias:input_type -> host.v1.DeleteAliasRequest
+	24, // 23: host.v1.HostManagerService.ToggleClient:output_type -> host.v1.ToggleResponse
+	3,  // 24: host.v1.HostManagerService.BrowseFiles:output_type -> host.v1.BrowseFilesResponse
+	7,  // 25: host.v1.HostManagerService.ListAllHosts:output_type -> host.v1.ListClientsResponse
+	5,  // 26: host.v1.HostManagerService.ListConnectedHosts:output_type -> host.v1.ListConnectedHostResponse
+	13, // 27: host.v1.HostManagerService.CreateHost:output_type -> host.v1.CreateHostResponse
+	9,  // 28: host.v1.HostManagerService.EditHost:output_type -> host.v1.EditHostResponse
+	11, // 29: host.v1.HostManagerService.DeleteHost:output_type -> host.v1.DeleteHostResponse
+	15, // 30: host.v1.HostManagerService.ListAlias:output_type -> host.v1.ListAliasResponse
+	20, // 31: host.v1.HostManagerService.AddAlias:output_type -> host.v1.AddAliasResponse
+	18, // 32: host.v1.HostManagerService.EditAlias:output_type -> host.v1.EditAliasResponse
+	22, // 33: host.v1.HostManagerService.DeleteAlias:output_type -> host.v1.DeleteAliasResponse
+	23, // [23:34] is the sub-list for method output_type
+	12, // [12:23] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_host_v1_host_proto_init() }
@@ -1491,7 +1552,7 @@ func file_host_v1_host_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_host_v1_host_proto_rawDesc), len(file_host_v1_host_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

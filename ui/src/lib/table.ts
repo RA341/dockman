@@ -1,17 +1,17 @@
 import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
-import {type DockmanYaml, FileService} from "../gen/files/v1/files_pb.ts";
 import {callRPC, useHostClient} from "./api.ts";
+import {type DockmanYaml, DockyamlService} from "../gen/dockyaml/v1/dockyaml_pb.ts";
 
 export type SortOrder = 'asc' | 'desc';
 
 export const useDockmanYaml = () => {
-    const fs = useHostClient(FileService)
+    const fs = useHostClient(DockyamlService)
     const [dockYaml, setDockYaml] = useState<DockmanYaml | null>(null)
 
     useEffect(() => {
         const callback = async () => {
-            const {val} = await callRPC(() => fs.getDockmanYaml({}))
-            setDockYaml(val)
+            const {val} = await callRPC(() => fs.getYaml({}))
+            setDockYaml(val?.dock ?? null)
         }
         callback().then()
     }, [fs]);

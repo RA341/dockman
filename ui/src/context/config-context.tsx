@@ -1,29 +1,29 @@
 import {type ReactNode, useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from "../lib/api.ts";
+import {callRPC, useClient, useHostClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
 import {ConfigService, type UserConfig} from "../gen/config/v1/config_pb.ts";
 import {ConfigContext, type ConfigContextType, type UpdateSettingsOption} from "../hooks/config.ts";
-import {type DockmanYaml} from "../gen/files/v1/files_pb.ts";
+import {type DockmanYaml, DockyamlService} from "../gen/dockyaml/v1/dockyaml_pb.ts";
 
 export type Config = Omit<UserConfig, '$typeName' | '$unknown'>;
 
 export function UserConfigProvider({children}: { children: ReactNode }) {
+    const {showWarning} = useSnackbar();
     const client = useClient(ConfigService)
-    // const file = useHostClient(FileService)
+    const dockyamlClient = useHostClient(DockyamlService)
 
     const {showError, showSuccess} = useSnackbar()
     const [config, setConfig] = useState<Config>({})
     const [isLoading, setIsLoading] = useState(true)
 
-    // todo fix dockyaml
-    const [dockYaml,] = useState<DockmanYaml | null>(null)
+    const [dockYaml, setDockyaml] = useState<DockmanYaml | null>(null)
     const fetchDockYaml = useCallback(async () => {
-        // todo
-        // const {val, err} = await callRPC(() => file.getDockmanYaml({}))
-        // if (err) {
-        //     showWarning(`Unable to get dockman yaml, ${err}`)
-        // }
-        // setDockYaml(val)
+        const {val, err} = await callRPC(() => dockyamlClient.getYaml({}))
+        if (err) {
+            showWarning(`Unable to get dockman yaml, ${err}`)
+        } else {
+            setDockyaml(val?.dock ?? null)
+        }
     }, [])
 
     const fetchConfig = useCallback(async () => {

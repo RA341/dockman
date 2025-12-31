@@ -41,6 +41,12 @@ import {enableMapSet} from "immer";
 import {SettingsOutlined as SettingsIcon} from '@mui/icons-material';
 import FolderIcon from "@mui/icons-material/Folder";
 
+function DockmanYamlEditor() {
+    return <div>
+        Dockman taml page
+    </div>
+}
+
 export function App() {
     enableMapSet()
 
@@ -64,6 +70,7 @@ export function App() {
 
                                         <Route path="files" element={<FilesLayout/>}>
                                             <Route index element={<FileIndexRedirect/>}/>
+                                            <Route path=".dockman.yml" element={<DockmanYamlEditor/>}/>
                                             <Route path="*" element={<ComposePage/>}/>
                                         </Route>
 
@@ -111,7 +118,7 @@ export function App() {
 
 function HomeIndexRedirect() {
     const {availableHosts} = useHostManager()
-    const at = availableHosts.at(0);
+    const at = availableHosts.at(0) ?? "";
     return <Navigate to={`/${at}`} replace/>;
 }
 
@@ -148,8 +155,12 @@ function HostGuard() {
     const {pathname} = useLocation()
 
     const isSettingsPage = pathname === "/settings";
+    const isRoot = pathname === "/";
+    if (isSettingsPage || isRoot) {
+        return <Outlet/>
+    }
 
-    if (isLoading && !isSettingsPage) {
+    if (isLoading && host?.length === 0) {
         return (
             <Box sx={{
                 display: 'flex',
@@ -168,13 +179,13 @@ function HostGuard() {
 
     const emptyHostList = !availableHosts || availableHosts.length === 0;
     const validHost = availableHosts.includes(host ?? "")
-    if (host !== undefined && (emptyHostList || !validHost)) {
+    if (emptyHostList || !validHost) {
         return <EmptyHost hostname={host ?? ""}/>
     }
 
     return (
         <UserConfigProvider>
-           <Outlet/>
+            <Outlet/>
         </UserConfigProvider>
     )
 }

@@ -22,7 +22,7 @@ func main() {
 	info.Version = info.VersionDev
 
 	envMap := map[string]string{
-		"AUTH_ENABLE":   "true",
+		//"AUTH_ENABLE":   "true",
 		"AUTH_USERNAME": "test",
 		"AUTH_PASSWORD": "test",
 		"LOG_LEVEL":     "debug",
@@ -35,8 +35,8 @@ func main() {
 		"GID":  "1000",
 		"PUID": "1000",
 
-		"AUTH_OIDC_ENABLE": "true",
-		//"AUTH_OIDC_AUTO_REDIRECT": "false",
+		//"AUTH_OIDC_ENABLE":        "true",
+		"AUTH_OIDC_AUTO_REDIRECT": "false",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
 		"AUTH_OIDC_CLIENT_ID":     "ce5ab220-d534-4929-b30e-2661dc4a108a",
 		"AUTH_OIDC_CLIENT_SECRET": "HO5GcdofvZ8VSr9EVdRelbNeS9IChusw",

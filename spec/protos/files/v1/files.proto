@@ -13,7 +13,6 @@ service FileService {
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
 
-  rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
   rpc Format(FormatRequest) returns (FormatResponse) {}
 }
 
@@ -60,37 +59,3 @@ message File {
 }
 
 message Empty {}
-
-message DockmanYaml {
-  map<string, string> customTools = 9;
-  bool useComposeFolders = 1;
-  bool disableComposeQuickActions = 7;
-  int32 searchLimit = 8;
-  int32 tabLimit = 6;
-  VolumesConfig volumesPage = 2;
-  NetworkConfig networkPage = 3;
-  ImageConfig imagePage = 4;
-  ContainerConfig containerPage = 5;
-}
-
-message VolumesConfig {
-  Sort sort = 1;
-}
-
-message NetworkConfig {
-  Sort sort = 1;
-}
-
-message ImageConfig {
-  Sort sort = 1;
-}
-
-message ContainerConfig {
-  Sort sort = 1;
-}
-
-
-message Sort {
-  string sortOrder = 1;
-  string sortField = 2;
-}

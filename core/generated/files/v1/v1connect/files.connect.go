@@ -45,9 +45,6 @@ const (
 	FileServiceExistsProcedure = "/files.v1.FileService/Exists"
 	// FileServiceRenameProcedure is the fully-qualified name of the FileService's Rename RPC.
 	FileServiceRenameProcedure = "/files.v1.FileService/Rename"
-	// FileServiceGetDockmanYamlProcedure is the fully-qualified name of the FileService's
-	// GetDockmanYaml RPC.
-	FileServiceGetDockmanYamlProcedure = "/files.v1.FileService/GetDockmanYaml"
 	// FileServiceFormatProcedure is the fully-qualified name of the FileService's Format RPC.
 	FileServiceFormatProcedure = "/files.v1.FileService/Format"
 )
@@ -60,7 +57,6 @@ type FileServiceClient interface {
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
-	GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error)
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
 }
 
@@ -111,12 +107,6 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(fileServiceMethods.ByName("Rename")),
 			connect.WithClientOptions(opts...),
 		),
-		getDockmanYaml: connect.NewClient[v1.Empty, v1.DockmanYaml](
-			httpClient,
-			baseURL+FileServiceGetDockmanYamlProcedure,
-			connect.WithSchema(fileServiceMethods.ByName("GetDockmanYaml")),
-			connect.WithClientOptions(opts...),
-		),
 		format: connect.NewClient[v1.FormatRequest, v1.FormatResponse](
 			httpClient,
 			baseURL+FileServiceFormatProcedure,
@@ -128,14 +118,13 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // fileServiceClient implements FileServiceClient.
 type fileServiceClient struct {
-	list           *connect.Client[v1.ListRequest, v1.ListResponse]
-	create         *connect.Client[v1.File, v1.Empty]
-	copy           *connect.Client[v1.CopyRequest, v1.CopyResponse]
-	delete         *connect.Client[v1.File, v1.Empty]
-	exists         *connect.Client[v1.File, v1.Empty]
-	rename         *connect.Client[v1.RenameFile, v1.Empty]
-	getDockmanYaml *connect.Client[v1.Empty, v1.DockmanYaml]
-	format         *connect.Client[v1.FormatRequest, v1.FormatResponse]
+	list   *connect.Client[v1.ListRequest, v1.ListResponse]
+	create *connect.Client[v1.File, v1.Empty]
+	copy   *connect.Client[v1.CopyRequest, v1.CopyResponse]
+	delete *connect.Client[v1.File, v1.Empty]
+	exists *connect.Client[v1.File, v1.Empty]
+	rename *connect.Client[v1.RenameFile, v1.Empty]
+	format *connect.Client[v1.FormatRequest, v1.FormatResponse]
 }
 
 // List calls files.v1.FileService.List.
@@ -168,11 +157,6 @@ func (c *fileServiceClient) Rename(ctx context.Context, req *connect.Request[v1.
 	return c.rename.CallUnary(ctx, req)
 }
 
-// GetDockmanYaml calls files.v1.FileService.GetDockmanYaml.
-func (c *fileServiceClient) GetDockmanYaml(ctx context.Context, req *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
-	return c.getDockmanYaml.CallUnary(ctx, req)
-}
-
 // Format calls files.v1.FileService.Format.
 func (c *fileServiceClient) Format(ctx context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
 	return c.format.CallUnary(ctx, req)
@@ -186,7 +170,6 @@ type FileServiceHandler interface {
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
-	GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error)
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
 }
 
@@ -233,12 +216,6 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(fileServiceMethods.ByName("Rename")),
 		connect.WithHandlerOptions(opts...),
 	)
-	fileServiceGetDockmanYamlHandler := connect.NewUnaryHandler(
-		FileServiceGetDockmanYamlProcedure,
-		svc.GetDockmanYaml,
-		connect.WithSchema(fileServiceMethods.ByName("GetDockmanYaml")),
-		connect.WithHandlerOptions(opts...),
-	)
 	fileServiceFormatHandler := connect.NewUnaryHandler(
 		FileServiceFormatProcedure,
 		svc.Format,
@@ -259,8 +236,6 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 			fileServiceExistsHandler.ServeHTTP(w, r)
 		case FileServiceRenameProcedure:
 			fileServiceRenameHandler.ServeHTTP(w, r)
-		case FileServiceGetDockmanYamlProcedure:
-			fileServiceGetDockmanYamlHandler.ServeHTTP(w, r)
 		case FileServiceFormatProcedure:
 			fileServiceFormatHandler.ServeHTTP(w, r)
 		default:
@@ -294,10 +269,6 @@ func (UnimplementedFileServiceHandler) Exists(context.Context, *connect.Request[
 
 func (UnimplementedFileServiceHandler) Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Rename is not implemented"))
-}
-
-func (UnimplementedFileServiceHandler) GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.GetDockmanYaml is not implemented"))
 }
 
 func (UnimplementedFileServiceHandler) Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {

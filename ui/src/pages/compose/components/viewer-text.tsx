@@ -1,19 +1,18 @@
-import React, {type ReactElement, type ReactNode, useEffect, useMemo, useState} from 'react';
+import React, {type ReactElement, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip, Typography} from '@mui/material';
+import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip} from '@mui/material';
 import {useFileComponents} from "../state/terminal.tsx";
 import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
-import {type SaveState, useSaveStatus} from "../hooks/status-hook.ts";
 import TabEditor from "../tab-editor.tsx";
 import {ShortcutFormatter} from "./shortcut-formatter.tsx";
 import {TabDeploy} from "../tab-deploy.tsx";
 import {TabStat} from "../tab-stats.tsx";
 import CenteredMessage from "../../../components/centered-message.tsx";
-import {ErrorOutline, RefreshRounded} from "@mui/icons-material";
-import {useConfig} from "../../../hooks/config.ts";
+import {ErrorOutline} from "@mui/icons-material";
 import {useOpenFiles} from "../state/files.ts";
 import {FileService} from "../../../gen/files/v1/files_pb.ts";
+import {indicatorMap, useSaveStatus} from "../hooks/status-hook.tsx";
 
 export enum TabType {
     // noinspection JSUnusedGlobalSymbols
@@ -34,44 +33,15 @@ export interface TabDetails {
     shortcut: React.ReactElement;
 }
 
-const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> = {
-    typing: {
-        color: "primary.main",
-        component: <Typography variant="button" color="primary.main">Typing</Typography>
-    },
-    saving: {
-        color: "info.main",
-        component: <Typography variant="button" color="info.main">Saving</Typography>
-    },
-    success: {
-        color: "success.main",
-        component: <Typography variant="button" color="success.main">Saved</Typography>
-    },
-    error: {
-        color: "error.main",
-        component: <Typography variant="button" color="error.main">Save Failed</Typography>
-    },
-    idle: {
-        color: "primary.secondary",
-        component: <></>
-    }
-};
-
 interface ActionButtons {
     title: string;
     icon: ReactElement;
     onClick: () => void;
 }
 
-function isDockmanYaml(filename: string) {
-    return filename.endsWith(".dockman.yaml") ||
-        filename.endsWith(".dockman.yml");
-}
-
-function TextEditor() {
+function ViewerTextEditor() {
     const {filename: fn} = useFileComponents()
-    const filename = fn! // file will never be null if we reached this point
-    const {fetchDockmanYaml} = useConfig()
+    const filename = fn!
 
     const fileService = useHostClient(FileService);
 
@@ -138,7 +108,7 @@ function TextEditor() {
         return () => window.removeEventListener("keydown", handleKeyDown)
     }, [filename, navigate]);
 
-    const {status, setStatus, handleContentChange} = useSaveStatus(500, filename);
+    const {status, handleContentChange} = useSaveStatus(500, filename);
 
     const tabsList: TabDetails[] = useMemo(() => {
         if (!filename) return [];
@@ -149,7 +119,6 @@ function TextEditor() {
             label: 'Editor',
             component: <TabEditor
                 selectedPage={filename}
-                setStatus={setStatus}
                 handleContentChange={handleContentChange}
             />,
             shortcut: <ShortcutFormatter title={"Editor"} keyCombo={["ALT", "Z"]}/>,
@@ -188,20 +157,9 @@ function TextEditor() {
         //     })
         // }
 
-        if (isDockmanYaml(filename)) {
-            map.push({
-                title: "Reload",
-                icon: <RefreshRounded/>,
-                onClick: () => {
-                    fetchDockmanYaml().then()
-                },
-            })
-        }
-
         return map;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filename, fetchDockmanYaml]);
-
+    }, [filename]);
 
     const currentTab = selectedTab ?? 'editor';
 
@@ -297,4 +255,4 @@ function TextEditor() {
     );
 }
 
-export default TextEditor;
+export default ViewerTextEditor;

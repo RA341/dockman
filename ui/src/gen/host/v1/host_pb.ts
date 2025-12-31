@@ -2,15 +2,15 @@
 // @generated from file host/v1/host.proto (package host.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type {GenEnum, GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
+import {enumDesc, fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
+import type {Message} from "@bufbuild/protobuf";
 
 /**
  * Describes the file host/v1/host.proto.
  */
 export const file_host_v1_host: GenFile = /*@__PURE__*/
-  fileDesc("ChJob3N0L3YxL2hvc3QucHJvdG8SB2hvc3QudjEiLwoSQnJvd3NlRmlsZXNSZXF1ZXN0EgwKBGhvc3QYASABKAkSCwoDZGlyGAIgASgJIi0KCkJyb3dzZUl0ZW0SEAoIZnVsbHBhdGgYASABKAkSDQoFaXNEaXIYAiABKAgiOQoTQnJvd3NlRmlsZXNSZXNwb25zZRIiCgVmaWxlcxgBIAMoCzITLmhvc3QudjEuQnJvd3NlSXRlbSIaChhMaXN0Q29ubmVjdGVkSG9zdFJlcXVlc3QiKgoZTGlzdENvbm5lY3RlZEhvc3RSZXNwb25zZRINCgVob3N0cxgBIAMoCSITChFMaXN0Q2xpZW50UmVxdWVzdCIzChNMaXN0Q2xpZW50c1Jlc3BvbnNlEhwKBWhvc3RzGAEgAygLMg0uaG9zdC52MS5Ib3N0Ii4KD0VkaXRIb3N0UmVxdWVzdBIbCgRob3N0GAEgASgLMg0uaG9zdC52MS5Ib3N0IhIKEEVkaXRIb3N0UmVzcG9uc2UiIQoRRGVsZXRlSG9zdFJlcXVlc3QSDAoEaG9zdBgBIAEoCSIUChJEZWxldGVIb3N0UmVzcG9uc2UiMAoRQ3JlYXRlSG9zdFJlcXVlc3QSGwoEaG9zdBgBIAEoCzINLmhvc3QudjEuSG9zdCIUChJDcmVhdGVIb3N0UmVzcG9uc2UiRwoQRWRpdEFsaWFzUmVxdWVzdBIOCgZob3N0SWQYASABKA0SIwoFYWxpYXMYAiABKAsyFC5ob3N0LnYxLkZvbGRlckFsaWFzIhMKEUVkaXRBbGlhc1Jlc3BvbnNlIkYKD0FkZEFsaWFzUmVxdWVzdBIOCgZob3N0SWQYASABKA0SIwoFYWxpYXMYAiABKAsyFC5ob3N0LnYxLkZvbGRlckFsaWFzIhIKEEFkZEFsaWFzUmVzcG9uc2UiIAoQTGlzdEFsaWFzUmVxdWVzdBIMCgRob3N0GAEgASgJIjoKEUxpc3RBbGlhc1Jlc3BvbnNlEiUKB2FsaWFzZXMYASADKAsyFC5ob3N0LnYxLkZvbGRlckFsaWFzIjMKEkRlbGV0ZUFsaWFzUmVxdWVzdBIOCgZob3N0SWQYASABKA0SDQoFYWxpYXMYAiABKAkiFQoTRGVsZXRlQWxpYXNSZXNwb25zZSItCg1Ub2dnbGVSZXF1ZXN0Eg4KBmVuYWJsZRgBIAEoCBIMCgRuYW1lGAIgASgJIhAKDlRvZ2dsZVJlc3BvbnNlIjoKC0ZvbGRlckFsaWFzEgoKAmlkGAEgASgNEg0KBWFsaWFzGAIgASgJEhAKCGZ1bGxwYXRoGAMgASgJIosBCglTU0hDb25maWcSCgoCaWQYASABKA0SDAoEaG9zdBgDIAEoCRIMCgRwb3J0GAQgASgFEgwKBHVzZXIYBSABKAkSEAoIcGFzc3dvcmQYBiABKAkSGQoRcmVtb3RlX3B1YmxpY19rZXkYByABKAkSGwoTdXNlX3B1YmxpY19rZXlfYXV0aBgIIAEoCCLDAQoESG9zdBIKCgJpZBgBIAEoDRIMCgRuYW1lGAIgASgJEhAKCGhvc3RBZGRyGAggASgJEiEKBGtpbmQYAyABKA4yEy5ob3N0LnYxLkNsaWVudFR5cGUSDgoGZW5hYmxlGAQgASgIEhUKDWRvY2tlcl9zb2NrZXQYBSABKAkSJwoLc3NoX29wdGlvbnMYBiABKAsyEi5ob3N0LnYxLlNTSENvbmZpZxIcChRmb2xkZXJfYWxpYXNlc19jb3VudBgHIAEoBSogCgpDbGllbnRUeXBlEgkKBUxPQ0FMEAASBwoDU1NIEAEyvgYKEkhvc3RNYW5hZ2VyU2VydmljZRJBCgxUb2dnbGVDbGllbnQSFi5ob3N0LnYxLlRvZ2dsZVJlcXVlc3QaFy5ob3N0LnYxLlRvZ2dsZVJlc3BvbnNlIgASSgoLQnJvd3NlRmlsZXMSGy5ob3N0LnYxLkJyb3dzZUZpbGVzUmVxdWVzdBocLmhvc3QudjEuQnJvd3NlRmlsZXNSZXNwb25zZSIAEkoKDExpc3RBbGxIb3N0cxIaLmhvc3QudjEuTGlzdENsaWVudFJlcXVlc3QaHC5ob3N0LnYxLkxpc3RDbGllbnRzUmVzcG9uc2UiABJdChJMaXN0Q29ubmVjdGVkSG9zdHMSIS5ob3N0LnYxLkxpc3RDb25uZWN0ZWRIb3N0UmVxdWVzdBoiLmhvc3QudjEuTGlzdENvbm5lY3RlZEhvc3RSZXNwb25zZSIAEkcKCkNyZWF0ZUhvc3QSGi5ob3N0LnYxLkNyZWF0ZUhvc3RSZXF1ZXN0GhsuaG9zdC52MS5DcmVhdGVIb3N0UmVzcG9uc2UiABJBCghFZGl0SG9zdBIYLmhvc3QudjEuRWRpdEhvc3RSZXF1ZXN0GhkuaG9zdC52MS5FZGl0SG9zdFJlc3BvbnNlIgASRwoKRGVsZXRlSG9zdBIaLmhvc3QudjEuRGVsZXRlSG9zdFJlcXVlc3QaGy5ob3N0LnYxLkRlbGV0ZUhvc3RSZXNwb25zZSIAEkQKCUxpc3RBbGlhcxIZLmhvc3QudjEuTGlzdEFsaWFzUmVxdWVzdBoaLmhvc3QudjEuTGlzdEFsaWFzUmVzcG9uc2UiABJBCghBZGRBbGlhcxIYLmhvc3QudjEuQWRkQWxpYXNSZXF1ZXN0GhkuaG9zdC52MS5BZGRBbGlhc1Jlc3BvbnNlIgASRAoJRWRpdEFsaWFzEhkuaG9zdC52MS5FZGl0QWxpYXNSZXF1ZXN0GhouaG9zdC52MS5FZGl0QWxpYXNSZXNwb25zZSIAEkoKC0RlbGV0ZUFsaWFzEhsuaG9zdC52MS5EZWxldGVBbGlhc1JlcXVlc3QaHC5ob3N0LnYxLkRlbGV0ZUFsaWFzUmVzcG9uc2UiAEKBAQoLY29tLmhvc3QudjFCCUhvc3RQcm90b1ABWipnaXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2hvc3QvdjGiAgNIWFiqAgdIb3N0LlYxygIHSG9zdFxWMeICE0hvc3RcVjFcR1BCTWV0YWRhdGHqAghIb3N0OjpWMWIGcHJvdG8z");
+    fileDesc("ChJob3N0L3YxL2hvc3QucHJvdG8SB2hvc3QudjEiLwoSQnJvd3NlRmlsZXNSZXF1ZXN0EgwKBGhvc3QYASABKAkSCwoDZGlyGAIgASgJIi0KCkJyb3dzZUl0ZW0SEAoIZnVsbHBhdGgYASABKAkSDQoFaXNEaXIYAiABKAgiOQoTQnJvd3NlRmlsZXNSZXNwb25zZRIiCgVmaWxlcxgBIAMoCzITLmhvc3QudjEuQnJvd3NlSXRlbSIaChhMaXN0Q29ubmVjdGVkSG9zdFJlcXVlc3QiKgoZTGlzdENvbm5lY3RlZEhvc3RSZXNwb25zZRINCgVob3N0cxgBIAMoCSITChFMaXN0Q2xpZW50UmVxdWVzdCIzChNMaXN0Q2xpZW50c1Jlc3BvbnNlEhwKBWhvc3RzGAEgAygLMg0uaG9zdC52MS5Ib3N0Ii4KD0VkaXRIb3N0UmVxdWVzdBIbCgRob3N0GAEgASgLMg0uaG9zdC52MS5Ib3N0IhIKEEVkaXRIb3N0UmVzcG9uc2UiIQoRRGVsZXRlSG9zdFJlcXVlc3QSDAoEaG9zdBgBIAEoCSIUChJEZWxldGVIb3N0UmVzcG9uc2UiMAoRQ3JlYXRlSG9zdFJlcXVlc3QSGwoEaG9zdBgBIAEoCzINLmhvc3QudjEuSG9zdCIUChJDcmVhdGVIb3N0UmVzcG9uc2UiIAoQTGlzdEFsaWFzUmVxdWVzdBIMCgRob3N0GAEgASgJIjoKEUxpc3RBbGlhc1Jlc3BvbnNlEiUKB2FsaWFzZXMYASADKAsyFC5ob3N0LnYxLkZvbGRlckFsaWFzIi0KCUFsaWFzSG9zdBIOCgZob3N0SWQYASABKA0SEAoIaG9zdG5hbWUYAiABKAkiWQoQRWRpdEFsaWFzUmVxdWVzdBIgCgRob3N0GAEgASgLMhIuaG9zdC52MS5BbGlhc0hvc3QSIwoFYWxpYXMYAiABKAsyFC5ob3N0LnYxLkZvbGRlckFsaWFzIhMKEUVkaXRBbGlhc1Jlc3BvbnNlIlgKD0FkZEFsaWFzUmVxdWVzdBIgCgRob3N0GAEgASgLMhIuaG9zdC52MS5BbGlhc0hvc3QSIwoFYWxpYXMYAiABKAsyFC5ob3N0LnYxLkZvbGRlckFsaWFzIhIKEEFkZEFsaWFzUmVzcG9uc2UiRQoSRGVsZXRlQWxpYXNSZXF1ZXN0EiAKBGhvc3QYASABKAsyEi5ob3N0LnYxLkFsaWFzSG9zdBINCgVhbGlhcxgCIAEoCSIVChNEZWxldGVBbGlhc1Jlc3BvbnNlIi0KDVRvZ2dsZVJlcXVlc3QSDgoGZW5hYmxlGAEgASgIEgwKBG5hbWUYAiABKAkiEAoOVG9nZ2xlUmVzcG9uc2UiOgoLRm9sZGVyQWxpYXMSCgoCaWQYASABKA0SDQoFYWxpYXMYAiABKAkSEAoIZnVsbHBhdGgYAyABKAkiiwEKCVNTSENvbmZpZxIKCgJpZBgBIAEoDRIMCgRob3N0GAMgASgJEgwKBHBvcnQYBCABKAUSDAoEdXNlchgFIAEoCRIQCghwYXNzd29yZBgGIAEoCRIZChFyZW1vdGVfcHVibGljX2tleRgHIAEoCRIbChN1c2VfcHVibGljX2tleV9hdXRoGAggASgIIsMBCgRIb3N0EgoKAmlkGAEgASgNEgwKBG5hbWUYAiABKAkSEAoIaG9zdEFkZHIYCCABKAkSIQoEa2luZBgDIAEoDjITLmhvc3QudjEuQ2xpZW50VHlwZRIOCgZlbmFibGUYBCABKAgSFQoNZG9ja2VyX3NvY2tldBgFIAEoCRInCgtzc2hfb3B0aW9ucxgGIAEoCzISLmhvc3QudjEuU1NIQ29uZmlnEhwKFGZvbGRlcl9hbGlhc2VzX2NvdW50GAcgASgFKiAKCkNsaWVudFR5cGUSCQoFTE9DQUwQABIHCgNTU0gQATK+BgoSSG9zdE1hbmFnZXJTZXJ2aWNlEkEKDFRvZ2dsZUNsaWVudBIWLmhvc3QudjEuVG9nZ2xlUmVxdWVzdBoXLmhvc3QudjEuVG9nZ2xlUmVzcG9uc2UiABJKCgtCcm93c2VGaWxlcxIbLmhvc3QudjEuQnJvd3NlRmlsZXNSZXF1ZXN0GhwuaG9zdC52MS5Ccm93c2VGaWxlc1Jlc3BvbnNlIgASSgoMTGlzdEFsbEhvc3RzEhouaG9zdC52MS5MaXN0Q2xpZW50UmVxdWVzdBocLmhvc3QudjEuTGlzdENsaWVudHNSZXNwb25zZSIAEl0KEkxpc3RDb25uZWN0ZWRIb3N0cxIhLmhvc3QudjEuTGlzdENvbm5lY3RlZEhvc3RSZXF1ZXN0GiIuaG9zdC52MS5MaXN0Q29ubmVjdGVkSG9zdFJlc3BvbnNlIgASRwoKQ3JlYXRlSG9zdBIaLmhvc3QudjEuQ3JlYXRlSG9zdFJlcXVlc3QaGy5ob3N0LnYxLkNyZWF0ZUhvc3RSZXNwb25zZSIAEkEKCEVkaXRIb3N0EhguaG9zdC52MS5FZGl0SG9zdFJlcXVlc3QaGS5ob3N0LnYxLkVkaXRIb3N0UmVzcG9uc2UiABJHCgpEZWxldGVIb3N0EhouaG9zdC52MS5EZWxldGVIb3N0UmVxdWVzdBobLmhvc3QudjEuRGVsZXRlSG9zdFJlc3BvbnNlIgASRAoJTGlzdEFsaWFzEhkuaG9zdC52MS5MaXN0QWxpYXNSZXF1ZXN0GhouaG9zdC52MS5MaXN0QWxpYXNSZXNwb25zZSIAEkEKCEFkZEFsaWFzEhguaG9zdC52MS5BZGRBbGlhc1JlcXVlc3QaGS5ob3N0LnYxLkFkZEFsaWFzUmVzcG9uc2UiABJECglFZGl0QWxpYXMSGS5ob3N0LnYxLkVkaXRBbGlhc1JlcXVlc3QaGi5ob3N0LnYxLkVkaXRBbGlhc1Jlc3BvbnNlIgASSgoLRGVsZXRlQWxpYXMSGy5ob3N0LnYxLkRlbGV0ZUFsaWFzUmVxdWVzdBocLmhvc3QudjEuRGVsZXRlQWxpYXNSZXNwb25zZSIAQoEBCgtjb20uaG9zdC52MUIJSG9zdFByb3RvUAFaKmdpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvaG9zdC92MaICA0hYWKoCB0hvc3QuVjHKAgdIb3N0XFYx4gITSG9zdFxWMVxHUEJNZXRhZGF0YeoCCEhvc3Q6OlYxYgZwcm90bzM");
 
 /**
  * @generated from message host.v1.BrowseFilesRequest
@@ -224,13 +224,72 @@ export const CreateHostResponseSchema: GenMessage<CreateHostResponse> = /*@__PUR
   messageDesc(file_host_v1_host, 12);
 
 /**
- * @generated from message host.v1.EditAliasRequest
+ * @generated from message host.v1.ListAliasRequest
  */
-export type EditAliasRequest = Message<"host.v1.EditAliasRequest"> & {
+export type ListAliasRequest = Message<"host.v1.ListAliasRequest"> & {
+    /**
+     * @generated from field: string host = 1;
+     */
+    host: string;
+};
+
+/**
+ * Describes the message host.v1.ListAliasRequest.
+ * Use `create(ListAliasRequestSchema)` to create a new message.
+ */
+export const ListAliasRequestSchema: GenMessage<ListAliasRequest> = /*@__PURE__*/
+    messageDesc(file_host_v1_host, 13);
+
+/**
+ * @generated from message host.v1.ListAliasResponse
+ */
+export type ListAliasResponse = Message<"host.v1.ListAliasResponse"> & {
+    /**
+     * @generated from field: repeated host.v1.FolderAlias aliases = 1;
+     */
+    aliases: FolderAlias[];
+};
+
+/**
+ * Describes the message host.v1.ListAliasResponse.
+ * Use `create(ListAliasResponseSchema)` to create a new message.
+ */
+export const ListAliasResponseSchema: GenMessage<ListAliasResponse> = /*@__PURE__*/
+    messageDesc(file_host_v1_host, 14);
+
+/**
+ * can either use id or name
+ * prefer id first
+ *
+ * @generated from message host.v1.AliasHost
+ */
+export type AliasHost = Message<"host.v1.AliasHost"> & {
   /**
    * @generated from field: uint32 hostId = 1;
    */
   hostId: number;
+
+    /**
+     * @generated from field: string hostname = 2;
+     */
+    hostname: string;
+};
+
+/**
+ * Describes the message host.v1.AliasHost.
+ * Use `create(AliasHostSchema)` to create a new message.
+ */
+export const AliasHostSchema: GenMessage<AliasHost> = /*@__PURE__*/
+    messageDesc(file_host_v1_host, 15);
+
+/**
+ * @generated from message host.v1.EditAliasRequest
+ */
+export type EditAliasRequest = Message<"host.v1.EditAliasRequest"> & {
+    /**
+     * @generated from field: host.v1.AliasHost host = 1;
+     */
+    host?: AliasHost;
 
   /**
    * @generated from field: host.v1.FolderAlias alias = 2;
@@ -243,7 +302,7 @@ export type EditAliasRequest = Message<"host.v1.EditAliasRequest"> & {
  * Use `create(EditAliasRequestSchema)` to create a new message.
  */
 export const EditAliasRequestSchema: GenMessage<EditAliasRequest> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 13);
+    messageDesc(file_host_v1_host, 16);
 
 /**
  * @generated from message host.v1.EditAliasResponse
@@ -256,16 +315,16 @@ export type EditAliasResponse = Message<"host.v1.EditAliasResponse"> & {
  * Use `create(EditAliasResponseSchema)` to create a new message.
  */
 export const EditAliasResponseSchema: GenMessage<EditAliasResponse> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 14);
+    messageDesc(file_host_v1_host, 17);
 
 /**
  * @generated from message host.v1.AddAliasRequest
  */
 export type AddAliasRequest = Message<"host.v1.AddAliasRequest"> & {
   /**
-   * @generated from field: uint32 hostId = 1;
+   * @generated from field: host.v1.AliasHost host = 1;
    */
-  hostId: number;
+  host?: AliasHost;
 
   /**
    * @generated from field: host.v1.FolderAlias alias = 2;
@@ -278,7 +337,7 @@ export type AddAliasRequest = Message<"host.v1.AddAliasRequest"> & {
  * Use `create(AddAliasRequestSchema)` to create a new message.
  */
 export const AddAliasRequestSchema: GenMessage<AddAliasRequest> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 15);
+    messageDesc(file_host_v1_host, 18);
 
 /**
  * @generated from message host.v1.AddAliasResponse
@@ -291,50 +350,16 @@ export type AddAliasResponse = Message<"host.v1.AddAliasResponse"> & {
  * Use `create(AddAliasResponseSchema)` to create a new message.
  */
 export const AddAliasResponseSchema: GenMessage<AddAliasResponse> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 16);
-
-/**
- * @generated from message host.v1.ListAliasRequest
- */
-export type ListAliasRequest = Message<"host.v1.ListAliasRequest"> & {
-  /**
-   * @generated from field: string host = 1;
-   */
-  host: string;
-};
-
-/**
- * Describes the message host.v1.ListAliasRequest.
- * Use `create(ListAliasRequestSchema)` to create a new message.
- */
-export const ListAliasRequestSchema: GenMessage<ListAliasRequest> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 17);
-
-/**
- * @generated from message host.v1.ListAliasResponse
- */
-export type ListAliasResponse = Message<"host.v1.ListAliasResponse"> & {
-  /**
-   * @generated from field: repeated host.v1.FolderAlias aliases = 1;
-   */
-  aliases: FolderAlias[];
-};
-
-/**
- * Describes the message host.v1.ListAliasResponse.
- * Use `create(ListAliasResponseSchema)` to create a new message.
- */
-export const ListAliasResponseSchema: GenMessage<ListAliasResponse> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 18);
+    messageDesc(file_host_v1_host, 19);
 
 /**
  * @generated from message host.v1.DeleteAliasRequest
  */
 export type DeleteAliasRequest = Message<"host.v1.DeleteAliasRequest"> & {
   /**
-   * @generated from field: uint32 hostId = 1;
+   * @generated from field: host.v1.AliasHost host = 1;
    */
-  hostId: number;
+  host?: AliasHost;
 
   /**
    * @generated from field: string alias = 2;
@@ -347,7 +372,7 @@ export type DeleteAliasRequest = Message<"host.v1.DeleteAliasRequest"> & {
  * Use `create(DeleteAliasRequestSchema)` to create a new message.
  */
 export const DeleteAliasRequestSchema: GenMessage<DeleteAliasRequest> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 19);
+    messageDesc(file_host_v1_host, 20);
 
 /**
  * @generated from message host.v1.DeleteAliasResponse
@@ -360,7 +385,7 @@ export type DeleteAliasResponse = Message<"host.v1.DeleteAliasResponse"> & {
  * Use `create(DeleteAliasResponseSchema)` to create a new message.
  */
 export const DeleteAliasResponseSchema: GenMessage<DeleteAliasResponse> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 20);
+    messageDesc(file_host_v1_host, 21);
 
 /**
  * @generated from message host.v1.ToggleRequest
@@ -382,7 +407,7 @@ export type ToggleRequest = Message<"host.v1.ToggleRequest"> & {
  * Use `create(ToggleRequestSchema)` to create a new message.
  */
 export const ToggleRequestSchema: GenMessage<ToggleRequest> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 21);
+    messageDesc(file_host_v1_host, 22);
 
 /**
  * @generated from message host.v1.ToggleResponse
@@ -395,7 +420,7 @@ export type ToggleResponse = Message<"host.v1.ToggleResponse"> & {
  * Use `create(ToggleResponseSchema)` to create a new message.
  */
 export const ToggleResponseSchema: GenMessage<ToggleResponse> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 22);
+    messageDesc(file_host_v1_host, 23);
 
 /**
  * @generated from message host.v1.FolderAlias
@@ -422,7 +447,7 @@ export type FolderAlias = Message<"host.v1.FolderAlias"> & {
  * Use `create(FolderAliasSchema)` to create a new message.
  */
 export const FolderAliasSchema: GenMessage<FolderAlias> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 23);
+    messageDesc(file_host_v1_host, 24);
 
 /**
  * @generated from message host.v1.SSHConfig
@@ -469,7 +494,7 @@ export type SSHConfig = Message<"host.v1.SSHConfig"> & {
  * Use `create(SSHConfigSchema)` to create a new message.
  */
 export const SSHConfigSchema: GenMessage<SSHConfig> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 24);
+    messageDesc(file_host_v1_host, 25);
 
 /**
  * @generated from message host.v1.Host
@@ -521,7 +546,7 @@ export type Host = Message<"host.v1.Host"> & {
  * Use `create(HostSchema)` to create a new message.
  */
 export const HostSchema: GenMessage<Host> = /*@__PURE__*/
-  messageDesc(file_host_v1_host, 25);
+    messageDesc(file_host_v1_host, 26);
 
 /**
  * @generated from enum host.v1.ClientType

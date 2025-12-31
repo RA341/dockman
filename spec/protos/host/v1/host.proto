@@ -76,21 +76,6 @@ message CreateHostResponse {}
 //////////////////////////////////////////////////////////////////////
 // aliases
 
-message EditAliasRequest {
-  uint32 hostId  = 1;
-  FolderAlias alias = 2;
-}
-
-message EditAliasResponse {}
-
-
-message AddAliasRequest {
-  uint32 hostId  = 1;
-  FolderAlias alias = 2;
-}
-
-message AddAliasResponse {}
-
 message ListAliasRequest {
   string host = 1;
 }
@@ -99,8 +84,29 @@ message ListAliasResponse {
   repeated FolderAlias aliases = 1;
 }
 
-message DeleteAliasRequest {
+// can either use id or name
+// prefer id first
+message AliasHost {
   uint32 hostId  = 1;
+  string hostname = 2;
+}
+
+message EditAliasRequest {
+  AliasHost host = 1;
+  FolderAlias alias = 2;
+}
+
+message EditAliasResponse {}
+
+message AddAliasRequest {
+  AliasHost host = 1;
+  FolderAlias alias = 2;
+}
+
+message AddAliasResponse {}
+
+message DeleteAliasRequest {
+  AliasHost host = 1;
   string alias  = 2;
 }
 

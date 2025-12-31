@@ -17,12 +17,13 @@ import {
 } from '@mui/material';
 import {FileList} from "./components/file-list.tsx";
 import {Close, FolderOffOutlined as ErrorIcon, SettingsOutlined as SettingsIcon} from '@mui/icons-material';
-import ActionBar from "./components/action-bar.tsx";
+import ActionSidebar from "./components/action-sidebar.tsx";
 import CoreComposeEmpty from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
 import {getExt} from "./components/file-icon.tsx";
 import ViewerSqlite from "./components/viewer-sqlite.tsx";
-import TextEditor from "./components/viewer-text.tsx";
+import ViewerText from "./components/viewer-text.tsx";
+import ViewerDockyaml, {formatDockyaml} from "./components/viewer-dockyml.tsx";
 import {useFileComponents, useTerminalTabs} from "./state/terminal.tsx";
 import {TabsProvider, useTabs, useTabsStore} from "../../context/tab-context.tsx";
 import FilesProvider from "../../context/file-context.tsx";
@@ -65,7 +66,7 @@ export const ComposePage = () => {
     const {host, alias} = useFileComponents();
     const navigate = useNavigate();
 
-    if (isLoading) {
+    if (isLoading && aliases.length === 0) {
         return (
             <Box sx={{
                 display: 'flex',
@@ -208,6 +209,8 @@ export const ComposePageInner = () => {
         clearTabs()
     }, [clearTabs, host]);
 
+    console.log("compose nav to ", filename)
+
     return (
         <Box sx={{
             display: 'flex',
@@ -215,7 +218,7 @@ export const ComposePageInner = () => {
             width: '100%',
             overflow: 'hidden'
         }}>
-            <ActionBar/>
+            <ActionSidebar/>
 
             <Box sx={{
                 flexGrow: 1,
@@ -355,10 +358,13 @@ const FileTabBar = () => {
 };
 
 const CoreCompose = () => {
-    const {filename} = useFileComponents()
+    const {host, alias, filename} = useFileComponents()
+
+    if (filename === formatDockyaml(alias, host)) {
+        return <ViewerDockyaml/>
+    }
 
     const ext = getExt(filename!)
-
     const specialFileSupport: Map<string, JSX.Element> = new Map([
         ["db", <ViewerSqlite/>],
     ])
@@ -368,5 +374,5 @@ const CoreCompose = () => {
         return viewer
     }
 
-    return <TextEditor/>;
+    return <ViewerText/>;
 };

@@ -173,8 +173,3 @@ func getFile(c *v1.File, hostname string) (string, error) {
 	}
 	return msg, nil
 }
-
-func (h *Handler) GetDockmanYaml(_ context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
-	conf := h.srv.dy.GetDockmanYaml()
-	return connect.NewResponse(conf.ToProto()), nil
-}

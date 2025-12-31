@@ -27,7 +27,7 @@ const DockerComposeIcon = () => (
     <SvgFromUrl url={'/docker.svg'}/>
 );
 
-const YamlIcon = () => (
+export const YamlIcon = () => (
     <SvgFromUrl url={'/yaml.png'}/>
 );
 

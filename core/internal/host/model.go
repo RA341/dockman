@@ -18,7 +18,7 @@ type ActiveHost struct {
 	SSHClient    *ssh2.Client
 	SFTPClient   *sftp.Client
 
-	FS   *AliasService
+	As   *AliasService
 	Addr string
 }
 

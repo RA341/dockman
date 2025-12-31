@@ -19,7 +19,9 @@ export function getBaseUrl(scope: ApiScope, host?: string): string {
         case 'protected':
             return `${API_BASE_URL}/api/protected`;
         case 'host':
-            if (!host) throw new Error("Host scope requires a hostname");
+            if (!host) {
+                throw new Error("Host scope requires a hostname");
+            }
             return `${API_BASE_URL}/api/protected/${host}`;
         default:
             return API_BASE_URL;

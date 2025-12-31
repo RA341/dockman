@@ -83,7 +83,7 @@ func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
 			return
 		}
 
-		err = va.FS.CreateOrEdit(RootAlias, composeRoot)
+		err = va.As.CreateOrEdit(RootAlias, composeRoot)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to add local Docker config")
 		}
@@ -110,12 +110,12 @@ func (s *Service) ListConnected() []string {
 	return names
 }
 
-func (s *Service) GetFileSystem(host, alias string) (filesystem.FileSystem, error) {
+func (s *Service) GetAlias(host, alias string) (filesystem.FileSystem, error) {
 	val, ok := s.activeClients.Load(host)
 	if !ok {
 		return nil, fmt.Errorf("host %s is not found in connected clients", host)
 	}
-	return val.FS.LoadAlias(alias)
+	return val.As.LoadAlias(alias)
 }
 
 func (s *Service) GetDockerService(name string) (*docker.Service, error) {
@@ -151,7 +151,7 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 				return compose.Host{}, err
 			}
 
-			fs, err := val.FS.LoadAlias(pathAlias)
+			fs, err := val.As.LoadAlias(pathAlias)
 			if err != nil {
 				return compose.Host{}, err
 			}
@@ -178,7 +178,7 @@ func (s *Service) Browse(host string, dir string) ([]BrowseItem, error) {
 		return nil, fmt.Errorf("host not found in connected clients")
 	}
 
-	fs, err := val.FS.LoadDirect("/")
+	fs, err := val.As.LoadDirect("/")
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (s *Service) Add(config *Config, create bool) (err error) {
 	ah.HostId = config.ID
 	ah.Kind = config.Type
 	ah.Addr = config.MachineAddr
-	ah.FS = NewAliasService(
+	ah.As = NewAliasService(
 		s.aliasStore,
 		config.ID,
 		ah.Kind,
@@ -427,4 +427,13 @@ func (s *Service) ListAliases(host string) ([]FolderAlias, error) {
 		return nil, fmt.Errorf("failed to load host '%s': %w", host, err)
 	}
 	return s.aliasStore.List(get.ID)
+}
+
+func (s *Service) getHostID(name string) (uint, error) {
+	get, err := s.store.Get(name)
+	if err != nil {
+		return 0, err
+	}
+
+	return get.ID, nil
 }

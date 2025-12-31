@@ -1,4 +1,4 @@
-package dockman_yaml
+package dockyaml
 
 const dockmanYamlFileYml = ".dockman.yml"
 const dockmanYamlFileYaml = ".dockman.yaml"

@@ -44,6 +44,7 @@ func (s *gormStore) Update(conf *Config) error {
 func (s *gormStore) List() ([]Config, error) {
 	var configs []Config
 	err := s.db.
+		Where("enable = ?", true).
 		Preload("SSHOptions").
 		Preload("FolderAliases").
 		Order("created_at ASC").

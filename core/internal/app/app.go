@@ -13,10 +13,12 @@ import (
 	cleanerrpc "github.com/RA341/dockman/generated/cleaner/v1/v1connect"
 	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
+	dockyamlrpc "github.com/RA341/dockman/generated/dockyaml/v1/v1connect"
 	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
 	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
+
 	mid "github.com/RA341/dockman/internal/app/middleware"
 	"github.com/RA341/dockman/internal/app/ui"
 	"github.com/RA341/dockman/internal/auth"
@@ -24,9 +26,8 @@ import (
 	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/database"
 	"github.com/RA341/dockman/internal/docker"
+	"github.com/RA341/dockman/internal/dockyaml"
 	"github.com/RA341/dockman/internal/files"
-	dockmanYaml "github.com/RA341/dockman/internal/files/dockman_yaml"
-	"github.com/RA341/dockman/internal/git"
 	"github.com/RA341/dockman/internal/host"
 	hostMid "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/internal/info"
@@ -48,6 +49,7 @@ type App struct {
 	UserConfigSrv *config.Service
 	CleanerSrv    *cleaner.Service
 	Viewer        *viewer.Service
+	DockYaml      *dockyaml.Service
 }
 
 func (a *App) VerifyServices() error {
@@ -67,6 +69,8 @@ func (a *App) VerifyServices() error {
 }
 
 func NewApp(conf *config.AppConfig) (app *App) {
+	var err error
+
 	// db and info setup
 	gormDB := database.New(conf.ConfigDir, info.IsDev())
 	userDb := config.NewUserConfigDB(gormDB)
@@ -84,16 +88,15 @@ func NewApp(conf *config.AppConfig) (app *App) {
 		sessionsDB,
 	)
 
-	composeRoot := setupComposeRoot(conf.ComposeRoot)
+	setupComposeRoot(conf.ComposeRoot)
 
 	// docker manager setup
 	sshDb := ssh.NewGormKeyManager(gormDB)
 	machDb := ssh.NewGormMachineManger(gormDB)
 	sshSrv := ssh.NewService(sshDb, machDb)
-	dockYamlSrv := dockmanYaml.NewDockmanYaml(conf.DockYaml, func() string {
-		// todo host aware
-		return conf.ComposeRoot
-	})
+
+	store := dockyaml.NewStore(filepath.Join(conf.ConfigDir, "dockyaml"))
+	dockyamlSrv := dockyaml.New(store)
 
 	aliasStore := host.NewAliasStore(gormDB)
 	hostStore := host.NewStore(gormDB)
@@ -106,15 +109,15 @@ func NewApp(conf *config.AppConfig) (app *App) {
 	)
 
 	fileSrv := files.New(
-		hostManager.GetFileSystem,
-		dockYamlSrv,
+		hostManager.GetAlias,
 		&conf.Perms,
+		dockyamlSrv.GetYaml,
 	)
 
-	err := git.NewMigrator(composeRoot)
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to complete git migration")
-	}
+	//err := git.NewMigrator(composeRoot)
+	//if err != nil {
+	//	log.Fatal().Err(err).Msg("unable to complete git migration")
+	//}
 
 	userConfigSrv := config.NewService(
 		userDb,
@@ -148,6 +151,7 @@ func NewApp(conf *config.AppConfig) (app *App) {
 		File:          fileSrv,
 		HostManager:   hostManager,
 		Info:          infoSrv,
+		DockYaml:      dockyamlSrv,
 		SSH:           sshSrv,
 		UserConfigSrv: userConfigSrv,
 		CleanerSrv:    cleanerSrv,
@@ -350,6 +354,13 @@ func withSubRouter(parent *http.ServeMux, path string, child http.Handler) {
 
 // /api/protected/:host
 func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
+	// dockyaml
+	hostMux.Handle(
+		dockyamlrpc.NewDockyamlServiceHandler(
+			dockyaml.NewHandler(a.DockYaml),
+		),
+	)
+
 	// files
 	hostMux.Handle(
 		filesrpc.NewFileServiceHandler(

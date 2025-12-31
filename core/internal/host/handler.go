@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -21,7 +22,7 @@ func NewHandler(srv *Service) *Handler {
 	}
 }
 
-func (h *Handler) BrowseFiles(ctx context.Context, req *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error) {
+func (h *Handler) BrowseFiles(_ context.Context, req *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error) {
 	dir := req.Msg.Dir
 	host := req.Msg.Host
 
@@ -42,7 +43,7 @@ func (h *Handler) BrowseFiles(ctx context.Context, req *connect.Request[v1.Brows
 	}), nil
 }
 
-func (h *Handler) ToggleClient(ctx context.Context, req *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error) {
+func (h *Handler) ToggleClient(_ context.Context, req *connect.Request[v1.ToggleRequest]) (*connect.Response[v1.ToggleResponse], error) {
 	name := req.Msg.Name
 	tog := req.Msg.Enable
 
@@ -102,17 +103,8 @@ func (h *Handler) DeleteHost(_ context.Context, req *connect.Request[v1.DeleteHo
 	return connect.NewResponse(&v1.DeleteHostResponse{}), nil
 }
 
-func (h *Handler) DeleteAlias(ctx context.Context, c *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
-	hostId := c.Msg.HostId
-	alias := c.Msg.Alias
-
-	err := h.srv.aliasStore.RemoveAlias(uint(hostId), alias)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(&v1.DeleteAliasResponse{}), nil
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// alias stuff
 
 func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAliasRequest]) (*connect.Response[v1.ListAliasResponse], error) {
 	host := req.Msg.Host
@@ -131,26 +123,61 @@ func (h *Handler) ListAlias(_ context.Context, req *connect.Request[v1.ListAlias
 	}), nil
 }
 
+func (h *Handler) ResolveHost(aliasHost *v1.AliasHost) (uint, error) {
+	if aliasHost.HostId != 0 {
+		return uint(aliasHost.HostId), nil
+	}
+
+	if aliasHost.Hostname != "" {
+		return h.srv.getHostID(aliasHost.Hostname)
+	}
+
+	return 0, fmt.Errorf("host id or hostname is empty")
+}
+
 func (h *Handler) AddAlias(_ context.Context, req *connect.Request[v1.AddAliasRequest]) (*connect.Response[v1.AddAliasResponse], error) {
 	alias := req.Msg.Alias.Alias
 	fullpath := req.Msg.Alias.Fullpath
-	hostId := req.Msg.HostId
 
-	err := h.srv.aliasStore.AddAlias(uint(hostId), alias, fullpath)
+	hostId, err := h.ResolveHost(req.Msg.Host)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.srv.aliasStore.AddAlias(uint(hostId), alias, fullpath)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.AddAliasResponse{}), nil
 }
 
-func (h *Handler) EditAlias(ctx context.Context, req *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error) {
+func (h *Handler) DeleteAlias(_ context.Context, req *connect.Request[v1.DeleteAliasRequest]) (*connect.Response[v1.DeleteAliasResponse], error) {
+	hostId, err := h.ResolveHost(req.Msg.Host)
+	if err != nil {
+		return nil, err
+	}
+
+	alias := req.Msg.Alias
+
+	err = h.srv.aliasStore.RemoveAlias(hostId, alias)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.DeleteAliasResponse{}), nil
+}
+
+func (h *Handler) EditAlias(_ context.Context, req *connect.Request[v1.EditAliasRequest]) (*connect.Response[v1.EditAliasResponse], error) {
 	alias := req.Msg.Alias.Alias
 	fullpath := req.Msg.Alias.Fullpath
 	id := req.Msg.Alias.Id
 
-	hostId := req.Msg.HostId
+	hostId, err := h.ResolveHost(req.Msg.Host)
+	if err != nil {
+		return nil, err
+	}
 
-	err := h.srv.aliasStore.EditAlias(uint(hostId), uint(id), &FolderAlias{
+	err = h.srv.aliasStore.EditAlias(hostId, uint(id), &FolderAlias{
 		Alias:    alias,
 		Fullpath: fullpath,
 	})
