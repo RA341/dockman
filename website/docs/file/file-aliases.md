@@ -5,13 +5,12 @@ sidebar_position: 1
 
 # File Aliases
 
-File aliases let you browse and edit files outside your compose root directory.
+File aliases let you browse and edit files in any directory on your host.
 
-Handy for accessing Docker data folders or config files without SSH.
+Handy for accessing Docker data folders or config files without manually SSHing.
 
 **Example use cases:**
 
-- Edit container configs stored in `/var/lib/docker`
 - Modify app data in `/opt/appdata`
 - Access media files in `/mnt/storage`
 
@@ -21,6 +20,12 @@ Handy for accessing Docker data folders or config files without SSH.
 
 Say you want to access `/home/zaphodb/appdata`:
 
+It is recommended to keep both sides of the mount same
+
+```
+- /home/zaphodb/appdata:/home/zaphodb/appdata  # <- your new mount
+```
+
 ```yml
 services:
   dockman:
@@ -29,7 +34,7 @@ services:
       - /home/zaphodb/stacks:/home/zaphodb/stacks
       - /home/zaphodb/config/dockman:/config
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/zaphodb/appdata:/appdata  # <- your new mount
+      - /home/zaphodb/appdata:/home/zaphodb/appdata  # <- your new mount
 ```
 
 **2. Add the alias**
@@ -40,8 +45,8 @@ Head to Settings and create an alias. Use the *container path* (right side of th
 
 **3. Use it**
 
-Your alias now appears in the file explorer dropdown:
+Your alias now appears in the file explorer sidebar:
 
-![dropdown.png](img/dropdown.png)
+![dropdown.png](./img/aliases.png)
 
 Switch between locations anytime. Default is always your compose root.
