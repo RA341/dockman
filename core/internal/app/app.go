@@ -110,7 +110,6 @@ func NewApp(conf *config.AppConfig) (app *App) {
 
 	fileSrv := files.New(
 		hostManager.GetAlias,
-		&conf.Perms,
 		dockyamlSrv.GetYaml,
 	)
 
@@ -435,7 +434,7 @@ func (a *App) withLogger(mux http.Handler) http.Handler {
 
 func (a *App) withAuth(mux http.Handler) http.Handler {
 	if !a.Config.Auth.Enable {
-		if !info.IsDev() {
+		if !info.IsDev() && a.Config.Log.AuthWarning {
 			printAuthWarning()
 		}
 

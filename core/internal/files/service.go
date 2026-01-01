@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RA341/dockman/internal/config"
 	"github.com/RA341/dockman/internal/dockyaml"
 	"github.com/RA341/dockman/internal/files/utils"
 	"github.com/RA341/dockman/internal/host/filesystem"
@@ -27,16 +26,13 @@ type DockyamlProvider func(host string) *dockyaml.DockmanYaml
 type Service struct {
 	Fs      FSProvider
 	dockYml DockyamlProvider
-	config  *config.FilePerms
 }
 
 func New(
 	fs FSProvider,
-	config *config.FilePerms,
 	dockYml DockyamlProvider,
 ) *Service {
 	return &Service{
-		config:  config,
 		Fs:      fs,
 		dockYml: dockYml,
 	}

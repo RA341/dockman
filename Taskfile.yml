@@ -189,15 +189,17 @@ tasks:
       - task dk:b
       - docker run --rm
         -e TZ=America/New_York
+        -e PUID=1000
+        -e PGID=1000
         -e DOCKMAN_LOG_LEVEL=debug
         -e DOCKMAN_LOG_VERBOSE=true
         -e DOCKMAN_LOG_HTTP=false
+        -e DOCKMAN_LOG_WARN=false
         -e DOCKMAN_AUTH_ENABLE=false
         -e DOCKMAN_AUTH_USERNAME=wow
         -e DOCKMAN_AUTH_PASSWORD=wow
         -e DOCKMAN_COMPOSE_ROOT=/.build/docker/compose
         -v /var/run/docker.sock:/var/run/docker.sock
-        -v ./.build/:/.build/
         -v ./.build/docker/compose:/.build/docker/compose
         -v ./.build/docker/config:/config
         -p 8221:8866

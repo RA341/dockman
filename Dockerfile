@@ -54,7 +54,10 @@ RUN curl -SL "https://github.com/docker/compose/releases/download/${COMPOSE_VERS
 
 FROM alpine:latest AS alpine
 
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata su-exec
+
+COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY --from=compose_cli_downloader /download/docker-compose /usr/local/bin/docker-compose
 
@@ -76,4 +79,11 @@ RUN docker-compose version
 
 EXPOSE 8866
 
-ENTRYPOINT ["./dockman"]
+# set default envs so that entrypoint can handle the permissions
+ENV DOCKMAN_UI_PATH=./dist
+ENV DOCKMAN_COMPOSE_ROOT=/compose
+ENV DOCKMAN_CONFIG=/config
+
+ENTRYPOINT ["entrypoint.sh"]
+
+CMD ["./dockman"]
