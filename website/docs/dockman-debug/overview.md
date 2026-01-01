@@ -1,7 +1,7 @@
 # Debugger
 
 :::info
-This feature is available v2.6+
+This feature is available v3+
 :::
 
 Dockman allows you to attach a custom toolkit to any running container. This enables you to `exec` into and inspect
@@ -42,7 +42,7 @@ Don't want to build a custom image? Use [Nixery](https://nixery.dev/) to generat
 fly.
 
 ```text
-# Creates an image containing bash, curl, vim and htop, no need to prebuild stuff
+# Creates an image containing bash, curl, vim and htop, no need to prebuild the image
 nixery.dev/shell/curl/vim/htop
 ```
 
@@ -50,4 +50,3 @@ nixery.dev/shell/curl/vim/htop
 
 * Inspired by the work of [Ivan Velichko (iximiuz)](https://iximiuz.com/en/posts/docker-debug-slim-containers/).
 * Based on the concepts behind [cdebug](https://github.com/iximiuz/cdebug).
-* Go support the dev !!
