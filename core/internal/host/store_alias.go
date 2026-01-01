@@ -8,6 +8,8 @@ type AliasStore interface {
 	AddAlias(hostId uint, alias string, path string) error
 	RemoveAlias(hostId uint, alias string) error
 	EditAlias(hostId uint, id uint, alias *FolderAlias) error
+	//EditAliasByName(hostId uint, name string, alias *FolderAlias) error
+
 	List(hostId uint) ([]FolderAlias, error)
 }
 

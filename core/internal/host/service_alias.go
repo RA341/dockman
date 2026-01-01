@@ -1,33 +1,27 @@
 package host
 
 import (
-	"fmt"
-
 	"github.com/RA341/dockman/internal/host/filesystem"
-	"github.com/pkg/sftp"
 )
 
-type SFTPProvider func() *sftp.Client
+type FSFactory func(root string) filesystem.FileSystem
 
 type AliasService struct {
 	store AliasStore
 
-	hostId       uint
-	kind         ClientType
-	sftpProvider SFTPProvider
+	hostId uint
+	fsFac  FSFactory
 }
 
 func NewAliasService(
 	store AliasStore,
 	hostId uint,
-	kind ClientType,
-	provider SFTPProvider,
+	fsFac FSFactory,
 ) *AliasService {
 	return &AliasService{
-		store:        store,
-		hostId:       hostId,
-		kind:         kind,
-		sftpProvider: provider,
+		store:  store,
+		hostId: hostId,
+		fsFac:  fsFac,
 	}
 }
 
@@ -42,17 +36,8 @@ func (as *AliasService) LoadAlias(alias string) (filesystem.FileSystem, error) {
 
 // LoadDirect loads a filesystem directly without checking db
 func (as *AliasService) LoadDirect(root string) (filesystem.FileSystem, error) {
-	switch as.kind {
-	case SSH:
-		if as.sftpProvider == nil {
-			return nil, fmt.Errorf("SFTP provider is nil, TF did you do")
-		}
-		return filesystem.NewSftp(as.sftpProvider(), root), nil
-	case LOCAL:
-		return filesystem.NewLocal(root), nil
-	default:
-		return nil, fmt.Errorf("unknown host type: %s", as.kind)
-	}
+	// it should not err but in case in the future need to add errs
+	return as.fsFac(root), nil
 }
 
 func (as *AliasService) resolveAlias(alias string) (string, error) {

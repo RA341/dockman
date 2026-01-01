@@ -9,14 +9,13 @@ import (
 
 	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/internal/docker/compose"
-	"github.com/RA341/dockman/internal/files/utils"
+	fUtil "github.com/RA341/dockman/internal/files/utils"
 	"github.com/RA341/dockman/internal/host/filesystem"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/moby/moby/client"
-	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	ssh2 "golang.org/x/crypto/ssh"
 )
@@ -45,8 +44,8 @@ func NewService(
 
 		activeClients: syncmap.Map[string, *ActiveHost]{},
 	}
-	s.LoadAll()
 	s.initLocalDocker(composeRoot, machineAddr)
+	s.LoadAll()
 
 	return s
 }
@@ -56,43 +55,44 @@ const RootAlias = "compose"
 const LocalDocker = "local"
 
 func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
-	var conf Config
-	var create = false
-
 	conf, err := s.store.Get(LocalDocker)
+
+	// Case 1: Create new if it doesn't exist
 	if err != nil {
 		log.Debug().Err(err).Msg("local Docker does not exist, setting up")
 		conf = Config{
-			Name:        LocalDocker,
-			Type:        LOCAL,
-			Enable:      true,
-			MachineAddr: localAddr,
-			FolderAliases: []FolderAlias{
-				{
-					Alias:    RootAlias,
-					Fullpath: composeRoot,
-				},
-			},
+			Name: LocalDocker, Type: LOCAL, Enable: true, MachineAddr: localAddr,
+			FolderAliases: []FolderAlias{{Alias: RootAlias, Fullpath: composeRoot}},
 		}
-		create = true
-	} else {
-		va, ok := s.activeClients.Load(LocalDocker)
-		if !ok {
-			log.Error().Str("localDocker", LocalDocker).
-				Msg("local Docker does not exist, this should NEVER HAPPEN")
-			return
-		}
-
-		err = va.As.CreateOrEdit(RootAlias, composeRoot)
-		if err != nil {
+		if err = s.store.Add(&conf); err != nil {
 			log.Fatal().Err(err).Msg("failed to add local Docker config")
 		}
+		return
 	}
 
-	err = s.Add(&conf, create)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to add local Docker config")
+	// Case 2: Update existing
+	// Handle Alias Upsert (Add or Edit)
+	var alias FolderAlias
+	if alias, err = s.aliasStore.Get(conf.ID, RootAlias); err != nil {
+		err = s.aliasStore.AddAlias(conf.ID, RootAlias, composeRoot)
+	} else {
+		alias.Fullpath = composeRoot
+		err = s.aliasStore.EditAlias(conf.ID, alias.ID, &alias)
 	}
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to update alias")
+	}
+
+	// Update Main Config
+	conf.MachineAddr = localAddr
+	conf.FolderAliases = nil
+	if err = s.store.Update(&conf); err != nil {
+		log.Fatal().Err(err).Msg("failed to update config")
+	}
+}
+
+func (s *Service) ListEnabled() ([]Config, error) {
+	return s.store.ListEnabled()
 }
 
 func (s *Service) ListAll() ([]Config, error) {
@@ -146,7 +146,7 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 		val.SSHClient,
 		func(filename string, host string) (compose.Host, error) {
 			strings.Split(filename, "/")
-			filename, pathAlias, err := utils.ExtractMeta(filename)
+			filename, pathAlias, err := fUtil.ExtractMeta(filename)
 			if err != nil {
 				return compose.Host{}, err
 			}
@@ -242,7 +242,7 @@ func (s *Service) Toggle(hostname string, enabled bool) error {
 }
 
 func (s *Service) LoadAll() {
-	all, err := s.store.ListEnabled()
+	all, err := s.ListEnabled()
 	if err != nil {
 		log.Error().Err(err).Msg("unable to load hosts")
 		return
@@ -289,17 +289,14 @@ func (s *Service) Add(config *Config, create bool) (err error) {
 		return nil
 	}
 
-	ah.HostId = config.ID
+	fsFactory, err := loadFSFactory(config, ah)
+	if err != nil {
+		return err
+	}
+
 	ah.Kind = config.Type
 	ah.Addr = config.MachineAddr
-	ah.As = NewAliasService(
-		s.aliasStore,
-		config.ID,
-		ah.Kind,
-		func() *sftp.Client {
-			return ah.SFTPClient
-		},
-	)
+	ah.As = NewAliasService(s.aliasStore, config.ID, fsFactory)
 
 	val, ok := s.activeClients.LoadAndDelete(config.Name)
 	if ok {
@@ -312,6 +309,22 @@ func (s *Service) Add(config *Config, create bool) (err error) {
 	)
 
 	return err
+}
+
+// fSFactoryFactory lmao
+func loadFSFactory(config *Config, ah ActiveHost) (FSFactory, error) {
+	switch config.Type {
+	case LOCAL:
+		return func(root string) filesystem.FileSystem {
+			return filesystem.NewLocal(root)
+		}, nil
+	case SSH:
+		return func(root string) filesystem.FileSystem {
+			return filesystem.NewSftp(ah.SFTPClient, root)
+		}, nil
+	default:
+		return nil, fmt.Errorf("could not load filesystem unknown host type: %s", config.Type)
+	}
 }
 
 func (s *Service) loadHost(config *Config, create bool) (ah ActiveHost, err error) {
