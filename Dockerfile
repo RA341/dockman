@@ -17,29 +17,26 @@ WORKDIR /core
 # for sqlite
 ENV CGO_ENABLED=1
 
-RUN apk update && apk add --no-cache gcc musl-dev
+RUN apk update && apk add --no-cache gcc musl-dev git
 
 COPY core/go.mod core/go.sum ./
 
 RUN go mod download
 
+COPY .git .git
 COPY core/ .
 
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
-
-ARG VERSION=dev
-ARG COMMIT_INFO=unknown
-ARG BRANCH=unknown
 ARG INFO_PACKAGE=github.com/RA341/dockman/internal/info
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w \
              -X ${INFO_PACKAGE}.Flavour=Docker \
-             -X ${INFO_PACKAGE}.Version=${VERSION} \
-             -X ${INFO_PACKAGE}.CommitInfo=${COMMIT_INFO} \
+             -X ${INFO_PACKAGE}.Version=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "dev") \
+             -X ${INFO_PACKAGE}.CommitInfo=$(git rev-parse HEAD) \
              -X ${INFO_PACKAGE}.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-             -X ${INFO_PACKAGE}.Branch=${BRANCH}" \
+             -X ${INFO_PACKAGE}.Branch=$(git rev-parse --abbrev-ref HEAD)" \
     -o dockman "./cmd/server"
 
 FROM alpine:latest AS compose_cli_downloader

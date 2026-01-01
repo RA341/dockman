@@ -463,7 +463,7 @@ func printAuthWarning() {
 		"",
 		argos.Colorize("Why this matters:", argos.ColorYellow),
 		argos.Colorize("Dockman has root-level access to manage", argos.ColorCyan),
-		argos.Colorize("Docker containers and system resources.", argos.ColorCyan),
+		argos.Colorize("Docker containers and resources.", argos.ColorCyan),
 		"",
 		argos.Colorize("Guide:", argos.ColorYellow),
 		argos.Colorize("https://dockman.radn.dev/docs/authentication/", argos.ColorGreen),

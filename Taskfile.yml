@@ -102,8 +102,8 @@ tasks:
       OUT_DIR: ../{{.CORE_DIR}}{{.GO_CMD_DIR}}/{{.CMD}}
     desc: "Builds ui and copies for embed binary. Usage: task ui:<go cmd target>"
     sources:
-    - "**/*.ts"
-    - "**/*.tsx"
+      - "**/*.ts"
+      - "**/*.tsx"
     cmds:
       - task: ui
       - rm -rf {{.OUT_DIR}}/dist
@@ -173,22 +173,20 @@ tasks:
     cmds:
       - task: go:{{.CMD_NAME}}
 
-  dk:b:*:
-    desc: "Builds the main dockman image for a specific target. Usage: task dk:<target>"
-    vars:
-      TARGET: "{{index .MATCH 0}}"
+  dk:
+    desc: "Builds and runs the main dockman image. Usage: task dk"
     cmds:
-      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}}
-    preconditions:
-      - sh: 'test -n "{{.TARGET}}"'
-        msg: "The 'target' variable must be provided. Usage: task dk.<target-name>"
+      - task dk:r
 
-  dk:*:
-    desc: "Builds and runs the main dockman image for a specific target. Usage: task dk:r:<target>"
-    vars:
-      TARGET: "{{index .MATCH 0}}"
+  dk:b:
+    desc: "Builds the main dockman image for a specific target. Usage: task dk:b"
     cmds:
-      - task dk:b:{{.TARGET}}
+      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}
+
+  dk:r:
+    desc: "Builds and runs the main dockman image for a specific target. Usage: task dk:r:<target>"
+    cmds:
+      - task dk:b
       - docker run --rm
         -e TZ=America/New_York
         -e DOCKMAN_LOG_LEVEL=debug
@@ -203,17 +201,7 @@ tasks:
         -v ./.build/docker/compose:/.build/docker/compose
         -v ./.build/docker/config:/config
         -p 8221:8866
-        {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}}
-    preconditions:
-      - sh: 'test -n "{{.TARGET}}"'
-        msg: "The 'target' variable must be provided. Usage: task dk:r.<target-name>"
-
-  dk:
-    desc: "Builds and runs the main dockman image. Usage: task dk"
-    vars:
-      TARGET: "alpine"
-    cmds:
-      - task dk:{{.TARGET}}
+        {{.DOCKMAN_IMAGE_BASE}}
 
   dk:up:
     desc: "Builds the updater image. Usage: task dk:<target>"
