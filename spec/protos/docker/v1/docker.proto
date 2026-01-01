@@ -89,7 +89,6 @@ message NetworkContainerInspect {
 }
 
 message ImageInspectRequest {
-
   string imageId = 1;
 }
 
@@ -110,6 +109,7 @@ message ImageLayer {
   string LayerId = 3;
   string cmd = 1;
   string size = 2;
+  string totalSizeAtLayer = 4;
 }
 
 message ComposeValidateResponse {

@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/docker/v1"
@@ -135,11 +136,19 @@ func (h *Handler) ImageInspect(ctx context.Context, req *connect.Request[v1.Imag
 	}
 
 	var layers = make([]*v1.ImageLayer, 0, len(history.Items))
+	var totalSize int64 = 0
+	slices.Reverse(history.Items)
 	for _, sd := range history.Items {
-		layers = append(layers, &v1.ImageLayer{
+		totalSize += sd.Size
+		el := &v1.ImageLayer{
 			Cmd:  sd.CreatedBy,
 			Size: humanize.Bytes(uint64(sd.Size)),
-		})
+		}
+		if sd.Size != 0 {
+			el.TotalSizeAtLayer = humanize.Bytes(uint64(totalSize))
+		}
+
+		layers = append(layers, el)
 	}
 
 	var name string

@@ -28,6 +28,11 @@ export function FileList() {
         fileCreate(`${alias}`)
     }, [alias]);
 
+    const editUrl = useEditorUrl()
+    function showDockyaml() {
+        nav(editUrl(formatDockyaml(alias, host)))
+    }
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if ((event.altKey) && event.key === 'r') {
@@ -41,6 +46,10 @@ export function FileList() {
                 event.preventDefault()
                 showFileAdd()
             }
+            if ((event.altKey) && event.key === 'e') {
+                event.preventDefault()
+                showDockyaml()
+            }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => {
@@ -50,11 +59,6 @@ export function FileList() {
     }, [])
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
-    const editUrl = useEditorUrl()
-
-    function openDockyaml() {
-        nav(editUrl(formatDockyaml(alias, host)))
-    }
 
     return (
         <>
@@ -117,7 +121,7 @@ export function FileList() {
 
                         {/* Added an extra icon just to match your snippet's count */}
                         <Tooltip arrow title={<ShortcutFormatter title="Edit dockman.yaml" keyCombo={["ALT", "E"]}/>}>
-                            <IconButton size="small" onClick={openDockyaml} color="success">
+                            <IconButton size="small" onClick={showDockyaml} color="success">
                                 <YamlIcon/>
                             </IconButton>
                         </Tooltip>

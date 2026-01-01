@@ -1,15 +1,16 @@
-import {useParams} from "react-router-dom";
+import {useNavigate, useParams} from "react-router-dom";
 import {useCallback, useEffect, useState} from "react";
 import {callRPC, useHostClient} from "../../lib/api.ts";
 import {DockerService, type ImageInspect} from "../../gen/docker/v1/docker_pb.ts";
 import {
     Alert,
     Box,
-    Button,
+    Breadcrumbs,
     Chip,
     CircularProgress,
     Divider,
     IconButton,
+    Link as MuiLink,
     Paper,
     Stack,
     Table,
@@ -23,349 +24,351 @@ import {
 } from '@mui/material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import ImageSearchIcon from '@mui/icons-material/ImageSearch';
-import StorageIcon from '@mui/icons-material/Storage';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import MemoryIcon from '@mui/icons-material/Memory';
-import {ArrowBack, ContentCopy} from "@mui/icons-material";
-
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
+import {ArrowBack, HistoryOutlined} from "@mui/icons-material";
 
 const ImageInspectPage = () => {
-    const dockerService = useHostClient(DockerService)
-    const {id} = useParams()
+    const dockerService = useHostClient(DockerService);
+    const {id} = useParams();
+    const navigate = useNavigate();
 
-    const [inspect, setInspect] = useState<ImageInspect | null>(null)
-    const [err, setErr] = useState("")
-    const [loading, setLoading] = useState(false)
+    const [inspect, setInspect] = useState<ImageInspect | null>(null);
+    const [err, setErr] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
-        setLoading(true)
-        setErr("")
-
-        const {val, err} = await callRPC(() => dockerService.imageInspect({imageId: id}))
-        if (err) {
-            setErr(err)
-        } else {
-            setInspect(val?.inspect ?? null)
-        }
-
-        setLoading(false)
+        setLoading(true);
+        setErr("");
+        const {val, err} = await callRPC(() => dockerService.imageInspect({imageId: id}));
+        if (err) setErr(err);
+        else setInspect(val?.inspect ?? null);
+        setLoading(false);
     }, [dockerService, id]);
 
     useEffect(() => {
-        fetchData().then()
+        fetchData();
     }, [fetchData]);
 
-    const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text).then();
-    };
-
     return (
-        <Paper
-            elevation={0}
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                width: '100%',
-                borderRadius: 0,
-                overflow: 'hidden',
-                ...scrollbarStyles
-            }}
-        >
+        <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+            overflow: 'hidden'
+        }}>
+            <Paper
+                elevation={0}
+                square
+                sx={{
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    py: 2, px: 3, flexShrink: 0
+                }}
+            >
+                <Stack direction="row" alignItems="center">
+                    <Box>
+                        <Breadcrumbs aria-label="breadcrumb" sx={{mb: 0.5}}>
+                            <MuiLink underline="hover" color="inherit" sx={{cursor: 'pointer', fontSize: '0.75rem'}}
+                                     onClick={() => navigate(-1)}>
+                                Images
+                            </MuiLink>
+                            <Typography color="text.primary"
+                                        sx={{fontSize: '0.75rem', fontWeight: 700}}>Inspect</Typography>
+                        </Breadcrumbs>
 
-            <Box sx={{
-                p: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: 1,
-                borderColor: 'divider',
-                bgcolor: 'background.default'
-            }}>
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-                    <IconButton
-                        onClick={() => {
-                            history.back();
-                        }}
-                        title="Back to Images"
-                    >
-                        <ArrowBack/>
-                    </IconButton>
-                    <ImageSearchIcon color="primary"/>
-                    <Typography variant="h6" component="h2">
-                        Inspect Image
-                    </Typography>
-                </Box>
-                <IconButton
-                    onClick={fetchData}
-                    disabled={loading}
-                    title="Refresh Data"
-                >
-                    <RefreshIcon/>
-                </IconButton>
-            </Box>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <IconButton onClick={() => navigate(-1)} size="small"
+                                        sx={{border: '1px solid', borderColor: 'divider'}}>
+                                <ArrowBack fontSize="small"/>
+                            </IconButton>
+                            <Box sx={{
+                                p: 1,
+                                bgcolor: 'primary.lighter',
+                                borderRadius: 1.5,
+                                color: 'primary.main',
+                                display: 'flex'
+                            }}>
+                                <ImageOutlinedIcon fontSize="small"/>
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" sx={{fontWeight: 800, lineHeight: 1.2}}>
+                                    {inspect?.name?.split(':')[0] || 'Image Manifest'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{fontFamily: 'monospace'}}>
+                                    {id?.substring(0, 12)}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </Box>
 
-            <Box sx={{
-                p: 3,
-                flexGrow: 1,
-                overflow: 'auto',
-                position: 'relative'
-            }}>
+                    <Tooltip title="Refresh Manifest">
+                        <IconButton onClick={fetchData} disabled={loading}
+                                    sx={{border: '1px solid', borderColor: 'divider'}}>
+                            <RefreshIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
+            </Paper>
 
-
-                {loading && (
+            <Box sx={{p: 3, flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 3}}>
+                {loading ? (
                     <Box sx={{
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        height: '100%',
+                        py: 10,
                         gap: 2
                     }}>
-                        <CircularProgress size={40} thickness={4}/>
-                        <Typography variant="h6" color="text.secondary">
-                            Loading...
-                        </Typography>
+                        <CircularProgress size={32} thickness={5}/>
+                        <Typography variant="body2" color="text.secondary" sx={{fontWeight: 600}}>Analyzing image
+                            layers...</Typography>
                     </Box>
-                )}
-
-
-                {!loading && err && (
-                    <Box sx={{display: 'flex', justifyContent: 'center', pt: 4}}>
-                        <Alert
-                            severity="error"
+                ) : err ? (
+                    <Alert severity="error" variant="outlined" sx={{borderRadius: 2}}>{err}</Alert>
+                ) : inspect && (
+                    <>
+                        {/* Summary Info Cards */}
+                        {/* Unified Image Summary Card */}
+                        <Paper
                             variant="outlined"
-                            sx={{fontSize: '1rem'}}
-                            action={
-                                <Button color="inherit" size="large" onClick={fetchData}>
-                                    Retry
-                                </Button>
-                            }
+                            sx={{
+                                p: 2.5,
+                                borderRadius: 3,
+                                bgcolor: 'background.paper',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                            }}
                         >
-                            Error: {err}
-                        </Alert>
-                    </Box>
-                )}
-
-
-                {!loading && !err && !inspect && (
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%',
-                        opacity: 0.5
-                    }}>
-                        <ErrorOutlineIcon sx={{fontSize: 60, mb: 2}}/>
-                        <Typography variant="h5">No info found</Typography>
-                    </Box>
-                )}
-
-                {!loading && !err && inspect && (
-                    <Stack spacing={3}>
-                        <Paper variant="outlined" sx={{p: 3}}>
-                            <Typography variant="h6" gutterBottom sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                <ImageSearchIcon color="primary"/>
-                                Image Details
-                            </Typography>
-                            <Divider sx={{my: 2}}/>
-
-                            <Stack spacing={2}>
+                            <Stack spacing={2.5}>
+                                {/* Top Section: Identification */}
                                 <Box>
-                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                        Name
+                                    <Typography variant="overline" sx={{
+                                        color: 'text.secondary',
+                                        fontWeight: 800,
+                                        mb: 1.5,
+                                        display: 'block'
+                                    }}>
+                                        Image Identity
                                     </Typography>
-                                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                        <Typography variant="body1" sx={{fontFamily: 'monospace'}}>
-                                            {inspect.name || 'N/A'}
-                                        </Typography>
-                                        {inspect.name && (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleCopy(inspect.name)}
-                                                title="Copy name"
-                                            >
-                                                <ContentCopy fontSize="small"/>
-                                            </IconButton>
-                                        )}
-                                    </Box>
+                                    <Stack spacing={2}>
+                                        <DetailRow label="Full Repository" value={inspect.name} mono/>
+                                        <DetailRow label="Image ID" value={inspect.id} mono/>
+                                    </Stack>
                                 </Box>
 
+                                <Divider sx={{borderStyle: 'dashed'}}/>
+
+                                {/* Bottom Section: Technical Specs */}
                                 <Box>
-                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                        ID
+                                    <Typography variant="overline" sx={{
+                                        color: 'text.secondary',
+                                        fontWeight: 800,
+                                        mb: 1.5,
+                                        display: 'block'
+                                    }}>
+                                        Specifications
                                     </Typography>
-                                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                        <Typography variant="body1" sx={{fontFamily: 'monospace'}}>
-                                            {inspect.id || 'N/A'}
-                                        </Typography>
-                                        {inspect.id && (
-                                            <IconButton
+                                    <Stack direction="row" spacing={6} alignItems="center">
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled" sx={{
+                                                fontWeight: 700,
+                                                display: 'block',
+                                                mb: 0.5
+                                            }}>SIZE</Typography>
+                                            <Typography variant="body2" sx={{
+                                                fontWeight: 800,
+                                                fontFamily: 'monospace',
+                                                color: 'primary.main'
+                                            }}>
+                                                {inspect.size}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled" sx={{
+                                                fontWeight: 700,
+                                                display: 'block',
+                                                mb: 0.5
+                                            }}>ARCHITECTURE</Typography>
+                                            <Chip
+                                                label={inspect.arch}
                                                 size="small"
-                                                onClick={() => handleCopy(inspect.id)}
-                                                title="Copy ID"
-                                            >
-                                                <ContentCopy fontSize="small"/>
-                                            </IconButton>
-                                        )}
-                                    </Box>
-                                </Box>
+                                                variant="outlined"
+                                                sx={{height: 20, fontSize: '0.65rem', fontWeight: 700, borderRadius: 1}}
+                                            />
+                                        </Box>
 
-                                <Box sx={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                                    gap: 2,
-                                    pt: 1
-                                }}>
-                                    <Box>
-                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom
-                                                    sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
-                                            <StorageIcon fontSize="small"/>
-                                            Size
-                                        </Typography>
-                                        <Chip label={inspect.size || 'N/A'} color="primary" variant="outlined"/>
-                                    </Box>
-
-                                    <Box>
-                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom
-                                                    sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
-                                            <MemoryIcon fontSize="small"/>
-                                            Architecture
-                                        </Typography>
-                                        <Chip label={inspect.arch || 'N/A'} color="secondary" variant="outlined"/>
-                                    </Box>
-
-                                    <Box>
-                                        <Typography variant="subtitle2" color="text.secondary" gutterBottom
-                                                    sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
-                                            <AccessTimeIcon fontSize="small"/>
-                                            Created
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            {inspect.createdIso ? new Date(inspect.createdIso).toLocaleString() : 'N/A'}
-                                        </Typography>
-                                    </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled"
+                                                        sx={{fontWeight: 700, display: 'block', mb: 0.5}}>CREATED
+                                                ON</Typography>
+                                            <Typography variant="body2" sx={{fontWeight: 600}}>
+                                                {inspect.createdIso ? new Date(inspect.createdIso).toLocaleDateString(undefined, {dateStyle: 'medium'}) : 'N/A'}
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
                                 </Box>
                             </Stack>
                         </Paper>
 
-                        <Paper variant="outlined" sx={{p: 3}}>
-                            <Typography variant="h6" gutterBottom sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                <StorageIcon color="primary"/>
-                                Layers ({inspect.layers?.length || 0})
-                            </Typography>
-                            <Divider sx={{my: 2}}/>
+                        {/* Layers Table */}
+                        <Paper variant="outlined"
+                               sx={{
+                                   // width: 800,
+                                   borderRadius: 3,
+                                   overflow: 'hidden',
+                                   display: 'flex',
+                                   flexDirection: 'column'
+                               }}>
+                            <Box sx={{
+                                p: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                bgcolor: 'background.paper'
+                            }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <HistoryOutlined sx={{fontSize: 18, color: 'text.disabled'}}/>
+                                    <Typography variant="subtitle2" sx={{fontWeight: 800}}>History Layers</Typography>
+                                    <Chip
+                                        label={`${inspect.layers?.length || 0} layers`}
+                                        size="small"
+                                        color="info"
+                                        sx={{height: 20, fontSize: '0.65rem', fontWeight: 700}}
+                                    />
+                                </Stack>
+                            </Box>
 
-                            {inspect.layers && inspect.layers.length > 0 ? (
-                                <TableContainer sx={{width: 'fit-content', maxWidth: '100%'}}>
-                                    <Table size="small" sx={{width: 'auto'}}>
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}>Layer
-                                                    Order
+                            <TableContainer sx={{...scrollbarStyles}}>
+                                <Table size="small" stickyHeader
+                                       sx={{tableLayout: 'fixed'}}> {/* Added fixed layout for strict width control */}
+                                    <TableHead>
+                                        <TableRow>
+                                            {/* Fixed small widths for metadata */}
+                                            <TableCell sx={{...headerStyles, width: 50}}>#</TableCell>
+                                            <TableCell sx={{...headerStyles, width: 120}}>Layer Size</TableCell>
+                                            <TableCell sx={{...headerStyles, width: 150}}>Cumulative</TableCell>
+                                            {/* Max width on the header */}
+                                            <TableCell sx={{...headerStyles, maxWidth: '500px'}}>Cmd</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {inspect.layers?.map((layer, idx) => (
+                                            <TableRow key={idx} hover>
+                                                <TableCell sx={{
+                                                    color: 'text.disabled',
+                                                    fontFamily: 'monospace',
+                                                    fontSize: '0.7rem'
+                                                }}>
+                                                    {idx}
                                                 </TableCell>
-                                                <TableCell
-                                                    sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}
-                                                    align="right">
-                                                    Size
+                                                <TableCell>
+                                                    <LayerSizeChip size={layer.size}/>
                                                 </TableCell>
-                                                <TableCell sx={{fontWeight: 'bold', whiteSpace: 'nowrap'}}>
-                                                    Command
+                                                <TableCell sx={{
+                                                    color: 'text.secondary',
+                                                    fontFamily: 'monospace',
+                                                    fontSize: '0.75rem'
+                                                }}>
+                                                    {layer.totalSizeAtLayer || '--'}
                                                 </TableCell>
+                                                {/* The Cell component now handles its own internal constraints */}
+                                                <DockerCommandCell command={layer.cmd || ''}/>
                                             </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {inspect.layers.reverse().map((layer, idx) => (
-                                                <TableRow
-                                                    key={layer.LayerId || idx}
-                                                    hover
-                                                    sx={{'&:last-child td, &:last-child th': {border: 0}}}
-                                                >
-                                                    <TableCell sx={{
-                                                        fontFamily: 'monospace',
-                                                        fontSize: '0.85rem',
-                                                        whiteSpace: 'nowrap'
-                                                    }}>
-                                                        {idx}
-                                                    </TableCell>
-                                                    <TableCell align="right" sx={{whiteSpace: 'nowrap'}}>
-                                                        <Chip
-                                                            label={layer.size || '0'}
-                                                            size="small"
-                                                            variant="outlined"
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell sx={{fontFamily: 'monospace', fontSize: '0.85rem'}}>
-                                                        <DockerCommandCell layer={layer}/>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            ) : (
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    py: 4,
-                                    opacity: 0.5
-                                }}>
-                                    <Typography variant="body1">No layers found</Typography>
-                                </Box>
-                            )}
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
                         </Paper>
-                    </Stack>
+                    </>
                 )}
             </Box>
-        </Paper>
+        </Box>
     );
 };
 
-// Helper to clean up the messy Docker history command string
-const formatDockerCmd = (cmd: string) => {
-    if (!cmd) return {instruction: 'N/A', args: ''};
+const headerStyles = {
+    fontWeight: 700,
+    fontSize: '0.65rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    py: 1.5
+};
 
-    // Remove the common prefix added by Docker for metadata-only layers
-    const cleanCmd = cmd.replace(/\/bin\/sh -c #\(nop\)\s+/g, '');
+const DetailRow = ({label, value, mono}: { label: string, value: string, mono?: boolean }) => (
+    <Box>
+        <Typography variant="caption" sx={{
+            color: 'text.disabled',
+            fontWeight: 700,
+            fontSize: '0.6rem',
+            textTransform: 'uppercase'
+        }}>{label}</Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="body2" sx={{
+                fontWeight: 600,
+                fontFamily: mono ? 'monospace' : 'inherit',
+                fontSize: mono ? '0.75rem' : '0.85rem',
+                wordBreak: 'break-all'
+            }}>
+                {value || 'N/A'}
+            </Typography>
+        </Stack>
+    </Box>
+);
 
-    // Split the instruction (e.g., RUN, CMD) from the rest
+const LayerSizeChip = ({size}: { size: string }) => {
+    const isZero = !size || size.startsWith("0");
+    return (
+        <Chip
+            label={size || '0 B'}
+            size="small"
+            variant="outlined"
+            color={isZero ? "default" : "success"}
+            sx={{
+                height: 18,
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                opacity: isZero ? 0.5 : 1,
+                bgcolor: isZero ? 'transparent' : 'success.lighter'
+            }}
+        />
+    );
+};
+
+const DockerCommandCell = ({ command }: { command: string }) => {
+    const cleanCmd = command.replace(/\/bin\/sh -c #\(nop\)\s+/g, '');
     const parts = cleanCmd.split(/\s+/);
     const instruction = parts[0]?.toUpperCase();
     const args = parts.slice(1).join(' ');
 
-    return {instruction, args};
-};
-
-export function DockerCommandCell({layer}: { layer: { cmd: string } }) {
-    const {instruction, args} = formatDockerCmd(layer.cmd);
-
     return (
-        <TableCell sx={{py: 1, verticalAlign: 'top'}}>
-            <Tooltip title={layer.cmd} placement="top" arrow>
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
+        <TableCell
+            sx={{
+                maxWidth: '500px', // Set your desired max width here
+                overflow: 'hidden',
+                py: 1
+            }}
+        >
+            <Stack spacing={0}>
+                <Typography
+                    variant="caption"
+                    sx={{
+                        color: 'primary.main',
+                        fontWeight: 800,
+                        fontFamily: 'monospace',
+                        fontSize: '0.7rem',
+                        lineHeight: 1
+                    }}
+                >
+                    {instruction}
+                </Typography>
+
+                <Tooltip title={args} placement="top" arrow>
                     <Typography
                         variant="caption"
                         sx={{
-                            fontWeight: 'bold',
-                            color: 'primary.main',
                             fontFamily: 'monospace',
-                            fontSize: '0.7rem',
-                            letterSpacing: 1
-                        }}
-                    >
-                        {instruction}
-                    </Typography>
-
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.85rem',
-                            maxWidth: '100vw',
                             color: 'text.secondary',
                             lineHeight: 1.4,
                             // Wrap long lines but keep them readable
@@ -378,10 +381,10 @@ export function DockerCommandCell({layer}: { layer: { cmd: string } }) {
                     >
                         {args}
                     </Typography>
-                </Box>
-            </Tooltip>
+                </Tooltip>
+            </Stack>
         </TableCell>
     );
-}
+};
 
 export default ImageInspectPage;
