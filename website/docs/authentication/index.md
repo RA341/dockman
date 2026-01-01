@@ -39,13 +39,13 @@ or [Authentik](https://goauthentik.io/)).
 Create a new application in your OIDC provider. When asked for the **Callback** or **Redirect URL**, use the following
 format:
 
-In dockman v3+ use
+#### v3+ use
+
+Note the `/api` is added
 
 `http://<your-dockman-url>/api/auth/login/oidc/callback`
 
-In dockman v2 use
-
-Note the `/api` is removed
+#### v2 use
 
 `http://<your-dockman-url>/auth/login/oidc/callback`
 
