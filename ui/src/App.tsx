@@ -41,12 +41,6 @@ import {enableMapSet} from "immer";
 import {SettingsOutlined as SettingsIcon} from '@mui/icons-material';
 import FolderIcon from "@mui/icons-material/Folder";
 
-function DockmanYamlEditor() {
-    return <div>
-        Dockman taml page
-    </div>
-}
-
 export function App() {
     enableMapSet()
 
@@ -70,7 +64,6 @@ export function App() {
 
                                         <Route path="files" element={<FilesLayout/>}>
                                             <Route index element={<FileIndexRedirect/>}/>
-                                            <Route path=".dockman.yml" element={<DockmanYamlEditor/>}/>
                                             <Route path="*" element={<ComposePage/>}/>
                                         </Route>
 

@@ -62,7 +62,7 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
         }
 
         setIsLoading(false)
-    }, [host])
+    }, [host, hostmanager])
 
     const addAlias = async (alias: string, host: number, fullpath: string) => {
         const {err} = await callRPC(() => hostmanager.addAlias({alias: {alias, fullpath, id: host}}))
@@ -87,8 +87,8 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
     const value = {
         aliases,
         isLoading,
-        addAlias: addAlias,
-        deleteAlias: deleteAlias,
+        addAlias,
+        deleteAlias,
         listAlias: list,
         setAlias,
         clearAlias,

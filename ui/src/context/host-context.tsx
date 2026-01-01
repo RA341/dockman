@@ -54,10 +54,10 @@ function HostProvider({children}: { children: ReactNode }) {
 
     const setHost = (host: string) => {
         // Example: "/local/containers" -> ["", "local", "containers"]
-        const segments = pathname.split('/');
+        // "/local/files/compose" -> ["", "local", "files"]
+        const segments = pathname.split('/').slice(0, 3);
         // Replace the host segment (which is index 1)
         segments[1] = host;
-        // Example: "/remote/containers"
         const newPath = segments.join('/');
         nav(newPath);
     }

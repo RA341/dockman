@@ -20,6 +20,8 @@ function DockyamlViewer() {
     const {showError} = useSnackbar();
     const {filename} = useFileComponents();
 
+    const {fetchDockmanYaml} = useConfig()
+
     const [contents, setContents] = useState<string>("");
     const [loading, setLoading] = useState(true); // Start as true for initial load
     const [err, setErr] = useState("");
@@ -94,8 +96,6 @@ function DockyamlViewer() {
             </Box>
         );
     }
-
-    const {fetchDockmanYaml} = useConfig()
 
     return (
         <Box sx={{
