@@ -220,6 +220,7 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                     ) : (
                         <Switch
                             checked={host.enable}
+                            onClick={(e) => e.stopPropagation()}
                             onChange={async event => {
                                 setIsToggling(true)
                                 await onToggle(event.target.checked)
@@ -249,7 +250,10 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Remove Host">
-                            <IconButton size="small" color="error" onClick={onDelete}>
+                            <IconButton size="small" color="error" onClick={async event => {
+                                event.stopPropagation()
+                                onDelete()
+                            }}>
                                 <DeleteOutline fontSize="small"/>
                             </IconButton>
                         </Tooltip>

@@ -1,24 +1,10 @@
 import {type JSX, useEffect, useMemo} from 'react';
 import {Navigate, Outlet, useNavigate} from 'react-router-dom';
-import {
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    IconButton,
-    MenuItem,
-    Paper,
-    Stack,
-    Tab,
-    Tabs,
-    TextField,
-    Tooltip,
-    Typography
-} from '@mui/material';
+import {Box, CircularProgress, IconButton, Tab, Tabs, Tooltip, Typography} from '@mui/material';
 import {FileList} from "./components/file-list.tsx";
-import {Close, FolderOffOutlined as ErrorIcon, SettingsOutlined as SettingsIcon} from '@mui/icons-material';
+import {Close} from '@mui/icons-material';
 import ActionSidebar from "./components/action-sidebar.tsx";
-import CoreComposeEmpty from "./compose-empty.tsx";
+import CoreComposeEmpty, {InvalidAlias} from "./compose-empty.tsx";
 import {LogsPanel} from "./components/logs-panel.tsx";
 import {getExt} from "./components/file-icon.tsx";
 import ViewerSqlite from "./components/viewer-sqlite.tsx";
@@ -33,8 +19,8 @@ import FileDelete from "./dialogs/file-delete.tsx";
 import FileRename from "./dialogs/file-rename.tsx";
 import {useAliasStore, useHostStore} from "./state/files.ts";
 import AliasProvider, {useAlias} from "../../context/alias-context.tsx";
-import FolderIcon from "@mui/icons-material/Folder";
 import {useEditorUrl} from "../../lib/editor.ts";
+import AliasDialog from "./components/add-alias-dialog.tsx";
 
 export function FilesLayout() {
     return (
@@ -57,16 +43,19 @@ export function FileIndexRedirect() {
         ? editorUrl(lastOpened, tabs[lastOpened])
         : aliases.at(0)?.alias ?? '';
 
+    if (!path) {
+        return <InvalidAlias/>
+    }
+
     return <Navigate to={path} replace/>;
 }
-
 
 export const ComposePage = () => {
     const {aliases, isLoading} = useAlias();
     const {host, alias} = useFileComponents();
-    const navigate = useNavigate();
 
-    if (isLoading && aliases.length === 0) {
+    const isEmpty = aliases.length === 0;
+    if (isLoading && isEmpty) {
         return (
             <Box sx={{
                 display: 'flex',
@@ -84,95 +73,8 @@ export const ComposePage = () => {
     }
 
     const validAlias = aliases.find(value => value.alias === alias);
-
-    if (!validAlias) {
-        return (
-            <Box sx={{
-                height: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                p: 3
-            }}>
-                <Container maxWidth="sm">
-                    <Paper
-                        variant="outlined"
-                        sx={{
-                            p: 6,
-                            textAlign: 'center',
-                            borderRadius: 4,
-                            borderStyle: 'dashed',
-                            borderWidth: 2,
-                            bgcolor: 'background.paper',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Box sx={{
-                            p: 2, borderRadius: '50%', bgcolor: 'error.lighter',
-                            color: 'error.main', mb: 3, display: 'flex'
-                        }}>
-                            <ErrorIcon sx={{fontSize: 40}}/>
-                        </Box>
-
-                        <Typography variant="h5" sx={{fontWeight: 800, mb: 1}}>
-                            Invalid Directory Alias
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary" sx={{mb: 3}}>
-                            The alias <Typography component="span" variant="caption" sx={{
-                            fontFamily: 'monospace',
-                            fontWeight: 700,
-                            px: 0.5
-                        }}>{alias}</Typography> is not registered on this host.
-                        </Typography>
-
-                        <Stack direction="row" spacing={2}>
-                            <Button
-                                variant="contained"
-                                startIcon={<SettingsIcon/>}
-                                onClick={() => navigate('/settings')}
-                                sx={{borderRadius: 2, fontWeight: 700, boxShadow: 'none'}}
-                            >
-                                Add alias
-                            </Button>
-
-                            <TextField
-                                select
-                                label="Switch Alias"
-                                value={""}
-                                onChange={(e) => navigate(`/${host}/files/${e.target.value}`)}
-                                size="small"
-                                sx={{
-                                    minWidth: 200,
-                                    '& .MuiOutlinedInput-root': {
-                                        borderRadius: 2,
-                                        fontWeight: 700,
-                                        bgcolor: 'background.paper'
-                                    }
-                                }}
-                                slotProps={{
-                                    select: {
-                                        displayEmpty: true,
-                                    }
-                                }}
-                            >
-                                {aliases.map((f) => (
-                                    <MenuItem key={f.alias} value={f.alias}>
-                                        <Stack direction="row" spacing={1} alignItems="center">
-                                            <FolderIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
-                                            <Typography variant="body2" sx={{fontWeight: 600}}>
-                                                {f.alias}
-                                            </Typography>
-                                        </Stack>
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                        </Stack>
-                    </Paper>
-                </Container>
-            </Box>
-        );
+    if (isEmpty || !alias || !validAlias) {
+        return <InvalidAlias/>
     }
 
     return (
@@ -192,6 +94,7 @@ export const ComposePage = () => {
                 <FileDelete/>
                 <FileRename/>
             </Box>
+            <AliasDialog host={host}/>
         </FilesProvider>
     )
 }

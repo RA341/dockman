@@ -6,17 +6,21 @@ export const useFileComponents = (): { host: string; alias: string; filename: st
     const params = useParams()
     const param = params["*"];
     const host = params.host;
-    if (!param || !host) {
+    if (!host) {
         return {host: "", alias: "", filename: ""}
     }
 
-    const [alias, relpath] = param.split("/", 2)
+    if (host && !param) {
+        return {host: host, alias: "", filename: ""}
+    }
+
+    const [alias, relpath] = param!.split("/", 2)
     // if the path has more than the host and alias
     // "local/compose/foo/bar":	"local", "compose", "foo/bar"
     return {
         host: host ?? "",
         alias: alias ?? "",
-        filename: relpath ? param : ""
+        filename: relpath ? param! : ""
     }
 }
 

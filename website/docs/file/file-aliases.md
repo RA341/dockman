@@ -1,3 +1,4 @@
+**```markdown
 ---
 title: File Aliases
 sidebar_position: 1
@@ -5,26 +6,36 @@ sidebar_position: 1
 
 # File Aliases
 
-File aliases let you browse and edit files in any directory on your host.
-
-Handy for accessing Docker data folders or config files without manually SSHing.
+File aliases provide a convenient way to browse and edit files in any directory on your host system directly from the
+Dockman interface, without the need for manual SSH connections or command-line navigation.
 
 **Example use cases:**
 
-- Modify app data in `/opt/appdata`
-- Access media files in `/mnt/storage`
+- Edit application configuration files stored in `/opt/appdata`
+- Browse and manage media files in `/mnt/storage`
+- Access log files in `/var/log`
+- Modify container data directories
 
-## Setup
+## How It Works
 
-**1. Mount the directory**
+File aliases work by mapping directories you've already mounted in your Dockman container. Once mounted and aliased,
+these directories become accessible through the file explorer interface, allowing you to view, edit, upload/download and
+manage files as if they were part of your compose directory structure.
 
-Say you want to access `/home/zaphodb/appdata`:
+## Setup Guide
 
-It is recommended to keep both sides of the mount same
+### Step 1: Mount the Directory
 
-```
-- /home/zaphodb/appdata:/home/zaphodb/appdata  # <- your new mount
-```
+First, you need to mount the host directory into your Dockman container. This is done by adding a volume mount in your
+`docker-compose.yml` file.
+
+:::important
+It's recommended to keep both sides of the mount identical (using the same path on both host and
+container). This prevents confusion and makes troubleshooting easier.
+
+:::
+
+**Example:** To access `/home/zaphodb/appdata` from your host:
 
 ```yml
 services:
@@ -37,16 +48,44 @@ services:
       - /home/zaphodb/appdata:/home/zaphodb/appdata  # <- your new mount
 ```
 
-**2. Add the alias**
+In this mount syntax:
 
-Head to Settings and create an alias. Use the *container path* (right side of the mount) — in this case `/appdata`.
+- **Left side** (`/home/zaphodb/appdata`): The path on your host machine
+- **Right side** (`/home/zaphodb/appdata`): The path inside the Dockman container
 
-![alias-settings.png](img/alias-settings.png)
+After adding the mount, restart your Dockman container for the changes to take effect:
 
-**3. Use it**
+```bash
+docker compose down && docker compose up -d
+```
 
-Your alias now appears in the file explorer sidebar:
+### Step 2: Create the Alias
 
-![dropdown.png](./img/aliases.png)
+On your file browser 
 
-Switch between locations anytime. Default is always your compose root.
+**Critical:** Use the *container path* (the right side of your mount) when creating the alias. In our example, this
+would be `/home/zaphodb/appdata`.
+
+![Creating an alias in settings](img/alias-settings.png)
+
+You can give your alias a friendly name (like "App Data" or "Media Files") to make it easier to identify in the file
+explorer.
+
+### Step 3: Access Your Files
+
+Once configured, your alias will appear in the file explorer sidebar, allowing instant access to your mounted directory.
+
+![File explorer showing aliases dropdown](./img/aliases.png)
+
+You can switch between your compose root directory and any configured aliases at any time using the dropdown selector.
+The compose root remains the default location when you first open the file explorer.
+
+## Tips
+
+- **Multiple aliases**: You can create as many aliases as needed for different directories
+- **Permissions**: Ensure the Dockman container has appropriate read/write permissions for mounted directories
+- **Path consistency**: Using identical paths on both sides of the mount (e.g., `/path/on/host:/path/on/host`) helps
+  avoid confusion when troubleshooting
+- **Security**: Only mount directories that Dockman needs access to, following the principle of least privilege
+
+```

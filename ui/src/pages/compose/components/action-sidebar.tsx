@@ -1,38 +1,24 @@
 import {useFileComponents, useTerminalAction} from "../state/terminal.tsx";
-import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    IconButton,
-    Stack,
-    Tooltip,
-    Typography
-} from "@mui/material";
-import {DnsOutlined, EditRounded, Folder, TerminalOutlined} from "@mui/icons-material"; // Hub is a good default for "Alias/Connection"
-import {useEffect, useState} from "react";
+import {Box, Divider, IconButton, Tooltip, Typography} from "@mui/material";
+import {EditRounded, Folder, TerminalOutlined} from "@mui/icons-material"; // Hub is a good default for "Alias/Connection"
+import {useEffect} from "react";
 import {useSideBarAction} from "../state/files.ts";
 import {useAlias} from "../../../context/alias-context.tsx";
 import {useNavigate} from "react-router-dom";
 import {type FolderAlias} from "../../../gen/host/v1/host_pb.ts";
-import HostAliasManager from "../../settings/components/alias-manager.tsx";
-import scrollbarStyles from "../../../components/scrollbar-style.tsx";
+import {useAliasAddDialogState} from "./add-alias-dialog.tsx";
 
 const ActionSidebar = () => {
     const {isSidebarOpen, toggle: fileSideBarToggle} = useSideBarAction(state => state);
     const {isTerminalOpen, toggle: terminalToggle} = useTerminalAction(state => state);
-    const {aliases, listAlias} = useAlias();
+    const {aliases} = useAlias();
     const nav = useNavigate()
     const {alias: activeAlias, host} = useFileComponents()
+    const openD = useAliasAddDialogState(state => state.setOpen)
 
     const handleAliasClick = (alias: FolderAlias) => {
         nav(`/${host}/files/${alias.alias}`)
     };
-
-    const [openAddAlias, setOpenAddAlias] = useState(false)
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -50,11 +36,6 @@ const ActionSidebar = () => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [fileSideBarToggle, terminalToggle]);
-
-    function onClose() {
-        setOpenAddAlias(false)
-        listAlias().then()
-    }
 
     return (
         <>
@@ -130,7 +111,7 @@ const ActionSidebar = () => {
                     <Tooltip title={"Manage aliases"} placement="right">
                         <IconButton
                             onClick={() => {
-                                setOpenAddAlias(true)
+                                openD(true)
                             }}
                             sx={{
                                 display: 'flex',
@@ -173,47 +154,6 @@ const ActionSidebar = () => {
                     </Tooltip>
                 </Box>
             </Box>
-
-            <Dialog
-                open={openAddAlias}
-                onClose={onClose}
-                fullWidth
-                maxWidth="sm"
-                slotProps={{
-                    paper: {sx: {borderRadius: 3, backgroundImage: 'none'}}
-                }}
-            >
-                <DialogTitle sx={{p: 3, pb: 0}}>
-                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{mb: 2}}>
-                        <Box sx={{
-                            p: 1,
-                            borderRadius: 1.5,
-                            bgcolor: 'primary.lighter',
-                            color: 'primary.main',
-                            display: 'flex'
-                        }}>
-                            <DnsOutlined fontSize="small"/>
-                        </Box>
-                        <Box>
-                            <Typography variant="h6" sx={{fontWeight: 800}}>
-                                Manage Aliases
-                            </Typography>
-                        </Box>
-                    </Stack>
-                </DialogTitle>
-
-                <DialogContent sx={{p: 3, minHeight: 450, ...scrollbarStyles}}>
-                    <HostAliasManager hostname={host} hostId={0}/>
-                </DialogContent>
-
-                <Divider/>
-
-                <DialogActions sx={{p: 2.5}}>
-                    <Button variant="outlined" color="inherit" onClick={onClose}
-                            sx={{borderRadius: 2, fontWeight: 700}}>Close</Button>
-                    <Box sx={{flex: 1}}/>
-                </DialogActions>
-            </Dialog>
         </>
     );
 };

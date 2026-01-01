@@ -242,7 +242,7 @@ func (s *Service) Toggle(hostname string, enabled bool) error {
 }
 
 func (s *Service) LoadAll() {
-	all, err := s.ListAll()
+	all, err := s.store.ListEnabled()
 	if err != nil {
 		log.Error().Err(err).Msg("unable to load hosts")
 		return
