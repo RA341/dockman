@@ -23,27 +23,3 @@ your network.
 
 Also, enable Dockman's built-in authentication. On a private network, this gives you sufficient protection for most home
 setups without making things overly complicated.
-
-### **Git Repository Security**
-
-#### Why Secrets in Git Are Usually Bad (But OK Here)
-
-Your dockman repo breaks the usual rules about secrets in git repositories, and that's intentional. Unlike most
-projects, this repository lives permanently on your homelab server, which changes everything about secret management.
-
-Git makes secret tracking easier here. When you update your Plex API key or database password and something
-breaks, you can roll back to the previous working configuration. Since this isn't a collaboration repo, the typical
-concerns about team access don't apply.
-
-#### How People Usually Mess This Up
-
-The stories about secrets in git involve one mistake: pushing to public repositories. Don't accidentally commit
-API keys to public GitHub repos. If you need remote backup, use private self-hosted solutions
-like [Gitea](https://about.gitea.com/) on a VPS.
-
-#### What Works
-
-Keep secrets directly in your local repository; it makes change tracking easier. Your homelab repo should never touch
-public services like GitHub or GitLab.
-
-If you prefer .env files with `.gitignore`, that works too; dockman doesn't enforce any particular convention.

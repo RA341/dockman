@@ -29,6 +29,7 @@ export function FileList() {
     }, [alias]);
 
     const editUrl = useEditorUrl()
+
     function showDockyaml() {
         nav(editUrl(formatDockyaml(alias, host)))
     }
@@ -167,11 +168,11 @@ export function FileList() {
 }
 
 const FileListInner = () => {
-    const {files} = useFiles()
+    const {files, isLoading} = useFiles()
 
     return (
         <StyledScrollbarBox sx={{flexGrow: 1}}>
-            {files.length < 1 ? (
+            {isLoading && files.length < 1 ? (
                 <Box display="flex" justifyContent="center" alignItems="center" height="100%">
                     <CircularProgress/>
                 </Box>

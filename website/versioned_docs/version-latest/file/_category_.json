@@ -1,0 +1,8 @@
+{
+  "label": "Files",
+  "position": 2,
+  "link": {
+    "type": "doc",
+    "id": "file/overview"
+  }
+}

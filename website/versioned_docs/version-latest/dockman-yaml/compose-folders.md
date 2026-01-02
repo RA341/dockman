@@ -23,6 +23,6 @@ useComposeFolders: true
 
 ### Example
 
-| Normal Folders                                  | Compose Folders                       |
-|-------------------------------------------------|---------------------------------------|
-| ![normal-folders.png](./img/folders-normal.png) | ![img.png](./img/folders-compose.png) |
+| Normal Folders                              | Compose Folders                       |
+|---------------------------------------------|---------------------------------------|
+| ![normal-folder.png](img/normal-folder.png) | ![img.png](./img/folders-compose.png) |

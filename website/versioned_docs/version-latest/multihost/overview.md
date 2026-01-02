@@ -3,145 +3,53 @@ sidebar_position: 1
 title: Overview
 ---
 
-Dockman's multihost feature lets you manage remote Docker hosts from one centralized interface.
-Jump between servers, keep your configurations perfectly organized, and deploy across your entire infrastructure
-seamlessly.
+# Multihost
 
-## How It Works
+Dockman connects to remote Docker hosts via SSH, allowing you to control multiple servers without needing direct access
+to each machine. All communication happens through secure SSH tunnels, so you can manage your entire Docker
+infrastructure from a single location.
 
-```
-                    ┌─────────────────────────────────┐
-                    │        Dockman Instance         │
-                    │                                 │
-                    │  ┌───────────────────────────┐  │
-                    │  │      Git Repository       │  │
-                    │  │                           │  │
-                    │  │  ┌─ main branch           │  │
-                    │  │  ├─ host-a branch ────┐   │  │
-                    │  │  ├─ host-b branch ────┼── ┼──┼─── docker-compose.yml
-                    │  │  └─ host-c branch ────┘   │  │    .env files
-                    │  │                           │  │    bind mount files
-                    │  └───────────────────────────┘  │
-                    └─────────────────┬───────────────┘
-                                      │
-                          ┌───────────┼───────────┐
-                          │           │           │
-                 Compose via API      │      Compose via API
-                  + File Transfer     │       + File Transfer
-                          │           │           │
-                          ▼           ▼           ▼
-                   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-                   │   Host A    │ │   Host B    │ │   Host C    │
-                   │             │ │             │ │             │
-                   │ Docker      │ │ Docker      │ │ Docker      │
-                   │ API/Daemon  │ │ API/Daemon  │ │ API/Daemon  │
-                   │             │ │             │ │             │
-                   │ ┌─────────┐ │ │ ┌─────────┐ │ │ ┌─────────┐ │
-                   │ │Container│ │ │ │Container│ │ │ │Container│ │
-                   │ │ Stack   │ │ │ │ Stack   │ │ │ │ Stack   │ │
-                   │ └─────────┘ │ │ └─────────┘ │ │ └─────────┘ │
-                   │             │ │             │ │             │
-                   │ bind mounts │ │ bind mounts │ │ bind mounts │
-                   │ (transferred│ │ (transferred│ │ (transferred│
-                   │  from local)│ │  from local)│ │  from local)│
-                   └─────────────┘ └─────────────┘ └─────────────┘
-```
+## Prerequisites
 
-This architecture provides centralized management of all your remote Docker Compose setups from a single interface, with
-all configurations version-controlled in Git. Dockman keeps your compose files local and sends them directly to the
-remote Docker API, only transferring necessary bind mount files via SSH.
+Before connecting to remote hosts, ensure the following requirements are met:
 
-## Key Features
+- **SSH Access**: Your local machine must be able to establish SSH connections to the remote hosts
+- **Docker Daemon Access**: The SSH user on the remote host must have permission to access the Docker daemon without
+  requiring root privileges
+    - This typically means the user is a member of the `docker` group
+    - You can verify this by running `docker ps` as the SSH user on the remote host
 
-### Agentless Architecture
+## Adding a Remote Host
 
-```
-    Dockman ──SSH + Docker API──> Remote Host
-       │                            │
-       │                            ├─ No agents installed
-       │                            ├─ No background processes  
-       │                            ├─ Compose files never transferred
-       └─ Local compose files       └─ Only bind mounts transferred
-         sent via Docker API
-```
+To connect to a remote Docker host:
 
-No bloated agents cluttering your servers—Dockman keeps it clean with **SSH-only connections** to the Docker API. Your
-`docker-compose.yml` and `.env` files never leave your local machine.
+1. Navigate to **Settings** in Dockman
+2. Click **Add Host**
+3. In the connection dialog, select **SSH** as the connection type
+4. Enter the connection details:
+    - **Host**: The IP address or hostname of the remote server
+    - **Port**: SSH port (typically 22)
+    - **User**: The SSH username
+    - **Password**: The SSH password
 
-Instead, Dockman sends the compose configuration directly to the remote Docker daemon via its API, only transferring the
-specific bind mount files that your containers need.
+### Authentication Options
 
-**What gets transferred vs. what stays local:**
+Dockman offers two authentication methods:
 
-```yaml
-# docker-compose.yaml -> (sent to Docker daemon directly)
-services:
-  nginx:
-  image: nginx
-  environment_file:
-    - .env # -> (sent to Docker daemon directly)
-  volumes:
-    - ./config/nginx.conf:/etc/nginx/nginx.conf # -> automatically transferred via sftp
-    - /home/zaphodb/data:/var/lib/data # -> this will not be transferred since its outside of compose root
-```
+**Passwordless SSH (Recommended)**
 
-### Git-Based Configuration Management
+- Enable the "Automatically add public key" option during setup
+- Dockman will copy its public SSH key to the remote host's `authorized_keys` file
+- Dockman will not store the password and use password-less SSH
 
-Each host gets its own **Git branch** for complete isolation.
-Modify one host's setup without affecting others.
+**Password-Based Authentication**
 
-When you switch hosts, Dockman automatically:
+- If you don't use the automatic key setup, Dockman will store your password
+- The stored password will be used automatically for subsequent connections
+- While convenient, using SSH keys is more secure and recommended.
 
-- Saves your current work on branch
-- Switches to the target host's branch
-- Connects to the remote server
-- Loads the host-specific configuration
+## Key Benefits
 
-Your Docker Compose files, environment variables,
-and deployment settings stay perfectly isolated per host,
-while still allowing you to sync configurations between branches when needed.
-
-```
-Compose Root/
-├── local/ <- git branch for local docker
-│   ├── docker-compose.yml
-│   ├── .env
-│   └── config.yaml
-│
-├── apollo/ <- git branch for host: apollo
-│   ├── .env
-│   ├── README.md
-│   ├── caddy/
-│   │   ├── docker-compose.yml
-│   │   ├── Caddyfile
-│   │   └── .env
-│   ├── calibre/
-│   │   ├── docker-compose.yml
-│   │   ├── config.json
-│   │   └── .env
-│   └── prometheus/
-│       ├── docker-compose.yml
-│       ├── prometheus.yml
-│       └── rules.yml
-│
-├── ares/  <- git branch for host: ares
-│   ├── .env
-│   ├── README.md
-│   ├── docker-compose.yml
-│   ├── grafana/
-│   │   ├── docker-compose.yml
-│   │   ├── provisioning/
-│   │   │   └── dashboards/
-│   │   │       └── default.json
-│   │   └── grafana.ini
-│
-├── artemis/ <- git branch for host artemis
-│   ├── .env
-│   ├── README.md
-│   ├── docker-compose.yml
-│   ├── node-exporter/
-│   │   ├── docker-compose.yml
-│   │   └── config.yaml
-│   └── settings.json
-
-```
+- **Centralized Control**: Manage all your Docker hosts from one interface
+- **Secure Connections**: All communication uses SSH encryption
+- **No Agent Required**: Works with standard Docker installations, no additional software needed on remote hosts
