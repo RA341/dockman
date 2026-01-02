@@ -1,3 +1,29 @@
+# [3.0.0](https://github.com/RA341/dockman/compare/v2.5.1...v3.0.0) (2026-01-02)
+
+
+* cleanup ([179ca9f](https://github.com/RA341/dockman/commit/179ca9fe88eb890fd73b8a0fbd185638ed3afc9e))
+
+
+### Bug Fixes
+
+* non-root entrypoint ([ac1a36f](https://github.com/RA341/dockman/commit/ac1a36f9fb44bb163aa997ec08d345e6112f3db3))
+* oidc state token ([3bd9725](https://github.com/RA341/dockman/commit/3bd9725cf63d96fe2c4380eb6466a79c7b127656))
+* partial file writes ([cd32c84](https://github.com/RA341/dockman/commit/cd32c84ca220edf0f6f49efb27d7e5e4ff5ad23e)), closes [#136](https://github.com/RA341/dockman/issues/136)
+
+
+### Features
+
+* added sortable ports ([3921178](https://github.com/RA341/dockman/commit/39211782d0f74e75311668bb5604703c11c5d7b6)), closes [#146](https://github.com/RA341/dockman/issues/146)
+* file aliases and improved file explorer ([c6a219b](https://github.com/RA341/dockman/commit/c6a219bcd0220c61ec40c063f0e9d28597f2fc99)), closes [#132](https://github.com/RA341/dockman/issues/132) [#115](https://github.com/RA341/dockman/issues/115)
+* image inspect ([a7698e7](https://github.com/RA341/dockman/commit/a7698e7a83f97416b006eb82670668644a6d622a))
+* network inspect ([04387f5](https://github.com/RA341/dockman/commit/04387f54ceeca013409c43309bb0f06e49de005c))
+* sqlite browser ([cd5033e](https://github.com/RA341/dockman/commit/cd5033e9253f2b8ae0be017b178364c1f514e95c))
+
+
+### BREAKING CHANGES
+
+* changed oidc urls, changed .dockman.yml loading, host loading
+
 ## [2.5.1](https://github.com/RA341/dockman/compare/v2.5.0...v2.5.1) (2025-12-07)
 
 
