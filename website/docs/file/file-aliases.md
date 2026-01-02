@@ -1,4 +1,3 @@
-**```markdown
 ---
 title: File Aliases
 sidebar_position: 1
@@ -50,8 +49,8 @@ services:
 
 In this mount syntax:
 
-- **Left side** (`/home/zaphodb/appdata`): The path on your host machine
-- **Right side** (`/home/zaphodb/appdata`): The path inside the Dockman container
+- **Left side** (`/home/ra341/Pictures`): The path on your host machine
+- **Right side** (`/home/ra341/Pictures`): The path inside the Dockman container
 
 After adding the mount, restart your Dockman container for the changes to take effect:
 
@@ -61,14 +60,18 @@ docker compose down && docker compose up -d
 
 ### Step 2: Create the Alias
 
-On your file browser 
+In the file list click on the edit button in the sidebar
 
-**Critical:** Use the *container path* (the right side of your mount) when creating the alias. In our example, this
-would be `/home/zaphodb/appdata`.
+![alias-sidebar](img/alias-sidebar.png)
+
+:::important
+Use the *container path* (the right side of your mount) when creating the alias. In our example, this
+would be `/home/ra341/Pictures`.
+:::
 
 ![Creating an alias in settings](img/alias-settings.png)
 
-You can give your alias a friendly name (like "App Data" or "Media Files") to make it easier to identify in the file
+You can give your alias a friendly name (like "appdata" or "media") to make it easier to identify in the file
 explorer.
 
 ### Step 3: Access Your Files
@@ -77,15 +80,11 @@ Once configured, your alias will appear in the file explorer sidebar, allowing i
 
 ![File explorer showing aliases dropdown](./img/aliases.png)
 
-You can switch between your compose root directory and any configured aliases at any time using the dropdown selector.
-The compose root remains the default location when you first open the file explorer.
-
 ## Tips
 
 - **Multiple aliases**: You can create as many aliases as needed for different directories
 - **Permissions**: Ensure the Dockman container has appropriate read/write permissions for mounted directories
 - **Path consistency**: Using identical paths on both sides of the mount (e.g., `/path/on/host:/path/on/host`) helps
   avoid confusion when troubleshooting
-- **Security**: Only mount directories that Dockman needs access to, following the principle of least privilege
-
+- **Security**: Only mount directories that You want Dockman to access, following the principle of least privilege
 ```

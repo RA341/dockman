@@ -11,7 +11,7 @@ import styles from './index.module.css';
 import Head from "@docusaurus/Head";
 
 function HomepageHeader() {
-    const demoCommand = "docker run --rm -p 8866:8866 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest"
+    const demoCommand = "docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest"
     const [isLoading, setIsLoading] = useState(true);
 
     return (

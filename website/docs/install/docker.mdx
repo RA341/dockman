@@ -3,21 +3,27 @@ title: Docker
 sidebar_position: 0
 ---
 
-## Docker Run
+It is recommended to install dockman using [docker compose](#docker-compose),
+but if you want to test it out first you can use the [demo command](#docker-run-demo) below
+
+## Docker Run (demo)
 
 Try Dockman with this docker run command
 
 :::important
-This quick-start command will **delete all dockman data** when the container stops. Use only for testing.
+This is a **quick-start demo command** and will **delete all dockman data** when the container stops. Use only for testing.
 
 For a more persistent setup, see the [compose](#docker-compose) section below.
 :::
 
 ```bash title="docker"
-docker run --rm -p 8866:8866 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest
+docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest
 ```
 
-Access at http://localhost:8866
+### Go to
+```
+http://localhost:8866
+```
 
 ## Docker Compose
 
@@ -33,7 +39,8 @@ This path consistency is essential for Dockman to locate and manage your compose
 
 ### Config generator
 
-Generate your config by inputting your preferred paths here
+Generate your config by using your preferred paths here
+
 
 
 import DockerComposeGenerator from '@site/src/components/compose-generator';
@@ -89,7 +96,7 @@ Use `latest` for newest features - may contain breaking changes requiring manual
 | `vX.Y`      | Latest patch for minor version       | `v1.2`   | Bug fixes                                                    |
 | `vX`        | Latest minor/patch for major version | `v1`     | New features                                                 |
 | `latest`    | Latest stable release                | `latest` | Always get the latest updates (May contain breaking changes) |
-| `canary`    | Development builds                   | `canary` | Contributing/testing unreleased features                     |
+| `canary`    | Unstable Development builds          | `canary` | Contributing/testing unreleased features                     |
 
 ### Docker Compose Example
 
