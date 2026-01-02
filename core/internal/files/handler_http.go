@@ -148,7 +148,7 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 
 	var response SearchResponse
 
-	all, err := h.srv.listAll(filename, hostname)
+	all, err := h.srv.listAllForSearch(filename, hostname)
 	if err != nil {
 		response.Error = err.Error()
 		writeJason(ws, response)

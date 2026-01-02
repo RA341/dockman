@@ -387,7 +387,7 @@ func (s *Service) search(hostname string, query string, allPaths []string) []Sea
 	return results
 }
 
-func (s *Service) listAll(dirPath string, hostname string) ([]string, error) {
+func (s *Service) listAllForSearch(dirPath string, hostname string) ([]string, error) {
 	fsCli, rel, err := s.LoadAll(dirPath, hostname)
 	if err != nil {
 		return nil, err
@@ -397,11 +397,16 @@ func (s *Service) listAll(dirPath string, hostname string) ([]string, error) {
 
 	var filez []string
 	err = fsCli.WalkDir(rel, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+
 		left := strings.TrimPrefix(path, root)
 		left = strings.TrimPrefix(left, string(filepath.Separator))
 		if left != "" {
 			filez = append(filez, left)
 		}
+
 		return nil
 	})
 
