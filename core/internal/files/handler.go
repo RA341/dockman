@@ -3,13 +3,11 @@ package files
 import (
 	"context"
 	"fmt"
-	"maps"
-	"path/filepath"
-	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/RA341/dockman/generated/files/v1"
+	"github.com/RA341/dockman/internal/host/middleware"
 )
 
 type Handler struct {
@@ -20,56 +18,66 @@ func NewConnectHandler(service *Service) *Handler {
 	return &Handler{srv: service}
 }
 
-func (h *Handler) List(_ context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error) {
-	fileList, err := h.srv.List()
+func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
+	var result = make([]Q, 0, len(input))
+	for _, t := range input {
+		result = append(result, mapper(t))
+	}
+	return result
+}
+
+func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	config := h.srv.GetDockmanYaml()
-
-	var resp []*v1.FileGroup
-	for _, key := range slices.Sorted(maps.Keys(fileList)) {
-		// Sort subfiles with the updated rule
-		slices.SortFunc(fileList[key], func(a, b string) int {
-			return sortFiles(a, b, fileList, config)
-		})
-
-		resp = append(resp, &v1.FileGroup{
-			Root:     key,
-			SubFiles: fileList[key],
-		})
+	result, err := h.srv.List(req.Msg.Path, hostname)
+	if err != nil {
+		return nil, err
 	}
 
-	// Sort groups alphabetically
-	slices.SortFunc(resp, func(a, b *v1.FileGroup) int {
-		return sortFiles(
-			a.Root,
-			b.Root,
-			fileList,
-			config,
-		)
-	})
+	var rpcResult = make([]*v1.FsEntry, 0, len(result))
+	for _, entry := range result {
+		var composeFileName = ""
 
-	return connect.NewResponse(&v1.ListResponse{Groups: resp}), nil
+		ele := &v1.FsEntry{
+			Filename:  entry.fullpath,
+			IsDir:     entry.isDir,
+			IsFetched: true,
+			SubFiles: ToMap(entry.children, func(childEntry Entry) *v1.FsEntry {
+				hasComposeExt := strings.HasSuffix(childEntry.fullpath, "compose.yaml") ||
+					strings.HasSuffix(childEntry.fullpath, "compose.yml")
+
+				if !childEntry.isDir && hasComposeExt {
+					composeFileName = childEntry.fullpath
+				}
+
+				return &v1.FsEntry{
+					Filename: childEntry.fullpath,
+					IsDir:    childEntry.isDir,
+					// max depth is 2 so indicate that it is unfetched
+					IsFetched: false,
+					SubFiles:  []*v1.FsEntry{},
+				}
+			}),
+		}
+
+		ele.IsComposeFolder = composeFileName
+		rpcResult = append(rpcResult, ele)
+	}
+
+	return connect.NewResponse(&v1.ListResponse{Entries: rpcResult}), nil
 }
 
-func sortFiles(a, b string, fileList map[string][]string, dockmanConf *DockmanYaml) int {
-	ra := getSortRank(a, fileList, dockmanConf)
-	rb := getSortRank(b, fileList, dockmanConf)
-
-	if ra < rb {
-		return -1
+func (h *Handler) Format(ctx context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if ra > rb {
-		return 1
-	}
-	return strings.Compare(a, b)
-}
 
-func (h *Handler) Format(ctx context.Context, c *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
-	name := c.Msg.GetFilename()
-	format, err := h.srv.Format(name)
+	name := req.Msg.Filename
+	format, err := h.srv.Format(name, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -77,81 +85,18 @@ func (h *Handler) Format(ctx context.Context, c *connect.Request[v1.FormatReques
 	return connect.NewResponse(&v1.FormatResponse{Contents: string(format)}), nil
 }
 
-// getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
-func getSortRank(name string, fileList map[string][]string, conf *DockmanYaml) int {
-	base := filepath.Base(name)
-	// -1: pinned files (highest priority)
-	if priority, ok := conf.PinnedFiles[base]; ok {
-		// potential bug, but if someone is manually writing the order of 100000 files i say get a life
-		// -999 > -12 in this context, pretty stupid but i cant be bothered to fix this mathematically
-		return priority - 100_000
-	}
-
-	// 0: dotfiles (highest priority)
-	if strings.HasPrefix(base, ".") {
-		return 1
-	}
-
-	// Check if it's a directory (has subfiles)
-	if len(fileList[name]) > 0 {
-		return 2
-	}
-
-	// 2+: normal files, ranked by getFileSortRank
-	return 3 + getFileSortRank(name)
-}
-
-// getFileSortRank assigns priority within normal files
-func getFileSortRank(filename string) int {
-	base := filepath.Base(filename)
-	// Priority 0: docker-compose files
-	if strings.HasSuffix(base, "compose.yaml") || strings.HasSuffix(base, "compose.yml") {
-		return 0
-	}
-	// Priority 1: other yaml/yml
-	if strings.HasSuffix(base, ".yaml") || strings.HasSuffix(base, ".yml") {
-		return 1
-	}
-	// Priority 2: everything else
-	return 2
-}
-
-func (h *Handler) Create(_ context.Context, c *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	filename, err := getFile(c.Msg)
+func (h *Handler) Create(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := h.srv.Create(filename); err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[v1.Empty]{}, nil
-}
-
-func (h *Handler) Exists(_ context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	if err := h.srv.Exists(req.Msg.GetFilename()); err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[v1.Empty]{}, nil
-}
-
-func (h *Handler) Delete(_ context.Context, c *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
-	filename, err := getFile(c.Msg)
+	filename, err := getFile(req.Msg, hostname)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := h.srv.Delete(filename); err != nil {
-		return nil, err
-	}
-
-	return &connect.Response[v1.Empty]{}, nil
-}
-
-func (h *Handler) Rename(_ context.Context, req *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
-	err := h.srv.Rename(req.Msg.OldFilePath, req.Msg.NewFilePath)
+	err = h.srv.Create(filename, req.Msg.IsDir, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -159,58 +104,72 @@ func (h *Handler) Rename(_ context.Context, req *connect.Request[v1.RenameFile])
 	return &connect.Response[v1.Empty]{}, nil
 }
 
-func getFile(c *v1.File) (string, error) {
-	msg := c.GetFilename()
+func (h *Handler) Copy(ctx context.Context, req *connect.Request[v1.CopyRequest]) (*connect.Response[v1.CopyResponse], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	dest := req.Msg.Dest.Filename
+	src := req.Msg.Source.Filename
+	isDir := req.Msg.Source.IsDir
+
+	err = h.srv.Copy(src, dest, hostname, isDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return &connect.Response[v1.CopyResponse]{}, nil
+}
+
+func (h *Handler) Exists(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.srv.Exists(req.Msg.Filename, hostname)
+	if err != nil {
+		return nil, err
+	}
+	return &connect.Response[v1.Empty]{}, nil
+}
+
+func (h *Handler) Delete(ctx context.Context, req *connect.Request[v1.File]) (*connect.Response[v1.Empty], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	filename, err := getFile(req.Msg, hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.srv.Delete(filename, hostname); err != nil {
+		return nil, err
+	}
+
+	return &connect.Response[v1.Empty]{}, nil
+}
+
+func (h *Handler) Rename(ctx context.Context, req *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.srv.Rename(req.Msg.OldFilePath, req.Msg.NewFilePath, hostname)
+	if err != nil {
+		return nil, err
+	}
+	return &connect.Response[v1.Empty]{}, nil
+}
+
+func getFile(c *v1.File, hostname string) (string, error) {
+	msg := c.Filename
 	if msg == "" {
 		return "", fmt.Errorf("name is empty")
 	}
 	return msg, nil
-}
-
-func (h *Handler) GetDockmanYaml(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.DockmanYaml], error) {
-	conf := h.srv.GetDockmanYaml()
-	return connect.NewResponse(conf.toProto()), nil
-}
-
-func (d DockmanYaml) toProto() *v1.DockmanYaml {
-	return &v1.DockmanYaml{
-		DisableComposeQuickActions: d.DisableComposeQuickActions,
-		UseComposeFolders:          d.UseComposeFolders,
-		VolumesPage:                d.VolumesPage.toProto(),
-		TabLimit:                   d.TabLimit,
-		NetworkPage:                d.NetworkPage.toProto(),
-		ImagePage:                  d.ImagePage.toProto(),
-		ContainerPage:              d.ContainerPage.toProto(),
-	}
-}
-
-func (s Sort) toProto() *v1.Sort {
-	return &v1.Sort{
-		SortOrder: s.Order,
-		SortField: s.Field,
-	}
-}
-
-func (v ContainerConfig) toProto() *v1.ContainerConfig {
-	return &v1.ContainerConfig{
-		Sort: v.Sort.toProto(),
-	}
-}
-
-func (v VolumesConfig) toProto() *v1.VolumesConfig {
-	return &v1.VolumesConfig{
-		Sort: v.Sort.toProto(),
-	}
-}
-
-func (n NetworkConfig) toProto() *v1.NetworkConfig {
-	return &v1.NetworkConfig{
-		Sort: n.Sort.toProto(),
-	}
-}
-
-func (i ImageConfig) toProto() *v1.ImageConfig {
-	return &v1.ImageConfig{
-		Sort: i.Sort.toProto(),
-	}
 }

@@ -3,7 +3,9 @@ import {
     Box,
     Checkbox,
     Chip,
+    IconButton,
     Paper,
+    Stack,
     Table,
     TableBody,
     TableCell,
@@ -11,17 +13,24 @@ import {
     TableHead,
     TableRow,
     TableSortLabel,
+    Tooltip,
     Typography
 } from '@mui/material';
-import {CalendarMonth, Label as LabelIcon} from '@mui/icons-material';
+import {
+    CalendarMonth as CalendarIcon,
+    DeviceHubOutlined as DriverIcon,
+    InfoOutlined as InspectIcon,
+    LanOutlined as NetworkIcon,
+    ShieldOutlined as InternalIcon
+} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import type {Network} from "../../gen/docker/v1/docker_pb.ts";
 import {useCopyButton} from "../../hooks/copy.ts";
 import CopyButton from "../../components/copy-button.tsx";
 import {formatDate} from "../../lib/api.ts";
 import {type SortOrder, sortTable, type TableInfo, useSort} from "../../lib/table.ts";
-import {TableLabelWithSort} from "../../lib/table-shared.tsx";
 import {useConfig} from "../../hooks/config.ts";
+import {useNavigate} from "react-router-dom";
 
 interface NetworkTableProps {
     networks: Network[];
@@ -30,331 +39,236 @@ interface NetworkTableProps {
 }
 
 export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange}: NetworkTableProps) => {
-    const {handleCopy, copiedId} = useCopyButton()
+    const {handleCopy, copiedId} = useCopyButton();
+    const {dockYaml} = useConfig();
+    const nav = useNavigate();
 
-    const handleRowSelection = (volumeName: string) => {
+    const handleRowSelection = (id: string) => {
         if (!onSelectionChange) return;
-
-        const newSelection = selectedNetworks.includes(volumeName)
-            ? selectedNetworks.filter(name => name !== volumeName)
-            : [...selectedNetworks, volumeName];
-
+        const newSelection = selectedNetworks.includes(id)
+            ? selectedNetworks.filter(name => name !== id)
+            : [...selectedNetworks, id];
         onSelectionChange(newSelection);
     };
+
     const handleSelectAll = () => {
         if (!onSelectionChange) return;
-
-        const allSelected = selectedNetworks.length === networks.length;
-        const newSelection = allSelected ? [] : networks.map(vol => vol.id);
-        onSelectionChange(newSelection);
+        onSelectionChange(selectedNetworks.length === networks.length ? [] : networks.map(n => n.id));
     };
-    const isAllSelected = selectedNetworks.length === networks.length && networks.length > 0;
-    const isIndeterminate = selectedNetworks.length > 0 && selectedNetworks.length < networks.length;
 
-    const {dockYaml} = useConfig()
-    const {
-        sortField,
-        sortOrder,
-        handleSort,
-    } = useSort(
-        dockYaml?.networkPage?.sort?.sortField ?? 'name',
+    const {sortField, sortOrder, handleSort} = useSort(
+        dockYaml?.networkPage?.sort?.sortField ?? 'Name',
         (dockYaml?.networkPage?.sort?.sortOrder as SortOrder) ?? 'asc'
-    )
+    );
 
     const tableInfo: TableInfo<Network> = {
         checkbox: {
+            getValue: () => 0,
             header: () => (
-                <TableCell padding="checkbox">
+                <TableCell padding="checkbox" sx={headerStyles}>
                     <Checkbox
-                        indeterminate={isIndeterminate}
-                        checked={isAllSelected}
-                        onChange={handleSelectAll}/>
+                        indeterminate={selectedNetworks.length > 0 && selectedNetworks.length < networks.length}
+                        checked={networks.length > 0 && selectedNetworks.length === networks.length}
+                        onChange={handleSelectAll}
+                    />
                 </TableCell>
             ),
-            cell: (network: Network) => (
+            cell: (n) => (
                 <TableCell padding="checkbox">
-                    <Checkbox
-                        checked={selectedNetworks.includes(network.id)}
-                        onChange={() => handleRowSelection(network.id)}
-                        onClick={(e) => e.stopPropagation()}/>
-                </TableCell>
-            ),
-            getValue: () => 0
-        },
-        "Network Name": {
-            header: (label) => {
-                const active = sortField === label;
-                return (
-                    <TableCell sx={{fontWeight: "bold"}}>
-                        <TableSortLabel
-                            active={active}
-                            direction={active ? sortOrder : "asc"}
-                            onClick={() => handleSort(label)}
-                        >
-                            {label}
-                        </TableSortLabel>
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
-                <TableCell>
-                    <Box sx={{display: "flex", alignItems: "center", gap: 0.5}}>
-                        <Box sx={{flex: 1, display: "flex", alignItems: "center", gap: 1}}>
-                            <Typography
-                                variant="body2"
-                                sx={{wordBreak: "break-all", fontWeight: "medium"}}
-                            >
-                                {network.name}
-                            </Typography>
-                            {(network.name === "host" || network.name === "bridge" || network.name === "none") && (
-                                <Chip
-                                    label="System"
-                                    size="small"
-                                    color="warning"
-                                    variant="outlined"/>
-                            )}
-                        </Box>
-                        <CopyButton
-                            handleCopy={handleCopy}
-                            thisID={network.id}
-                            activeID={copiedId ?? ""}
-                            tooltip="Copy Network ID"/>
-                    </Box>
-                </TableCell>
-            ),
-            getValue: (data) => data.name,
-        },
-        Project: {
-            getValue: data => data.composeProject,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 100}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
-                <TableCell>
-                    {network.composeProject ? (
-                        <Chip
-                            label={network.name}
-                            size="small"
-                            variant="outlined"
-                            color="secondary"
-                            icon={<LabelIcon/>}
-                            sx={{fontSize: "0.75rem"}}
-                        />
-                    ) : (
-                        <Typography variant="body2" color="text.secondary">—</Typography>
-                    )}
+                    <Checkbox checked={selectedNetworks.includes(n.id)}/>
                 </TableCell>
             )
         },
-        "In use": {
-            getValue: data => data.containerIds.length,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 120}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
+        Name: {
+            getValue: (n) => n.name,
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>
+                        {label}
+                    </TableSortLabel>
+                </TableCell>
+            ),
+            cell: (n) => (
+                <TableCell>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <NetworkIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
+                        <Box sx={{minWidth: 0}}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="body2"
+                                            sx={{fontWeight: 400, lineHeight: 1.2}}>{n.name}</Typography>
+                                {(n.name === "host" || n.name === "bridge" || n.name === "none") && (
+                                    <Chip label="System" size="small" variant="outlined" sx={{
+                                        height: 16,
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        color: 'warning.main',
+                                        borderColor: 'warning.light'
+                                    }}/>
+                                )}
+                            </Stack>
+                            <Stack direction="row" spacing={0.5} alignItems="center">
+                                <Typography variant="caption"
+                                            sx={{fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.7rem'}}>
+                                    {n.id.substring(0, 12)}
+                                </Typography>
+                                <CopyButton tooltip={"Copy Network ID"} handleCopy={handleCopy} thisID={n.id}
+                                            activeID={copiedId ?? ""}/>
+                            </Stack>
+                        </Box>
+                    </Stack>
+                </TableCell>
+            )
+        },
+        Driver: {
+            getValue: (n) => n.driver,
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>DRIVER</TableSortLabel>
+                </TableCell>
+            ),
+            cell: (n) => (
                 <TableCell>
                     <Chip
-                        label={`${network.containerIds.length} using`}
+                        icon={<DriverIcon sx={{fontSize: '12px !important'}}/>}
+                        label={n.driver}
                         size="small"
                         variant="outlined"
-                        color={network.containerIds.length === 0 ? "secondary" : "info"}
-                        sx={{fontSize: "0.75rem"}}
+                        sx={{fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase'}}
+                    />
+                </TableCell>
+            )
+        },
+        Actions: {
+            getValue: () => 0,
+            header: () => <TableCell sx={{...headerStyles}}>ACTIONS</TableCell>,
+            cell: (n) => (
+                <TableCell>
+                    <Tooltip title="Inspect Network" arrow>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                nav(`inspect/${n.id}`);
+                            }}
+                            sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.5}}
+                        >
+                            <InspectIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+                </TableCell>
+            )
+        },
+        Usage: {
+            getValue: (n) => n.containerIds.length,
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>USAGE</TableSortLabel>
+                </TableCell>
+            ),
+            cell: (n) => (
+                <TableCell>
+                    <Chip
+                        label={`${n.containerIds.length} Containers`}
+                        size="small"
+                        variant="outlined"
+                        color={n.containerIds.length > 0 ? "info" : "default"}
+                        sx={{
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                            height: 20,
+                            bgcolor: 'transparent',
+                            borderWidth: 1,
+                        }}
                     />
                 </TableCell>
             )
         },
         Subnet: {
-            getValue: data => data.subnet,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 120}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
+            getValue: (n) => n.subnet,
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>SUBNET</TableSortLabel>
+                </TableCell>
+            ),
+            cell: (n) => (
                 <TableCell>
-                    <Typography variant="body2" color="text.primary">
-                        {network.subnet}
+                    <Typography variant="body2" sx={{
+                        fontFamily: 'monospace',
+                        fontWeight: 500,
+                        color: n.subnet ? 'text.primary' : 'text.disabled'
+                    }}>
+                        {n.subnet || '—'}
                     </Typography>
                 </TableCell>
             )
         },
-        Scope: {
-            getValue: data => data.scope,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 120}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
+        Attributes: {
+            getValue: (n) => n.scope,
+            header: () => <TableCell sx={headerStyles}>ATTRIBUTES</TableCell>,
+            cell: (n) => (
                 <TableCell>
-                    <Typography variant="body2" color="text.primary">
-                        {network.scope}
-                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                        <Tooltip title={`Scope: ${n.scope}`}>
+                            <Chip label={n.scope} size="small" variant="outlined"
+                                  sx={{height: 18, fontSize: '0.6rem', textTransform: 'uppercase'}}/>
+                        </Tooltip>
+                        {n.internal && (
+                            <Tooltip title="Internal Network Only">
+                                <InternalIcon sx={{fontSize: 16, color: 'warning.main'}}/>
+                            </Tooltip>
+                        )}
+                    </Stack>
                 </TableCell>
             )
         },
-        Driver: {
-            getValue: data => data.driver,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 200}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
+        Created: {
+            getValue: (n) => n.createdAt,
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel active={sortField === label} direction={sortOrder}
+                                    onClick={() => handleSort(label)}>CREATED</TableSortLabel>
+                </TableCell>
+            ),
+            cell: (n) => (
                 <TableCell>
-                    <Typography variant="body2" color="text.primary">
-                        {network.driver === "null" ? "-----" : network.driver}
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{color: 'text.secondary'}}>
+                        <CalendarIcon sx={{fontSize: 14}}/>
+                        <Typography variant="body2" sx={{whiteSpace: 'nowrap'}}>{formatDate(n.createdAt)}</Typography>
+                    </Stack>
                 </TableCell>
             )
         },
-        Internal: {
-            getValue: data => data.internal.toString(),
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 150}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
-                <TableCell>
-                    <Typography variant="body2" color="text.primary">
-                        {network.internal.toString()}
-                    </Typography>
-                </TableCell>
-            )
-        },
-        Attachable: {
-            getValue: data => data.attachable,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 150}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
-                <TableCell>
-                    <Typography variant="body2" color="text.primary">
-                        {network.attachable.toString()}
-                    </Typography>
-                </TableCell>
-            )
-        },
-        "Created": {
-            getValue: data => data.createdAt,
-            header: (label) => {
-                return (
-                    <TableCell sx={{fontWeight: "bold", minWidth: 150}}>
-                        <TableLabelWithSort
-                            label={label}
-                            activeLabel={sortField}
-                            sortOrder={sortOrder}
-                            handleSort={handleSort}
-                        />
-                    </TableCell>
-                );
-            },
-            cell: (network: Network) => (
-                <TableCell>
-                    <Box sx={{display: "flex", alignItems: "center"}}>
-                        <CalendarMonth sx={{fontSize: 14, mr: 0.5, color: "text.secondary"}}/>
-                        <Typography variant="body2">{formatDate(network.createdAt)}</Typography>
-                    </Box>
-                </TableCell>
-            )
-        }
     };
 
     const sortedNetworks = sortTable(networks, sortField, tableInfo, sortOrder);
 
     return (
-        <TableContainer
-            component={Paper}
-            sx={{
-                height: '100%',
-                overflow: 'auto',
-                ...scrollbarStyles
-            }}
-        >
-            <Table stickyHeader sx={{minWidth: 650}}>
+        <TableContainer component={Paper} variant="outlined"
+                        sx={{height: '100%', borderRadius: 2, overflow: 'auto', ...scrollbarStyles}}>
+            <Table stickyHeader size="small">
                 <TableHead>
                     <TableRow>
-                        {Object.entries(tableInfo).map(([key, val], index) => (
-                            <React.Fragment key={index}>
-                                {val.header(key)}
-                            </React.Fragment>
+                        {Object.entries(tableInfo).map(([key, val], idx) => (
+                            <React.Fragment key={idx}>{val.header(key)}</React.Fragment>
                         ))}
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {sortedNetworks.map((network) => (
+                    {sortedNetworks.map((n) => (
                         <TableRow
-                            key={network.name}
+                            key={n.id}
                             hover
-                            sx={{
-                                '&:last-child td, &:last-child th': {border: 0},
-                                cursor: 'pointer',
-                                backgroundColor: selectedNetworks.includes(network.name)
-                                    ? 'rgba(25, 118, 210, 0.08)'
-                                    : 'transparent'
-                            }}
-                            onClick={() => handleRowSelection(network.id)}
+                            onClick={() => handleRowSelection(n.id)}
+                            selected={selectedNetworks.includes(n.id)}
+                            sx={{cursor: 'pointer', '&.Mui-selected': {bgcolor: 'primary.lighter'}}}
                         >
-                            {Object.values(tableInfo).map((val, index) => (
-                                <React.Fragment key={index}>
-                                    {val.cell(network)}
-                                </React.Fragment>
+                            {Object.values(tableInfo).map((val, idx) => (
+                                <React.Fragment key={idx}>{val.cell(n)}</React.Fragment>
                             ))}
                         </TableRow>
                     ))}
@@ -362,4 +276,13 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
             </Table>
         </TableContainer>
     );
+};
+
+const headerStyles = {
+    fontWeight: 700,
+    fontSize: '0.65rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    py: 1.5,
+    whiteSpace: 'nowrap'
 };

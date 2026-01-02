@@ -2,10 +2,10 @@ import {Editor, type Monaco} from "@monaco-editor/react";
 import {getLanguageFromExtension} from "../../../lib/editor";
 import {useCallback, useEffect, useRef, useState} from "react";
 import * as monacoEditor from "monaco-editor";
-import {useTabs} from "../../../hooks/tabs.ts";
-import {callRPC, useClient} from "../../../lib/api.ts";
-import {FileService} from "../../../gen/files/v1/files_pb.ts";
+import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
+import {useTabs, useTabsStore} from "../../../context/tab-context.tsx";
+import {FileService} from "../../../gen/files/v1/files_pb.ts";
 
 interface MonacoEditorProps {
     selectedFile: string;
@@ -19,20 +19,19 @@ export function MonacoEditor(
         fileContent,
         handleEditorChange,
     }: MonacoEditorProps) {
-    const file = useClient(FileService)
+    const file = useHostClient(FileService)
     const {showError} = useSnackbar()
 
     const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor | null>(null);
     const saveLineNum = useSaveLineNum()
 
-    const {tabs, setTabDetails} = useTabs()
     const [mounted, setMounted] = useState(false);
+    const {setTabDetails} = useTabs()
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;
         setMounted(true);
         editor.focus();
-
 
         editor.addCommand(
             monaco.KeyMod.Alt | monaco.KeyCode.KeyL,
@@ -43,12 +42,9 @@ export function MonacoEditor(
                 } else {
                     const contents = val?.contents;
                     if (contents) {
-                        // Save current state
                         const model = editor.getModel()!;
                         const position = editor.getPosition()!;
                         const offset = model?.getOffsetAt(position);
-
-                        // Get the full range of the editor content
                         const fullRange = model.getFullModelRange();
 
                         // Replace content while preserving undo stack
@@ -92,7 +88,7 @@ export function MonacoEditor(
             handleEditorChange(model.getValue());
         });
 
-        const tab = tabs[selectedFile];
+        const tab = useTabsStore.getState().allTabs[selectedFile];
         if (!tab) return;
         const {row, col} = tab;
 

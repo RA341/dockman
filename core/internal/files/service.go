@@ -1,228 +1,184 @@
 package files
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
-	"dario.cat/mergo"
-	"github.com/RA341/dockman/internal/docker"
-	"github.com/RA341/dockman/internal/git"
+	"github.com/RA341/dockman/internal/dockyaml"
+	"github.com/RA341/dockman/internal/files/utils"
+	"github.com/RA341/dockman/internal/host/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/goccy/go-yaml"
-	"github.com/rs/zerolog/log"
+
+	"github.com/gabriel-vasile/mimetype"
+	"github.com/sahilm/fuzzy"
 )
 
-type ActiveMachineFolderProvider func() string
+type FSProvider func(host, alias string) (filesystem.FileSystem, error)
+type DockyamlProvider func(host string) *dockyaml.DockmanYaml
 
 type Service struct {
-	machineFolder ActiveMachineFolderProvider
-	composeRoot   func() string
-	dockYamlPath  string
-	guid          int
-	puid          int
-
-	lastModTime time.Time
-	cachedYaml  *DockmanYaml
+	Fs      FSProvider
+	dockYml DockyamlProvider
 }
 
-func NewService(
-	composeRoot, dockYaml string,
-	puid, guid int,
-	machineFolder ActiveMachineFolderProvider,
+func New(
+	fs FSProvider,
+	dockYml DockyamlProvider,
 ) *Service {
-	if !filepath.IsAbs(composeRoot) {
-		var err error
-		composeRoot, err = filepath.Abs(composeRoot)
-		if err != nil {
-			log.Fatal().Str("path", composeRoot).Msg("Err getting abs path for composeRoot")
-		}
+	return &Service{
+		Fs:      fs,
+		dockYml: dockYml,
 	}
-
-	if err := os.MkdirAll(composeRoot, 0755); err != nil {
-		log.Fatal().Err(err).Str("compose-root", composeRoot).Msg("failed to create compose root folder")
-	}
-
-	prov := func() string {
-		mach := machineFolder()
-		if mach == docker.LocalClient {
-			// return normal compose root for local client
-			return composeRoot
-		}
-		return filepath.Join(composeRoot, git.DockmanRemoteFolder, mach)
-	}
-
-	srv := &Service{
-		composeRoot:   prov,
-		guid:          guid,
-		puid:          puid,
-		machineFolder: machineFolder,
-	}
-
-	if dockYaml != "" {
-		if strings.HasPrefix(dockYaml, "/") {
-			// Absolute path provided
-			// e.g /home/zaphodb/conf/.dockman.db
-			srv.dockYamlPath = dockYaml
-		} else {
-			// Relative path; attach compose root
-			// e.g. dockman/.dockman.yml
-			srv.dockYamlPath = srv.WithRoot(dockYaml)
-		}
-	}
-
-	log.Debug().Msg("File service loaded successfully")
-	return srv
 }
 
-func (s *Service) Close() error {
-	return nil
+type Entry struct {
+	fullpath string
+	isDir    bool
+	children []Entry
 }
 
-type dirResult struct {
-	fileList []string
-	dirname  string
-}
-
-func (s *Service) List() (map[string][]string, error) {
-	err := os.MkdirAll(s.composeRoot(), os.ModePerm)
+func (s *Service) List(path string, hostname string) ([]Entry, error) {
+	cliFs, relpath, err := s.LoadFs(path, hostname)
 	if err != nil {
 		return nil, err
 	}
 
-	topLevelEntries, err := os.ReadDir(s.composeRoot())
+	topLevelEntries, err := cliFs.ReadDir(relpath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in compose root: %v", err)
 	}
-	result := make(map[string][]string, len(topLevelEntries))
 
-	eg := sync.WaitGroup{}
-
-	subDirChan := make(chan dirResult, len(topLevelEntries))
-
-	var ignoredFiles = []string{".git", git.DockmanRemoteFolder}
-
+	result := make([]Entry, 0, len(topLevelEntries))
 	for _, entry := range topLevelEntries {
-		entryName := entry.Name()
-		if slices.Contains(ignoredFiles, entryName) {
-			continue
+		fullRelpath := filepath.Join(relpath, entry.Name())
+		displayPath := filepath.Join(path, entry.Name())
+
+		isDir := entry.IsDir()
+
+		ele := Entry{
+			fullpath: displayPath,
+			isDir:    isDir,
 		}
 
-		if !entry.IsDir() {
-			result[entryName] = []string{}
-			continue
-		}
-
-		eg.Go(func() {
-			fullPath := s.WithRoot(entryName)
-			files, err := listFiles(fullPath)
+		if isDir {
+			children, err := s.listFiles(cliFs, fullRelpath, displayPath, hostname)
 			if err != nil {
-				log.Warn().Err(err).Str("path", fullPath).Msg("error listing subdir")
-				return
+				return nil, err
 			}
-
-			subDirChan <- dirResult{
-				fileList: files,
-				dirname:  entryName,
-			}
-		})
-	}
-
-	go func() {
-		eg.Wait()
-		close(subDirChan)
-	}()
-
-	for item := range subDirChan {
-		if len(item.fileList) == 0 {
-			// do not send empty dirs
-			continue
+			ele.children = children
 		}
 
-		result[item.dirname] = item.fileList
+		result = append(result, ele)
 	}
+
+	slices.SortFunc(result, func(a, b Entry) int {
+		return s.sortFiles(&a, &b, hostname)
+	})
 
 	return result, nil
 }
 
-func (s *Service) Create(fileName string) error {
-	if err := s.createFile(fileName); err != nil {
+func (s *Service) listFiles(
+	cliFs filesystem.FileSystem,
+	relDirpath string,
+	displayPath string,
+	hostname string,
+) ([]Entry, error) {
+	subEntries, err := cliFs.ReadDir(relDirpath)
+	if err != nil {
+		return nil, err
+	}
+
+	filesInSubDir := make([]Entry, 0, len(subEntries))
+	for _, subEntry := range subEntries {
+		join := filepath.Join(displayPath, subEntry.Name())
+		filesInSubDir = append(filesInSubDir,
+			Entry{
+				fullpath: join,
+				isDir:    subEntry.IsDir(),
+				children: []Entry{},
+			},
+		)
+	}
+
+	slices.SortFunc(filesInSubDir, func(a, b Entry) int {
+		return s.sortFiles(&a, &b, hostname)
+	})
+
+	return filesInSubDir, nil
+}
+
+func (s *Service) Create(filename string, dir bool, hostname string) error {
+	cliFs, filename, err := s.LoadFs(filename, hostname)
+	if err != nil {
 		return err
 	}
+
+	if dir {
+		return cliFs.MkdirAll(filename, os.ModePerm)
+	}
+
+	baseDir := filepath.Dir(filename)
+	if err = cliFs.MkdirAll(baseDir, 0755); err != nil {
+		return err
+	}
+
+	file, err := cliFs.OpenFile(
+		filename,
+		os.O_RDWR|os.O_CREATE,
+		os.ModePerm,
+	)
+	if err != nil {
+		return err
+	}
+	fileutil.Close(file)
 
 	return nil
 }
 
-func (s *Service) GetDockmanYaml() *DockmanYaml {
-	filenames := []string{dockmanYamlFileYml, dockmanYamlFileYaml}
-	var finalPath string
-	var stat os.FileInfo
-
-	// Determine which file to use
-	if s.dockYamlPath != "" {
-		stat = fileutil.StatFileIfExists(s.dockYamlPath)
-		if stat != nil {
-			finalPath = s.dockYamlPath
-		}
-	} else {
-		for _, filename := range filenames {
-			path := s.WithRoot(filename)
-			stat = fileutil.StatFileIfExists(path)
-			if stat != nil {
-				finalPath = path
-				break
-			}
-		}
+func (s *Service) Copy(source, dest, hostname string, isDir bool) error {
+	if isDir {
+		return fmt.Errorf("directory copying is unimplemented")
 	}
 
-	// If no file is found, return a default config
-	if stat == nil {
-		// log.Warn().Msg("unable to find a dockman yaml file, using defaults")
-		return &defaultDockmanYaml
-	}
-
-	// Check if the file has been modified since last read
-	if !stat.ModTime().After(s.lastModTime) && s.cachedYaml != nil {
-		//log.Debug().Msg("Returning cached version")
-		return s.cachedYaml // Return cached version
-	}
-
-	// File is new or has been modified, load it
-	file, err := os.ReadFile(finalPath)
+	cliFs, sourceFile, err := s.LoadFs(source, hostname)
 	if err != nil {
-		// log.Warn().Err(err).Str("path", finalPath).Msg("failed to read dockman yaml")
-		return &defaultDockmanYaml
+		return err
 	}
 
-	// Start with defaults, then merge the loaded config
-	config := defaultDockmanYaml
-	var override DockmanYaml
-	if err := yaml.Unmarshal(file, &override); err != nil {
-		// log.Warn().Err(err).Msg("failed to parse dockman yaml")
-		return &config
+	_, destFile, err := s.LoadFs(dest, hostname)
+	if err != nil {
+		return err
 	}
 
-	// Merge override into config
-	if err := mergo.Merge(&config, &override, mergo.WithOverride); err != nil {
-		// log.Warn().Err(err).Msg("failed to merge dockman yaml configs")
-		return &defaultDockmanYaml
+	sourceReader, err := cliFs.OpenFile(sourceFile, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return err
 	}
 
-	// Update cache with new data and modification time
-	s.lastModTime = stat.ModTime()
-	s.cachedYaml = &config
+	destWriter, err := cliFs.OpenFile(destFile, os.O_RDWR|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return err
+	}
 
-	//log.Debug().Msg("Returning fresh version")
-	return s.cachedYaml
+	_, err = io.Copy(destWriter, sourceReader)
+	return err
 }
 
-func (s *Service) Exists(filename string) error {
-	stat, err := os.Stat(s.WithRoot(filename))
+func (s *Service) Exists(filename string, hostname string) error {
+	cliFs, filename, err := s.LoadFs(filename, hostname)
+	if err != nil {
+		return err
+	}
+
+	stat, err := cliFs.Stat(filename)
 	if err != nil {
 		return err
 	}
@@ -233,76 +189,167 @@ func (s *Service) Exists(filename string) error {
 	return nil
 }
 
-func (s *Service) Delete(fileName string) error {
-	fullpath := s.WithRoot(fileName)
-	if err := os.RemoveAll(fullpath); err != nil {
+func (s *Service) Delete(filename string, hostname string) error {
+	sfCli, fullpath, err := s.LoadFs(filename, hostname)
+	if err != nil {
 		return err
 	}
-
-	return nil
+	return sfCli.RemoveAll(fullpath)
 }
 
-func (s *Service) Rename(oldFileName, newFilename string) error {
-	oldFullPath := s.WithRoot(filepath.ToSlash(filepath.Clean(oldFileName)))
-	newFullPath := s.WithRoot(filepath.ToSlash(filepath.Clean(newFilename)))
-
-	err := os.Rename(oldFullPath, newFullPath)
+// Rename todo refactor this
+func (s *Service) Rename(oldFileName, newFilename, hostname string) error {
+	cliFs, oldFullPath, err := s.LoadFs(oldFileName, hostname)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (s *Service) Save(filename string, destWriter io.Reader) error {
-	filename = s.WithRoot(filename)
-	read, err := io.ReadAll(destWriter)
+	_, newFullPath, err := s.LoadFs(newFilename, hostname)
 	if err != nil {
 		return err
 	}
 
-	if err = os.WriteFile(filename, read, os.ModePerm); err != nil {
-		return err
-	}
-	return nil
+	oldFileName = filepath.ToSlash(oldFullPath)
+	newFilename = filepath.ToSlash(newFullPath)
+
+	return cliFs.Rename(oldFileName, newFilename)
 }
 
-func (s *Service) getFileContents(filename string) ([]byte, error) {
-	file, err := os.ReadFile(s.WithRoot(filepath.ToSlash(filename)))
+func (s *Service) Save(filename, hostname string, create bool, source io.Reader) error {
+	sfCli, filename, err := s.LoadFs(filename, hostname)
+	if err != nil {
+		return err
+	}
+
+	flag := os.O_RDWR | os.O_TRUNC
+	if create {
+		flag |= os.O_CREATE
+	}
+
+	dest, err := sfCli.OpenFile(filename, flag, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer fileutil.Close(dest)
+
+	_, err = io.Copy(dest, source)
+	return err
+}
+
+func (s *Service) getFileContents(filename, hostname string) ([]byte, error) {
+	fsCli, fullpath, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, err
 	}
-	return file, nil
-}
-
-func (s *Service) LoadFilePath(filename string) (string, error) {
-	return s.WithRoot(filename), nil
-}
-
-func (s *Service) createFile(filename string) error {
-	filename = s.WithRoot(filename)
-	baseDir := filepath.Dir(filename)
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		return err
+	file, err := fsCli.ReadFile(fullpath)
+	if err != nil {
+		return nil, err
 	}
 
-	f, err := openFile(filename)
+	return file, err
+}
+
+func (s *Service) LoadFilePath(filename, hostname string, download bool) (io.ReadSeekCloser, time.Time, error) {
+	cliFs, relpath, err := s.LoadFs(filename, hostname)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	if download {
+		stat, err := cliFs.Stat(relpath)
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+
+		if stat.IsDir() {
+			// convert to zip
+			// todo
+		} else {
+			return cliFs.LoadFile(relpath)
+		}
+	}
+
+	file, t, err := cliFs.LoadFile(relpath)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+
+	err = CheckFileType(file)
+	if err != nil {
+		// file cannot be opened close it before return the err
+		fileutil.Close(file)
+		return nil, time.Time{}, errors.Join(ErrFileNotSupported, err)
+	}
+
+	// reset seek pointer after checking trghe file mime
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("failed to seek: %w", err)
+	}
+
+	return file, t, err
+}
+
+var ErrFileNotSupported = errors.New("file type not supported")
+
+func CheckFileType(reader io.Reader) error {
+	mtype, err := mimetype.DetectReader(reader)
 	if err != nil {
 		return err
 	}
 
-	fileutil.Close(f)
+	// Almost all text formats (json, yaml, txt)
+	// inherit from "text/plain"
+	// todo
+	isText := false
+	for m := mtype; m != nil; m = m.Parent() {
+		if m.Is("text/plain") {
+			return nil
+		}
+	}
+
+	// Explicit check for SQLite
+	if mtype.String() == "application/x-sqlite3" {
+		return fmt.Errorf("SQLite not allowed")
+	}
+
+	if !isText {
+		return fmt.Errorf("binary files not allowed")
+	}
+
 	return nil
 }
 
-// WithRoot joins s.composeRoot() with filename
-func (s *Service) WithRoot(filename string) string {
-	return filepath.Join(s.composeRoot(), filename)
+func (s *Service) LoadAll(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
+	filename, pathAlias, err := utils.ExtractMeta(filename)
+	if err != nil {
+		return nil, "", err
+	}
+
+	fsCli, err := s.Fs(hostname, pathAlias)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return fsCli, filename, nil
 }
 
-func (s *Service) Format(filename string) ([]byte, error) {
-	path := s.WithRoot(filename)
-	contents, err := os.ReadFile(path)
+// LoadFs FS gets the correct client -> alias -> path
+func (s *Service) LoadFs(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
+	fsCli, relpath, err := s.LoadAll(filename, hostname)
+	if err != nil {
+		return nil, "", err
+	}
+	return fsCli, relpath, nil
+}
+
+func (s *Service) Format(filename string, hostname string) ([]byte, error) {
+	sfCLi, filename, err := s.LoadFs(filename, hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	contents, err := sfCLi.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read file %w", err)
 	}
@@ -316,22 +363,106 @@ func (s *Service) Format(filename string) ([]byte, error) {
 	return contents, nil
 }
 
-func openFile(filename string) (*os.File, error) {
-	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, os.ModePerm)
+type SearchResult struct {
+	Value   string
+	Indexes []int
 }
 
-func listFiles(path string) ([]string, error) {
-	subEntries, err := os.ReadDir(path)
+func (s *Service) search(hostname string, query string, allPaths []string) []SearchResult {
+	limit := s.dockYml(hostname).SearchLimit
+
+	matches := fuzzy.Find(query, allPaths)
+
+	if len(matches) < limit {
+		limit = len(matches)
+	}
+	results := make([]SearchResult, limit)
+	for i := 0; i < limit; i++ {
+		results[i] = SearchResult{
+			Value:   matches[i].Str,
+			Indexes: matches[i].MatchedIndexes,
+		}
+	}
+
+	return results
+}
+
+func (s *Service) listAllForSearch(dirPath string, hostname string) ([]string, error) {
+	fsCli, rel, err := s.LoadAll(dirPath, hostname)
 	if err != nil {
 		return nil, err
 	}
 
-	filesInSubDir := make([]string, 0, len(subEntries))
-	for _, subEntry := range subEntries {
-		if !subEntry.IsDir() {
-			filesInSubDir = append(filesInSubDir, subEntry.Name())
+	root := fsCli.Root()
+
+	var filez []string
+	err = fsCli.WalkDir(rel, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
 		}
+
+		left := strings.TrimPrefix(path, root)
+		left = strings.TrimPrefix(left, string(filepath.Separator))
+		if left != "" {
+			filez = append(filez, left)
+		}
+
+		return nil
+	})
+
+	return filez, err
+}
+
+func (s *Service) sortFiles(a, b *Entry, host string) int {
+	ra := s.getSortRank(a, host)
+	rb := s.getSortRank(b, host)
+
+	if ra < rb {
+		return -1
+	}
+	if ra > rb {
+		return 1
+	}
+	return strings.Compare(a.fullpath, b.fullpath)
+}
+
+// getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
+func (s *Service) getSortRank(entry *Entry, host string) int {
+	conf := s.dockYml(host)
+
+	base := filepath.Base(entry.fullpath)
+	// -1: pinned files (highest priority)
+	if priority, ok := conf.PinnedFiles[base]; ok {
+		// potential bug, but if someone is manually writing the order of 100000 files i say get a life
+		// -999 > -12 in this context, pretty stupid but i cant be bothered to fix this mathematically
+		return priority - 100_000
 	}
 
-	return filesInSubDir, nil
+	// 0: dotfiles (highest priority)
+	if strings.HasPrefix(base, ".") {
+		return 1
+	}
+
+	// Check if it's a directory (has subfiles)
+	if entry.isDir {
+		return 2
+	}
+
+	// 2+: normal files, ranked by getFileSortRank
+	return 3 + s.getFileSortRank(entry.fullpath)
+}
+
+// getFileSortRank assigns priority within normal files
+func (s *Service) getFileSortRank(filename string) int {
+	base := filepath.Base(filename)
+	// Priority 0: docker-compose files
+	if strings.HasSuffix(base, "compose.yaml") || strings.HasSuffix(base, "compose.yml") {
+		return 0
+	}
+	// Priority 1: other yaml/yml
+	if strings.HasSuffix(base, ".yaml") || strings.HasSuffix(base, ".yml") {
+		return 1
+	}
+	// Priority 2: everything else
+	return 2
 }

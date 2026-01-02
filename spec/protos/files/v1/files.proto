@@ -5,14 +5,30 @@ package files.v1;
 option go_package = "github.com/RA341/dockman/generated/files/v1";
 
 service FileService {
-  // root file management
+  rpc List(ListRequest) returns (ListResponse) {}
   rpc Create(File) returns (Empty) {}
-  rpc List(Empty) returns (ListResponse) {}
+  rpc Copy(CopyRequest) returns (CopyResponse) {}
+
   rpc Delete(File) returns (Empty) {}
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
-  rpc GetDockmanYaml(Empty) returns (DockmanYaml) {}
+
   rpc Format(FormatRequest) returns (FormatResponse) {}
+}
+
+message CopyRequest {
+  File source = 1;
+  File dest = 2;
+}
+
+message CopyResponse {}
+
+message ListRequest {
+  string path = 1;
+}
+
+message ListResponse {
+  repeated FsEntry entries = 1;
 }
 
 message FormatRequest {
@@ -23,14 +39,13 @@ message FormatResponse {
   string contents = 1;
 }
 
-
-message ListResponse {
-  repeated FileGroup groups = 1;
-}
-
-message FileGroup {
-  string root = 1;
-  repeated string subFiles = 2;
+message FsEntry {
+  string filename = 2;
+  bool isDir = 3;
+  repeated FsEntry subFiles = 4;
+  // flag for lazy loading
+  bool isFetched = 5;
+  string isComposeFolder = 6;
 }
 
 message RenameFile {
@@ -40,38 +55,7 @@ message RenameFile {
 
 message File {
   string filename = 1;
+  bool isDir = 2;
 }
 
 message Empty {}
-
-message DockmanYaml {
-  bool useComposeFolders = 1;
-  bool disableComposeQuickActions = 7;
-  int32 tabLimit = 6;
-  VolumesConfig volumesPage = 2;
-  NetworkConfig networkPage = 3;
-  ImageConfig imagePage = 4;
-  ContainerConfig containerPage = 5;
-}
-
-message VolumesConfig {
-  Sort sort = 1;
-}
-
-message NetworkConfig {
-  Sort sort = 1;
-}
-
-message ImageConfig {
-  Sort sort = 1;
-}
-
-message ContainerConfig {
-  Sort sort = 1;
-}
-
-
-message Sort {
-  string sortOrder = 1;
-  string sortField = 2;
-}

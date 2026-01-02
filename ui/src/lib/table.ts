@@ -1,17 +1,17 @@
 import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
-import {type DockmanYaml, FileService} from "../gen/files/v1/files_pb.ts";
-import {callRPC, useClient} from "./api.ts";
+import {callRPC, useHostClient} from "./api.ts";
+import {type DockmanYaml, DockyamlService} from "../gen/dockyaml/v1/dockyaml_pb.ts";
 
 export type SortOrder = 'asc' | 'desc';
 
 export const useDockmanYaml = () => {
-    const fs = useClient(FileService)
+    const fs = useHostClient(DockyamlService)
     const [dockYaml, setDockYaml] = useState<DockmanYaml | null>(null)
 
     useEffect(() => {
         const callback = async () => {
-            const {val} = await callRPC(() => fs.getDockmanYaml({}))
-            setDockYaml(val)
+            const {val} = await callRPC(() => fs.getYaml({}))
+            setDockYaml(val?.dock ?? null)
         }
         callback().then()
     }, [fs]);
@@ -122,3 +122,22 @@ export function sortTable<T>(
 
 }
 
+const rtf = new Intl.RelativeTimeFormat('en', {numeric: 'auto'});
+
+export function formatTimeAgo(timestamp: Date) {
+    const diff = (new Date().getTime() - timestamp.getTime()) / 1000;
+
+    if (diff < 60) {
+        return rtf.format(-Math.round(diff), 'second');
+    } else if (diff < 3600) {
+        return rtf.format(-Math.round(diff / 60), 'minute');
+    } else if (diff < 86400) {
+        return rtf.format(-Math.round(diff / 3600), 'hour');
+    } else if (diff < 2592000) { // Approx 30 days
+        return rtf.format(-Math.round(diff / 86400), 'day');
+    } else if (diff < 31536000) { // Approx 365 days
+        return rtf.format(-Math.round(diff / 2592000), 'month');
+    } else {
+        return rtf.format(-Math.round(diff / 31536000), 'year');
+    }
+}

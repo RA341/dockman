@@ -57,6 +57,9 @@ const (
 	// DockerServiceContainerLogsProcedure is the fully-qualified name of the DockerService's
 	// ContainerLogs RPC.
 	DockerServiceContainerLogsProcedure = "/docker.v1.DockerService/ContainerLogs"
+	// DockerServiceContainerInspectProcedure is the fully-qualified name of the DockerService's
+	// ContainerInspect RPC.
+	DockerServiceContainerInspectProcedure = "/docker.v1.DockerService/ContainerInspect"
 	// DockerServiceComposeUpProcedure is the fully-qualified name of the DockerService's ComposeUp RPC.
 	DockerServiceComposeUpProcedure = "/docker.v1.DockerService/ComposeUp"
 	// DockerServiceComposeDownProcedure is the fully-qualified name of the DockerService's ComposeDown
@@ -88,6 +91,9 @@ const (
 	// DockerServiceImagePruneUnusedProcedure is the fully-qualified name of the DockerService's
 	// ImagePruneUnused RPC.
 	DockerServiceImagePruneUnusedProcedure = "/docker.v1.DockerService/ImagePruneUnused"
+	// DockerServiceImageInspectProcedure is the fully-qualified name of the DockerService's
+	// ImageInspect RPC.
+	DockerServiceImageInspectProcedure = "/docker.v1.DockerService/ImageInspect"
 	// DockerServiceVolumeListProcedure is the fully-qualified name of the DockerService's VolumeList
 	// RPC.
 	DockerServiceVolumeListProcedure = "/docker.v1.DockerService/VolumeList"
@@ -106,6 +112,9 @@ const (
 	// DockerServiceNetworkDeleteProcedure is the fully-qualified name of the DockerService's
 	// NetworkDelete RPC.
 	DockerServiceNetworkDeleteProcedure = "/docker.v1.DockerService/NetworkDelete"
+	// DockerServiceNetworkInspectProcedure is the fully-qualified name of the DockerService's
+	// NetworkInspect RPC.
+	DockerServiceNetworkInspectProcedure = "/docker.v1.DockerService/NetworkInspect"
 )
 
 // DockerServiceClient is a client for the docker.v1.DockerService service.
@@ -116,9 +125,10 @@ type DockerServiceClient interface {
 	ContainerRemove(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerRestart(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerUpdate(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error)
-	ContainerList(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error)
+	ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error)
 	ContainerStats(context.Context, *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error)
 	ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
+	ContainerInspect(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error)
 	// compose
 	ComposeUp(context.Context, *connect.Request[v1.ComposeFile]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
 	ComposeDown(context.Context, *connect.Request[v1.ComposeFile]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
@@ -132,6 +142,7 @@ type DockerServiceClient interface {
 	ImageList(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	ImageRemove(context.Context, *connect.Request[v1.RemoveImageRequest]) (*connect.Response[v1.RemoveImageResponse], error)
 	ImagePruneUnused(context.Context, *connect.Request[v1.ImagePruneRequest]) (*connect.Response[v1.ImagePruneResponse], error)
+	ImageInspect(context.Context, *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error)
 	// volumes
 	VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	VolumeCreate(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
@@ -140,6 +151,7 @@ type DockerServiceClient interface {
 	NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
 	NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
+	NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error)
 }
 
 // NewDockerServiceClient constructs a client for the docker.v1.DockerService service. By default,
@@ -183,7 +195,7 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("ContainerUpdate")),
 			connect.WithClientOptions(opts...),
 		),
-		containerList: connect.NewClient[v1.Empty, v1.ListResponse](
+		containerList: connect.NewClient[v1.ContainerListRequest, v1.ListResponse](
 			httpClient,
 			baseURL+DockerServiceContainerListProcedure,
 			connect.WithSchema(dockerServiceMethods.ByName("ContainerList")),
@@ -199,6 +211,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+DockerServiceContainerLogsProcedure,
 			connect.WithSchema(dockerServiceMethods.ByName("ContainerLogs")),
+			connect.WithClientOptions(opts...),
+		),
+		containerInspect: connect.NewClient[v1.ContainerLogsRequest, v1.ContainerInspectMessage](
+			httpClient,
+			baseURL+DockerServiceContainerInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("ContainerInspect")),
 			connect.WithClientOptions(opts...),
 		),
 		composeUp: connect.NewClient[v1.ComposeFile, v1.LogsMessage](
@@ -267,6 +285,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("ImagePruneUnused")),
 			connect.WithClientOptions(opts...),
 		),
+		imageInspect: connect.NewClient[v1.ImageInspectRequest, v1.ImageInspectResponse](
+			httpClient,
+			baseURL+DockerServiceImageInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("ImageInspect")),
+			connect.WithClientOptions(opts...),
+		),
 		volumeList: connect.NewClient[v1.ListVolumesRequest, v1.ListVolumesResponse](
 			httpClient,
 			baseURL+DockerServiceVolumeListProcedure,
@@ -303,6 +327,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("NetworkDelete")),
 			connect.WithClientOptions(opts...),
 		),
+		networkInspect: connect.NewClient[v1.NetworkInspectRequest, v1.NetworkInspectResponse](
+			httpClient,
+			baseURL+DockerServiceNetworkInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("NetworkInspect")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -313,9 +343,10 @@ type dockerServiceClient struct {
 	containerRemove  *connect.Client[v1.ContainerRequest, v1.LogsMessage]
 	containerRestart *connect.Client[v1.ContainerRequest, v1.LogsMessage]
 	containerUpdate  *connect.Client[v1.ContainerRequest, v1.Empty]
-	containerList    *connect.Client[v1.Empty, v1.ListResponse]
+	containerList    *connect.Client[v1.ContainerListRequest, v1.ListResponse]
 	containerStats   *connect.Client[v1.StatsRequest, v1.StatsResponse]
 	containerLogs    *connect.Client[v1.ContainerLogsRequest, v1.LogsMessage]
+	containerInspect *connect.Client[v1.ContainerLogsRequest, v1.ContainerInspectMessage]
 	composeUp        *connect.Client[v1.ComposeFile, v1.LogsMessage]
 	composeDown      *connect.Client[v1.ComposeFile, v1.LogsMessage]
 	composeStart     *connect.Client[v1.ComposeFile, v1.LogsMessage]
@@ -327,12 +358,14 @@ type dockerServiceClient struct {
 	imageList        *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
 	imageRemove      *connect.Client[v1.RemoveImageRequest, v1.RemoveImageResponse]
 	imagePruneUnused *connect.Client[v1.ImagePruneRequest, v1.ImagePruneResponse]
+	imageInspect     *connect.Client[v1.ImageInspectRequest, v1.ImageInspectResponse]
 	volumeList       *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
 	volumeCreate     *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
 	volumeDelete     *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
 	networkList      *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
 	networkCreate    *connect.Client[v1.CreateNetworkRequest, v1.CreateNetworkResponse]
 	networkDelete    *connect.Client[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse]
+	networkInspect   *connect.Client[v1.NetworkInspectRequest, v1.NetworkInspectResponse]
 }
 
 // ContainerStart calls docker.v1.DockerService.ContainerStart.
@@ -361,7 +394,7 @@ func (c *dockerServiceClient) ContainerUpdate(ctx context.Context, req *connect.
 }
 
 // ContainerList calls docker.v1.DockerService.ContainerList.
-func (c *dockerServiceClient) ContainerList(ctx context.Context, req *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error) {
+func (c *dockerServiceClient) ContainerList(ctx context.Context, req *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error) {
 	return c.containerList.CallUnary(ctx, req)
 }
 
@@ -373,6 +406,11 @@ func (c *dockerServiceClient) ContainerStats(ctx context.Context, req *connect.R
 // ContainerLogs calls docker.v1.DockerService.ContainerLogs.
 func (c *dockerServiceClient) ContainerLogs(ctx context.Context, req *connect.Request[v1.ContainerLogsRequest]) (*connect.ServerStreamForClient[v1.LogsMessage], error) {
 	return c.containerLogs.CallServerStream(ctx, req)
+}
+
+// ContainerInspect calls docker.v1.DockerService.ContainerInspect.
+func (c *dockerServiceClient) ContainerInspect(ctx context.Context, req *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error) {
+	return c.containerInspect.CallUnary(ctx, req)
 }
 
 // ComposeUp calls docker.v1.DockerService.ComposeUp.
@@ -430,6 +468,11 @@ func (c *dockerServiceClient) ImagePruneUnused(ctx context.Context, req *connect
 	return c.imagePruneUnused.CallUnary(ctx, req)
 }
 
+// ImageInspect calls docker.v1.DockerService.ImageInspect.
+func (c *dockerServiceClient) ImageInspect(ctx context.Context, req *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error) {
+	return c.imageInspect.CallUnary(ctx, req)
+}
+
 // VolumeList calls docker.v1.DockerService.VolumeList.
 func (c *dockerServiceClient) VolumeList(ctx context.Context, req *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
 	return c.volumeList.CallUnary(ctx, req)
@@ -460,6 +503,11 @@ func (c *dockerServiceClient) NetworkDelete(ctx context.Context, req *connect.Re
 	return c.networkDelete.CallUnary(ctx, req)
 }
 
+// NetworkInspect calls docker.v1.DockerService.NetworkInspect.
+func (c *dockerServiceClient) NetworkInspect(ctx context.Context, req *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error) {
+	return c.networkInspect.CallUnary(ctx, req)
+}
+
 // DockerServiceHandler is an implementation of the docker.v1.DockerService service.
 type DockerServiceHandler interface {
 	// container
@@ -468,9 +516,10 @@ type DockerServiceHandler interface {
 	ContainerRemove(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerRestart(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerUpdate(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error)
-	ContainerList(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error)
+	ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error)
 	ContainerStats(context.Context, *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error)
 	ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest], *connect.ServerStream[v1.LogsMessage]) error
+	ContainerInspect(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error)
 	// compose
 	ComposeUp(context.Context, *connect.Request[v1.ComposeFile], *connect.ServerStream[v1.LogsMessage]) error
 	ComposeDown(context.Context, *connect.Request[v1.ComposeFile], *connect.ServerStream[v1.LogsMessage]) error
@@ -484,6 +533,7 @@ type DockerServiceHandler interface {
 	ImageList(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	ImageRemove(context.Context, *connect.Request[v1.RemoveImageRequest]) (*connect.Response[v1.RemoveImageResponse], error)
 	ImagePruneUnused(context.Context, *connect.Request[v1.ImagePruneRequest]) (*connect.Response[v1.ImagePruneResponse], error)
+	ImageInspect(context.Context, *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error)
 	// volumes
 	VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	VolumeCreate(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
@@ -492,6 +542,7 @@ type DockerServiceHandler interface {
 	NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
 	NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
+	NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error)
 }
 
 // NewDockerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -547,6 +598,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		DockerServiceContainerLogsProcedure,
 		svc.ContainerLogs,
 		connect.WithSchema(dockerServiceMethods.ByName("ContainerLogs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dockerServiceContainerInspectHandler := connect.NewUnaryHandler(
+		DockerServiceContainerInspectProcedure,
+		svc.ContainerInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("ContainerInspect")),
 		connect.WithHandlerOptions(opts...),
 	)
 	dockerServiceComposeUpHandler := connect.NewServerStreamHandler(
@@ -615,6 +672,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(dockerServiceMethods.ByName("ImagePruneUnused")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dockerServiceImageInspectHandler := connect.NewUnaryHandler(
+		DockerServiceImageInspectProcedure,
+		svc.ImageInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("ImageInspect")),
+		connect.WithHandlerOptions(opts...),
+	)
 	dockerServiceVolumeListHandler := connect.NewUnaryHandler(
 		DockerServiceVolumeListProcedure,
 		svc.VolumeList,
@@ -651,6 +714,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(dockerServiceMethods.ByName("NetworkDelete")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dockerServiceNetworkInspectHandler := connect.NewUnaryHandler(
+		DockerServiceNetworkInspectProcedure,
+		svc.NetworkInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("NetworkInspect")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/docker.v1.DockerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DockerServiceContainerStartProcedure:
@@ -669,6 +738,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceContainerStatsHandler.ServeHTTP(w, r)
 		case DockerServiceContainerLogsProcedure:
 			dockerServiceContainerLogsHandler.ServeHTTP(w, r)
+		case DockerServiceContainerInspectProcedure:
+			dockerServiceContainerInspectHandler.ServeHTTP(w, r)
 		case DockerServiceComposeUpProcedure:
 			dockerServiceComposeUpHandler.ServeHTTP(w, r)
 		case DockerServiceComposeDownProcedure:
@@ -691,6 +762,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceImageRemoveHandler.ServeHTTP(w, r)
 		case DockerServiceImagePruneUnusedProcedure:
 			dockerServiceImagePruneUnusedHandler.ServeHTTP(w, r)
+		case DockerServiceImageInspectProcedure:
+			dockerServiceImageInspectHandler.ServeHTTP(w, r)
 		case DockerServiceVolumeListProcedure:
 			dockerServiceVolumeListHandler.ServeHTTP(w, r)
 		case DockerServiceVolumeCreateProcedure:
@@ -703,6 +776,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceNetworkCreateHandler.ServeHTTP(w, r)
 		case DockerServiceNetworkDeleteProcedure:
 			dockerServiceNetworkDeleteHandler.ServeHTTP(w, r)
+		case DockerServiceNetworkInspectProcedure:
+			dockerServiceNetworkInspectHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -732,7 +807,7 @@ func (UnimplementedDockerServiceHandler) ContainerUpdate(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerUpdate is not implemented"))
 }
 
-func (UnimplementedDockerServiceHandler) ContainerList(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.ListResponse], error) {
+func (UnimplementedDockerServiceHandler) ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerList is not implemented"))
 }
 
@@ -742,6 +817,10 @@ func (UnimplementedDockerServiceHandler) ContainerStats(context.Context, *connec
 
 func (UnimplementedDockerServiceHandler) ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest], *connect.ServerStream[v1.LogsMessage]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerLogs is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) ContainerInspect(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.Response[v1.ContainerInspectMessage], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerInspect is not implemented"))
 }
 
 func (UnimplementedDockerServiceHandler) ComposeUp(context.Context, *connect.Request[v1.ComposeFile], *connect.ServerStream[v1.LogsMessage]) error {
@@ -788,6 +867,10 @@ func (UnimplementedDockerServiceHandler) ImagePruneUnused(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ImagePruneUnused is not implemented"))
 }
 
+func (UnimplementedDockerServiceHandler) ImageInspect(context.Context, *connect.Request[v1.ImageInspectRequest]) (*connect.Response[v1.ImageInspectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ImageInspect is not implemented"))
+}
+
 func (UnimplementedDockerServiceHandler) VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.VolumeList is not implemented"))
 }
@@ -810,4 +893,8 @@ func (UnimplementedDockerServiceHandler) NetworkCreate(context.Context, *connect
 
 func (UnimplementedDockerServiceHandler) NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkDelete is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkInspect is not implemented"))
 }

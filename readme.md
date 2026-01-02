@@ -28,7 +28,7 @@ Try Dockman with this docker run command
 > For a more persistent setup, see the [compose](#docker-compose) section below.
 
 ```bash title="Bash"
-docker run --rm -p 8866:8866 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest
+docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest
 ```
 
 Access at http://localhost:8866

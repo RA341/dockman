@@ -1,15 +1,15 @@
 import {useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from '../lib/api.ts'
-import {type ContainerList, DockerService} from '../gen/docker/v1/docker_pb.ts'
+import {callRPC, useHostClient} from '../lib/api.ts'
+import {DockerService, type ListResponse} from '../gen/docker/v1/docker_pb.ts'
 import {useSnackbar} from "./snackbar.ts"
-import {useHost} from "./host.ts";
+import {useHostStore} from "../pages/compose/state/files.ts";
 
 export function useDockerContainers() {
-    const dockerService = useClient(DockerService)
+    const dockerService = useHostClient(DockerService)
     const {showWarning} = useSnackbar()
-    const {selectedHost} = useHost()
+    const selectedHost = useHostStore(state => state.host)
 
-    const [containers, setContainers] = useState<ContainerList[]>([])
+    const [containers, setContainers] = useState<ListResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [refreshInterval, setRefreshInterval] = useState(2000)
 
@@ -17,11 +17,11 @@ export function useDockerContainers() {
         const {val, err} = await callRPC(() => dockerService.containerList({}))
         if (err) {
             showWarning(`Failed to refresh containers: ${err}`)
-            setContainers([])
+            setContainers(null)
             return
         }
 
-        setContainers(val?.list || [])
+        setContainers(val)
     }, [dockerService, selectedHost])
 
     const refreshContainers = useCallback(() => {
@@ -35,7 +35,6 @@ export function useDockerContainers() {
         })
     }, [fetchContainers]) // run only once on page load
 
-    // fetch without setting load
     useEffect(() => {
         fetchContainers().then()
         const intervalId = setInterval(fetchContainers, refreshInterval)

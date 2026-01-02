@@ -1,29 +1,31 @@
 import {type ReactNode, useCallback, useEffect, useState} from 'react'
-import {callRPC, useClient} from "../lib/api.ts";
+import {callRPC, useClient, useHostClient} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
 import {ConfigService, type UserConfig} from "../gen/config/v1/config_pb.ts";
 import {ConfigContext, type ConfigContextType, type UpdateSettingsOption} from "../hooks/config.ts";
-import {type DockmanYaml, FileService} from "../gen/files/v1/files_pb.ts";
+import {type DockmanYaml, DockyamlService} from "../gen/dockyaml/v1/dockyaml_pb.ts";
 
 export type Config = Omit<UserConfig, '$typeName' | '$unknown'>;
 
 export function UserConfigProvider({children}: { children: ReactNode }) {
+    const {showWarning} = useSnackbar();
     const client = useClient(ConfigService)
-    const file = useClient(FileService)
+    const dockyamlClient = useHostClient(DockyamlService)
 
-    const {showError, showSuccess, showWarning} = useSnackbar()
+    const {showError, showSuccess} = useSnackbar()
     const [config, setConfig] = useState<Config>({})
     const [isLoading, setIsLoading] = useState(true)
 
-    const [dockYaml, setDockYaml] = useState<DockmanYaml | null>(null)
-
+    const [dockYaml, setDockyaml] = useState<DockmanYaml | null>(null)
     const fetchDockYaml = useCallback(async () => {
-        const {val, err} = await callRPC(() => file.getDockmanYaml({}))
+        console.log("reloading dockman yaml")
+        const {val, err} = await callRPC(() => dockyamlClient.getYaml({}))
         if (err) {
             showWarning(`Unable to get dockman yaml, ${err}`)
+        } else {
+            setDockyaml(val?.dock ?? null)
         }
-        setDockYaml(val)
-    }, [file])
+    }, [dockyamlClient])
 
     const fetchConfig = useCallback(async () => {
         console.log("Fetching user config...")
@@ -63,6 +65,7 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
         isLoading,
         updateSettings,
         dockYaml,
+        fetchDockmanYaml: fetchDockYaml,
     }
 
     return (

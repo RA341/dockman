@@ -51,7 +51,7 @@ tasks:
 
   init:build:
     desc: "Creates the build dir"
-    cmd: coreutils mkdir -p {{.BUILD_DIR}}
+    cmd: mkdir -p {{.BUILD_DIR}}
     status:
       # This command checks if the directory exists. If it does, the task is considered "up-to-date" and won't run.
       - test -d {{.BUILD_DIR}}
@@ -74,8 +74,8 @@ tasks:
       NATIVE_DIR: "{{.UI_DIR}}src/pages"
       CMD_NAME: "{{index .MATCH 0}}"
     cmds:
-      - coreutils mkdir -p {{ .NATIVE_DIR }}/{{ .CMD_NAME }}
-      - coreutils touch {{ .NATIVE_DIR }}/{{ .CMD_NAME }}/{{ .CMD_NAME }}.tsx
+      - mkdir -p {{ .NATIVE_DIR }}/{{ .CMD_NAME }}
+      - touch {{ .NATIVE_DIR }}/{{ .CMD_NAME }}/{{ .CMD_NAME }}.tsx
 
   ui:dev:
     desc: "npm run dev in {{.UI_DIR}}"
@@ -101,6 +101,9 @@ tasks:
       CMD: "{{index .MATCH 0}}"
       OUT_DIR: ../{{.CORE_DIR}}{{.GO_CMD_DIR}}/{{.CMD}}
     desc: "Builds ui and copies for embed binary. Usage: task ui:<go cmd target>"
+    sources:
+      - "**/*.ts"
+      - "**/*.tsx"
     cmds:
       - task: ui
       - rm -rf {{.OUT_DIR}}/dist
@@ -110,7 +113,7 @@ tasks:
   clean:
     desc: "Removes all files in {{.BUILD_DIR}}"
     cmds:
-      - coreutils rm -rf {{.BUILD_DIR}}/*
+      - rm -rf {{.BUILD_DIR}}/*
 
   tidy:
     desc: "Calls go mod tidy in {{.CORE_DIR}}"
@@ -135,7 +138,7 @@ tasks:
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
     cmds:
       - mkdir -p ../{{.BUILD_DIR}}/{{.CMD_NAME}}
-      - go build -v
+      - go build -v -tags desktop,production,webkit2_41
         -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}
         ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 
@@ -153,6 +156,16 @@ tasks:
       - task: go:b:{{.CMD_NAME}}
       - ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
 
+  desk:
+    dir: "{{.BUILD_DIR}}"
+    desc: "Builds and runs a Go desktop target"
+    vars:
+      CMD_NAME: "desktop"
+      EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
+    cmds:
+      - task ui:b:{{.CMD_NAME}}
+      - task go:{{.CMD_NAME}}
+
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"
     vars:
@@ -160,41 +173,37 @@ tasks:
     cmds:
       - task: go:{{.CMD_NAME}}
 
-  dk:b:*:
-    desc: "Builds the main dockman image for a specific target. Usage: task dk:<target>"
-    vars:
-      TARGET: "{{index .MATCH 0}}"
+  dk:
+    desc: "Builds and runs the main dockman image. Usage: task dk"
     cmds:
-      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}} --target {{.TARGET}}
-    preconditions:
-      - sh: 'test -n "{{.TARGET}}"'
-        msg: "The 'target' variable must be provided. Usage: task dk.<target-name>"
+      - task dk:r
 
-  dk:*:
-    desc: "Builds and runs the main dockman image for a specific target. Usage: task dk:r:<target>"
-    vars:
-      TARGET: "{{index .MATCH 0}}"
+  dk:b:
+    desc: "Builds the main dockman image for a specific target. Usage: task dk:b"
     cmds:
-      - task dk:b:{{.TARGET}}
+      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}
+
+  dk:r:
+    desc: "Builds and runs the main dockman image for a specific target. Usage: task dk:r:<target>"
+    cmds:
+      - task dk:b
       - docker run --rm
         -e TZ=America/New_York
+        -e PUID=1000
+        -e PGID=1000
         -e DOCKMAN_LOG_LEVEL=debug
+        -e DOCKMAN_LOG_VERBOSE=true
+        -e DOCKMAN_LOG_HTTP=false
+        -e DOCKMAN_LOG_WARN=false
         -e DOCKMAN_AUTH_ENABLE=false
         -e DOCKMAN_AUTH_USERNAME=wow
         -e DOCKMAN_AUTH_PASSWORD=wow
+        -e DOCKMAN_COMPOSE_ROOT=/.build/docker/compose
         -v /var/run/docker.sock:/var/run/docker.sock
+        -v ./.build/docker/compose:/.build/docker/compose
+        -v ./.build/docker/config:/config
         -p 8221:8866
-        {{.DOCKMAN_IMAGE_BASE}}:{{.TARGET}}
-    preconditions:
-      - sh: 'test -n "{{.TARGET}}"'
-        msg: "The 'target' variable must be provided. Usage: task dk:r.<target-name>"
-
-  dk:
-    desc: "Builds and runs the main dockman image. Usage: task dk"
-    vars:
-      TARGET: "alpine"
-    cmds:
-      - task dk:{{.TARGET}}
+        {{.DOCKMAN_IMAGE_BASE}}
 
   dk:up:
     desc: "Builds the updater image. Usage: task dk:<target>"

@@ -1,7 +1,6 @@
 import {ReactNode, useState} from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import Heading from '@theme/Heading';
@@ -9,10 +8,10 @@ import IconCopy from "@theme/Icon/Copy";
 import IconSuccess from "@theme/Icon/Success";
 
 import styles from './index.module.css';
+import Head from "@docusaurus/Head";
 
 function HomepageHeader() {
-    const {siteConfig} = useDocusaurusContext();
-    const demoCommand = "docker run --rm -p 8866:8866 -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest"
+    const demoCommand = "docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:latest"
     const [isLoading, setIsLoading] = useState(true);
 
     return (
@@ -133,6 +132,9 @@ export default function Home(): ReactNode {
             title="Dockman - Docker Management Tool"
             description="Yet another Docker Compose manager">
             <HomepageHeader/>
+            <Head>
+                <meta name="algolia-site-verification" content="51EE8E6D0FBDD71C"/>
+            </Head>
             <main>
                 <HomepageFeatures/>
             </main>

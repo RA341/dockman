@@ -1,4 +1,6 @@
-import type {TabDetails} from "../hooks/tabs.ts";
+import type {TabDetails} from "../context/tab-context.tsx";
+import {useCallback} from "react";
+import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
 
 export const COMPOSE_EXTENSIONS = ['compose.yaml', 'compose.yml']
 
@@ -31,9 +33,29 @@ export const getUsageColor = (value: number): 'success.main' | 'warning.main' | 
 }
 
 
-export const getEditorUrl = (filename: string, tabDetail: TabDetails) => {
-    return `/stacks/${filename}?tab=${tabDetail.subTabIndex ?? 0}`;
-}
+export const useEditorUrl = () => {
+    const host = useHostStore(state => state.host)
+    const prevAlias = useAliasStore(state => state.alias)
+
+    return useCallback((filename?: string, tabDetail?: TabDetails | number) => {
+        let base = `/${host}/files`;
+        if (filename) {
+            base = `${base}/${filename}`;
+            if (tabDetail) {
+                let tabValue: number;
+                if (typeof tabDetail === 'number') {
+                    tabValue = tabDetail;
+                } else {
+                    tabValue = tabDetail.subTabIndex ?? 0;
+                }
+                base = `${base}?tab=${tabValue}`;
+            }
+        } else {
+            base = `${base}/${prevAlias || "compose"}`;
+        }
+        return base;
+    }, [host, prevAlias]);
+};
 
 export const getLanguageFromExtension = (filename?: string): string => {
     if (!filename) {

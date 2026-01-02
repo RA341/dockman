@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package cleaner.v1;
+
+option go_package = "github.com/RA341/dockman/generated/cleaner/v1";
+
+service CleanerService {
+  rpc ListHistory(ListHistoryRequest) returns (ListHistoryResponse) {}
+  rpc RunCleaner(RunCleanerRequest) returns (RunCleanerResponse) {}
+  rpc SpaceStatus(SpaceStatusRequest) returns (SpaceStatusResponse) {}
+
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
+  rpc EditConfig(EditConfigRequest) returns (EditConfigResponse) {}
+}
+
+
+message SpaceStatusRequest {}
+
+message SpaceStatusResponse {
+  SpaceStat Containers = 1;
+  SpaceStat Images = 2;
+  SpaceStat Volumes = 3;
+  SpaceStat BuildCache = 4;
+  SpaceStat Network = 5;
+}
+
+message SpaceStat {
+  int64 ActiveCount = 1;
+  int64 TotalCount = 2;
+  string Reclaimable = 3;
+  string TotalSize = 4;
+}
+
+message EditConfigRequest {
+  PruneConfig config = 1;
+}
+
+message EditConfigResponse {
+  PruneConfig config = 1;
+}
+
+message GetConfigRequest {}
+
+message GetConfigResponse {
+  PruneConfig config = 1;
+}
+
+message PruneHistory {
+  string TimeRan = 1;
+  string status = 2;
+  string Volumes = 3;
+  string Networks = 4;
+  string Images = 5;
+  string Containers = 6;
+  string BuildCache = 7;
+
+}
+
+message ListHistoryRequest {}
+
+message ListHistoryResponse {
+  repeated PruneHistory history = 1;
+}
+
+message RunCleanerRequest {}
+
+message RunCleanerResponse {}
+
+message PruneResult {}
+
+message PruneConfig {
+  bool Enabled = 1;
+  uint32 IntervalInHours = 2;
+
+  bool Volumes = 3;
+  bool Networks = 4;
+  bool Images = 5;
+  bool Containers = 6;
+  bool BuildCache = 7;
+}

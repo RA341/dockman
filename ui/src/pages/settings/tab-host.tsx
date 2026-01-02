@@ -1,439 +1,267 @@
-import React, {useEffect, useState} from 'react'
+import {useEffect, useState} from 'react';
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     Divider,
-    FormControlLabel,
+    Grid,
     IconButton,
     Paper,
+    Stack,
     Switch,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TextField,
+    Tooltip,
     Typography
-} from "@mui/material"
-import {callRPC, useClient} from "../../lib/api.ts"
-import {Add, Delete, Edit, ErrorOutlined, InfoOutlined} from '@mui/icons-material'
-import {DockerManagerService, type Machine} from '../../gen/docker_manager/v1/docker_manager_pb.ts'
+} from "@mui/material";
+import {Add, DeleteOutline, DnsOutlined, EditOutlined, FolderSpecialOutlined, Refresh} from '@mui/icons-material';
+import {callRPC, useClient} from "../../lib/api.ts";
+import {ClientType, type Host, HostManagerService} from "../../gen/host/v1/host_pb.ts";
+import EmptyHostDisplay from "./tab-host-empty.tsx";
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {useHost} from "../../hooks/host.ts";
+import {useHostManager} from "../../context/host-context.tsx";
+import HostWizardDialog from "./components/host-wizard.tsx";
 
-export function TabDockerHosts() {
-    const sshClient = useClient(DockerManagerService)
+function TabDockerHosts() {
+    const hostClient = useClient(HostManagerService);
     const {showError} = useSnackbar()
-    const {fetchHosts} = useHost()
 
-    const [machines, setMachines] = useState<Machine[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [isDialogOpen, setIsDialogOpen] = useState(false)
-    const [editingMachine, setEditingMachine] = useState<Machine | null>(null)
-    const [toggleLoading, setToggleLoading] = useState<Set<string>>(new Set())
+    const {fetchHosts} = useHostManager()
 
-    const fetchMachines = async () => {
-        setLoading(true)
-        const {val, err} = await callRPC(() => sshClient.listHosts({}))
+    const [hosts, setHosts] = useState<Host[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState("");
+
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedHost, setSelectedHost] = useState<Host | null>(null);
+
+    const loadHosts = async () => {
+        setLoading(true);
+        setErr("");
+
+        const {val, err} = await callRPC(() => hostClient.listAllHosts({}));
         if (err) {
-            setError(err)
-            console.error(err)
+            setErr(err);
         } else {
-            setMachines(val?.machines || [])
+            setHosts(val?.hosts ?? []);
         }
-        setLoading(false)
-    }
+
+        setLoading(false);
+    };
 
     useEffect(() => {
-        fetchMachines().then()
-        return () => {
-            fetchHosts().then()
-        }
-    }, [])
+        loadHosts().then();
+    }, []);
 
-    const handleOpenDialog = (machine?: Machine) => {
-        setEditingMachine(machine || null)
-        setIsDialogOpen(true)
-    }
+    const handleToggle = async (host: Host, val: boolean) => {
+        const {err} = await callRPC(() => hostClient.toggleClient({name: host.name, enable: val}))
+        if (err) showError(`Failed to toggle host ${host.name}`);
 
-    const handleCloseDialog = () => {
-        setIsDialogOpen(false)
-        setEditingMachine(null)
-    }
+        await loadHosts()
+    };
 
-    const handleSave = async (machine: Omit<Machine, '$unknown' | '$typeName'>) => {
-        const rpcCall = editingMachine !== null
-            ? () => sshClient.editClient({...machine})
-            : () => sshClient.newClient({...machine});
-
-        const {err} = await callRPC(() => rpcCall())
+    const handleDelete = async (hostname: string) => {
+        const {err} = await callRPC(() => hostClient.deleteHost({host: hostname}))
         if (err) {
-            showError(err)
-            console.error("Failed to save machine", err)
+            showError(`Error occurred while deleting host ${err}`);
         }
 
-        // Refresh the list after saving
-        fetchMachines().then()
-        handleCloseDialog()
-    }
+        await loadHosts()
+    };
 
-    const handleDelete = async (id: bigint) => {
-        if (window.confirm('Are you sure you want to delete this machine?')) {
-            const {err} = await callRPC(() => sshClient.deleteClient({id}))
-            if (err) {
-                showError(err)
-                console.error("Failed to delete machine", err)
-            }
-            await fetchMachines() // Refresh the list
-        }
-    }
-
-    const handleToggleEnable = async (machine: Machine) => {
-        const machineId = machine.name
-        setToggleLoading(prev => new Set(prev).add(machineId))
-
-        const {err} = await callRPC(() => sshClient.toggleClient({
-            name: machineId,
-            enable: !machine.enable
-        }))
-
-        if (err) {
-            showError(err)
-            console.error("Failed to toggle machine", err)
-        } else {
-            setMachines(prev =>
-                prev.map(m =>
-                    m.name === machineId
-                        ? {...m, enable: !m.enable}
-                        : m
-                )
-            )
-        }
-        setToggleLoading(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(machineId)
-            return newSet
-        })
-    }
-
-    if (loading) {
-        return <Box sx={{display: 'flex', justifyContent: 'center', p: 4}}><CircularProgress/></Box>
-    }
-
-    if (error) {
-        return <Typography color="error">{error}</Typography>
+    function onClose() {
+        loadHosts().then()
+        fetchHosts().then()
+        setDialogOpen(false)
     }
 
     return (
-        <>
-            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
-                <Button
-                    variant="contained"
-                    startIcon={<Add/>}
-                    onClick={() => handleOpenDialog()}
-                >
-                    Add Machine
-                </Button>
-            </Box>
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell sx={{paddingRight: 0}}>Status</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>User</TableCell>
-                            <TableCell sx={{paddingRight: 0}}>Host</TableCell>
-                            <TableCell>Port</TableCell>
-                            <TableCell align="center">Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {machines.map((machine) => (
-                            <TableRow key={machine.id}>
-                                <TableCell sx={{paddingRight: 0}}>
-                                    <MachineToggle
-                                        key={machine.name}
-                                        machine={machine}
-                                        onToggle={handleToggleEnable}
-                                        loading={toggleLoading.has(machine.name)}
-                                    />
-                                </TableCell>
-                                <TableCell>{machine.name}</TableCell>
-                                <TableCell>{machine.user}</TableCell>
-                                <TableCell sx={{paddingRight: 0}}>{machine.host}</TableCell>
-                                <TableCell>{machine.port}</TableCell>
-                                <TableCell align="center">
-                                    <IconButton onClick={() => handleOpenDialog(machine)}><Edit/></IconButton>
-                                    <IconButton onClick={() => handleDelete(machine.id)}><Delete/></IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-            <MachineFormDialog
-                open={isDialogOpen}
-                onClose={handleCloseDialog}
-                onSave={handleSave}
-                machine={editingMachine}
-            />
-        </>
-    )
-}
-
-const MachineToggle = (
-    {machine, onToggle, loading}:
-    { machine: Machine; onToggle: (machine: Machine) => void; loading: boolean }
-) => {
-    return (
-        <FormControlLabel
-            control={
-                // This Box will maintain a constant size, preventing layout shifts.
-                <Box
-                    sx={{
-                        position: 'relative',
-                        // Set a fixed size matching the approximate dimensions of the Switch component.
-                        // A standard Material-UI Switch is roughly 62px by 42px.
-                        width: '50px',
-                        height: '30px',
-                        // Center the content within the box.
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    {/* The Switch is only rendered when not loading. */}
-                    {!loading ? (
-                        <Switch
-                            checked={machine.enable}
-                            onChange={() => onToggle(machine)}
-                            disabled={loading}
-                        />
-                    ) : (
-                        // The CircularProgress is shown during the loading state.
-                        <CircularProgress
-                            size={24}
-                            // The absolute positioning centers the spinner within the Box.
-                            sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                marginTop: '-12px',
-                                marginLeft: '-12px',
-                            }}
-                        />
-                    )}
+        <Box sx={{p: 3}}>
+            <Stack direction="row" justifyContent="" alignItems="center" sx={{mb: 4}}>
+                <Box sx={{pr: 3}}>
+                    <Typography variant="h5" sx={{fontWeight: 800}}>Hosts</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Manage local and remote Docker engines
+                    </Typography>
                 </Box>
-            }
-            label=""
-        />
-    );
-};
 
-interface MachineFormDialogProps {
-    open: boolean
-    onClose: () => void
-    onSave: (machine: Omit<Machine, '$unknown' | '$typeName'>) => Promise<void>
-    machine: Machine | null
-}
+                <Stack direction="row" spacing={2}>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            loadHosts().then()
+                        }}
+                        sx={{borderRadius: 2, minWidth: 'auto', px: 1.5, py: 1}}
+                    >
+                        <Refresh/>
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Add/>}
+                        onClick={() => {
+                            setSelectedHost(null);
+                            setDialogOpen(true);
+                        }}
+                        sx={{borderRadius: 2, px: 3}}
+                    >
+                        Add Host
+                    </Button>
+                </Stack>
+            </Stack>
 
-const publicKeyHelperText = [
-    "When PublicKey is enabled",
-    "Password is only used for the initial connection",
-    "Dockman will automatically install its public key on the remote host",
-    "Enables secure password-less authentication for future connections",
-    "Your password will not be stored"
-]
+            {err && <Chip label={err} color="error" variant="outlined" sx={{mb: 2}}/>}
 
-const passwordHelperText = [
-    "When PublicKey is disabled",
-    "Standard password authentication is used",
-    "Your password will be stored and used in subsequent connections to the remote host"
-]
-
-const emptyMachine = {
-    id: BigInt(0),
-    name: '',
-    host: '',
-    port: 22,
-    user: '',
-    password: '',
-    enable: false,
-    usePublicKeyAuth: false,
-}
-
-export function MachineFormDialog({open, onClose, onSave, machine}: MachineFormDialogProps) {
-    const [formData, setFormData] = useState(machine || emptyMachine)
-    const [error, setError] = useState<string>('')
-    const [isLoading, setIsLoading] = useState(false)
-
-    useEffect(() => {
-        setFormData(machine || emptyMachine)
-        setError('') // Clear error when dialog opens/closes or machine changes
-    }, [machine, open])
-
-    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const {name, value, type, checked} = event.target
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value,
-        }))
-
-        if (error) {
-            setError('')
-        }
-    }
-
-    const handlePortChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData(prev => ({
-            ...prev,
-            port: parseInt(event.target.value, 10) || 0,
-        }))
-
-        if (error) {
-            setError('')
-        }
-    }
-
-    const isFormValid = () => {
-        return formData.name.trim() !== '' &&
-            formData.host.trim() !== '' &&
-            formData.user.trim() !== '' &&
-            (formData.usePublicKeyAuth || formData.password.trim() !== '')
-    }
-
-    const handleSave = () => {
-        setIsLoading(true)
-        onSave(formData).finally(() => {
-            setIsLoading(false)
-        })
-    }
-
-    return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            fullWidth
-            maxWidth="sm"
-            slotProps={{
-                // paper: {sx: {backgroundColor: '#fff'}}
-            }}
-        >
-            <DialogTitle>
-                <Typography variant="h6" component="div">
-                    {machine ? 'Edit Machine' : 'Add New Machine'}
-                </Typography>
-            </DialogTitle>
-            <DialogContent>
-                <Box sx={{pt: 1}}>
-                    <FormControlLabel
-                        sx={{justifyContent: 'space-between', ml: 0}}
-                        labelPlacement="start"
-                        label="Enable Machine"
-                        control={<Switch name="enable" checked={formData.enable} onChange={handleChange}/>}
-                    />
-                    <Divider sx={{my: 2}}/>
-                    <TextField name="name" label="Name" value={formData.name} onChange={handleChange} fullWidth
-                               margin="dense"/>
-                    <TextField name="host" label="Host" value={formData.host} onChange={handleChange} fullWidth
-                               margin="dense"/>
-                    <TextField name="port" label="Port" type="number" value={formData.port} onChange={handlePortChange}
-                               fullWidth margin="dense"/>
-                    <TextField name="user" label="User" value={formData.user} onChange={handleChange} fullWidth
-                               margin="dense"/>
-
-                    <Box sx={{mt: 2, mb: 2}}>
-                        <Box sx={{display: 'flex', alignItems: 'flex-end', gap: 2}}>
-                            <Box sx={{flexGrow: 1}}>
-                                <TextField
-                                    name="password"
-                                    label="Password"
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    margin="none"
-                                />
-                            </Box>
-                            <FormControlLabel
-                                sx={{
-                                    mb: '8px', // Better alignment with TextField
-                                    alignItems: 'center',
-                                    height: '40px' // Match approximate TextField height
+            {loading && hosts.length === 0 ? (
+                <Box sx={{display: 'flex', justifyContent: 'center', py: 8}}><CircularProgress/></Box>
+            ) : hosts.length > 0 ? (
+                <Grid container spacing={3}>
+                    {hosts.map((h) => (
+                        <Grid
+                            key={h.id.toString()}
+                            size={{xs: 12, sm: 3, md: 2}}
+                            onClick={() => {
+                                setSelectedHost(h);
+                                setDialogOpen(true);
+                            }}
+                        >
+                            <HostCard
+                                host={h}
+                                onEdit={() => {
+                                    setSelectedHost(h);
+                                    setDialogOpen(true);
                                 }}
-                                control={<Switch name="usePublicKeyAuth" checked={formData.usePublicKeyAuth}
-                                                 onChange={handleChange}/>}
-                                label="Public Key"
-                                labelPlacement="start"
+                                onDelete={() => handleDelete((h.name))}
+                                onToggle={(val: boolean) => handleToggle(h, val)}
                             />
+                        </Grid>
+                    ))}
+                </Grid>
+            ) : (
+                <EmptyHostDisplay onAdd={() => setDialogOpen(true)}/>
+            )}
+
+            <HostWizardDialog
+                open={dialogOpen}
+                onClose={onClose}
+                host={selectedHost ?? undefined}
+                onSuccess={loadHosts}
+            />
+        </Box>
+    );
+}
+
+function HostCard({host, onEdit, onDelete, onToggle}: {
+    host: Host,
+    onEdit: () => void,
+    onDelete: () => void,
+    onToggle: (val: boolean) => Promise<void>
+}) {
+    const [isToggling, setIsToggling] = useState(false)
+
+    const kind = ClientType[host.kind].toLowerCase();
+    return (
+        <Paper variant="outlined"
+               sx={{
+                   p: 2,
+                   borderRadius: 3,
+                   position: 'relative',
+                   transition: 'all 0.2s',
+
+                   '&:hover': {borderColor: 'primary.main', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}
+               }}>
+            <Stack spacing={2}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{
+                            p: 1,
+                            bgcolor: host.enable ? 'primary.lighter' : 'primary.darker',
+                            borderRadius: 2,
+                            color: host.enable ? 'primary.main' : 'text.disabled',
+                            display: 'flex'
+                        }}>
+                            <DnsOutlined/>
                         </Box>
+                        <Box>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{mb: 0.5}}>
+                                <Typography variant="subtitle1" sx={{fontWeight: 800, lineHeight: 1}}>
+                                    {host.name}
+                                </Typography>
+                                <Chip
+                                    label={kind}
+                                    size="small"
+                                    variant="outlined"
+                                    color='primary'
+                                    sx={{
+                                        height: 18,
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.04em',
+                                        borderRadius: 1,
+                                        borderWidth: 1,
+                                        bgcolor: 'transparent'
+                                    }}
+                                />
+                            </Stack>
+                            <Typography variant="caption" sx={{fontFamily: 'monospace', color: 'text.disabled'}}>
+                                {host.sshOptions?.host || host.hostAddr || ''}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                    {isToggling ? (
                         <Box sx={{
                             display: 'flex',
-                            alignItems: 'flex-start',
-                            mt: 1,
-                            p: 1.5,
-                            borderRadius: 1,
-                            backgroundColor: 'action.hover',
-                            // Fixed height prevents shifting when text changes
-                            minHeight: 72,
-                            height: 'auto'
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 58,
+                            height: 38
                         }}>
-                            <InfoOutlined color="action" sx={{mr: 1, mt: '3px', flexShrink: 0}}/>
-                            <Box sx={{flexGrow: 1}}>
-                                {(formData.usePublicKeyAuth ? publicKeyHelperText : passwordHelperText).map((text, index) => (
-                                    <Typography key={index} variant="caption" color="text.secondary" sx={{
-                                        display: 'block',
-                                        lineHeight: 1.4,
-                                        mb: index === (formData.usePublicKeyAuth ? publicKeyHelperText : passwordHelperText).length - 1 ? 0 : 0.5,
-                                        '&::before': {
-                                            content: '"• "',
-                                            mr: 0.5
-                                        }
-                                    }}>
-                                        {text}
-                                    </Typography>
-                                ))}
-                            </Box>
+                            <CircularProgress size={20}/>
                         </Box>
+                    ) : (
+                        <Switch
+                            checked={host.enable}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={async event => {
+                                setIsToggling(true)
+                                await onToggle(event.target.checked)
+                                setIsToggling(false)
+                            }}
+                            size="small"
+                        />
+                    )}
+                </Stack>
 
-                        {/* Error message display */}
-                        {error && (
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                mt: 1,
-                                p: 1.5,
-                                borderRadius: 1,
-                                backgroundColor: 'error.light',
-                                color: 'error.contrastText'
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip
+                        size="small"
+                        icon={<FolderSpecialOutlined sx={{fontSize: '14px !important'}}/>}
+                        label={`${host.folderAliasesCount || 0} Alias`}
+                        variant="outlined"
+                    />
+                </Stack>
+
+                <Divider/>
+
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                        <Tooltip title="Edit Host">
+                            <IconButton size="small" onClick={onEdit}>
+                                <EditOutlined fontSize="small"/>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Remove Host">
+                            <IconButton size="small" color="error" onClick={async event => {
+                                event.stopPropagation()
+                                onDelete()
                             }}>
-                                <ErrorOutlined sx={{mr: 1, mt: '3px', flexShrink: 0, color: 'error.main'}}/>
-                                <Typography variant="caption" color="error.main" sx={{lineHeight: 1.4}}>
-                                    {error}
-                                </Typography>
-                            </Box>
-                        )}
+                                <DeleteOutline fontSize="small"/>
+                            </IconButton>
+                        </Tooltip>
                     </Box>
-                </Box>
-            </DialogContent>
-            <DialogActions sx={{p: '16px 24px'}}>
-                <Button
-                    onClick={handleSave}
-                    variant="contained"
-                    disabled={!isFormValid() || isLoading}
-                    startIcon={isLoading ? <CircularProgress size={16} color="inherit"/> : null}
-                >
-                    {isLoading ? 'Saving...' : 'Save'}
-                </Button>
-                <Button onClick={onClose}>Cancel</Button>
-            </DialogActions>
-        </Dialog>
-    )
+                </Stack>
+            </Stack>
+        </Paper>
+    );
 }
+
+export default TabDockerHosts

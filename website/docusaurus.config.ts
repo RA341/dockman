@@ -104,6 +104,13 @@ const config: Config = {
                 },
             ],
         },
+        algolia: {
+            appId: 'KH8BKV2RO6',
+            apiKey: '8c03894541244c540a19161806fe3810',
+            indexName: 'dockbot',
+            // contextualSearch: true,
+            // searchPagePath: 'search',
+        },
         footer: {
             style: 'dark',
             links: [

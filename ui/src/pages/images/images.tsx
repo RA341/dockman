@@ -1,15 +1,13 @@
 import {useMemo, useState} from 'react';
-import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
-import {CleaningServices, Delete, Refresh, Sanitizer} from '@mui/icons-material';
-import {useDockerImages} from "../../hooks/docker-images.ts";
-import {ImagesEmpty} from "./images-empty.tsx";
+import {Box, Button, Card, CircularProgress, Fade, Link, Paper, Tooltip, Typography} from '@mui/material';
+import {CleaningServices, Delete, Refresh, Sanitizer, Storage} from '@mui/icons-material';
 import {ImageTable} from './images-table.tsx';
 import {formatBytes} from "../../lib/editor.ts";
-import {ImagesLoading} from "./images-loading.tsx";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
 import SearchBar from "../../components/search-bar.tsx";
+import {useDockerImages} from "./docker-images.ts";
 
 const ImagesPage = () => {
     const {
@@ -25,7 +23,6 @@ const ImagesPage = () => {
 
     const {search, setSearch, searchInputRef} = useSearch();
     const [selectedImages, setSelectedImages] = useState<string[]>([])
-
 
     const filteredImages = useMemo(() => {
         if (search) {
@@ -134,6 +131,7 @@ const ImagesPage = () => {
                 borderColor: 'rgba(255, 255, 255, 0.23)',
                 borderRadius: 3,
                 display: 'flex',
+                flexDirection: 'column',
                 overflow: 'hidden',
                 minHeight: 0
             }}>
@@ -141,7 +139,13 @@ const ImagesPage = () => {
                     <ImagesLoading/>
                 ) : (
                     <Fade in={!loading} timeout={300}>
-                        <div style={{width: '100%'}}>
+                        <Box sx={{
+                            width: '100%',
+                            height: '100%',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
                             {images.length === 0 ? (
                                 <ImagesEmpty searchTerm={''}/>
                             ) : (
@@ -151,12 +155,72 @@ const ImagesPage = () => {
                                     onSelectionChange={setSelectedImages}
                                 />
                             )}
-                        </div>
+                        </Box>
                     </Fade>
                 )}
             </Box>
         </Box>
     )
+};
+
+const ImagesLoading = () => {
+    return (
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            flex: 1
+        }}>
+            <CircularProgress sx={{mr: 2}}/>
+            <Typography variant="body1" color="text.secondary">
+                Loading images...
+            </Typography>
+        </Box>
+    );
+};
+
+
+const ImagesEmpty = ({searchTerm}: { searchTerm: string }) => {
+    return (
+        <Paper sx={{
+            p: 6,
+            textAlign: 'center',
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+        }}>
+            <Storage sx={{
+                fontSize: 48,
+                color: 'text.secondary',
+                mb: 2,
+                mx: 'auto'
+            }}/>
+
+            <Typography variant="h6" sx={{mb: 1}}>
+                {searchTerm ? 'No images found' : 'No images available'}
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary">
+                {searchTerm ? (
+                    'Try adjusting your search criteria.'
+                ) : (
+                    <>
+                        Run some apps, treat yourself, {' '}
+                        <Link
+                            href="https://selfh.st/apps/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            https://selfh.st/apps/
+                        </Link>
+                    </>
+                )}
+            </Typography>
+        </Paper>
+    );
 };
 
 export default ImagesPage;

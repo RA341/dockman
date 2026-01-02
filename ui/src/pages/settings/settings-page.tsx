@@ -1,7 +1,7 @@
 import React from 'react';
 import {Box, Tab, Tabs} from "@mui/material";
 import {useSearchParams} from 'react-router-dom';
-import {TabDockerHosts} from "./tab-host.tsx";
+import TabDockerHosts from "./tab-host.tsx";
 
 interface TabConfig {
     label: string;
@@ -33,7 +33,7 @@ function TabPanel(props: TabPanelProps) {
             {...other}
         >
             {value === index && (
-                <Box sx={{p: 3}}>
+                <Box sx={{p: 1}}>
                     {children}
                 </Box>
             )}

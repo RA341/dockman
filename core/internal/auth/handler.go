@@ -12,11 +12,11 @@ import (
 )
 
 type Handler struct {
-	auth *Service
+	srv *Service
 }
 
 func NewConnectHandler(auth *Service) *Handler {
-	return &Handler{auth: auth}
+	return &Handler{srv: auth}
 }
 
 func (a *Handler) Login(_ context.Context, c *connect.Request[v1.User]) (*connect.Response[v1.Empty], error) {
@@ -25,7 +25,7 @@ func (a *Handler) Login(_ context.Context, c *connect.Request[v1.User]) (*connec
 		return nil, fmt.Errorf("empty username or password")
 	}
 
-	session, authToken, err := a.auth.Login(username, password)
+	session, authToken, err := a.srv.Login(username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +44,26 @@ func (a *Handler) Login(_ context.Context, c *connect.Request[v1.User]) (*connec
 	return response, nil
 }
 
+func (a *Handler) Config(context.Context, *connect.Request[v1.ConfigRequest]) (*connect.Response[v1.ConfigResponse], error) {
+	conf := &v1.Config{}
+
+	if a.srv.config.OIDCEnable && !a.srv.config.OIDCAutoRedirect {
+		conf.OidcUrl = oidcPage
+	}
+
+	return connect.NewResponse(&v1.ConfigResponse{
+		Conf: conf,
+	}), nil
+
+}
+
 func (a *Handler) Logout(_ context.Context, req *connect.Request[v1.Empty]) (*connect.Response[v1.Empty], error) {
 	cookies, err := http.ParseCookie(req.Header().Get("Cookie"))
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = verifyCookie(cookies, a.auth)
+	_, err = verifyCookie(cookies, a.srv)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, err)
 	}
@@ -64,7 +77,7 @@ func (a *Handler) Logout(_ context.Context, req *connect.Request[v1.Empty]) (*co
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	err = a.auth.Logout(uint(sessionID))
+	err = a.srv.Logout(uint(sessionID))
 	if err != nil {
 		log.Warn().Err(err).Msg("error while logging out")
 	}

@@ -1,6 +1,6 @@
 import React, {type ReactNode, useCallback, useEffect, useMemo, useState} from 'react';
 import {AuthContext} from '../hooks/auth.ts';
-import {callRPC, pingWithAuth, useClient} from "../lib/api.ts";
+import {callRPC, pingWithAuth, useAuthClient} from "../lib/api.ts";
 import {AuthService} from "../gen/auth/v1/auth_pb.ts";
 
 export interface AuthProviderProps {
@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         checkAuthStatus().then();
     }, [authVersion]);
 
-    const userClient = useClient(AuthService)
+    const userClient = useAuthClient(AuthService)
 
     const logout = useCallback(async () => {
         const {err} = await callRPC(() => userClient.logout({}))

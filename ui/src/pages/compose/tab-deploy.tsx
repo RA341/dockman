@@ -7,14 +7,16 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Link,
     TextField,
     Typography
 } from '@mui/material';
 import {ContainerTable} from './components/container-info-table';
-import {getWSUrl} from "../../lib/api.ts";
+import {getWSUrl, useHostUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {useContainerExec} from "./state/state.tsx";
+import {useContainerExec} from "./state/terminal.tsx";
 import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
+import {useHostStore} from "./state/files.ts";
 
 interface DeployPageProps {
     selectedPage: string;
@@ -34,9 +36,11 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
+    const selectedHost = useHostStore(state => state.host)
+    const getBase = useHostUrl()
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const url = getWSUrl(`docker/logs/${containerId}`)
+        const url = getWSUrl(getBase(`/docker/logs/${containerId}/${encodeURIComponent(selectedHost)}`))
         execContainer(`${selectedPage}: logs-${containerName}`, url, false)
     };
 
@@ -58,11 +62,20 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
         setShowExecDialog(false)
     }
 
-    const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
+    const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh", "fish"];
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
+    const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
+    const [debuggerImage, setDebuggerImage] = useState("")
+
     const handleConnect = (containerId: string, containerName: string, cmd: string) => {
         const encodedCmd = encodeURIComponent(cmd);
-        const url = getWSUrl(`docker/exec/${containerId}?cmd=${encodedCmd}`)
+        let url = getBase(`/docker/exec/${containerId}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`);
+        if (debuggerImage) {
+            console.log("using dockman debug with debuggerImage", debuggerImage);
+            url += "&debug=" + "true"; // indicate to use dockman debug instead of docker exec
+            url += "&image=" + debuggerImage;
+        }
+
         execContainer(`${selectedPage}: exec-${containerName}`, url, true)
         closeExecDialog()
     }
@@ -76,23 +89,40 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     }
 
     return (
-        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'background.default'}}>
-            <Box sx={{flexGrow: 1, p: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+        <Box sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'background.default'
+        }}>
+            <Box sx={{
+                flexGrow: 1,
+                p: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+            }}>
                 <ComposeActionHeaders
                     selectedServices={selectedServices}
                     fetchContainers={fetchContainers}
                 />
                 <Box sx={{
-                    flexGrow: 1, overflow: 'hidden', border: '3px ridge',
-                    borderColor: 'rgba(255, 255, 255, 0.23)', borderRadius: 3, display: 'flex',
-                    flexDirection: 'column', backgroundColor: 'rgb(41,41,41)'
+                    height: '100%',
+                    display: 'flex',
+                    flexGrow: 1,
+                    overflow: 'hidden',
+                    border: '2px ridge',
+                    borderColor: 'rgba(255, 255, 255, 0.23)',
+                    borderRadius: 3,
+                    flexDirection: 'column',
+                    backgroundColor: 'rgb(41,41,41)'
                 }}>
                     <ContainerTable
                         containers={containers}
                         loading={loading}
                         setSelectedServices={setSelectedServices}
                         selectedServices={selectedServices}
-                        onShowLogs={handleContainerLogs}
+                        onLogs={handleContainerLogs}
                         onExec={showDialog}
                     />
                 </Box>
@@ -133,6 +163,52 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                             />
                         )}
                     />
+
+                    <Box sx={{width: '100%', maxWidth: 400, display: 'flex', gap: 1, alignItems: 'center'}}>
+                        <Typography>
+                            Dockman Debug
+                        </Typography>
+                        <Autocomplete
+                            freeSolo
+                            options={debugImageOptions}
+                            value={debuggerImage}
+                            onInputChange={(_, value) => setDebuggerImage(value)}
+                            sx={{flex: 1}}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Debugger Image"
+                                    variant="outlined"
+                                    size="small"
+                                    slotProps={{
+                                        inputLabel: {style: {color: '#aaa'}},
+                                        input: {
+                                            ...params.InputProps,
+                                            style: {color: '#fff', backgroundColor: '#333'}
+                                        }
+                                    }}
+                                />
+                            )}
+                        />
+                    </Box>
+                    <Typography>
+                        Exec into any container using a custom image {' '}
+                        <Link
+                            href={"https://dockman.radn.dev/docs/dockman-debug/overview"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Read more on GitHub (opens in a new tab)"
+                            sx={{
+                                color: '#60a5fa',
+                                fontWeight: 'medium',
+                                '&:hover': {
+                                    color: '#93c5fd',
+                                }
+                            }}
+                        >
+                            more info
+                        </Link>
+                    </Typography>
                     <Button
                         variant="contained"
                         onClick={() => handleConnect(containerId, containerName, selectedCmd)}

@@ -1,10 +1,12 @@
 import {
     Box,
     CircularProgress,
+    Divider,
     Fade,
     IconButton,
     Paper,
     Skeleton,
+    Stack,
     Table,
     TableBody,
     TableCell,
@@ -12,21 +14,21 @@ import {
     TableHead,
     TableRow,
     TableSortLabel,
-    Tooltip,
-    Typography,
-    useTheme
+    Typography
 } from "@mui/material"
-import React from "react"
-import GetAppIcon from '@mui/icons-material/GetApp'
-import PublishIcon from '@mui/icons-material/Publish'
-import EditIcon from '@mui/icons-material/Edit'
-import {Article, ContentCopy} from "@mui/icons-material"
-import CheckIcon from "@mui/icons-material/Check"
+import {
+    Article as ReadIcon,
+    Check as CheckIcon,
+    ContentCopy,
+    Edit as WriteIcon,
+    GetApp as DownloadIcon,
+    Publish as UploadIcon,
+    Terminal as TerminalIcon
+} from "@mui/icons-material"
 import {type ContainerStats, ORDER, SORT_FIELD} from "../../../gen/docker/v1/docker_pb"
 import {formatBytes, getUsageColor} from "../../../lib/editor.ts";
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 import {useCopyButton} from "../../../hooks/copy.ts";
-
 
 interface ContainersTableProps {
     activeSortField: SORT_FIELD
@@ -37,262 +39,139 @@ interface ContainersTableProps {
     loading: boolean
 }
 
-export function ContainerStatTable(
-    {
-        containers,
-        onFieldClick,
-        activeSortField,
-        order,
-        loading,
-        placeHolders = 5,
-    }: ContainersTableProps) {
-
+export function ContainerStatTable({
+                                       containers, onFieldClick, activeSortField, order, loading, placeHolders = 5
+                                   }: ContainersTableProps) {
+    const {copiedId, handleCopy} = useCopyButton()
     const isEmpty = !loading && containers.length === 0
 
     const handleSortRequest = (field: SORT_FIELD) => {
-        if (loading || isEmpty) {
-            return
-        }
+        if (loading || isEmpty) return;
         const isAsc = activeSortField === field && order === ORDER.ASC
-        const newOrder = isAsc ? ORDER.DSC : ORDER.ASC
-        const finalOrder = activeSortField !== field ? ORDER.DSC : newOrder
-        onFieldClick(field, finalOrder)
+        onFieldClick(field, activeSortField !== field ? ORDER.DSC : (isAsc ? ORDER.DSC : ORDER.ASC))
     }
 
-    const createSortableHeader = (field: SORT_FIELD, label: string, icon?: React.ReactNode) => (
-        <TableSortLabel
-            active={activeSortField === field}
-            direction={order === ORDER.ASC ? 'asc' : 'desc'}
-            onClick={() => handleSortRequest(field)}
+    const createSortHeader = (field: SORT_FIELD, label: string, align: 'left' | 'center' | 'right' = 'left') => (
+        <TableCell
+            align={align}
+            sx={{
+                py: 1.5,
+                bgcolor: 'background.paper',
+                zIndex: 2
+            }}
         >
-            <Box component="span" sx={{display: 'flex', alignItems: 'center'}}>
-                {icon && (
-                    <Box component="span" sx={{mr: 0.5, display: 'flex', alignItems: 'center'}}>
-                        {icon}
-                    </Box>
-                )}
+            <TableSortLabel
+                active={activeSortField === field}
+                direction={order === ORDER.ASC ? 'asc' : 'desc'}
+                onClick={() => handleSortRequest(field)}
+                sx={{
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                }}
+            >
                 {label}
-            </Box>
-        </TableSortLabel>
+            </TableSortLabel>
+        </TableCell>
     )
-
-    const {copiedId, handleCopy} = useCopyButton()
-
-    const tableInfo = [
-        {
-            header: (
-                <TableCell sx={{minWidth: 140, width: 'auto'}}>
-                    {createSortableHeader(SORT_FIELD.NAME, 'Container Name')}
-                </TableCell>
-            ),
-            cell: (container: ContainerStats) => (
-                <TableCell component="th" scope="row" sx={{minWidth: 140}}>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
-                        <Typography variant="body2" sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: '120px'
-                        }}>
-                            {container.name}
-                        </Typography>
-                        <Tooltip
-                            title={copiedId === container.id ? "Copied!" : "Copy container ID"}
-                            placement="top">
-                            <IconButton
-                                onClick={() => handleCopy(container.id)}
-                                size="small"
-                                sx={{position: 'relative', flexShrink: 0}}
-                            >
-                                <CheckIcon
-                                    fontSize="inherit"
-                                    sx={{
-                                        position: 'absolute',
-                                        opacity: copiedId === container.id ? 1 : 0,
-                                        transition: 'opacity 0.2s',
-                                        color: 'success.main'
-                                    }}
-                                />
-                                <ContentCopy
-                                    fontSize="inherit"
-                                    sx={{
-                                        opacity: copiedId === container.id ? 0 : 1,
-                                        transition: 'opacity 0.2s',
-                                    }}
-                                />
-                            </IconButton>
-                        </Tooltip>
-                    </Box>
-                </TableCell>
-            )
-        },
-        {
-            header: (
-                <TableCell sx={{minWidth: 80, width: 'auto', textAlign: 'center'}}>
-                    {createSortableHeader(SORT_FIELD.CPU, 'CPU %')}
-                </TableCell>
-            ),
-            cell: (container: ContainerStats) => (
-                <TableCell sx={{minWidth: 80, maxWidth: 100, textAlign: 'center'}}>
-                    <CPUStat
-                        value={container.cpuUsage}
-                        size={48}
-                        thickness={1}
-                    />
-                </TableCell>
-            )
-        },
-        {
-            header: (
-                <TableCell sx={{minWidth: 120, width: 'auto'}}>
-                    {createSortableHeader(SORT_FIELD.MEM, 'Memory Usage')}
-                </TableCell>
-            ),
-            cell: (container: ContainerStats) => (
-                <TableCell sx={{minWidth: 120, maxWidth: 160}}>
-                    <UsageBar
-                        usage={(Number(container.memoryUsage))}
-                        limit={(Number(container.memoryLimit))}
-                    />
-                </TableCell>
-            )
-        },
-        {
-            header: (
-                <TableCell sx={{minWidth: 180, width: 'auto'}}>
-                    <Box sx={{display: 'flex', alignItems: 'center', flexWrap: 'nowrap'}}>
-                        <Typography variant="body2" sx={{fontWeight: 'bold', mr: 1, whiteSpace: 'nowrap'}}>
-                            Network:
-                        </Typography>
-                        <Box sx={{display: 'flex', alignItems: 'center', flexWrap: 'nowrap'}}>
-                            {createSortableHeader(SORT_FIELD.NETWORK_RX, "Rx",
-                                <GetAppIcon fontSize="small"/>)
-                            }
-                            <Typography component="span" sx={{mx: 0.5}}>/</Typography>
-                            {createSortableHeader(SORT_FIELD.NETWORK_TX, "Tx",
-                                <PublishIcon fontSize="small"/>)
-                            }
-                        </Box>
-                    </Box>
-                </TableCell>
-            ),
-            cell: (container: ContainerStats) => (
-                <TableCell sx={{minWidth: 180, maxWidth: 240}}>
-                    <RWData
-                        download={Number(container.networkRx)}
-                        upload={Number(container.networkTx)}
-                    />
-                </TableCell>
-            )
-        },
-        {
-            header: (
-                <TableCell sx={{minWidth: 180, width: 'auto'}}>
-                    <Box sx={{display: 'flex', alignItems: 'center', flexWrap: 'nowrap'}}>
-                        <Typography variant="body2" sx={{fontWeight: 'bold', mr: 1, whiteSpace: 'nowrap'}}>
-                            Block I/O:
-                        </Typography>
-                        <Box sx={{display: 'flex', alignItems: 'center', flexWrap: 'nowrap'}}>
-                            {createSortableHeader(SORT_FIELD.DISK_W, "Write", <EditIcon fontSize="small"/>)}
-                            <Typography component="span" sx={{mx: 0.5}}>/</Typography>
-                            {createSortableHeader(SORT_FIELD.DISK_R, "Read", <Article fontSize="small"/>)}
-                        </Box>
-                    </Box>
-                </TableCell>
-            ),
-            cell: (container: ContainerStats) => (
-                <TableCell sx={{minWidth: 180, maxWidth: 240}}>
-                    <RWData
-                        download={Number(container.blockWrite)}
-                        upload={Number(container.blockRead)}
-                    />
-                </TableCell>
-            )
-        }
-    ];
 
     return (
         <TableContainer
             component={Paper}
+            variant="outlined"
             sx={{
                 flexGrow: 1,
-                boxShadow: 3,
+                minHeight: 0,
+                height: '100%',
                 borderRadius: 2,
-                height: '98%',
-                maxHeight: '100%',
                 overflow: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
+                position: 'relative',
                 ...scrollbarStyles,
             }}
         >
-            <Table
-                stickyHeader
-                sx={{
-                    minWidth: 900, // Increased minimum width
-                    width: '100%'
-                    // Removed tableLayout: 'fixed' to allow flexible column sizing
-                }}
-                aria-label="container stats table"
-            >
+            <Table stickyHeader size="small">
                 <TableHead>
-                    <TableRow sx={{
-                        '& th': {
-                            fontWeight: 'bold',
-                            backgroundColor: 'background.paper',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 100
-                        }
-                    }}>
-                        {tableInfo.map((column, index) => (
-                            <React.Fragment key={index}>
-                                {column.header}
-                            </React.Fragment>
-                        ))}
+                    <TableRow>
+                        {createSortHeader(SORT_FIELD.NAME, 'Container')}
+                        {createSortHeader(SORT_FIELD.CPU, 'CPU Usage', 'center')}
+                        {createSortHeader(SORT_FIELD.MEM, 'Memory')}
+                        <TableCell sx={{
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            bgcolor: 'background.paper',
+                            zIndex: 2
+                        }}>
+                            <Stack direction="row" spacing={2}>
+                                <span>NETWORK (RX/TX)</span>
+                                <span>DISK (W/R)</span>
+                            </Stack>
+                        </TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {loading ? (
-                        [...Array(placeHolders)].map((_, index) => (
-                            <TableRow key={`skeleton-${index}`}>
-                                <TableCell><Skeleton animation="wave" variant="rounded"/></TableCell>
-                                <TableCell>
-                                    <Skeleton animation="wave" variant="rounded"
-                                              width={80}
-                                              height={24}/>
-                                </TableCell>
-                                <TableCell><Skeleton animation="wave" variant="rounded"/></TableCell>
-                                <TableCell><Skeleton animation="wave" variant="rounded"/></TableCell>
-                                <TableCell><Skeleton animation="wave" variant="rounded"/></TableCell>
+                        [...Array(placeHolders)].map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell><Skeleton variant="text" width="80%"/></TableCell>
+                                <TableCell align="center"><Skeleton variant="circular" width={32} height={32}
+                                                                    sx={{mx: 'auto'}}/></TableCell>
+                                <TableCell><Skeleton variant="rounded" height={24}/></TableCell>
+                                <TableCell><Skeleton variant="rounded" height={24}/></TableCell>
                             </TableRow>
                         ))
                     ) : isEmpty ? (
                         <TableRow>
-                            <TableCell colSpan={5} sx={{border: 0, height: 200}}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        height: '100%',
-                                    }}
-                                >
-                                    <Typography variant="h5" color="text.secondary">
-                                        No container stats found
-                                    </Typography>
-                                </Box>
+                            <TableCell colSpan={4} sx={{height: 200, textAlign: 'center'}}>
+                                <Typography variant="body2" color="text.secondary">No statistics available</Typography>
                             </TableCell>
                         </TableRow>
                     ) : (
                         containers.map((container) => (
-                            <Fade in={true} timeout={400} key={container.id}>
-                                <TableRow sx={{'&:last-child td, &:last-child th': {border: 0}}}>
-                                    {tableInfo.map((column, index) => (
-                                        <React.Fragment key={index}>
-                                            {column.cell(container)}
-                                        </React.Fragment>
-                                    ))}
+                            <Fade in key={container.id}>
+                                <TableRow hover sx={{
+                                    '& td': {
+                                        py: 1.5,
+                                        borderBottom: '1px solid',
+                                        borderColor: 'action.hover'
+                                    }
+                                }}>
+                                    <TableCell>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <TerminalIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
+                                            <Box sx={{minWidth: 0}}>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {container.name}
+                                                </Typography>
+                                                <Stack direction="row" spacing={0.5} alignItems="center">
+                                                    <Typography variant="caption"
+                                                                sx={{fontFamily: 'monospace', color: 'text.disabled'}}>
+                                                        {container.id.substring(0, 12)}
+                                                    </Typography>
+                                                    <IconButton size="small" onClick={() => handleCopy(container.id)}
+                                                                sx={{p: 0.2}}>
+                                                        {copiedId === container.id ?
+                                                            <CheckIcon sx={{fontSize: 12, color: 'success.main'}}/> :
+                                                            <ContentCopy sx={{fontSize: 12}}/>}
+                                                    </IconButton>
+                                                </Stack>
+                                            </Box>
+                                        </Stack>
+                                    </TableCell>
+                                    <TableCell align="center"><CPUStat value={container.cpuUsage}/></TableCell>
+                                    <TableCell>
+                                        <UsageBar usage={Number(container.memoryUsage)}
+                                                  limit={Number(container.memoryLimit)}/>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Stack direction="row" spacing={4}
+                                               divider={<Divider orientation="vertical" flexItem/>}>
+                                            <RWData up={Number(container.networkTx)}
+                                                    down={Number(container.networkRx)} type="net"/>
+                                            <RWData up={Number(container.blockRead)}
+                                                    down={Number(container.blockWrite)} type="disk"/>
+                                        </Stack>
+                                    </TableCell>
                                 </TableRow>
                             </Fade>
                         ))
@@ -303,165 +182,67 @@ export function ContainerStatTable(
     )
 }
 
-const RWData = ({upload, download}: { upload: number; download: number }) => {
-    const rx = Number(upload);
-    const tx = Number(download);
-
-    // todo Calculate the ratio, handling the case where tx is 0 to avoid division errors
-    // let ratioText = '0:1';
-    // if (tx > 0) {
-    //     const ratio = (rx / tx).toFixed(1);
-    //     ratioText = `${ratio}:1`;
-    // } else if (rx > 0) {
-    //     // If there's download but no upload, the ratio is infinite
-    //     ratioText = '∞';
-    // }
-
-    return (
-        <Box sx={{display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'start', gap: 1}}>
-            {/*<Typography*/}
-            {/*    variant="body2"*/}
-            {/*    sx={{color: 'primary.main', fontWeight: 'medium'}}*/}
-            {/*>*/}
-            {/*    {ratioText}*/}
-            {/*</Typography>*/}
-
-            {/* Download/Upload Column */}
-            <Box sx={{display: 'flex', alignItems: 'center'}}>
-                <Typography variant="body2" color="text.secondary">
-                    {`${formatBytes(rx)} / ${formatBytes(tx)}`}
-                </Typography>
-            </Box>
-        </Box>
-    )
-}
-
-interface CPUStatProps {
-    value: number,
-    size: number,
-    thickness: number,
-}
-
-function CPUStat(props: CPUStatProps) {
-    const {value, size = 56, thickness = 4} = props
-    const clampedValue = Math.min(value, 100)
-    const theme = useTheme()
-    const progressColor = getUsageColor(value)
-
+function CPUStat({value}: { value: number }) {
+    const color = getUsageColor(value);
+    const circleSize = 48;
     return (
         <Box sx={{position: 'relative', display: 'inline-flex'}}>
+            <CircularProgress variant="determinate" value={100} size={circleSize} thickness={4} sx={{color: 'grey'}}/>
             <CircularProgress
                 variant="determinate"
-                sx={{
-                    color: theme.palette.grey[800],
-                }}
-                size={size}
-                thickness={thickness}
-                value={100}
+                value={Math.min(value, 100)}
+                size={circleSize}
+                thickness={4}
+                sx={{color, position: 'absolute', left: 0, strokeLinecap: 'round'}}
             />
-            <CircularProgress
-                variant="determinate"
-                value={clampedValue}
-                size={size}
-                thickness={thickness}
-                sx={{
-                    color: progressColor,
-                    position: 'absolute',
-                    left: 0,
-                }}
-            />
-
-            <Box
-                sx={{
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    right: 0,
-                    position: 'absolute',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                }}
-            >
-                <Typography
-                    variant="caption"
-                    component="div"
-                    sx={{fontWeight: 'bold', color: progressColor}}
-                >
-                    {`${value.toFixed(2)}`}
+            <Box sx={{inset: 0, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                <Typography variant="caption" sx={{fontWeight: 700, fontSize: '0.65rem', color}}>
+                    {value.toFixed(0)}%
                 </Typography>
             </Box>
         </Box>
     )
 }
 
-interface UsageBarProps {
-    usage: number   // Formatted usage string, e.g., "2.92 GB"
-    limit: number   // Formatted limit string, e.g., "15.5 GB"
-    barHeight?: number  // Optional: makes the bar height configurable
-}
-
-export function UsageBar(
-    {
-        usage,
-        limit,
-        barHeight = 16
-    }: UsageBarProps) {
-
-    const theme = useTheme()
-    const trackColor = theme.palette.grey[700]
-
-    const memUsagePercent = limit > 0 ?
-        (usage / limit) * 100 : 0
-
-    const color = getUsageColor(memUsagePercent)
-    const roundedValue = memUsagePercent.toFixed(0)
-
-    const formattedUsage = formatBytes(usage)
-    const formattedLimit = formatBytes(limit)
+export function UsageBar({usage, limit}: { usage: number, limit: number }) {
+    const percent = limit > 0 ? (usage / limit) * 100 : 0
+    const color = getUsageColor(percent)
 
     return (
-        <Tooltip title={`Memory Usage: ${memUsagePercent.toFixed(1)}%`} placement="top">
-            <Box sx={{display: 'flex', flexDirection: 'column', minWidth: 150}}>
-                <Box sx={{
-                    position: 'relative',
-                    width: '100%',
-                    height: barHeight,
-                    bgcolor: trackColor,
-                    borderRadius: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                }}>
-
-                    <Box sx={{
-                        width: `${memUsagePercent}%`,
-                        height: '100%',
-                        bgcolor: color,
-                        borderRadius: 1,
-                        transition: 'width 0.3s ease-in-out',
-                    }}/>
-
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            position: 'absolute',
-                            width: '100%',
-                            textAlign: 'center',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            textShadow: '1px 1px 2px rgba(0,0,0,0.5)', // Keeps text readable
-                        }}
-                    >
-                        {`${roundedValue}%`}
-                    </Typography>
-                </Box>
-
-                <Box sx={{display: 'flex', justifyContent: 'flex-end', pt: 0.5}}>
-                    <Typography variant="caption" color="text.secondary">
-                        {`${formattedUsage} / ${formattedLimit}`}
-                    </Typography>
-                </Box>
+        <Box sx={{width: 160}}>
+            <Stack direction="row" justifyContent="space-between" sx={{mb: 0.5}}>
+                <Typography variant="caption" sx={{fontWeight: 700, color}}>
+                    {percent.toFixed(1)}%
+                </Typography>
+                <Typography variant="caption" sx={{fontFamily: 'monospace', color: 'text.secondary'}}>
+                    {formatBytes(usage)}
+                </Typography>
+            </Stack>
+            <Box sx={{height: 6, width: '100%', bgcolor: 'grey', borderRadius: 3, overflow: 'hidden'}}>
+                <Box sx={{width: `${percent}%`, height: '100%', bgcolor: color, transition: 'width 0.5s ease'}}/>
             </Box>
-        </Tooltip>
+        </Box>
+    )
+}
+
+const RWData = ({up, down, type}: { up: number; down: number, type: 'net' | 'disk' }) => {
+    const UpIcon = type === 'net' ? UploadIcon : ReadIcon;
+    const DownIcon = type === 'net' ? DownloadIcon : WriteIcon;
+
+    return (
+        <Stack spacing={0.5}>
+            <Stack direction="row" spacing={1} alignItems="center">
+                <DownIcon sx={{fontSize: 14, color: 'text.disabled'}}/>
+                <Typography variant="caption" sx={{fontFamily: 'monospace', minWidth: 60}}>
+                    {formatBytes(down)}
+                </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+                <UpIcon sx={{fontSize: 14, color: 'text.disabled'}}/>
+                <Typography variant="caption" sx={{fontFamily: 'monospace', minWidth: 60}}>
+                    {formatBytes(up)}
+                </Typography>
+            </Stack>
+        </Stack>
     )
 }

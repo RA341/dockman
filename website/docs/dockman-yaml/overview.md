@@ -3,57 +3,55 @@ title: Overview
 sidebar_position: 1
 ---
 
-The **`.dockman.yaml`** file is an optional configuration file that allows you to customize your Dockman instance.
-Use it to define how your instance behaves, looks, and feels.
+The **`.dockman.yaml`** file is an optional configuration file for customizing your Dockman instance's behavior,
+appearance, and functionality.
 
-## Creating the Configuration File
+## Configuration File Location
 
-To start using Dockman, create a `.dockman.yaml` or `.dockman.yml` file in your compose root directory.
+### Version 3+
 
-By default, Dockman looks for this file in the root of your compose root.
-For example, if your `DOCKMAN_COMPOSE_ROOT` is set to `/home/zaphodb/stacks`,
-Dockman will look for:
+Dockman automatically manages configuration files. YAML files are stored at:
+
+```
+path/to/config/dockyaml/<host>.dockman.yml
+```
+
+Edit the host-specific configuration by clicking the YAML button in the file list toolbar:
+
+![dockm](./img/dock-file-actions.png)
+
+### Version 2
+
+Create a `.dockman.yaml` or `.dockman.yml` file in your compose root directory.
+
+**Default location:**
+
+Dockman searches for the configuration file in your compose root. For example, with
+`DOCKMAN_COMPOSE_ROOT=/home/zaphodb/stacks`:
 
 ```
 /home/zaphodb/stacks/.dockman.yaml
 ```
 
-or
+**Custom location:**
 
-```
-/home/zaphodb/stacks/.dockman.yml
-```
+Override the default path using the `DOCKMAN_DOCK_YAML` environment variable ([configuration guide](../install/env.md)):
 
-### Custom Path
+- **Absolute paths** start with `/`
+- **Relative paths** are relative to the compose root
 
-You can set a custom path by defining the `DOCKMAN_DOCK_YAML` environment
-variable ([see how to set environment variables](../install/env.md)).
+**Examples:**
 
-* If the path starts with `/`, it is considered an **absolute path**.
-* If the path does **not** start with `/`, it is considered **relative to the compose root**.
-
-#### Examples
-
-**Default path (no environment variable set):**
-
-```
+```bash
+# Default (no custom path set)
 DOCKMAN_COMPOSE_ROOT=/home/zaphodb/stacks
-# Dockman looks for:
-/home/zaphodb/stacks/.dockman.yaml
-```
+# → /home/zaphodb/stacks/.dockman.yaml
 
-**Absolute path example:**
-
-```
+# Absolute path
 DOCKMAN_DOCK_YAML=/opt/configs/mydockman.yaml
-# Dockman looks for:
-/opt/configs/mydockman.yaml
-```
+# → /opt/configs/mydockman.yaml
 
-**Relative path example:**
-
-```
+# Relative path
 DOCKMAN_DOCK_YAML=dockman/.dockman.yml
-# Dockman looks for:
-/home/zaphodb/stacks/dockman/.dockman.yml
+# → /home/zaphodb/stacks/dockman/.dockman.yml
 ```

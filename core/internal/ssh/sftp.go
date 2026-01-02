@@ -2,12 +2,14 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/RA341/dockman/pkg/fileutil"
+
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
 type SftpClient struct {

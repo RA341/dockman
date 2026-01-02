@@ -1,148 +1,205 @@
-import {type ReactNode, useCallback, useEffect, useState} from 'react'
-import {useLocation, useNavigate, useParams} from 'react-router-dom';
-import {type TabDetails, TabsContext} from "../hooks/tabs.ts";
-import {useHost} from "../hooks/host.ts";
+import {createContext, type ReactNode, useCallback, useContext, useEffect} from 'react'
+import {useLocation, useNavigate} from 'react-router-dom';
 import {useConfig} from "../hooks/config.ts";
-import {getEditorUrl} from "../lib/editor.ts";
+import {useEditorUrl} from "../lib/editor.ts";
+import {create} from "zustand";
+import {immer} from "zustand/middleware/immer";
+import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
+import {useFileComponents} from "../pages/compose/state/terminal.tsx";
 
-interface TabsProviderProps {
-    children: ReactNode
+export interface TabDetails {
+    subTabIndex: number;
+    row: number;
+    col: number;
 }
 
-export function TabsProvider({children}: TabsProviderProps) {
-    const {selectedHost} = useHost()
+interface EditorState {
+    // Stores the actual data: { "file1.ts": { row: 1, col: 5... } }
+    allTabs: Record<string, TabDetails>;
+    // Stores the grouping: { "localhost/projectA": Set(["file1.ts", "file2.ts"]) }
+    contextTabs: Record<string, Set<string>>;
+
+    lastOpened: string;
+
+    update: (filename: string, details: Partial<TabDetails>) => void;
+    create: (filename: string, tabIndex?: number) => void;
+    close: (filename: string) => string;
+    rename: (oldFilename: string, newFilename: string) => string;
+    active: (filename: string) => void;
+    load: (filename: string) => TabDetails | undefined;
+}
+
+export const getContextKey = () => {
+    const {host} = useHostStore.getState();
+    const {alias} = useAliasStore.getState();
+    return `${host}/${alias}`;
+};
+
+
+export const useTabsStore = create<EditorState>()(
+    immer((set, get) => ({
+        allTabs: {},
+        contextTabs: {},
+        lastOpened: '',
+
+        load: (filename: string) => {
+            return get().allTabs[filename];
+        },
+
+        create: (filename, tabIndex = 0) => {
+            const key = getContextKey();
+            set((state) => {
+                if (!state.allTabs[filename]) {
+                    state.allTabs[filename] = {
+                        subTabIndex: tabIndex,
+                        row: 1,
+                        col: 1,
+                    };
+                } else {
+                    // set the tab state
+                    state.allTabs[filename] = {
+                        ...state.allTabs[filename],
+                        subTabIndex: tabIndex,
+                    };
+                }
+
+                if (!state.contextTabs[key]) {
+                    state.contextTabs[key] = new Set();
+                }
+
+                state.contextTabs[key].add(filename);
+            });
+        },
+
+        update: (filename, details) => {
+            set((state) => {
+                if (state.allTabs[filename]) {
+                    state.allTabs[filename] = {
+                        ...state.allTabs[filename],
+                        ...details
+                    };
+                }
+            });
+        },
+
+        close: (filename) => {
+            let newFile = ''
+            const key = getContextKey();
+            set((state) => {
+                delete state.allTabs[filename];
+                if (state.contextTabs[key]) {
+                    state.contextTabs[key].delete(filename);
+                }
+
+                // If we closed the active tab, find a replacement in the same context
+                if (state.lastOpened === filename) {
+                    const currentContextArray = Array.from(state.contextTabs[key] || []);
+                    newFile = currentContextArray.length > 0
+                        ? currentContextArray[currentContextArray.length - 1]
+                        : '';
+                }
+            });
+
+            return newFile;
+        },
+
+        rename: (oldFilename, newFilename) => {
+            let next = ''
+
+            set((state) => {
+                if (state.allTabs[oldFilename]) {
+                    state.allTabs[newFilename] = state.allTabs[oldFilename];
+                    delete state.allTabs[oldFilename];
+                }
+                Object.keys(state.contextTabs).forEach((key) => {
+                    if (state.contextTabs[key].has(oldFilename)) {
+                        state.contextTabs[key].delete(oldFilename);
+                        state.contextTabs[key].add(newFilename);
+                    }
+                });
+                if (state.lastOpened === oldFilename) {
+                    next = newFilename;
+                }
+            });
+
+            return next;
+        },
+
+        active: (filename) => {
+            set((state) => {
+                state.lastOpened = filename;
+            });
+        },
+    }))
+);
+
+export interface TabsContextType {
+    // tabs: Record<string, TabDetails>;
+    // activeTab: string;
+    setTabDetails: (filename: string, details: Partial<TabDetails>) => void;
+    openTab: (filename: string) => void;
+    closeTab: (filename: string) => void;
+    renameTab: (oldFilename: string, newFilename: string) => void;
+    onTabClick: (filename: string) => void;
+}
+
+export const TabsContext = createContext<TabsContextType | undefined>(undefined);
+
+export const useTabs = (): TabsContextType => {
+    const context = useContext(TabsContext);
+    if (!context) {
+        throw new Error('useTabs must be used within a TabsProvider');
+    }
+    return context;
+};
+
+export function TabsProvider({children}: { children: ReactNode }) {
     const {dockYaml} = useConfig()
     const tabLimit = dockYaml?.tabLimit ?? 5
 
+    const location = useLocation();
     const navigate = useNavigate();
-    const location = useLocation(); // current location
-    const {file, child} = useParams<{ file: string; child?: string }>();
-    const filename = child ? `${file}/${child}` : file;
+    const editorUrl = useEditorUrl()
+    const {filename} = useFileComponents()
 
-    const [curTab, setCurTab] = useState("")
-    const [openTabs, setOpenTabs] = useState<Record<string, TabDetails>>({})
+    const {allTabs, active, load, rename, update, create, close} = useTabsStore()
 
-    useEffect(() => {
-        // reset tabs on changing host
-        setOpenTabs({})
-        setCurTab("")
-    }, [selectedHost])
-
-    // handler for when someone clicks on a tab
     const handleTabClick = useCallback((filename: string) => {
-        // capture current row and col
-
-        const tabDetail = openTabs[filename];
-        const url = getEditorUrl(filename, tabDetail);
+        const tabDetail = load(filename)
+        const url = editorUrl(filename, tabDetail);
         navigate(url);
-    }, [openTabs, navigate]);
+    }, [editorUrl, navigate]);
 
     const handleOpenTab = useCallback((filename: string) => {
         const params = new URLSearchParams(location.search);
-
-        setOpenTabs(prevTabs => {
-            if (prevTabs[filename]) {
-                const tab = Number(params.get("tab") ?? "0")
-                return {
-                    ...prevTabs,
-                    [filename]: {...prevTabs[filename], subTabIndex: tab},
-                }
-            }
-
-            const newTabs = {...prevTabs};
-            // Enforce tab limit
-            const keys = Object.keys(newTabs);
-            if (keys.length >= tabLimit) {
-                const firstKey = keys[0];
-                delete newTabs[firstKey];
-            }
-
-            // Add new tab with default subTabIndex
-            newTabs[filename] = {subTabIndex: 0, col: 1, row: 1};
-            return newTabs;
-        });
+        // todo enforce tab limit
+        create(filename, Number(params.get("tab") ?? "0"))
+        active(filename)
     }, [location.search, tabLimit]);
 
-    const setTabDetails = useCallback((filename: string, details: Partial<TabDetails>) => {
-        setOpenTabs(prevTabs => {
-            if (!prevTabs[filename]) return prevTabs;
-
-            return {
-                ...prevTabs,
-                [filename]: {...prevTabs[filename], ...details},
-            };
-        });
-    }, []);
-
     const handleCloseTab = useCallback((filename: string) => {
-        localStorage.removeItem(filename)
-
-        setOpenTabs(prevTabs => {
-            const newTabs = {...prevTabs};
-            const tabKeys = Object.keys(prevTabs);
-            const currentIndex = tabKeys.indexOf(filename);
-
-            delete newTabs[filename];
-
-            if (Object.keys(newTabs).length < 1) {
-                setCurTab("")
-                navigate("/stacks")
-            } else {
-                if (filename == curTab) {
-                    // Try right tab first, then left, then first
-                    const nextIndex = currentIndex < tabKeys.length - 1 ? currentIndex : currentIndex - 1;
-                    const next = tabKeys[nextIndex] !== filename ? tabKeys[nextIndex] : Object.keys(newTabs)[0];
-                    navigate("/stacks/" + next);
-                }
-            }
-
-            return newTabs;
-        });
-    }, [curTab, navigate]);
+        const next = close(filename)
+        navigate(editorUrl(next, allTabs[next]))
+    }, [allTabs, close, editorUrl, navigate])
 
     const handleTabRename = useCallback((oldFilename: string, newFilename: string) => {
-        setOpenTabs(prevTabs => {
-            const tab = prevTabs[oldFilename];
-            if (!tab) return prevTabs; // nothing to rename
+        const next = rename(oldFilename, newFilename)
+        navigate(editorUrl(next, allTabs[next]))
+    }, [allTabs, navigate, editorUrl]);
 
-            const newTabs = {...prevTabs, [newFilename]: tab};
-            delete newTabs[oldFilename];
-
-            navigate(`/stacks/${newFilename}?tab=${tab.subTabIndex}`);
-
-            return newTabs;
-        });
-    }, [navigate]);
-
-
-    // This effect syncs the URL with the open tabs.
-    // When the `filename` in the URL changes, it adds it as a new tab if not already open.
     useEffect(() => {
-        if (!location.pathname.startsWith("/stacks")) return;
+        if (!location.pathname.startsWith(editorUrl()) ||
+            !filename) return;
 
-        if (!filename) {
-            // No file in URL → clear active tab
-            setCurTab("");
-            return;
-        }
-
-        // Open file in tabs if not already present
         handleOpenTab(filename);
-
-        // Sync active tab with URL
-        setCurTab(filename);
-    }, [filename, handleOpenTab, location.pathname])
-
-    // const activeTabName = filename ? !!openTabs[filename] : false;
+    }, [filename, handleOpenTab, editorUrl, location.pathname])
 
     const value = {
-        tabs: openTabs,
-        activeTab: curTab,
         openTab: handleOpenTab,
         closeTab: handleCloseTab,
         renameTab: handleTabRename,
         onTabClick: handleTabClick,
-        setTabDetails: setTabDetails,
+        setTabDetails: update,
     }
 
     return (

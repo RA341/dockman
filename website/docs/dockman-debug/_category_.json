@@ -1,0 +1,8 @@
+{
+  "label": "Debugger",
+  "position": 4,
+  "link": {
+    "type": "doc",
+    "id": "dockman-debug/overview"
+  }
+}

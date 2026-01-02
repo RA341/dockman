@@ -4,11 +4,11 @@ import {Delete, DryCleaning, Refresh} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import NetworksLoading from "./networks-loading.tsx";
 import NetworksEmpty from "./networks-empty.tsx";
-import {useDockerNetwork} from "../../hooks/docker-networks.ts";
 import {NetworkTable} from "./networks-table.tsx";
 import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
 import SearchBar from "../../components/search-bar.tsx";
+import {useDockerNetwork} from "./docker-hook-networks.ts";
 
 const NetworksPage = () => {
     const {loading, networks, loadNetworks, networkPrune, deleteSelected} = useDockerNetwork();
@@ -116,24 +116,33 @@ const NetworksPage = () => {
                 borderColor: 'rgba(255, 255, 255, 0.23)',
                 borderRadius: 3,
                 display: 'flex',
+                flexDirection: 'column',
                 overflow: 'hidden',
                 minHeight: 0
             }}>
-                {loading ?
-                    <NetworksLoading/> :
+                {loading ? (
+                    <NetworksLoading/>
+                ) : (
                     <Fade in={!loading} timeout={300}>
-                        <div style={{width: '100%'}}>
-                            {isEmpty ?
-                                <NetworksEmpty/> :
+                        <Box sx={{
+                            width: '100%',
+                            height: '100%',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            {isEmpty ? (
+                                <NetworksEmpty/>
+                            ) : (
                                 <NetworkTable
                                     networks={filteredNetworks}
                                     selectedNetworks={selectedNetworks}
                                     onSelectionChange={setSelectedNetworks}
                                 />
-                            }
-                        </div>
+                            )}
+                        </Box>
                     </Fade>
-                }
+                )}
             </Box>
         </Box>
     );

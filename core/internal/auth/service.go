@@ -11,16 +11,12 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
-
-	"github.com/RA341/dockman/internal/config"
 )
-
-type Config = *config.Auth
 
 type Service struct {
 	userStore    UserStore
 	sessionStore SessionStore
-	config       Config
+	config       *Config
 
 	oidcProvider *oidc.Provider
 	oauth2Config *oauth2.Config
@@ -28,7 +24,7 @@ type Service struct {
 
 func NewService(
 	user, pass string,
-	config Config,
+	config *Config,
 	userStore UserStore,
 	sessionStore SessionStore,
 ) *Service {
@@ -38,7 +34,7 @@ func NewService(
 		config:       config,
 	}
 
-	if config.EnableOidc {
+	if config.OIDCEnable {
 		ctx := getOidcContext(nil)
 
 		provider, err := oidc.NewProvider(ctx, config.OIDCIssuerURL)
@@ -117,7 +113,7 @@ func (auth *Service) CreateSession(user *User) (session *Session, rawSessionToke
 	session = &Session{}
 	session.UserID = user.ID
 	session.User = *user
-	session.Expires = time.Now().Add(auth.config.GetCookieExpiryLimitOrDefault())
+	session.Expires = time.Now().Add(auth.config.GetCookieExpiry())
 	session.HashedToken = hashString(rawSessionToken)
 
 	err = auth.sessionStore.NewSession(session)

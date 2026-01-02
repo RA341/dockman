@@ -1,25 +1,32 @@
-import {useClient} from "../../../lib/api.ts";
-import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
-import {deployActionsConfig, useComposeAction} from "../state/state.tsx";
+import {useHostClient} from "../../../lib/api.ts";
+import {useFileComponents} from "../state/terminal.tsx";
 import {Box, Button, CircularProgress} from "@mui/material";
+import {deployActionsConfig, useComposeAction} from "../state/compose.tsx";
+import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
 
 export function ComposeActionHeaders({selectedServices, fetchContainers}: {
     selectedServices: string[];
     fetchContainers: () => Promise<void>
 }) {
-    const dockerService = useClient(DockerService);
+    const dockerService = useHostClient(DockerService);
 
     const runAction = useComposeAction(state => state.runAction)
     const activeAction = useComposeAction(state => state.activeAction)
+    const {filename} = useFileComponents();
+    const composeFile = filename!
 
     const handleComposeAction = (
         name: typeof deployActionsConfig[number]['name'],
         _message: string,
         rpcName: typeof deployActionsConfig[number]['rpcName'],
     ) => {
-        runAction(dockerService[rpcName], name, selectedServices, () => {
-            fetchContainers().then()
-        })
+        runAction(
+            composeFile,
+            dockerService[rpcName],
+            name,
+            selectedServices,
+            () => fetchContainers()
+        )
     };
 
     return (

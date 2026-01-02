@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/RA341/dockman/pkg/fileutil"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/ssh"
 )
 
 // Common SSH private key filenames in order of preference
@@ -39,7 +40,7 @@ func createSSHClient(machine *MachineOptions, auth ssh.AuthMethod, saveHostCallb
 	}
 
 	if machine.RemotePublicKey != "" {
-		log.Debug().Str("name", machine.Name).Msg("Verifying public key")
+		log.Debug().Msg("Verifying public key")
 		pubkey, err := stringToPublicKey(machine.RemotePublicKey)
 		if err != nil {
 			return nil, err
