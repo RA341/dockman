@@ -33,7 +33,7 @@ ARG INFO_PACKAGE=github.com/RA341/dockman/internal/info
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w \
              -X ${INFO_PACKAGE}.Flavour=Docker \
-             -X ${INFO_PACKAGE}.Version=$(git describe --exact-match --tags HEAD 2>/dev/null || echo "dev") \
+             -X ${INFO_PACKAGE}.Version=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") \
              -X ${INFO_PACKAGE}.CommitInfo=$(git rev-parse HEAD) \
              -X ${INFO_PACKAGE}.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
              -X ${INFO_PACKAGE}.Branch=$(git rev-parse --abbrev-ref HEAD)" \
