@@ -29,3 +29,4 @@ install/stacks/
 /core/internal/git/test
 /core/config/dockman.yml
 .build
+/test-dockman/*

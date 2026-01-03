@@ -74,7 +74,6 @@ func (h *Handler) ComposeStart(ctx context.Context, req *connect.Request[v1.Comp
 			ctx,
 			req.Msg.Filename,
 			writer,
-			[]string{},
 			req.Msg.SelectedServices...,
 		)
 	})

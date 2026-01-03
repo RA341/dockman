@@ -158,7 +158,6 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 
 			return compose.Host{
 				Fs:      fs,
-				Root:    fs.Root(),
 				Relpath: filename,
 			}, nil
 		},
