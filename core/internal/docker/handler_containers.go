@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/netip"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	contSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/updater"
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/RA341/dockman/pkg/listutils"
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
@@ -111,28 +113,81 @@ func (h *Handler) ContainerInspect(ctx context.Context, req *connect.Request[v1.
 		return nil, err
 	}
 
-	mounts := make([]*v1.ContainerMount, 0, len(inspect.Mounts))
-	for _, mr := range inspect.Mounts {
-		mounts = append(mounts, &v1.ContainerMount{
-			Type:        string(mr.Type),
-			Name:        mr.Name,
-			Source:      mr.Source,
-			Destination: mr.Destination,
-			Driver:      mr.Driver,
-			Mode:        mr.Mode,
-			RW:          mr.RW,
-		})
+	mounts := listutils.ToMap(inspect.Mounts, func(mt container.MountPoint) *v1.ContainerMount {
+		return &v1.ContainerMount{
+			Type:        string(mt.Type),
+			Name:        mt.Name,
+			Source:      mt.Source,
+			Destination: mt.Destination,
+			Driver:      mt.Driver,
+			Mode:        mt.Mode,
+			RW:          mt.RW,
+		}
+	})
+
+	contConf := inspect.Config
+	exposedPorts := slices.Collect(func(yield func(string) bool) {
+		for k := range maps.Keys(contConf.ExposedPorts) {
+			if !yield(k.String()) {
+				return
+			}
+		}
+	})
+
+	config := &v1.ContainerConfig{
+		Hostname:     contConf.Hostname,
+		Domainname:   contConf.Domainname,
+		User:         contConf.User,
+		AttachStdin:  contConf.AttachStdin,
+		AttachStdout: contConf.AttachStdout,
+		AttachStderr: contConf.AttachStderr,
+		Tty:          contConf.Tty,
+		OpenStdin:    contConf.OpenStdin,
+		StdinOnce:    contConf.StdinOnce,
+
+		ArgsEscaped:  contConf.ArgsEscaped,
+		Image:        contConf.Image,
+		Env:          contConf.Env,
+		Cmd:          contConf.Cmd,
+		WorkingDir:   contConf.WorkingDir,
+		Entrypoint:   contConf.Entrypoint,
+		Labels:       contConf.Labels,
+		Volumes:      slices.Collect(maps.Keys(contConf.Volumes)),
+		ExposedPorts: exposedPorts,
 	}
 
 	return connect.NewResponse(&v1.ContainerInspectMessage{
+		ID:        inspect.ID,
 		Name:      inspect.Name,
 		Created:   inspect.Created,
-		ID:        inspect.ID,
+		Config:    config,
 		Path:      inspect.Path,
 		Image:     inspect.Image,
 		HostsPath: inspect.HostsPath,
+		Mounts:    mounts,
+	}), nil
+}
 
-		Mounts: mounts,
+func (h *Handler) ContainerTop(ctx context.Context, req *connect.Request[v1.ContainerTopRequest]) (*connect.Response[v1.ContainerTopResponse], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	top, err := dkSrv.Container.Top(ctx, req.Msg.ContainerId)
+	if err != nil {
+		return nil, err
+	}
+
+	tt := &v1.Top{
+		Proc: listutils.ToMap(top.Processes, func(t []string) *v1.Process {
+			return &v1.Process{Processes: t}
+		}),
+		Titles: top.Titles,
+	}
+
+	return connect.NewResponse(&v1.ContainerTopResponse{
+		Top: tt,
 	}), nil
 }
 

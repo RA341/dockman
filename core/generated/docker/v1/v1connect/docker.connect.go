@@ -48,6 +48,9 @@ const (
 	// DockerServiceContainerUpdateProcedure is the fully-qualified name of the DockerService's
 	// ContainerUpdate RPC.
 	DockerServiceContainerUpdateProcedure = "/docker.v1.DockerService/ContainerUpdate"
+	// DockerServiceContainerTopProcedure is the fully-qualified name of the DockerService's
+	// ContainerTop RPC.
+	DockerServiceContainerTopProcedure = "/docker.v1.DockerService/ContainerTop"
 	// DockerServiceContainerListProcedure is the fully-qualified name of the DockerService's
 	// ContainerList RPC.
 	DockerServiceContainerListProcedure = "/docker.v1.DockerService/ContainerList"
@@ -125,6 +128,7 @@ type DockerServiceClient interface {
 	ContainerRemove(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerRestart(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerUpdate(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error)
+	ContainerTop(context.Context, *connect.Request[v1.ContainerTopRequest]) (*connect.Response[v1.ContainerTopResponse], error)
 	ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error)
 	ContainerStats(context.Context, *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error)
 	ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest]) (*connect.ServerStreamForClient[v1.LogsMessage], error)
@@ -193,6 +197,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+DockerServiceContainerUpdateProcedure,
 			connect.WithSchema(dockerServiceMethods.ByName("ContainerUpdate")),
+			connect.WithClientOptions(opts...),
+		),
+		containerTop: connect.NewClient[v1.ContainerTopRequest, v1.ContainerTopResponse](
+			httpClient,
+			baseURL+DockerServiceContainerTopProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("ContainerTop")),
 			connect.WithClientOptions(opts...),
 		),
 		containerList: connect.NewClient[v1.ContainerListRequest, v1.ListResponse](
@@ -343,6 +353,7 @@ type dockerServiceClient struct {
 	containerRemove  *connect.Client[v1.ContainerRequest, v1.LogsMessage]
 	containerRestart *connect.Client[v1.ContainerRequest, v1.LogsMessage]
 	containerUpdate  *connect.Client[v1.ContainerRequest, v1.Empty]
+	containerTop     *connect.Client[v1.ContainerTopRequest, v1.ContainerTopResponse]
 	containerList    *connect.Client[v1.ContainerListRequest, v1.ListResponse]
 	containerStats   *connect.Client[v1.StatsRequest, v1.StatsResponse]
 	containerLogs    *connect.Client[v1.ContainerLogsRequest, v1.LogsMessage]
@@ -391,6 +402,11 @@ func (c *dockerServiceClient) ContainerRestart(ctx context.Context, req *connect
 // ContainerUpdate calls docker.v1.DockerService.ContainerUpdate.
 func (c *dockerServiceClient) ContainerUpdate(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error) {
 	return c.containerUpdate.CallUnary(ctx, req)
+}
+
+// ContainerTop calls docker.v1.DockerService.ContainerTop.
+func (c *dockerServiceClient) ContainerTop(ctx context.Context, req *connect.Request[v1.ContainerTopRequest]) (*connect.Response[v1.ContainerTopResponse], error) {
+	return c.containerTop.CallUnary(ctx, req)
 }
 
 // ContainerList calls docker.v1.DockerService.ContainerList.
@@ -516,6 +532,7 @@ type DockerServiceHandler interface {
 	ContainerRemove(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerRestart(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error)
 	ContainerUpdate(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error)
+	ContainerTop(context.Context, *connect.Request[v1.ContainerTopRequest]) (*connect.Response[v1.ContainerTopResponse], error)
 	ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error)
 	ContainerStats(context.Context, *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error)
 	ContainerLogs(context.Context, *connect.Request[v1.ContainerLogsRequest], *connect.ServerStream[v1.LogsMessage]) error
@@ -580,6 +597,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		DockerServiceContainerUpdateProcedure,
 		svc.ContainerUpdate,
 		connect.WithSchema(dockerServiceMethods.ByName("ContainerUpdate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dockerServiceContainerTopHandler := connect.NewUnaryHandler(
+		DockerServiceContainerTopProcedure,
+		svc.ContainerTop,
+		connect.WithSchema(dockerServiceMethods.ByName("ContainerTop")),
 		connect.WithHandlerOptions(opts...),
 	)
 	dockerServiceContainerListHandler := connect.NewUnaryHandler(
@@ -732,6 +755,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceContainerRestartHandler.ServeHTTP(w, r)
 		case DockerServiceContainerUpdateProcedure:
 			dockerServiceContainerUpdateHandler.ServeHTTP(w, r)
+		case DockerServiceContainerTopProcedure:
+			dockerServiceContainerTopHandler.ServeHTTP(w, r)
 		case DockerServiceContainerListProcedure:
 			dockerServiceContainerListHandler.ServeHTTP(w, r)
 		case DockerServiceContainerStatsProcedure:
@@ -805,6 +830,10 @@ func (UnimplementedDockerServiceHandler) ContainerRestart(context.Context, *conn
 
 func (UnimplementedDockerServiceHandler) ContainerUpdate(context.Context, *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerUpdate is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) ContainerTop(context.Context, *connect.Request[v1.ContainerTopRequest]) (*connect.Response[v1.ContainerTopResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.ContainerTop is not implemented"))
 }
 
 func (UnimplementedDockerServiceHandler) ContainerList(context.Context, *connect.Request[v1.ContainerListRequest]) (*connect.Response[v1.ListResponse], error) {

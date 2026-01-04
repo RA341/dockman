@@ -175,11 +175,21 @@ func (s *Service) ContainerGetStatsFromList(ctx context.Context, containers []co
 }
 
 func (s *Service) Inspect(ctx context.Context, containerId string) (container.InspectResponse, error) {
-	inspect, err := s.Cli().ContainerInspect(ctx, containerId, client.ContainerInspectOptions{
-		Size: true,
-	})
+	inspect, err := s.Cli().ContainerInspect(
+		ctx,
+		containerId,
+		client.ContainerInspectOptions{
+			Size: true,
+		},
+	)
 	if err != nil {
 		return container.InspectResponse{}, err
 	}
 	return inspect.Container, nil
+}
+
+func (s *Service) Top(ctx context.Context, containerId string) (client.ContainerTopResult, error) {
+	return s.Cli().ContainerTop(ctx, containerId, client.ContainerTopOptions{
+		Arguments: nil,
+	})
 }

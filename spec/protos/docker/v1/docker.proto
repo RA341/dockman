@@ -11,6 +11,7 @@ service DockerService {
   rpc ContainerRemove(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerRestart(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerUpdate(ContainerRequest) returns (Empty) {}
+  rpc ContainerTop(ContainerTopRequest) returns (ContainerTopResponse) {}
 
   rpc ContainerList(ContainerListRequest) returns (ListResponse) {}
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
@@ -45,6 +46,24 @@ service DockerService {
   rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
 }
 
+
+message ContainerTopRequest {
+  string containerId = 1;
+}
+
+message ContainerTopResponse {
+  Top top = 1;
+}
+
+message Process {
+  repeated string Processes = 1;
+}
+
+message Top {
+  repeated Process proc = 1;
+  repeated string Titles = 2;
+}
+
 message ContainerInspectMessage {
   string Name = 1;
   string ID = 2;
@@ -53,6 +72,36 @@ message ContainerInspectMessage {
   string Image = 4;
   string HostsPath = 5;
   repeated ContainerMount mounts = 6;
+  ContainerConfig config = 8;
+}
+
+message ContainerConfig {
+  string Hostname = 1;
+  string Domainname = 2;
+  string User = 3;
+  bool AttachStdin = 4;
+  bool AttachStdout = 5;
+  bool AttachStderr = 6;
+  bool Tty = 7;
+  bool OpenStdin = 8;
+  bool StdinOnce = 9;
+
+  bool ArgsEscaped = 10;
+  string Image = 11;
+  repeated string Env = 12;
+  repeated string Cmd = 13;
+  repeated string Volumes = 14;
+  string WorkingDir = 15;
+  repeated string Entrypoint = 16;
+  map<string, string> Labels = 17;
+  repeated string ExposedPorts = 18;
+
+  //  Healthcheck     *HealthConfig
+  //  NetworkDisabled bool
+  //  OnBuild         []string
+  //  StopSignal      string
+  //  StopTimeout     *int
+  //  Shell           []string
 }
 
 message ContainerMount {
