@@ -80,7 +80,7 @@ func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
 		err = s.aliasStore.EditAlias(conf.ID, alias.ID, &alias)
 	}
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to update alias")
+		log.Warn().Err(err).Msg("failed to update alias")
 	}
 
 	// Update Main Config
