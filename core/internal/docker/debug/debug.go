@@ -34,12 +34,12 @@ func (s *Service) Cli() *client.Client {
 // CleanupFn type aliased so that we can add more params/return values if needed
 type CleanupFn func()
 
-func (s *Service) ExecDebugContainer(
+func (s *Service) ContainerExecDebug(
 	ctx context.Context,
 	containerID string,
+	debuggerEntryCmd string,
 	debuggerImage string,
 	imgPullWriter io.Writer,
-	debuggerEntryCmd string,
 ) (resp client.HijackedResponse, cleanup CleanupFn, err error) {
 	err = s.cont.ImagePull(ctx, debuggerImage, imgPullWriter)
 	if err != nil {

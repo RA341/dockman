@@ -15,19 +15,18 @@ import {
 
 import "@xterm/xterm/css/xterm.css";
 
-// Icons
 import TerminalIcon from '@mui/icons-material/Terminal';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {FitAddon} from "@xterm/addon-fit";
 import {createTab} from "../compose/state/terminal.tsx";
-import {getWSUrl, useHostUrl} from "../../lib/api.ts";
+import {useContainerExecWsUrl} from "../../lib/api.ts";
 import AppTerminal from "../compose/components/logs-terminal.tsx";
 import {useHostStore} from "../compose/state/files.ts";
+import {Close} from "@mui/icons-material";
 
 const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
 const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "nixery.dev/shell/zsh"];
@@ -53,25 +52,23 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
         setIsConnected(true);
     };
 
-    const getBase = useHostUrl()
-
+    const createExecUrl = useContainerExecWsUrl()
     const setupExec = useCallback(() => {
-        const encodedCmd = encodeURIComponent(selectedCmd);
-        let base = getBase(`/docker/exec/${containerID}/${encodeURIComponent(selectedHost)}?cmd=${encodedCmd}`);
-
-        if (debuggerImage) {
-            base += "&debug=true";
-            base += "&image=" + encodeURIComponent(debuggerImage);
-        }
-
-        return createTab(getWSUrl(base), `Exec: ${containerID}`, true);
+        const url = createExecUrl(containerID, selectedCmd, debuggerImage)
+        return createTab(url, `Exec: ${containerID}`, true)
     }, [containerID, debuggerImage, selectedCmd, selectedHost]);
 
     const containerShortId = containerID.slice(0, 12);
 
     if (isConnected) {
         return (
-            <Box sx={{display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', minHeight: '500px'}}>
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                // height: '100vh',
+                height: 'calc(100vh - 140px)',
+                minHeight: '500px'
+            }}>
                 <Paper
                     variant="outlined"
                     sx={{
@@ -79,24 +76,27 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
                         mb: 1,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
+                        justifyContent: 'start',
                         bgcolor: 'background.default'
                     }}
                 >
                     <Stack direction="row" spacing={2} alignItems="center">
                         <IconButton size="small" onClick={() => setIsConnected(false)}>
-                            <ArrowBackIcon fontSize="small"/>
+                            <Close fontSize="small"/>
                         </IconButton>
                         <Typography variant="subtitle2" sx={{fontFamily: 'monospace', fontWeight: 700}}>
-                            {containerShortId} › {selectedCmd}
+                            {containerShortId} › {selectedCmd || "/bin/sh"}
                         </Typography>
                     </Stack>
-                    <Typography variant="caption" color="success.main" sx={{fontWeight: 700}}>
-                        ● CONNECTED
-                    </Typography>
                 </Paper>
 
-                <Box sx={{flex: 1, bgcolor: '#000', borderRadius: 1, overflow: 'hidden', p: 1}}>
+                <Box sx={{
+                    flex: 1,
+                    // bgcolor: '#000',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    p: 1
+                }}>
                     <AppTerminal
                         {...setupExec()}
                         isActive={true}

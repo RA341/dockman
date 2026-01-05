@@ -33,7 +33,30 @@ export function getWSUrl(input: string) {
     const baseUrl = url.host
     const proto = url.protocol == "http:" ? "ws" : "wss";
     const path = url.pathname
-    return `${proto}://${baseUrl}${path}`
+    return `${proto}://${baseUrl}${path}${url.search}`
+}
+
+export function useContainerLogsWsUrl() {
+    const getBase = useHostUrl()
+    return useCallback((containerId: string) => {
+        return getWSUrl(getBase(`/docker/logs/${containerId}`))
+    }, [getBase])
+}
+
+export function useContainerExecWsUrl() {
+    const getBase = useHostUrl()
+    return useCallback((containerId: string, entrypoint: string, debuggerImage?: string) => {
+        let params: Record<string, string> = {
+            "cmd": entrypoint,
+        }
+        if (debuggerImage) {
+            params["debug"] = "true"
+            params["image"] = debuggerImage
+        }
+
+        const urlParam = new URLSearchParams(params)
+        return getWSUrl(getBase(`/docker/exec/${containerId}?${urlParam.toString()}`))
+    }, [getBase]);
 }
 
 export function withAuthAPI(url: string = "/") {
