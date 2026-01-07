@@ -24,7 +24,7 @@ jobs:
             console.log(label)
             
             if (label === 'done') {
-              const comment = [
+              comment = [
                   '✅ This issue has been implemented in the canary build!',
                   '',
                   'You can test it by running:',
