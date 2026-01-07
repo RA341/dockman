@@ -24,18 +24,18 @@ jobs:
             console.log(label)
             
             if (label === 'done') {
-              comment = [
-                'This issue has been implemented on canary build',
-                '',
-                'You can test and provide feedback, by using:',
-                '```',
-                'docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:canary',
-                '```',
-                '',
-                'Let us know if you encounter any issues!',
-                '',
-                'CAUTION: canary builds are unstable and may contain breaking changes',
-              ].join('\n');
+              const comment = [
+                  '✅ This issue has been implemented in the canary build!',
+                  '',
+                  'You can test it by running:',
+                  '```bash',
+                  'docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:canary',
+                  '```',
+                  '',
+                  'Please share any feedback or issues you encounter.',
+                  '',
+                  '⚠️ **Note:** Canary builds are unstable and may contain breaking changes.',
+                ].join('\n');
             }
 
             if (comment) {
