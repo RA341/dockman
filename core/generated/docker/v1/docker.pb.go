@@ -2906,16 +2906,16 @@ type ContainerList struct {
 	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ImageID   string                 `protobuf:"bytes,2,opt,name=imageID,proto3" json:"imageID,omitempty"`
 	ImageName string                 `protobuf:"bytes,3,opt,name=imageName,proto3" json:"imageName,omitempty"`
-	Status    string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	State     string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
 	Name      string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
 	Created   string                 `protobuf:"bytes,6,opt,name=created,proto3" json:"created,omitempty"`
 	Ports     []*Port                `protobuf:"bytes,7,rep,name=ports,proto3" json:"ports,omitempty"`
 	// name to use in selecting service in docker compose
-	ServiceName     string `protobuf:"bytes,8,opt,name=serviceName,proto3" json:"serviceName,omitempty"`
-	ServicePath     string `protobuf:"bytes,9,opt,name=servicePath,proto3" json:"servicePath,omitempty"`
-	StackName       string `protobuf:"bytes,10,opt,name=stackName,proto3" json:"stackName,omitempty"`
-	UpdateAvailable string `protobuf:"bytes,11,opt,name=updateAvailable,proto3" json:"updateAvailable,omitempty"`
-	IPAddress       string `protobuf:"bytes,12,opt,name=IPAddress,proto3" json:"IPAddress,omitempty"`
+	ServiceName     string   `protobuf:"bytes,8,opt,name=serviceName,proto3" json:"serviceName,omitempty"`
+	ServicePath     string   `protobuf:"bytes,9,opt,name=servicePath,proto3" json:"servicePath,omitempty"`
+	StackName       string   `protobuf:"bytes,10,opt,name=stackName,proto3" json:"stackName,omitempty"`
+	UpdateAvailable string   `protobuf:"bytes,11,opt,name=updateAvailable,proto3" json:"updateAvailable,omitempty"`
+	IPAddress       []string `protobuf:"bytes,12,rep,name=IPAddress,proto3" json:"IPAddress,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2971,9 +2971,9 @@ func (x *ContainerList) GetImageName() string {
 	return ""
 }
 
-func (x *ContainerList) GetStatus() string {
+func (x *ContainerList) GetState() string {
 	if x != nil {
-		return x.Status
+		return x.State
 	}
 	return ""
 }
@@ -3027,11 +3027,11 @@ func (x *ContainerList) GetUpdateAvailable() string {
 	return ""
 }
 
-func (x *ContainerList) GetIPAddress() string {
+func (x *ContainerList) GetIPAddress() []string {
 	if x != nil {
 		return x.IPAddress
 	}
-	return ""
+	return nil
 }
 
 // ContainerInfo holds metrics for a single Docker container.
@@ -3572,12 +3572,12 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"\x04list\x18\x02 \x03(\v2\x18.docker.v1.ContainerListR\x04list\x1a>\n" +
 	"\x10StatusCountEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xee\x02\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\xec\x02\n" +
 	"\rContainerList\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aimageID\x18\x02 \x01(\tR\aimageID\x12\x1c\n" +
-	"\timageName\x18\x03 \x01(\tR\timageName\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12\x12\n" +
+	"\timageName\x18\x03 \x01(\tR\timageName\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\x12\x12\n" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12\x18\n" +
 	"\acreated\x18\x06 \x01(\tR\acreated\x12%\n" +
 	"\x05ports\x18\a \x03(\v2\x0f.docker.v1.PortR\x05ports\x12 \n" +
@@ -3586,7 +3586,7 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"\tstackName\x18\n" +
 	" \x01(\tR\tstackName\x12(\n" +
 	"\x0fupdateAvailable\x18\v \x01(\tR\x0fupdateAvailable\x12\x1c\n" +
-	"\tIPAddress\x18\f \x01(\tR\tIPAddress\"\x95\x02\n" +
+	"\tIPAddress\x18\f \x03(\tR\tIPAddress\"\x95\x02\n" +
 	"\x0eContainerStats\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +

@@ -30,7 +30,7 @@ import scrollbarStyles from "../../../components/scrollbar-style.tsx"
 import CopyButton from "../../../components/copy-button.tsx"
 import {useCopyButton} from "../../../hooks/copy.ts"
 import ComposeLink from "../../../components/compose-link.tsx"
-import {type SortOrder, sortTable, type TableInfo, useSort} from '../../../lib/table.ts'
+import {formatTimeAgo, type SortOrder, sortTable, type TableInfo, useSort} from '../../../lib/table.ts'
 import {useConfig} from "../../../hooks/config.ts";
 import {getImageHomePageUrl} from "../../images/docker-images.ts";
 
@@ -58,7 +58,7 @@ export function ContainerTable(
     }: ContainerTableProps) {
     const [isLoaded, setIsLoaded] = useState(false);
     const {handleCopy, copiedId} = useCopyButton();
-    const {handleCopy: handleCopyIP, copiedId: copiedIPId} = useCopyButton();
+
     const {dockYaml} = useConfig();
 
     useEffect(() => {
@@ -127,14 +127,61 @@ export function ContainerTable(
             )
         },
         Status: {
-            getValue: (c) => c.status,
+            getValue: (c) => c.state,
             header: (label) => (
                 <TableCell sx={headerStyles}>
-                    <TableSortLabel active={sortField === label} direction={sortOrder}
-                                    onClick={() => handleSort(label)}>STATUS</TableSortLabel>
+                    <TableSortLabel
+                        active={sortField === label} direction={sortOrder}
+                        onClick={() => handleSort(label)}
+                    >
+                        STATUS
+                    </TableSortLabel>
                 </TableCell>
             ),
-            cell: (c) => <TableCell><StatusChip status={c.status}/></TableCell>
+            cell: (c) => (
+                <TableCell sx={{width: 120 }}>
+                    <StatusChip status={c.state}/>
+                </TableCell>
+            )
+        },
+        Uptime: {
+            getValue: (c) => new Date(c.created),
+            header: (label) => (
+                <TableCell sx={headerStyles}>
+                    <TableSortLabel
+                        active={sortField === label} direction={sortOrder}
+                        onClick={() => handleSort(label)}
+                    >
+                        CREATED
+                    </TableSortLabel>
+                </TableCell>
+            ),
+            cell: (c) => (
+                <TableCell sx={{width: 180}}>
+                    <Tooltip title={new Date(c.created).toLocaleString()} arrow placement="top">
+                        <Stack spacing={0}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="body2" sx={{fontWeight: 600, color: 'info.main'}}>
+                                    {formatTimeAgo(new Date(c.created))}
+                                </Typography>
+                            </Stack>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontFamily: 'monospace',
+                                    color: 'text.secondary',
+                                    fontSize: '0.7rem',
+                                }}
+                            >
+                                {new Date(c.created).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })} {new Date(c.created).toLocaleDateString()}
+                            </Typography>
+                        </Stack>
+                    </Tooltip>
+                </TableCell>
+            )
         },
         Actions: {
             getValue: () => 0,
@@ -165,8 +212,13 @@ export function ContainerTable(
             getValue: (c) => c.imageName,
             header: (label) => (
                 <TableCell sx={headerStyles}>
-                    <TableSortLabel active={sortField === label} direction={sortOrder}
-                                    onClick={() => handleSort(label)}>IMAGE</TableSortLabel>
+                    <TableSortLabel
+                        active={sortField === label}
+                        direction={sortOrder}
+                        onClick={() => handleSort(label)}
+                    >
+                        IMAGE
+                    </TableSortLabel>
                 </TableCell>
             ),
             cell: (c) => (
@@ -196,8 +248,13 @@ export function ContainerTable(
             getValue: (c) => c.stackName,
             header: (label) => (
                 <TableCell sx={headerStyles}>
-                    <TableSortLabel active={sortField === label} direction={sortOrder}
-                                    onClick={() => handleSort(label)}>STACK</TableSortLabel>
+                    <TableSortLabel
+                        active={sortField === label}
+                        direction={sortOrder}
+                        onClick={() => handleSort(label)}
+                    >
+                        STACK
+                    </TableSortLabel>
                 </TableCell>
             ),
             cell: (c) => (
@@ -209,18 +266,18 @@ export function ContainerTable(
             )
         },
         IP: {
-            getValue: (c) => c.IPAddress,
-            header: (_) => <TableCell sx={headerStyles}>IP ADDRESS</TableCell>,
+            getValue: (c) => c.IPAddress.length,
+            header: (_) => <TableCell sx={headerStyles}>ADDRESS</TableCell>,
             cell: (c) => (
                 <TableCell>
-                    {c.IPAddress ? (
+                    {c.IPAddress ?
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                            <Typography variant="caption"
-                                        sx={{fontFamily: 'monospace', fontWeight: 600}}>{c.IPAddress}</Typography>
-                            <CopyButton tooltip={"Copy IP"} handleCopy={handleCopyIP} thisID={c.IPAddress}
-                                        activeID={copiedIPId ?? ""}/>
+                            <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.5}}>
+                                {formatIPAddr(c.IPAddress)}
+                            </Box>
                         </Stack>
-                    ) : <Typography variant="caption" color="text.disabled">—</Typography>}
+                        : <Typography variant="caption" color="text.disabled">—</Typography>
+                    }
                 </TableCell>
             )
         },
@@ -234,7 +291,9 @@ export function ContainerTable(
             },
             cell: (c) => (
                 <TableCell sx={{maxWidth: 330}}>
-                    <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.5}}>{formatPorts(c.ports)}</Box>
+                    <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.5}}>
+                        {formatPorts(c.ports)}
+                    </Box>
                 </TableCell>
             )
         }
@@ -322,20 +381,39 @@ const ActionBtn = ({icon, title, onClick}: { icon: any, title: string, onClick: 
 
 const StatusChip = ({status}: { status: string }) => {
     const s = status.toLowerCase();
-    let color: any = "default";
-    if (s.startsWith('up')) color = "success";
-    else if (s.startsWith('exited')) color = "error";
-    else if (s.includes('restarting')) color = "warning";
+    let color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" = "default";
+
+    switch (s) {
+        case "created":
+            color = "primary";
+            break
+        case "running":
+            color = "success";
+            break
+        case "paused":
+            color = "secondary";
+            break
+        case "restarting":
+            color = "warning";
+            break
+        case "dead":
+        case "exited":
+        case "removing":
+            color = "error";
+            break
+    }
 
     return (
         <Chip
-            label={status} size="small" variant="outlined" color={color}
+            label={status}
+            size="small"
+            variant="outlined"
+            color={color}
             sx={{
                 fontWeight: 700,
-                fontSize: '0.6rem',
-                height: 18,
+                fontSize: '0.7rem',
+                height: 20,
                 textTransform: 'uppercase',
-                bgcolor: color === 'default' ? 'transparent' : `${color}.lighter`
             }}
         />
     );
@@ -361,4 +439,34 @@ const formatPorts = (ports: Port[]) => {
                 <ContainerInfoPort port={p}/>
             </Box>
         ));
+};
+
+const formatIPAddr = (addrs: string[]) => {
+    if (!addrs?.length) return <Typography variant="caption" color="text.disabled">—</Typography>;
+
+    return addrs.map((addr, i) => (
+        <Box
+            key={i}
+            component="span"
+            sx={{
+                bgcolor: 'action.hover',
+                px: 0.5,
+                py: 0.1,
+                borderRadius: 0.5,
+                border: '1px solid',
+                borderColor: 'divider'
+            }}
+        >
+            <Tooltip title="Open IP in new tab" arrow>
+                <Link
+                    href={`http://${addr}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{color: 'info.main', textDecoration: 'none', '&:hover': {textDecoration: 'underline'}}}
+                >
+                    {addr}
+                </Link>
+            </Tooltip>
+        </Box>
+    ));
 };

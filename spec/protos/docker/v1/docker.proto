@@ -358,7 +358,7 @@ message ContainerList {
   string id = 1;
   string imageID = 2;
   string imageName = 3;
-  string status = 4;
+  string state = 4;
   string name = 5;
   string created = 6;
   repeated Port ports = 7;
@@ -367,7 +367,7 @@ message ContainerList {
   string servicePath = 9;
   string stackName = 10;
   string updateAvailable = 11;
-  string IPAddress = 12;
+  repeated string IPAddress = 12;
 }
 
 // ContainerInfo holds metrics for a single Docker container.

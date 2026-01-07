@@ -7,6 +7,7 @@ import (
 	"io"
 	"maps"
 	"net/netip"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -340,23 +341,69 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 }
 
 func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
-	var ipAddr string
-	for _, netConf := range stack.NetworkSettings.Networks {
-		ipAddr = netConf.IPAddress.String()
-	}
+	ipAddr := extractIPAddr(stack)
 
 	return &v1.ContainerList{
 		Name:            strings.TrimPrefix(stack.Names[0], "/"),
 		Id:              stack.ID,
 		ImageID:         stack.ImageID,
 		ImageName:       stack.Image,
-		Status:          stack.Status,
+		State:           string(stack.State),
+		Created:         time.Unix(stack.Created, 0).UTC().Format(time.RFC3339),
 		IPAddress:       ipAddr,
 		UpdateAvailable: update.UpdateRef,
 		Ports:           portSlice,
 		ServiceName:     stack.Labels[api.ServiceLabel],
 		StackName:       stack.Labels[api.ProjectLabel],
 		ServicePath:     h.getComposeFilePath(stack.Labels[api.ConfigFilesLabel]),
-		Created:         time.Unix(stack.Created, 0).UTC().Format(time.RFC3339),
 	}
+}
+
+func extractIPAddr(stack container.Summary) (hosts []string) {
+	hosts = extractTraefikLabel(stack.Labels)
+	if hosts != nil {
+		return hosts
+	}
+
+	var ipAddr string
+	for _, netConf := range stack.NetworkSettings.Networks {
+		ipAddr = netConf.IPAddress.String()
+		if ipAddr != "invalid IP" {
+			hosts = append(hosts, ipAddr)
+		}
+	}
+
+	return hosts
+}
+
+func extractTraefikLabel(labels map[string]string) (hosts []string) {
+	val, ok := labels["traefik.enable"]
+	if !(ok && val == "true") {
+		return hosts
+	}
+
+	// looks for the Host() or HostRegexp() functions
+	// It captures everything inside the parenthesis
+	hostRegex := regexp.MustCompile(`Host(?:Regexp)?\((.*?)\)`)
+	// This regex identifies the actual domain names inside the quotes/backticks
+	domainRegex := regexp.MustCompile(`[` + "`" + `"]([^` + "`" + `",\s]+)[` + "`" + `"]`)
+	for key, value := range labels {
+		if strings.HasPrefix(key, "traefik.http.routers.") && strings.HasSuffix(key, ".rule") {
+			// Find all Host(...) or HostRegexp(...) occurrences in the rule
+			matches := hostRegex.FindAllStringSubmatch(value, -1)
+			for _, match := range matches {
+				if len(match) > 1 {
+					// (Handles comma separated: Host(`a.com`, `b.com`))
+					domains := domainRegex.FindAllStringSubmatch(match[1], -1)
+					for _, d := range domains {
+						if len(d) > 1 {
+							hosts = append(hosts, d[1])
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return hosts
 }
