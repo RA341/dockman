@@ -27,14 +27,14 @@ jobs:
               comment = [
                 'This issue has been implemented on canary build',
                 '',
-                'If you can provide feedback, by using:',
+                'You can test and provide feedback, by using:',
                 '```',
                 'docker run --rm -p 8866:8866 -e DOCKMAN_LOG_AUTH_WARNING=false -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/ra341/dockman:canary',
                 '```',
                 '',
                 'Let us know if you encounter any issues!',
                 '',
-                'Note: canary builds are unstable and may contain breaking changes, run with caution',
+                'CAUTION: canary builds are unstable and may contain breaking changes',
               ].join('\n');
             }
 
