@@ -16,7 +16,9 @@ jobs:
           script: |
             const label = context.payload.label.name;
             let comment = '';
-
+            
+            console.log(label)
+            
             if (label === 'done') {
                 const comment = [
                 'This issue has been implemented on canary build',
