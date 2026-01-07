@@ -17,10 +17,8 @@ jobs:
             const label = context.payload.label.name;
             let comment = '';
             
-            console.log(label)
-            
             if (label === 'done') {
-                const comment = [
+                comment = [
                 'This issue has been implemented on canary build',
                 '',
                 'If you can provide feedback, by using:',
@@ -33,6 +31,8 @@ jobs:
                 'Note: canary builds are unstable and may contain breaking changes, run with caution',
               ].join('\n');
             }
+
+            console.log("setting comment, comment)
 
             if (comment) {
               github.rest.issues.createComment({
