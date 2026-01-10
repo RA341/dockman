@@ -65,7 +65,7 @@ func PrintInfo() {
 	fields := litany.NewFieldConfig()
 
 	fields.NewStrField("Version", Version)
-	fields.NewStrField("Flavour", Flavour)
+	fields.NewStrField("Flavour", string(Flavour))
 	fields.NewTimeField("BuildDate", BuildDate)
 	fields.DashDivider()
 

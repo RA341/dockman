@@ -1,17 +1,12 @@
 package main
 
 import (
-	"embed"
-
 	"github.com/RA341/dockman/internal/app"
 	"github.com/RA341/dockman/internal/info"
 )
 
-//go:embed dist
-var frontendDir embed.FS
-
 func init() {
-	app.InitMeta(info.FlavourServer)
+	app.InitMeta(info.FlavourDocker)
 }
 
 func main() {

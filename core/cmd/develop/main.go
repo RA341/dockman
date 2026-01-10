@@ -12,6 +12,10 @@ import (
 	"github.com/RA341/dockman/pkg/argos"
 )
 
+func init() {
+	app.InitMeta(info.FlavourDevelop)
+}
+
 //go:embed dist
 var frontendDir embed.FS
 

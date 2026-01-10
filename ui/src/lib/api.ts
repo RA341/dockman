@@ -4,7 +4,8 @@ import type {DescService} from "@bufbuild/protobuf";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useParams} from "react-router-dom";
 
-export const API_BASE_URL = import.meta.env.MODE === 'development'
+const mode = import.meta.env.MODE;
+export const API_BASE_URL = mode === 'development' || mode === 'electron'
     ? "http://localhost:8866"
     : window.location.origin;
 

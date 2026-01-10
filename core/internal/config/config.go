@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"strings"
@@ -24,7 +25,8 @@ type AppConfig struct {
 	Log    Logger        `config:""`
 	Viewer viewer.Config `config:""`
 
-	UIFS fs.FS
+	UIFS          fs.FS
+	ServerContext context.Context
 }
 
 func (c *AppConfig) GetAllowedOrigins() []string {

@@ -2,7 +2,6 @@ package info
 
 import (
 	"runtime"
-	"strings"
 )
 
 // build args to modify vars
@@ -15,18 +14,22 @@ import (
 
 // defaults
 const (
-	VersionDev = "develop"
+	VersionDev = "canary"
 	Unknown    = "unknown"
 )
 
+type FlavourType string
+
 // flavours
 const (
-	Server = "server"
-	Docker = "docker"
+	FlavourDevelop FlavourType = "develop"
+	FlavourServer  FlavourType = "server"
+	FlavourDocker  FlavourType = "docker"
+	FlavourDesktop FlavourType = "desktop"
 )
 
 var (
-	Flavour    = Server
+	Flavour    = FlavourDevelop
 	Version    = VersionDev
 	CommitInfo = Unknown
 	BuildDate  = Unknown
@@ -34,14 +37,22 @@ var (
 	GoVersion  = runtime.Version()
 )
 
+func SetFlavour(f FlavourType) {
+	Flavour = f
+}
+
 func IsKnown(val string) bool {
 	return val != Unknown
 }
 
 func IsDocker() bool {
-	return strings.ToLower(Flavour) == Docker
+	return Flavour == FlavourDocker
 }
 
 func IsDev() bool {
-	return strings.ToLower(Version) == VersionDev
+	return Flavour == FlavourDevelop
+}
+
+func IsDesktop() bool {
+	return Flavour == FlavourDesktop
 }
