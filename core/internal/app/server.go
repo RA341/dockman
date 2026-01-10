@@ -25,7 +25,6 @@ func InitMeta(flavour info.FlavourType) {
 }
 
 func StartServer(opt ...config.ServerOpt) {
-
 	conf, err := config.Load(opt...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error parsing config")
@@ -59,7 +58,18 @@ func StartServer(opt ...config.ServerOpt) {
 	}
 
 	go func() {
-		err := srv.ListenAndServe()
+		var err error
+
+		if conf.Certs.IsSet() {
+			log.Info().Msg("Certs found using https...")
+			err = srv.ListenAndServeTLS(
+				conf.Certs.PublicCertPath,
+				conf.Certs.PrivateKeyPath,
+			)
+		} else {
+			err = srv.ListenAndServe()
+		}
+
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal().Err(err).Msg("Error starting server")
 		}

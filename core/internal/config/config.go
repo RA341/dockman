@@ -21,9 +21,10 @@ type AppConfig struct {
 	ComposeRoot    string `config:"flag=cr,env=COMPOSE_ROOT,default=/compose,usage=Root directory for compose files"`
 	ConfigDir      string `config:"flag=conf,env=CONFIG,default=/config,usage=Directory to store dockman config"`
 
-	Auth   auth.Config   `config:""` // empty tag to indicate to parse struct
-	Log    Logger        `config:""`
-	Viewer viewer.Config `config:""`
+	Auth   auth.Config     `config:""` // empty tag to indicate to parse struct
+	Log    Logger          `config:""`
+	Viewer viewer.Config   `config:""`
+	Certs  SelfSignedCerts `config:""`
 
 	UIFS          fs.FS
 	ServerContext context.Context
@@ -39,6 +40,15 @@ func (c *AppConfig) GetAllowedOrigins() []string {
 
 func (c *AppConfig) GetDockmanWithMachineUrl() string {
 	return fmt.Sprintf("http://%s:%d", c.LocalAddr, c.Port)
+}
+
+type SelfSignedCerts struct {
+	PublicCertPath string `config:"flag=sscPub,env=PUB_CERT_PATH,default=,usage=path to a public cert"`
+	PrivateKeyPath string `config:"flag=sscPrv,env=PRIV_KEY_PATH,default=,usage=path to a private cert"`
+}
+
+func (c SelfSignedCerts) IsSet() bool {
+	return c.PublicCertPath != "" && c.PrivateKeyPath != ""
 }
 
 type FilePerms struct {

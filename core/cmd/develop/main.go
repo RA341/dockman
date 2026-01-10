@@ -39,6 +39,9 @@ func main() {
 		"GID":  "1000",
 		"PUID": "1000",
 
+		//"PUB_CERT_PATH": "./cert.pem",
+		//"PRIV_KEY_PATH": "./key.pem",
+
 		//"AUTH_OIDC_ENABLE":        "true",
 		"AUTH_OIDC_AUTO_REDIRECT": "false",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
