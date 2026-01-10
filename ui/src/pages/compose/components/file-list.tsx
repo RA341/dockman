@@ -1,5 +1,5 @@
 import {useCallback, useEffect} from 'react'
-import {Box, CircularProgress, Divider, IconButton, List, styled, Toolbar, Tooltip, Typography} from '@mui/material'
+import {Box, CircularProgress, Divider, IconButton, List, Toolbar, Tooltip, Typography} from '@mui/material'
 import {Add as AddIcon, Cached, Search as SearchIcon} from '@mui/icons-material'
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
 import {useFileComponents} from "../state/terminal.tsx";
@@ -131,12 +131,11 @@ export function FileList() {
 
                 <Divider/>
 
-                {/* SCROLLABLE CONTENT AREA */}
                 <Box sx={{
                     flexGrow: 1,
                     overflowY: 'auto',
                     overflowX: 'hidden',
-                    // Optional: styling scrollbar to look more like an IDE
+                    scrollbarGutter: 'stable',
                     '&::-webkit-scrollbar': {width: '6px'},
                     '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
                 }}>
@@ -171,7 +170,7 @@ const FileListInner = () => {
     const {files, isLoading} = useFiles()
 
     return (
-        <StyledScrollbarBox sx={{flexGrow: 1}}>
+        <>
             {isLoading && files.length < 1 ? (
                 <Box display="flex" justifyContent="center" alignItems="center" height="100%">
                     <CircularProgress/>
@@ -186,29 +185,6 @@ const FileListInner = () => {
                     )}
                 </List>
             )}
-        </StyledScrollbarBox>
+        </>
     );
 };
-
-
-const StyledScrollbarBox = styled(Box)(({theme}) => ({
-    overflowY: 'auto',
-    scrollbarGutter: 'stable',
-    // Use theme colors for better theming support
-    scrollbarWidth: 'thin',
-    scrollbarColor: `${theme.palette.grey[400]} transparent`,
-
-    '&::-webkit-scrollbar': {
-        width: '6px',
-    },
-    '&::-webkit-scrollbar-track': {
-        background: 'transparent', // Makes the track invisible
-    },
-    '&::-webkit-scrollbar-thumb': {
-        backgroundColor: theme.palette.grey[400],
-        borderRadius: '3px',
-    },
-    '&::-webkit-scrollbar-thumb:hover': {
-        backgroundColor: theme.palette.grey[500],
-    },
-}))
