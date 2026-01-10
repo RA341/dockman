@@ -69,7 +69,6 @@ function FilesProvider({children}: { children: ReactNode }) {
         }))
         if (err) {
             showError(err)
-            setFiles([])
         } else if (val) {
             setFiles(prevState => {
                 if (depthIndex.length < 1) {
