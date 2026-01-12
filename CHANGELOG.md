@@ -1,3 +1,19 @@
+# [3.1.0](https://github.com/RA341/dockman/compare/v3.0.0...v3.1.0) (2026-01-12)
+
+
+### Bug Fixes
+
+* blank file tree on perm denied ([fd2acb6](https://github.com/RA341/dockman/commit/fd2acb65685e51095b5c546b64d116500d43e121)), closes [#166](https://github.com/RA341/dockman/issues/166)
+* exec/logs processes not exiting ([a4e2441](https://github.com/RA341/dockman/commit/a4e2441d3208fc0a4e81302c6162e30b8df2a01e))
+* file tree layout shift on scrollbar ([b672331](https://github.com/RA341/dockman/commit/b6723318e7ff9b346f267e102ddd775a49a26314)), closes [#165](https://github.com/RA341/dockman/issues/165)
+
+
+### Features
+
+* custom cert paths ([811de70](https://github.com/RA341/dockman/commit/811de7085769df3c66a904b6975217c28474b282)), closes [#169](https://github.com/RA341/dockman/issues/169)
+* improved container inspect ([4c32766](https://github.com/RA341/dockman/commit/4c327663054fea3d278208489e4cee5ad1fbc2d4))
+* traefik labels ([e284959](https://github.com/RA341/dockman/commit/e284959cb2a5816a7e48448993fbb7103714f714)), closes [#148](https://github.com/RA341/dockman/issues/148)
+
 # [3.0.0](https://github.com/RA341/dockman/compare/v2.5.1...v3.0.0) (2026-01-02)
 
 
