@@ -1,10 +1,11 @@
 import {type Client, ConnectError, createClient} from "@connectrpc/connect";
 import {createConnectTransport} from "@connectrpc/connect-web";
 import type {DescService} from "@bufbuild/protobuf";
-import {useCallback, useMemo} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useParams} from "react-router-dom";
 
-export const API_BASE_URL = import.meta.env.MODE === 'development'
+const mode = import.meta.env.MODE;
+export const API_BASE_URL = mode === 'development' || mode === 'electron'
     ? "http://localhost:8866"
     : window.location.origin;
 
@@ -33,7 +34,30 @@ export function getWSUrl(input: string) {
     const baseUrl = url.host
     const proto = url.protocol == "http:" ? "ws" : "wss";
     const path = url.pathname
-    return `${proto}://${baseUrl}${path}`
+    return `${proto}://${baseUrl}${path}${url.search}`
+}
+
+export function useContainerLogsWsUrl() {
+    const getBase = useHostUrl()
+    return useCallback((containerId: string) => {
+        return getWSUrl(getBase(`/docker/logs/${containerId}`))
+    }, [getBase])
+}
+
+export function useContainerExecWsUrl() {
+    const getBase = useHostUrl()
+    return useCallback((containerId: string, entrypoint: string, debuggerImage?: string) => {
+        let params: Record<string, string> = {
+            "cmd": entrypoint,
+        }
+        if (debuggerImage) {
+            params["debug"] = "true"
+            params["image"] = debuggerImage
+        }
+
+        const urlParam = new URLSearchParams(params)
+        return getWSUrl(getBase(`/docker/exec/${containerId}?${urlParam.toString()}`))
+    }, [getBase]);
 }
 
 export function withAuthAPI(url: string = "/") {
@@ -92,6 +116,36 @@ export function useHostClient<T extends DescService>(service: T): Client<T> {
 // Specialized hook for auth
 export function useAuthClient<T extends DescService>(service: T): Client<T> {
     return useClient(service, 'auth');
+}
+
+export const useRPCRunner = <T>(
+    exec: () => Promise<T>
+) => {
+    const [loading, setLoading] = useState(false)
+    const [err, setErr] = useState("")
+    const [val, setVal] = useState<null | T>(null)
+
+    const execRef = useRef(exec);
+    useEffect(() => {
+        execRef.current = exec;
+    }, [exec]);
+
+    const runner = useCallback(async () => {
+        setLoading(true)
+        setErr("")
+
+        const {val, err} = await callRPC(execRef.current)
+        if (err) {
+            setVal(null)
+            setErr(err)
+        } else {
+            setVal(val)
+        }
+
+        setLoading(false)
+    }, []);
+
+    return {runner, val, loading, err}
 }
 
 export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | null; err: string; }> {

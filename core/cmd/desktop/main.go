@@ -1,130 +1,137 @@
 package main
 
 import (
-	"embed"
+	"context"
 	"fmt"
 	"io/fs"
-	"log"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
-	"strings"
-	"time" // Added for startup delay
+	"os/exec"
 
 	"github.com/RA341/dockman/internal/app"
 	"github.com/RA341/dockman/internal/config"
+	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/pkg/argos"
+	"github.com/rs/zerolog"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/getlantern/systray"
+	log2 "github.com/rs/zerolog/log"
 )
 
-//go:embed dist
-var frontendDir embed.FS
+var log *zerolog.Logger
+
+func init() {
+	app.InitMeta(info.FlavourDesktop)
+	logger := log2.With().Str("desktop", "").Logger()
+	log = &logger
+}
 
 func main() {
-	// 1. FIX: Ensure we get the actual 'dist' folder for both Wails and the Backend
-	subFS, err := fs.Sub(frontendDir, "dist")
+	exitIfAlreadyRunning()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	subFS, err := setupEmbeddedFrontend()
 	if err != nil {
-		log.Fatal("Error loading frontend directory", err)
+		log.Fatal().Err(err).Msg("Failed to setup embedded frontend filesystem")
+	}
+	executable, workingDir, err := setupElectronExecPath()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to find executable path")
 	}
 
-	// ... Environment setup ...
+	setupEnvs()
+
+	// 3. Start Systray in its own goroutine (it blocks, but we use onReady)
+	// We pass 'cancel' so the tray can shut down the whole app
+	go systray.Run(
+		func() {
+			onReady(cancel)
+		},
+		onExit,
+	)
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		app.StartServer(config.WithUIFS(subFS), config.WithCtx(ctx))
+		return nil
+	})
+
+	g.Go(func() error {
+		defer cancel()
+		return startDesktopUI(ctx, executable, workingDir)
+	})
+
+	g.Go(func() error {
+		return setupSocketHandler(ctx)
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error().Err(err).Msg("App execution error")
+	}
+
+	fmt.Println("Shutdown complete goodbye...")
+}
+
+func onReady(cancel context.CancelFunc) {
+	file, err := frontendDir.ReadFile("dist/dockman.svg")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load icon")
+	}
+
+	systray.SetIcon(file)
+	systray.AddMenuItem("Dockman Desktop", "")
+	systray.AddSeparator()
+
+	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+	//uiQuit := systray.AddMenuItem("Quit UI", "Quit the ui")
+
+	go func() {
+		select {
+		case <-mQuit.ClickedCh:
+			systray.Quit()
+			cancel()
+			//case <-uiQuit.ClickedCh:
+			//	log.Printf("exiting ui")
+		}
+	}()
+}
+
+func onExit() {
+}
+
+func startDesktopUI(ctx context.Context, fullpath string, wd string) error {
+	cmd := exec.CommandContext(ctx, fullpath)
+	cmd.Dir = wd
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil && ctx.Err() == nil {
+		log.Error().Err(err).Msg("UI exited unexpectedly")
+		return err
+	}
+	return nil
+}
+
+func startCoreServer(ctx context.Context, subFS fs.FS) {
+	app.StartServer(
+		config.WithUIFS(subFS),
+		config.WithCtx(ctx),
+	)
+}
+
+func setupEnvs() {
 	prefixer := argos.Prefixer(config.EnvPrefix)
 	envMap := map[string]string{
-		"LOG_LEVEL":    "debug",
-		"LOG_VERBOSE":  "true",
-		"CONFIG":       "./config",
-		"COMPOSE_ROOT": "./compose",
-		"GID":          "1000",
-		"PUID":         "1000",
+		"LOG_LEVEL":   "debug",
+		"LOG_VERBOSE": "true",
+		"CONFIG":      "./config",
+		//"COMPOSE_ROOT": "./compose",
 	}
 	for k, v := range envMap {
 		_ = os.Setenv(prefixer(k), v)
 	}
-
-	// Start Backend in Goroutine
-	go func() {
-		app.StartServer(
-			config.WithUIFS(subFS),
-		)
-	}()
-
-	// 2. Give the backend a moment to actually bind to port 8866
-	// If Wails starts too fast, the proxy might hit "Connection Refused" immediately.
-	time.Sleep(1 * time.Second)
-
-	// --- PROXY SETUP ---
-	target := "http://localhost:8866"
-	targUr, _ := url.Parse(target)
-
-	proxy := httputil.NewSingleHostReverseProxy(targUr)
-
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-
-		// If left set, it causes errors when the client tries to reuse the request.
-		req.RequestURI = ""
-		// Set the Host so the backend thinks it's a local request
-		req.Host = targUr.Host
-		req.URL.Host = targUr.Host
-		req.URL.Scheme = targUr.Scheme
-
-		req.Header.Set("X-Forwarded-Proto", "http")
-		req.Header.Del("Origin")
-		req.Header.Del("Referer")
-	}
-
-	proxy.ModifyResponse = func(r *http.Response) error {
-		if r.StatusCode >= 300 && r.StatusCode < 400 {
-			fmt.Printf("[Proxy Redirect] %s -> %s\n", r.Request.URL.Path, r.Header.Get("Location"))
-		} else {
-			fmt.Printf("[Proxy] %s | Status: %s\n", r.Request.URL.Path, r.Status)
-		}
-		return nil
-	}
-
-	err = StartWails(subFS, proxy)
-	if err != nil {
-		log.Fatal("Error starting wails ", err)
-	}
-}
-
-func StartWails(assets fs.FS, proxy *httputil.ReverseProxy) error {
-	return wails.Run(&options.App{
-		Debug: options.Debug{
-			OpenInspectorOnStartup: true,
-		},
-		EnableDefaultContextMenu: true,
-		Title:                    "Dockman Desktop",
-		WindowStartState:         options.Minimised,
-		Width:                    1920,
-		Height:                   1080,
-
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-			Middleware: func(next http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if strings.HasPrefix(r.URL.Path, "/api") ||
-						strings.HasPrefix(r.URL.Path, "/auth/ping") ||
-						strings.Contains(r.URL.Path, ".v1.") {
-
-						log.Println("proxying", r.Method, r.URL)
-
-						// FIX: Remove Accept-Encoding so backend sends plain text (easier to debug)
-						r.Header.Del("Accept-Encoding")
-
-						proxy.ServeHTTP(w, r)
-						return
-					}
-
-					log.Println("assets", r.Method, r.URL)
-					next.ServeHTTP(w, r)
-				})
-			},
-		},
-	})
 }

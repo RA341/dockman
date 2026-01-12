@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Dockman
+Exec=dockman
+Icon=dockman
+Type=Application
+Categories=Utility;
+Terminal=false

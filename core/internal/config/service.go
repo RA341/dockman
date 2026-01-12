@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -104,6 +105,10 @@ func defaultIfNotSet(config *AppConfig) {
 		if err == nil {
 			config.LocalAddr = ip
 		}
+	}
+
+	if config.ServerContext == nil {
+		config.ServerContext = context.Background()
 	}
 }
 

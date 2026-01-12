@@ -1,12 +1,19 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
 )
 
 type ServerOpt func(o *AppConfig)
+
+func WithCtx(ctx context.Context) ServerOpt {
+	return func(o *AppConfig) {
+		o.ServerContext = ctx
+	}
+}
 
 func WithUIFromFile(path string) (fs.FS, error) {
 	root, err := os.OpenRoot(path)

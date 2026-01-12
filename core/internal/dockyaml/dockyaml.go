@@ -1,8 +1,5 @@
 package dockyaml
 
-const dockmanYamlFileYml = ".dockman.yml"
-const dockmanYamlFileYaml = ".dockman.yaml"
-
 var defaultDockmanYaml = DockmanYaml{
 	TabLimit:    5,
 	SearchLimit: 10,

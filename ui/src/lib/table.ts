@@ -122,7 +122,9 @@ export function sortTable<T>(
 
 }
 
-const rtf = new Intl.RelativeTimeFormat('en', {numeric: 'auto'});
+const rtf = new Intl.RelativeTimeFormat('en', {numeric: 'always', style: "long", });
+
+
 
 export function formatTimeAgo(timestamp: Date) {
     const diff = (new Date().getTime() - timestamp.getTime()) / 1000;

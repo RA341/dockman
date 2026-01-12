@@ -23,7 +23,7 @@ func NewService(
 	daemonAddr string,
 	mobyClient *client.Client,
 	sshCli *ssh.Client,
-	fs compose.GetHost,
+	fs compose.FilenameParser,
 ) *Service {
 	containerClient := container.New(mobyClient)
 	// todo potentially cache sshCli get and fs get ops
@@ -34,11 +34,13 @@ func NewService(
 
 	return &Service{
 		Host:       hostname,
-		Container:  containerClient,
-		Compose:    composeClient,
-		Updater:    upClient,
-		Debugger:   dbgClient,
 		DaemonAddr: daemonAddr,
+
+		Container: containerClient,
+		Compose:   composeClient,
+		Debugger:  dbgClient,
+
+		Updater: upClient,
 	}
 }
 

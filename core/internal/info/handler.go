@@ -1,9 +1,10 @@
 package info
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+
+	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/info/v1"
 )
 
@@ -52,7 +53,7 @@ func (c *ConnectHandler) ReadVersion(_ context.Context, req *connect.Request[v1.
 func (c *ConnectHandler) GetAppInfo(_ context.Context, req *connect.Request[v1.Empty]) (*connect.Response[v1.AppInfo], error) {
 	appInfo := &v1.AppInfo{
 		Version:   Version,
-		Flavour:   Flavour,
+		Flavour:   string(Flavour),
 		Commit:    CommitInfo,
 		BuildDate: Branch,
 		Branch:    CommitInfo,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/RA341/dockman/internal/docker/container"
@@ -24,20 +25,26 @@ const composePlugin = "docker compose"
 
 type Host struct {
 	Fs      filesystem.FileSystem
-	Root    string
 	Relpath string
 }
 
-type GetHost func(filename string, host string) (Host, error)
+type FilenameParser func(filename string, host string) (Host, error)
 
 type Service struct {
+	TTY      bool
 	cont     *container.Service
-	getFs    GetHost
+	parser   FilenameParser
 	runner   CmdRunner
 	hostname string
 }
 
-func NewComposeTerminal(hostname string, cont *container.Service, getFs GetHost, cli *ssh.Client) *Service {
+func NewComposeTerminal(
+	hostname string,
+	cont *container.Service,
+	getFs FilenameParser,
+	cli *ssh.Client,
+	// TTY bool,
+) *Service {
 	var runner CmdRunner
 	if cli == nil {
 		runner = NewLocalRunner()
@@ -46,14 +53,24 @@ func NewComposeTerminal(hostname string, cont *container.Service, getFs GetHost,
 	}
 
 	return &Service{
+		TTY:      true,
 		cont:     cont,
-		getFs:    getFs,
+		parser:   getFs,
 		runner:   runner,
 		hostname: hostname,
 	}
 }
 
-func (c *Service) version(ctx context.Context) (string, error) {
+// checks if tty is enabled or not and sets the appropriate --progress flag
+// todo load TTY from rpc instead of struct wide
+func (c *Service) progressOut() string {
+	if c.TTY {
+		return "--progress=tty"
+	}
+	return "--progress=plain"
+}
+
+func (c *Service) version(ctx context.Context) ([]string, error) {
 	errWriter := bytes.Buffer{}
 
 	split := strings.Split(composePlugin, " ")
@@ -65,7 +82,7 @@ func (c *Service) version(ctx context.Context) (string, error) {
 		&errWriter,
 	)
 	if err == nil {
-		return composePlugin, nil
+		return []string{split[0], split[1]}, nil
 	}
 
 	err = c.runner.Run(
@@ -76,10 +93,10 @@ func (c *Service) version(ctx context.Context) (string, error) {
 		&errWriter,
 	)
 	if err == nil {
-		return composeStandalone, nil
+		return []string{composeStandalone}, nil
 	}
 
-	return "", fmt.Errorf(
+	return nil, fmt.Errorf(
 		"could not determine compose binary location tried %s and %s\nerr:%s",
 		composeStandalone,
 		composePlugin,
@@ -87,15 +104,16 @@ func (c *Service) version(ctx context.Context) (string, error) {
 	)
 }
 
-type WithBin func(binary string, relpath string) ([]string, error)
+type WithCmd func(curCmds []string) []string
 
-func (c *Service) WithBinary(
+func (c *Service) withCmd(
 	ctx context.Context,
 	filename string,
 	stream io.Writer,
-	fn WithBin,
+	addCmd WithCmd,
+	services []string,
 ) error {
-	info, err := c.getFs(filename, c.hostname)
+	fileParts, err := c.parser(filename, c.hostname)
 	if err != nil {
 		return err
 	}
@@ -105,35 +123,28 @@ func (c *Service) WithBinary(
 		return err
 	}
 
-	fullCmd, err := fn(binary, info.Relpath)
-	if err != nil {
-		return err
-	}
+	envs := loadEnvFile(fileParts.Fs, fileParts.Relpath)
 
-	rootEnv := loadEnvFile(&info, "")
-	dirEnv := loadEnvFile(&info, filepath.Dir(info.Relpath))
+	// docker compose --envfile=... -f some/file/path/compose.yml --progress=<val>
+	fullCmd := append(
+		append(binary, envs...),
+		c.progressOut(),
+		"-f", fileParts.Relpath,
+	)
 
-	envs := []string{rootEnv, dirEnv}
-
-	if binary == composePlugin {
-		split := strings.Split(composePlugin, " ")
-
-		elems := append(envs, fullCmd[1:]...)
-		fullCmd = append(split, elems...)
-	} else {
-		elems := append(envs, fullCmd[1:]...)
-		fullCmd = append([]string{fullCmd[0]}, elems...)
-	}
-	//log.Debug().Strs("envs", fullCmd).Msg("loading envs")
+	fullCmd = addCmd(fullCmd)
+	fullCmd = append(fullCmd, services...)
 
 	var cleanCmd = make([]string, 0, len(fullCmd))
 	var sb strings.Builder
 	for _, cmd := range fullCmd {
 		cl := strings.TrimSpace(cmd)
-		if cl != "" {
-			cleanCmd = append(cleanCmd, cl)
-			sb.WriteString(cl + " ")
+		if cl == "" {
+			continue
 		}
+
+		cleanCmd = append(cleanCmd, cl)
+		sb.WriteString(cl + " ")
 	}
 
 	if stream != nil {
@@ -144,29 +155,41 @@ func (c *Service) WithBinary(
 	}
 
 	errWriter := new(bytes.Buffer)
-	err = c.runner.Run(ctx, cleanCmd, info.Root, stream, errWriter)
+	err = c.runner.Run(ctx, cleanCmd, fileParts.Fs.Root(), stream, errWriter)
 	if err != nil {
-		return fmt.Errorf(errWriter.String())
+		return fmt.Errorf("%s", errWriter.String())
 	}
 	return nil
 }
 
-func loadEnvFile(info *Host, dir string) string {
-	const envFileName = ".env"
+const envFileName = ".env"
 
-	envPath := info.Fs.Join(dir, envFileName)
-	_, err := info.Fs.Stat(envPath)
-	if err == nil {
-		join := info.Fs.Join(info.Root, envPath)
-		return fmt.Sprintf("--env-file=%s", join)
+func loadEnvFile(fs filesystem.FileSystem, filename string) []string {
+	// remove leading '/' if left it will break filepath.dir
+	filename = strings.TrimPrefix(filename, "/")
+	var envPaths []string
+
+	// some/relative/path/compose.yml
+	start := filename
+	for start != "." { // "." will return for empty
+		// some/relative
+		start = filepath.Dir(start) // some/relative/path
+		// some/relative/path/.env
+		envPath := fs.Join(start, envFileName)
+		_, err := fs.Stat(envPath)
+		if err == nil {
+			absEnvPath := fs.Join(fs.Root(), envPath)
+			envPaths = append(envPaths, "--env-file="+absEnvPath)
+		}
 	}
 
-	return ""
+	// envs (lower) outer -> (higher) inner
+	slices.Reverse(envPaths)
+
+	return envPaths
 }
 
 var green = color.New(color.BgGreen).SprintlnFunc()
-
-const TTYProgress = "--progress=tty"
 
 func (c *Service) Up(
 	ctx context.Context,
@@ -174,18 +197,16 @@ func (c *Service) Up(
 	io io.Writer,
 	services ...string,
 ) error {
-	return c.WithBinary(ctx, filename, io,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary, TTYProgress,
-				"-f", relpath,
+	return c.withCmd(
+		ctx, filename, io,
+		func(cmdList []string) []string {
+			return append(cmdList,
 				"up", "-d", "-y",
 				"--build", "--remove-orphans",
-			}
-			raw = append(raw, services...)
-
-			return raw, nil
-		})
+			)
+		},
+		services,
+	)
 }
 
 func (c *Service) Down(
@@ -194,16 +215,13 @@ func (c *Service) Down(
 	io io.Writer,
 	services ...string,
 ) error {
-	return c.WithBinary(ctx, filename, io,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary, TTYProgress,
-				"-f", relpath,
+	return c.withCmd(ctx, filename, io,
+		func(cmdList []string) []string {
+			return append(cmdList,
 				"down", "--remove-orphans",
-			}
-			raw = append(raw, services...)
-			return raw, nil
+			)
 		},
+		services,
 	)
 }
 
@@ -211,22 +229,14 @@ func (c *Service) Start(
 	ctx context.Context,
 	filename string,
 	io io.Writer,
-	envFiles []string,
 	services ...string,
 ) error {
-	return c.WithBinary(ctx, filename, io,
-		func(binary string, relpath string) ([]string, error) {
-			envstr := ""
-			if len(envFiles) > 0 {
-				envstr = "--env-file=" + strings.Join(envFiles, ",")
-			}
-			raw := []string{
-				binary, TTYProgress, envstr,
-				"-f", relpath, "start", "--wait",
-			}
-			raw = append(raw, services...)
-			return raw, nil
+	return c.withCmd(
+		ctx, filename, io,
+		func(cmdList []string) []string {
+			return append(cmdList, "start", "--wait")
 		},
+		services,
 	)
 }
 
@@ -236,14 +246,11 @@ func (c *Service) Stop(
 	io io.Writer,
 	services ...string,
 ) error {
-	return c.WithBinary(ctx, filename, io,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary, TTYProgress, "-f", relpath, "stop",
-			}
-			raw = append(raw, services...)
-			return raw, nil
+	return c.withCmd(ctx, filename, io,
+		func(cmdList []string) []string {
+			return append(cmdList, "stop")
 		},
+		services,
 	)
 }
 
@@ -253,16 +260,17 @@ func (c *Service) Pull(
 	io io.Writer,
 	services ...string,
 ) error {
-	return c.WithBinary(ctx, filename, io,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary, TTYProgress, "-f", relpath, "pull",
+	return c.withCmd(
+		ctx, filename, io,
+		func(cmdList []string) []string {
+			return append(
+				cmdList,
+				"pull",
 				"--ignore-buildable", "--include-deps", "--ignore-pull-failures",
 				"--policy", "always",
-			}
-			raw = append(raw, services...)
-			return raw, nil
+			)
 		},
+		services,
 	)
 }
 
@@ -272,14 +280,13 @@ func (c *Service) Restart(
 	io io.Writer,
 	services ...string,
 ) error {
-	return c.WithBinary(ctx, filename, io,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary, TTYProgress, "-f", relpath, "restart",
-			}
-			raw = append(raw, services...)
-			return raw, nil
+	return c.withCmd(ctx, filename, io,
+		func(cmdList []string) []string {
+			return append(
+				cmdList, "restart",
+			)
 		},
+		services,
 	)
 }
 
@@ -319,15 +326,14 @@ func (c *Service) Stats(ctx context.Context, filename string) ([]container.Stats
 
 func (c *Service) listIds(ctx context.Context, filename string) ([]string, error) {
 	sb := new(bytes.Buffer)
-	err := c.WithBinary(ctx, filename, sb,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary,
-				"-f", relpath,
+	err := c.withCmd(ctx, filename, sb,
+		func(cmdList []string) []string {
+			return append(
+				cmdList,
 				"ps", "-a", "--format", "{{.ID}}",
-			}
-			return raw, nil
+			)
 		},
+		[]string{},
 	)
 	if err != nil {
 		return nil, err
@@ -340,20 +346,20 @@ func (c *Service) listIds(ctx context.Context, filename string) ([]string, error
 
 func (c *Service) Validate(ctx context.Context, filename string) []error {
 	buf := new(bytes.Buffer)
-	err := c.WithBinary(ctx, filename, buf,
-		func(binary string, relpath string) ([]string, error) {
-			raw := []string{
-				binary, "-f", relpath, "config",
-			}
-			return raw, nil
+	err := c.withCmd(ctx, filename, buf,
+		func(cmdList []string) []string {
+			return append(
+				cmdList, "config",
+			)
 		},
+		[]string{},
 	)
 	if err == nil {
 		return []error{}
 	}
 
 	s := buf.String()
-	fileErr := fmt.Errorf("failed to validate compose file: %w", s)
+	fileErr := fmt.Errorf("failed to validate compose file: %s", s)
 	// todo more validations
 
 	return []error{fileErr}

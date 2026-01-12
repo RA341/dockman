@@ -128,18 +128,43 @@ tasks:
     vars:
       CMD_NAME: "{{index .MATCH 0}}"
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
-    deps:
-      - task: init:build
+
+      DEFAULT_OUT: ../{{.BUILD_DIR}}/{{.CMD_NAME}}
+      OUT: '{{.OUT| default .DEFAULT_OUT}}'
+
+      DEFAULT_OUT_EXE: '{{.OUT}}/{{.CMD_NAME}}{{.EXE_EXT}}'
+      OUT_EXE: '{{.OUT_EXE| default .DEFAULT_OUT_EXE}}'
+
+      INFO_PACKAGE: "github.com/RA341/dockman/internal/info"
+
+      VERSION:
+        sh: git describe --tags --abbrev=0 2>/dev/null || echo "canary"
+      COMMIT:
+        sh: git rev-parse HEAD
+      BUILD_DATE:
+        sh: date -u +'%Y-%m-%dT%H:%M:%SZ'
+      BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
+
+      LDFLAGS: >-
+        {{if .PROD}}-s -w{{end}} 
+        -X {{.INFO_PACKAGE}}.Version={{.VERSION}}
+        -X {{.INFO_PACKAGE}}.CommitInfo={{.COMMIT}}
+        -X {{.INFO_PACKAGE}}.BuildDate={{.BUILD_DATE}}
+        -X {{.INFO_PACKAGE}}.Branch={{.BRANCH}}
+
     sources:
       - "**/*.go"
+      - "go.*"
+
     summary: |
       Builds the '{{.CMD_NAME}}' Go command.
       Source: '{{.GO_CMD_DIR}}/{{.CMD_NAME}}'
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
     cmds:
-      - mkdir -p ../{{.BUILD_DIR}}/{{.CMD_NAME}}
-      - go build -v -tags desktop,production,webkit2_41
-        -o ../{{.BUILD_DIR}}/{{.CMD_NAME}}/{{.CMD_NAME}}{{.EXE_EXT}}
+      - '{{if eq .OUT_EXE .DEFAULT_OUT_EXE}} mkdir -p {{.OUT}} {{end}}'
+      - CGO_ENABLED=1 go build -ldflags "{{.LDFLAGS}}" -v
+        -o {{ .OUT_EXE }}
         ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 
   go:*:
@@ -162,9 +187,60 @@ tasks:
     vars:
       CMD_NAME: "desktop"
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
+    deps:
+      - desk:go
+      - desk:ui
     cmds:
-      - task ui:b:{{.CMD_NAME}}
-      - task go:{{.CMD_NAME}}
+      - cd {{.CMD_NAME}} && ./{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
+
+  desk:go:
+    desc: "Builds the electron package"
+    vars:
+      PROD: '{{.PROD}}'
+      OUT: '{{.OUT}}'
+      CMD_NAME: "desktop"
+    cmds:
+      - task ui:b:{{.CMD_NAME}} -f
+      - task go:b:{{.CMD_NAME}} PROD={{.PROD}} OUT_EXE={{.OUT}} -f
+
+  build:pkg:appimage:
+    desc: Build the Linux AppImage
+    vars:
+      APP_NAME: dockman
+      APP_DIR: "{{.BUILD_DIR}}/{{.APP_NAME}}.AppDir"
+      APPIMAGE: "{{.BUILD_DIR}}/appimagetool"
+    cmds:
+      - rm -rf {{.APP_DIR}}
+      - mkdir -p {{.APP_DIR}}/usr/bin
+
+      - task desk:ui OUT={{.TASK_DIR}}/{{.APP_DIR}}/usr/bin
+      - task desk:go OUT=../{{.APP_DIR}}/usr/bin/dockman PROD=1
+
+      # metadata
+      - cp pkg/appimage/dockman.desktop {{.APP_DIR}}/
+      - cp ui/public/dockman.svg {{.APP_DIR}}/{{.APP_NAME}}.png
+
+      #  mandatory AppRun
+      - ln -sr {{.APP_DIR}}/usr/bin/{{.APP_NAME}} {{.APP_DIR}}/AppRun
+
+      # download appimagetool
+      - |
+        if [ ! -f {{.APPIMAGE}} ]; then
+          curl -Lo {{.APPIMAGE}} https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x {{.APPIMAGE}}
+        fi
+
+      - ARCH=x86_64 {{.APPIMAGE}} {{.APP_DIR}} {{.BUILD_DIR}}/dockman.Appimage
+
+  desk:ui:
+    dir: "{{.UI_DIR}}"
+    desc: "Builds the electron package"
+    vars:
+      DEFAULT_OUT: ../{{.BUILD_DIR}}/desktop
+      OUT: '{{.OUT| default .DEFAULT_OUT}}'
+    cmds:
+      - npm run desk:build
+      - mv -f release/*-unpacked {{.OUT}}
 
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"

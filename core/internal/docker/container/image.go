@@ -9,6 +9,8 @@ import (
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
+	diveImg "github.com/wagoodman/dive/dive/image"
+	"github.com/wagoodman/dive/dive/image/docker"
 )
 
 func (s *Service) ImageList(ctx context.Context) ([]image.Summary, error) {
@@ -99,4 +101,31 @@ func (s *Service) ImagePruneUnused(ctx context.Context) (image.PruneReport, erro
 		return prune.Report, err
 	}
 	return prune.Report, nil
+}
+
+// ImageDive todo image dive
+// support docker only; dockman doesn't support other runtimes
+// the struct can be huge to send over the wire
+func (s *Service) ImageDive(ctx context.Context, imageId string) (*diveImg.AnalysisResult, error) {
+	body, err := s.Client.ImageSave(ctx, []string{imageId})
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract image data %s: %w", imageId, err)
+	}
+
+	parse, err := docker.NewImageArchive(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse image archive %s: %w", imageId, err)
+	}
+
+	img, err := parse.ToImage()
+	if err != nil {
+		return nil, err
+	}
+
+	analysis, err := img.Analyze()
+	if err != nil {
+		return nil, fmt.Errorf("analyzing image %q: %w", imageId, err)
+	}
+
+	return analysis, nil
 }

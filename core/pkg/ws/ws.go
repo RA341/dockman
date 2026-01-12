@@ -26,19 +26,24 @@ func (w *WsWriter) Write(p []byte) (n int, err error) {
 }
 
 const (
-	AnsiGreen = "\x1b[32m"
-	AnsiRed   = "\x1b[31m"
-	AnsiReset = "\x1b[0m"
-
-	newLine = "\r\n"
+	AnsiGreen  = "\x1b[32m"
+	AnsiRed    = "\x1b[31m"
+	AnsiReset  = "\x1b[0m"
+	AnsiYellow = "\x1b[33m"
+	newLine    = "\r\n"
 )
 
-func WsInf(ws *websocket.Conn, message string) {
+func WWrn(ws *websocket.Conn, message string) {
+	message = formatTermMessage(message, AnsiYellow)
+	WsMustWrite(ws, message)
+}
+
+func WInf(ws *websocket.Conn, message string) {
 	message = formatTermMessage(message, AnsiGreen)
 	WsMustWrite(ws, message)
 }
 
-func WsErr(ws *websocket.Conn, errMessage error) {
+func WErr(ws *websocket.Conn, errMessage error) {
 	message := formatTermMessage(errMessage.Error(), AnsiRed)
 	WsMustWrite(ws, message)
 }

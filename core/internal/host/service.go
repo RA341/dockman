@@ -64,6 +64,7 @@ func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
 			Name: LocalDocker, Type: LOCAL, Enable: true, MachineAddr: localAddr,
 			FolderAliases: []FolderAlias{{Alias: RootAlias, Fullpath: composeRoot}},
 		}
+
 		if err = s.store.Add(&conf); err != nil {
 			log.Fatal().Err(err).Msg("failed to add local Docker config")
 		}
@@ -80,7 +81,7 @@ func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
 		err = s.aliasStore.EditAlias(conf.ID, alias.ID, &alias)
 	}
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to update alias")
+		log.Warn().Err(err).Msg("failed to update alias")
 	}
 
 	// Update Main Config
@@ -158,7 +159,6 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 
 			return compose.Host{
 				Fs:      fs,
-				Root:    fs.Root(),
 				Relpath: filename,
 			}, nil
 		},

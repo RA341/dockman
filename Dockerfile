@@ -12,32 +12,26 @@ RUN npm run build
 
 FROM golang:1-alpine AS back
 
-WORKDIR /core
+WORKDIR /build
 
 # for sqlite
 ENV CGO_ENABLED=1
 
-RUN apk update && apk add --no-cache gcc musl-dev git
+RUN apk update && apk add --no-cache gcc musl-dev git curl
 
-COPY core/go.mod core/go.sum ./
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
-RUN go mod download
+RUN task --help
+
+COPY core/go.mod core/go.sum core/
+
+RUN cd core && go mod download
 
 COPY .git .git
-COPY core/ .
+COPY core/ core/
+COPY Taskfile.yml .
 
-ARG TARGETPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-ARG INFO_PACKAGE=github.com/RA341/dockman/internal/info
-
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w \
-             -X ${INFO_PACKAGE}.Flavour=Docker \
-             -X ${INFO_PACKAGE}.Version=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") \
-             -X ${INFO_PACKAGE}.CommitInfo=$(git rev-parse HEAD) \
-             -X ${INFO_PACKAGE}.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-             -X ${INFO_PACKAGE}.Branch=$(git rev-parse --abbrev-ref HEAD)" \
-    -o dockman "./cmd/server"
+RUN task go:b:docker OUT_EXE=../dockman PROD=1
 
 FROM alpine:latest AS compose_cli_downloader
 
@@ -66,14 +60,9 @@ LABEL dockman.container=true
 
 WORKDIR /app
 
-COPY --from=back /core/dockman dockman
+COPY --from=back /build/dockman dockman
 
 COPY --from=front /frontend/dist/ ./dist
-
-# todo non root
-#RUN chown -R appuser:appgroup /app
-#
-#USER appuser
 
 RUN docker-compose version
 
