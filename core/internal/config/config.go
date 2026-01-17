@@ -18,9 +18,9 @@ type AppConfig struct {
 	AllowedOrigins string `config:"flag=origins,env=ORIGINS,default=*,usage=Allowed origins for the API (in CSV)"`
 	UIPath         string `config:"flag=ui,env=UI_PATH,default=dist,usage=Path to frontend files"`
 	LocalAddr      string `config:"flag=ma,env=MACHINE_ADDR,default=0.0.0.0,usage=Local machine IP address"`
-	ComposeRoot    string `config:"flag=cr,env=COMPOSE_ROOT,default=/compose,usage=Root directory for compose files"`
-	ConfigDir      string `config:"flag=conf,env=CONFIG,default=/config,usage=Directory to store dockman config"`
-	DockYaml       string `config:"flag=dyp,env=YAML_PATH,default=,usage=custom path for dockman.yml files"`
+	ComposeRoot    string `config:"flag=cr,env=COMPOSE_ROOT,default=./compose,usage=Root directory for compose files"`
+	ConfigDir      string `config:"flag=conf,env=CONFIG,default=./config,usage=Directory to store dockman config"`
+	DockYaml       string `config:"flag=dyp,env=YAML_PATH,default=./config/dockyaml,usage=custom path for dockman.yml files"`
 
 	Auth   auth.Config     `config:""` // empty tag to indicate to parse struct
 	Log    Logger          `config:""`
