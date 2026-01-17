@@ -34,7 +34,7 @@ func main() {
 		//"LOG_HTTP":      "true",
 		"CONFIG":       "./config",
 		"COMPOSE_ROOT": "./compose",
-		"UPDATER_HOST": "http://localhost:8869",
+		"YAML_PATH":    "./dockyaml",
 
 		//"PUB_CERT_PATH": "./cert.pem",
 		//"PRIV_KEY_PATH": "./key.pem",

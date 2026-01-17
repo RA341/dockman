@@ -95,7 +95,12 @@ func NewApp(conf *config.AppConfig) (app *App) {
 	machDb := ssh.NewGormMachineManger(gormDB)
 	sshSrv := ssh.NewService(sshDb, machDb)
 
-	store := dockyaml.NewStore(filepath.Join(conf.ConfigDir, "dockyaml"))
+	dockyamlPath := filepath.Join(conf.ConfigDir, "dockyaml")
+	if conf.DockYaml != "" {
+		dockyamlPath = conf.DockYaml
+	}
+
+	store := dockyaml.NewStore(dockyamlPath)
 	dockyamlSrv := dockyaml.New(store)
 
 	aliasStore := host.NewAliasStore(gormDB)

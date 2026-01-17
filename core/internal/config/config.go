@@ -20,6 +20,7 @@ type AppConfig struct {
 	LocalAddr      string `config:"flag=ma,env=MACHINE_ADDR,default=0.0.0.0,usage=Local machine IP address"`
 	ComposeRoot    string `config:"flag=cr,env=COMPOSE_ROOT,default=/compose,usage=Root directory for compose files"`
 	ConfigDir      string `config:"flag=conf,env=CONFIG,default=/config,usage=Directory to store dockman config"`
+	DockYaml       string `config:"flag=dyp,env=YAML_PATH,default=,usage=custom path for dockman.yml files"`
 
 	Auth   auth.Config     `config:""` // empty tag to indicate to parse struct
 	Log    Logger          `config:""`
@@ -49,15 +50,6 @@ type SelfSignedCerts struct {
 
 func (c SelfSignedCerts) IsSet() bool {
 	return c.PublicCertPath != "" && c.PrivateKeyPath != ""
-}
-
-type FilePerms struct {
-	PUID int `config:"flag=puid,env=PUID,default=0,usage=PUID for composeRoot"`
-	GID  int `config:"flag=gid,env=GID,default=0,usage=GID for composeRoot"`
-}
-
-type UpdaterConfig struct {
-	Addr string `config:"flag=upAddr,env=UPDATER_HOST,default=http://updater:8869,usage=URL for dockman updater eg: http://localhost:8869"`
 }
 
 type Logger struct {
