@@ -72,6 +72,7 @@ EXPOSE 8866
 ENV DOCKMAN_UI_PATH=./dist
 ENV DOCKMAN_COMPOSE_ROOT=/compose
 ENV DOCKMAN_CONFIG=/config
+ENV DOCKMAN_YAML_PATH=/config/dockyaml
 
 ENTRYPOINT ["entrypoint.sh"]
 
