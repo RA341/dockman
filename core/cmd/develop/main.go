@@ -26,7 +26,7 @@ func main() {
 	info.Version = info.VersionDev
 
 	envMap := map[string]string{
-		//"AUTH_ENABLE":   "true",
+		"AUTH_ENABLE":   "true",
 		"AUTH_USERNAME": "test",
 		"AUTH_PASSWORD": "test",
 		"LOG_LEVEL":     "debug",
@@ -36,17 +36,14 @@ func main() {
 		"COMPOSE_ROOT": "./compose",
 		"UPDATER_HOST": "http://localhost:8869",
 
-		"GID":  "1000",
-		"PUID": "1000",
-
 		//"PUB_CERT_PATH": "./cert.pem",
 		//"PRIV_KEY_PATH": "./key.pem",
 
-		//"AUTH_OIDC_ENABLE":        "true",
-		"AUTH_OIDC_AUTO_REDIRECT": "false",
+		"AUTH_OIDC_ENABLE": "true",
+		//"AUTH_OIDC_AUTO_REDIRECT": "false",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
-		"AUTH_OIDC_CLIENT_ID":     "ce5ab220-d534-4929-b30e-2661dc4a108a",
-		"AUTH_OIDC_CLIENT_SECRET": "HO5GcdofvZ8VSr9EVdRelbNeS9IChusw",
+		"AUTH_OIDC_CLIENT_ID":     "74347a8e-718d-4bb1-b0f6-e264b0c45bad",
+		"AUTH_OIDC_CLIENT_SECRET": "DIvLgg09ibXJhmVTtFYQXPjSrzBTJd2D",
 		"AUTH_OIDC_REDIRECT_URL":  "http://localhost:8866/api/auth/login/oidc/callback",
 	}
 
