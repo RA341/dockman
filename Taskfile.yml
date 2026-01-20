@@ -122,6 +122,11 @@ tasks:
       - go mod download
       - go mod tidy -v -x
 
+  docs:
+    dir: website
+    cmds:
+      - npm run start
+
   go:b:*:
     dir: "{{.CORE_DIR}}"
     desc: "Builds a Go target. Usage: task go:<target>"
