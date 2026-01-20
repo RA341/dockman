@@ -13,8 +13,32 @@ service FileService {
   rpc Exists(File) returns (Empty) {}
   rpc Rename(RenameFile) returns (Empty) {}
 
+  rpc GetTmpls(GetTmplsRequest) returns (GetTmplsResponse) {}
+  rpc WriteTmpl(WriteTmplRequest) returns (WriteTmplResponse) {}
+
   rpc Format(FormatRequest) returns (FormatResponse) {}
 }
+
+message WriteTmplRequest {
+  string dir = 2;
+  Template tmpl = 1;
+}
+
+message WriteTmplResponse {}
+
+message GetTmplsRequest {
+  string alias = 1;
+}
+
+message Template {
+  string Name = 1;
+  map<string, string> vars = 2;
+}
+
+message GetTmplsResponse {
+  repeated Template templs = 1;
+}
+
 
 message CopyRequest {
   File source = 1;

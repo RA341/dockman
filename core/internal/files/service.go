@@ -9,13 +9,14 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/template"
+	"text/template/parse"
 	"time"
 
 	"github.com/RA341/dockman/internal/dockyaml"
 	"github.com/RA341/dockman/internal/files/utils"
 	"github.com/RA341/dockman/internal/host/filesystem"
 	"github.com/RA341/dockman/pkg/fileutil"
-
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/sahilm/fuzzy"
 )
@@ -24,8 +25,9 @@ type FSProvider func(host, alias string) (filesystem.FileSystem, error)
 type DockyamlProvider func(host string) *dockyaml.DockmanYaml
 
 type Service struct {
-	Fs      FSProvider
-	dockYml DockyamlProvider
+	Fs             FSProvider
+	dockYml        DockyamlProvider
+	templateFolder string
 }
 
 func New(
@@ -35,6 +37,8 @@ func New(
 	return &Service{
 		Fs:      fs,
 		dockYml: dockYml,
+		// todo load from env
+		templateFolder: "templates",
 	}
 }
 
@@ -45,7 +49,7 @@ type Entry struct {
 }
 
 func (s *Service) List(path string, hostname string) ([]Entry, error) {
-	cliFs, relpath, err := s.LoadFs(path, hostname)
+	cliFs, relpath, _, err := s.LoadFs(path, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +120,7 @@ func (s *Service) listFiles(
 }
 
 func (s *Service) Create(filename string, dir bool, hostname string) error {
-	cliFs, filename, err := s.LoadFs(filename, hostname)
+	cliFs, filename, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
@@ -148,12 +152,12 @@ func (s *Service) Copy(source, dest, hostname string, isDir bool) error {
 		return fmt.Errorf("directory copying is unimplemented")
 	}
 
-	cliFs, sourceFile, err := s.LoadFs(source, hostname)
+	cliFs, sourceFile, _, err := s.LoadFs(source, hostname)
 	if err != nil {
 		return err
 	}
 
-	_, destFile, err := s.LoadFs(dest, hostname)
+	_, destFile, _, err := s.LoadFs(dest, hostname)
 	if err != nil {
 		return err
 	}
@@ -173,7 +177,7 @@ func (s *Service) Copy(source, dest, hostname string, isDir bool) error {
 }
 
 func (s *Service) Exists(filename string, hostname string) error {
-	cliFs, filename, err := s.LoadFs(filename, hostname)
+	cliFs, filename, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
@@ -190,7 +194,7 @@ func (s *Service) Exists(filename string, hostname string) error {
 }
 
 func (s *Service) Delete(filename string, hostname string) error {
-	sfCli, fullpath, err := s.LoadFs(filename, hostname)
+	sfCli, fullpath, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
@@ -199,12 +203,12 @@ func (s *Service) Delete(filename string, hostname string) error {
 
 // Rename todo refactor this
 func (s *Service) Rename(oldFileName, newFilename, hostname string) error {
-	cliFs, oldFullPath, err := s.LoadFs(oldFileName, hostname)
+	cliFs, oldFullPath, _, err := s.LoadFs(oldFileName, hostname)
 	if err != nil {
 		return err
 	}
 
-	_, newFullPath, err := s.LoadFs(newFilename, hostname)
+	_, newFullPath, _, err := s.LoadFs(newFilename, hostname)
 	if err != nil {
 		return err
 	}
@@ -215,8 +219,187 @@ func (s *Service) Rename(oldFileName, newFilename, hostname string) error {
 	return cliFs.Rename(oldFileName, newFilename)
 }
 
+type Template struct {
+	name string
+	vars map[string]string
+}
+
+const TemplateFolder = "templates"
+
+func (s *Service) WriteTemplate(hostname string, dest string, tpl *Template) error {
+	fsCli, rel, _, err := s.LoadFs(tpl.name, hostname)
+	if err != nil {
+		return err
+	}
+	contents, err := fsCli.ReadFile(rel)
+	if err != nil {
+		return err
+	}
+
+	destFsCli, destRel, _, err := s.LoadFs(dest, hostname)
+	if err != nil {
+		return err
+	}
+
+	const selfName = "sd"
+	vf := template.New(selfName).Funcs(s.getTmplFuncs())
+	tmpl, err := vf.Parse(string(contents))
+	if err != nil {
+		return err
+	}
+
+	for _, subTmpl := range tmpl.Templates() {
+		filename := subTmpl.Name()
+		if filename == selfName {
+			continue
+		}
+
+		vars := parseFilename(filename)
+		newFilename := filename
+		for _, replaceVal := range vars {
+			newVal := tpl.vars[replaceVal]
+			if newVal == "" {
+				return fmt.Errorf("template variable %s is missing",
+					replaceVal,
+				)
+			}
+			newFilename = strings.Replace(filename, replaceVal, newVal, -1)
+		}
+
+		err := s.createTmplFile(
+			tmpl,
+			tpl.vars,
+			destFsCli,
+			destRel,
+			filename,
+			newFilename,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) createTmplFile(
+	tmpl *template.Template,
+	data map[string]string,
+	destFsCli filesystem.FileSystem,
+	destRel string,
+	tmplName string,
+	filename string,
+) error {
+	fpath := destFsCli.Join(destRel, filename)
+
+	err := destFsCli.MkdirAll(filepath.Dir(fpath), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	file, err := destFsCli.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer fileutil.Close(file)
+
+	return tmpl.ExecuteTemplate(file, tmplName, data)
+}
+
+func parseFilename(filename string) []string {
+	var vars []string
+
+	acc := ""
+	for _, ch := range filename {
+		if ch == '$' {
+			if acc != "" {
+				acc = acc + string(ch) // add the last $
+				vars = append(vars, acc)
+				acc = ""
+				continue
+			}
+
+			acc = acc + string(ch)
+			continue
+		}
+		if acc != "" {
+			acc = acc + string(ch)
+		}
+	}
+
+	return vars
+}
+
+// custom functions for now
+func (s *Service) getTmplFuncs() template.FuncMap {
+	return template.FuncMap{}
+}
+
+func (s *Service) GetTemplates(fPath string, hostname string) ([]Template, error) {
+	fsCli, rel, parsedAlias, err := s.LoadFs(fPath, hostname)
+	if err != nil {
+		return nil, err
+	}
+	// always root it to alias we dont need to check sub paths
+	rel = ""
+
+	templateBase := fsCli.Join(rel, TemplateFolder)
+	templates, err := fsCli.ReadDir(templateBase)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var tmpls []Template
+
+	for _, tpl := range templates {
+		relBase := fsCli.Join(templateBase, tpl.Name())
+		content, err := fsCli.ReadFile(relBase)
+		if err != nil {
+			return nil, err
+		}
+
+		trees, err := parse.Parse(
+			"stack", string(content),
+			"", "",
+			s.getTmplFuncs(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		name := filepath.Join(parsedAlias, relBase)
+		elems := Template{
+			name: name,
+			vars: make(map[string]string),
+		}
+
+		for key := range trees {
+			vars := parseFilename(key)
+			for _, v := range vars {
+				elems.vars[v] = ""
+			}
+
+			tree := trees[key]
+			// get var names in tmpl
+			for _, node := range tree.Root.Nodes {
+				if action, ok := node.(*parse.ActionNode); ok {
+					cleanKey := strings.TrimPrefix(action.Pipe.String(), ".")
+					elems.vars[cleanKey] = ""
+				}
+			}
+		}
+
+		tmpls = append(tmpls, elems)
+	}
+
+	return tmpls, nil
+}
+
 func (s *Service) Save(filename, hostname string, create bool, source io.Reader) error {
-	sfCli, filename, err := s.LoadFs(filename, hostname)
+	sfCli, filename, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return err
 	}
@@ -237,7 +420,7 @@ func (s *Service) Save(filename, hostname string, create bool, source io.Reader)
 }
 
 func (s *Service) getFileContents(filename, hostname string) ([]byte, error) {
-	fsCli, fullpath, err := s.LoadFs(filename, hostname)
+	fsCli, fullpath, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +433,7 @@ func (s *Service) getFileContents(filename, hostname string) ([]byte, error) {
 }
 
 func (s *Service) LoadFilePath(filename, hostname string, download bool) (io.ReadSeekCloser, time.Time, error) {
-	cliFs, relpath, err := s.LoadFs(filename, hostname)
+	cliFs, relpath, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -320,31 +503,36 @@ func CheckFileType(reader io.Reader) error {
 	return nil
 }
 
-func (s *Service) LoadAll(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
+func (s *Service) LoadAll(filename string, hostname string) (
+	fs filesystem.FileSystem,
+	relpath string,
+	alias string,
+	err error,
+) {
 	filename, pathAlias, err := utils.ExtractMeta(filename)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	fsCli, err := s.Fs(hostname, pathAlias)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
-	return fsCli, filename, nil
+	return fsCli, filename, pathAlias, nil
 }
 
 // LoadFs FS gets the correct client -> alias -> path
-func (s *Service) LoadFs(filename string, hostname string) (fs filesystem.FileSystem, relpath string, err error) {
-	fsCli, relpath, err := s.LoadAll(filename, hostname)
+func (s *Service) LoadFs(filename string, hostname string) (fs filesystem.FileSystem, relpath string, alias string, err error) {
+	fsCli, relpath, alias, err := s.LoadAll(filename, hostname)
 	if err != nil {
-		return nil, "", err
+		return nil, "", alias, err
 	}
-	return fsCli, relpath, nil
+	return fsCli, relpath, alias, nil
 }
 
 func (s *Service) Format(filename string, hostname string) ([]byte, error) {
-	sfCLi, filename, err := s.LoadFs(filename, hostname)
+	sfCLi, filename, _, err := s.LoadFs(filename, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +576,7 @@ func (s *Service) search(hostname string, query string, allPaths []string) []Sea
 }
 
 func (s *Service) listAllForSearch(dirPath string, hostname string) ([]string, error) {
-	fsCli, rel, err := s.LoadAll(dirPath, hostname)
+	fsCli, rel, _, err := s.LoadAll(dirPath, hostname)
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,10 @@ const (
 	FileServiceExistsProcedure = "/files.v1.FileService/Exists"
 	// FileServiceRenameProcedure is the fully-qualified name of the FileService's Rename RPC.
 	FileServiceRenameProcedure = "/files.v1.FileService/Rename"
+	// FileServiceGetTmplsProcedure is the fully-qualified name of the FileService's GetTmpls RPC.
+	FileServiceGetTmplsProcedure = "/files.v1.FileService/GetTmpls"
+	// FileServiceWriteTmplProcedure is the fully-qualified name of the FileService's WriteTmpl RPC.
+	FileServiceWriteTmplProcedure = "/files.v1.FileService/WriteTmpl"
 	// FileServiceFormatProcedure is the fully-qualified name of the FileService's Format RPC.
 	FileServiceFormatProcedure = "/files.v1.FileService/Format"
 )
@@ -57,6 +61,8 @@ type FileServiceClient interface {
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
+	GetTmpls(context.Context, *connect.Request[v1.GetTmplsRequest]) (*connect.Response[v1.GetTmplsResponse], error)
+	WriteTmpl(context.Context, *connect.Request[v1.WriteTmplRequest]) (*connect.Response[v1.WriteTmplResponse], error)
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
 }
 
@@ -107,6 +113,18 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(fileServiceMethods.ByName("Rename")),
 			connect.WithClientOptions(opts...),
 		),
+		getTmpls: connect.NewClient[v1.GetTmplsRequest, v1.GetTmplsResponse](
+			httpClient,
+			baseURL+FileServiceGetTmplsProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("GetTmpls")),
+			connect.WithClientOptions(opts...),
+		),
+		writeTmpl: connect.NewClient[v1.WriteTmplRequest, v1.WriteTmplResponse](
+			httpClient,
+			baseURL+FileServiceWriteTmplProcedure,
+			connect.WithSchema(fileServiceMethods.ByName("WriteTmpl")),
+			connect.WithClientOptions(opts...),
+		),
 		format: connect.NewClient[v1.FormatRequest, v1.FormatResponse](
 			httpClient,
 			baseURL+FileServiceFormatProcedure,
@@ -118,13 +136,15 @@ func NewFileServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // fileServiceClient implements FileServiceClient.
 type fileServiceClient struct {
-	list   *connect.Client[v1.ListRequest, v1.ListResponse]
-	create *connect.Client[v1.File, v1.Empty]
-	copy   *connect.Client[v1.CopyRequest, v1.CopyResponse]
-	delete *connect.Client[v1.File, v1.Empty]
-	exists *connect.Client[v1.File, v1.Empty]
-	rename *connect.Client[v1.RenameFile, v1.Empty]
-	format *connect.Client[v1.FormatRequest, v1.FormatResponse]
+	list      *connect.Client[v1.ListRequest, v1.ListResponse]
+	create    *connect.Client[v1.File, v1.Empty]
+	copy      *connect.Client[v1.CopyRequest, v1.CopyResponse]
+	delete    *connect.Client[v1.File, v1.Empty]
+	exists    *connect.Client[v1.File, v1.Empty]
+	rename    *connect.Client[v1.RenameFile, v1.Empty]
+	getTmpls  *connect.Client[v1.GetTmplsRequest, v1.GetTmplsResponse]
+	writeTmpl *connect.Client[v1.WriteTmplRequest, v1.WriteTmplResponse]
+	format    *connect.Client[v1.FormatRequest, v1.FormatResponse]
 }
 
 // List calls files.v1.FileService.List.
@@ -157,6 +177,16 @@ func (c *fileServiceClient) Rename(ctx context.Context, req *connect.Request[v1.
 	return c.rename.CallUnary(ctx, req)
 }
 
+// GetTmpls calls files.v1.FileService.GetTmpls.
+func (c *fileServiceClient) GetTmpls(ctx context.Context, req *connect.Request[v1.GetTmplsRequest]) (*connect.Response[v1.GetTmplsResponse], error) {
+	return c.getTmpls.CallUnary(ctx, req)
+}
+
+// WriteTmpl calls files.v1.FileService.WriteTmpl.
+func (c *fileServiceClient) WriteTmpl(ctx context.Context, req *connect.Request[v1.WriteTmplRequest]) (*connect.Response[v1.WriteTmplResponse], error) {
+	return c.writeTmpl.CallUnary(ctx, req)
+}
+
 // Format calls files.v1.FileService.Format.
 func (c *fileServiceClient) Format(ctx context.Context, req *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {
 	return c.format.CallUnary(ctx, req)
@@ -170,6 +200,8 @@ type FileServiceHandler interface {
 	Delete(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Exists(context.Context, *connect.Request[v1.File]) (*connect.Response[v1.Empty], error)
 	Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error)
+	GetTmpls(context.Context, *connect.Request[v1.GetTmplsRequest]) (*connect.Response[v1.GetTmplsResponse], error)
+	WriteTmpl(context.Context, *connect.Request[v1.WriteTmplRequest]) (*connect.Response[v1.WriteTmplResponse], error)
 	Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error)
 }
 
@@ -216,6 +248,18 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(fileServiceMethods.ByName("Rename")),
 		connect.WithHandlerOptions(opts...),
 	)
+	fileServiceGetTmplsHandler := connect.NewUnaryHandler(
+		FileServiceGetTmplsProcedure,
+		svc.GetTmpls,
+		connect.WithSchema(fileServiceMethods.ByName("GetTmpls")),
+		connect.WithHandlerOptions(opts...),
+	)
+	fileServiceWriteTmplHandler := connect.NewUnaryHandler(
+		FileServiceWriteTmplProcedure,
+		svc.WriteTmpl,
+		connect.WithSchema(fileServiceMethods.ByName("WriteTmpl")),
+		connect.WithHandlerOptions(opts...),
+	)
 	fileServiceFormatHandler := connect.NewUnaryHandler(
 		FileServiceFormatProcedure,
 		svc.Format,
@@ -236,6 +280,10 @@ func NewFileServiceHandler(svc FileServiceHandler, opts ...connect.HandlerOption
 			fileServiceExistsHandler.ServeHTTP(w, r)
 		case FileServiceRenameProcedure:
 			fileServiceRenameHandler.ServeHTTP(w, r)
+		case FileServiceGetTmplsProcedure:
+			fileServiceGetTmplsHandler.ServeHTTP(w, r)
+		case FileServiceWriteTmplProcedure:
+			fileServiceWriteTmplHandler.ServeHTTP(w, r)
 		case FileServiceFormatProcedure:
 			fileServiceFormatHandler.ServeHTTP(w, r)
 		default:
@@ -269,6 +317,14 @@ func (UnimplementedFileServiceHandler) Exists(context.Context, *connect.Request[
 
 func (UnimplementedFileServiceHandler) Rename(context.Context, *connect.Request[v1.RenameFile]) (*connect.Response[v1.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.Rename is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) GetTmpls(context.Context, *connect.Request[v1.GetTmplsRequest]) (*connect.Response[v1.GetTmplsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.GetTmpls is not implemented"))
+}
+
+func (UnimplementedFileServiceHandler) WriteTmpl(context.Context, *connect.Request[v1.WriteTmplRequest]) (*connect.Response[v1.WriteTmplResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("files.v1.FileService.WriteTmpl is not implemented"))
 }
 
 func (UnimplementedFileServiceHandler) Format(context.Context, *connect.Request[v1.FormatRequest]) (*connect.Response[v1.FormatResponse], error) {

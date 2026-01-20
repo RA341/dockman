@@ -14,7 +14,6 @@ import (
 	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
 	dockyamlrpc "github.com/RA341/dockman/generated/dockyaml/v1/v1connect"
-	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
 	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
 	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
@@ -137,7 +136,7 @@ func NewApp(conf *config.AppConfig) (app *App) {
 	viewerSrv := viewer.New(
 		hostManager.GetDockerService,
 		func(input, host string) (root string, relpath string, err error) {
-			fs, relpath, err := fileSrv.LoadAll(input, host)
+			fs, relpath, _, err := fileSrv.LoadAll(input, host)
 			if err != nil {
 				return "", "", err
 			}
@@ -366,11 +365,7 @@ func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
 	)
 
 	// files
-	hostMux.Handle(
-		filesrpc.NewFileServiceHandler(
-			files.NewConnectHandler(a.File),
-		),
-	)
+	hostMux.Handle(files.NewConnectHandler(a.File))
 	// files http handlers
 	hostMux.Handle(
 		"/file/",

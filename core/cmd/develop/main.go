@@ -26,7 +26,6 @@ func main() {
 	info.Version = info.VersionDev
 
 	envMap := map[string]string{
-		"AUTH_ENABLE":   "true",
 		"AUTH_USERNAME": "test",
 		"AUTH_PASSWORD": "test",
 		"LOG_LEVEL":     "debug",
@@ -34,12 +33,13 @@ func main() {
 		//"LOG_HTTP":      "true",
 		"CONFIG":       "./config",
 		"COMPOSE_ROOT": "./compose",
-		"YAML_PATH":    "./dockyaml",
+		//"YAML_PATH":    "./dockyaml",
 
 		//"PUB_CERT_PATH": "./cert.pem",
 		//"PRIV_KEY_PATH": "./key.pem",
 
-		"AUTH_OIDC_ENABLE": "true",
+		"AUTH_ENABLE": "false",
+		//"AUTH_OIDC_ENABLE": "true",
 		//"AUTH_OIDC_AUTO_REDIRECT": "false",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
 		"AUTH_OIDC_CLIENT_ID":     "74347a8e-718d-4bb1-b0f6-e264b0c45bad",
