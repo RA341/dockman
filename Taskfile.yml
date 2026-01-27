@@ -146,8 +146,8 @@ tasks:
       DEFAULT_OUT_EXE: '{{.OUT}}/{{.CMD_NAME}}{{.EXE_EXT}}'
       OUT_EXE: '{{.OUT_EXE| default .DEFAULT_OUT_EXE}}'
 
-      DEFAUT_BDCMD: build
-      BDCMD: '{{.BDCMD| default .DEFAUT_BDCMD}}'
+      DEFAULT_BDCMD: build
+      BDCMD: '{{.BDCMD| default .DEFAULT_BDCMD}}'
 
       INFO_PACKAGE: "github.com/RA341/dockman/internal/info"
 
@@ -271,7 +271,7 @@ tasks:
   dk:b:
     desc: "Builds the main dockman image for a specific target. Usage: task dk:b"
     cmds:
-      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}
+      - docker build . -f pkg/docker/Dockerfile -t {{.DOCKMAN_IMAGE_BASE}}
 
   dk:r:
     desc: "Builds and runs the main dockman image for a specific target. Usage: task dk:r:<target>"

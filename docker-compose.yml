@@ -5,7 +5,7 @@ services:
     container_name: dockman-dev
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: pkg/docker/Dockerfile
     environment:
       DOCKMAN_AUTH_ENABLE: true
       DOCKMAN_AUTH_OIDC_ENABLE: true

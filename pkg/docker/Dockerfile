@@ -50,7 +50,7 @@ FROM alpine:latest AS alpine
 
 RUN apk add --no-cache tzdata su-exec
 
-COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY pkg/docker/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY --from=compose_cli_downloader /download/docker-compose /usr/local/bin/docker-compose
