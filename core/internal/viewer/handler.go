@@ -3,9 +3,11 @@ package viewer
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/viewer/v1"
+	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
 	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/rs/zerolog/log"
 )
@@ -14,8 +16,9 @@ type Handler struct {
 	srv *Service
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{srv: service}
+func NewHandler(service *Service) (string, http.Handler) {
+	h := &Handler{srv: service}
+	return viewerrpc.NewViewerServiceHandler(h)
 }
 
 func (h *Handler) StartSqliteSession(ctx context.Context, req *connect.Request[v1.StartSqliteSessionRequest], stream *connect.ServerStream[v1.StartSqliteSessionResponse]) error {

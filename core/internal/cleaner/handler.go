@@ -3,11 +3,13 @@ package cleaner
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/cleaner/v1"
+	cleanerrpc "github.com/RA341/dockman/generated/cleaner/v1/v1connect"
 	"github.com/RA341/dockman/internal/host/middleware"
 
 	"github.com/dustin/go-humanize"
@@ -17,8 +19,9 @@ type Handler struct {
 	srv *Service
 }
 
-func NewHandler(srv *Service) *Handler {
-	return &Handler{srv: srv}
+func NewHandler(srv *Service) (string, http.Handler) {
+	h := &Handler{srv: srv}
+	return cleanerrpc.NewCleanerServiceHandler(h)
 }
 
 func (h *Handler) ListHistory(ctx context.Context, _ *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {

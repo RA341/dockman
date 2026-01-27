@@ -2,20 +2,23 @@ package config
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/config/v1"
+	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
 )
 
 type Handler struct {
 	srv *Service
 }
 
-func NewConnectHandler(srv *Service) *Handler {
-	return &Handler{
+func NewConnectHandler(srv *Service) (string, http.Handler) {
+	h := &Handler{
 		srv: srv,
 	}
+	return configrpc.NewConfigServiceHandler(h)
 }
 
 func (h *Handler) GetUserConfig(context.Context, *connect.Request[v1.Empty]) (*connect.Response[v1.UserConfig], error) {

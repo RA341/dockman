@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/auth/v1"
+	authrpc "github.com/RA341/dockman/generated/auth/v1/v1connect"
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,8 +16,9 @@ type Handler struct {
 	srv *Service
 }
 
-func NewConnectHandler(auth *Service) *Handler {
-	return &Handler{srv: auth}
+func NewConnectHandler(auth *Service) (string, http.Handler) {
+	h := &Handler{srv: auth}
+	return authrpc.NewAuthServiceHandler(h)
 }
 
 func (a *Handler) Login(_ context.Context, c *connect.Request[v1.User]) (*connect.Response[v1.Empty], error) {

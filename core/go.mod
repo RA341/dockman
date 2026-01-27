@@ -19,8 +19,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/yamlfmt v0.21.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/moby/moby/api v1.52.0
-	github.com/moby/moby/client v0.2.1
+	github.com/moby/moby/api v1.53.0
+	github.com/moby/moby/client v0.2.2
 	github.com/nikoksr/notify v1.5.0
 	github.com/pkg/sftp v1.13.10
 	github.com/rs/cors v1.11.1

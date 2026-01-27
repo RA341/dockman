@@ -3,19 +3,22 @@ package info
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/info/v1"
+	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
 )
 
 type ConnectHandler struct {
 	srv *Service
 }
 
-func NewConnectHandler(srv *Service) *ConnectHandler {
-	return &ConnectHandler{
+func NewConnectHandler(srv *Service) (string, http.Handler) {
+	c := &ConnectHandler{
 		srv: srv,
 	}
+	return inforpc.NewInfoServiceHandler(c)
 }
 
 func (c *ConnectHandler) GetChangelog(_ context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.Changelog], error) {

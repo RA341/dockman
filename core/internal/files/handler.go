@@ -16,7 +16,7 @@ type Handler struct {
 	srv *Service
 }
 
-func NewConnectHandler(service *Service) (string, http.Handler) {
+func NewHandler(service *Service) (string, http.Handler) {
 	h := &Handler{srv: service}
 	return v1connect.NewFileServiceHandler(h)
 }

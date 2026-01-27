@@ -2,8 +2,6 @@ package viewer
 
 import (
 	"time"
-
-	"github.com/RA341/dockman/pkg/fileutil"
 )
 
 type Session struct {
@@ -12,11 +10,11 @@ type Session struct {
 }
 
 type Config struct {
-	ContainerWait string `config:"flag=vcw,env=VIEWER_CONTAINER_TIMEOUT,default=5s,usage=time to wait for a viewer container to start"`
+	//ContainerWait string `config:"flag=vcw,env=VIEWER_CONTAINER_TIMEOUT,default=5s,usage=time to wait for a viewer container to start"`
 }
 
-const defaultContainerWait = time.Second * 5
+const defaultContainerWait = 5 * time.Second
 
-func (c Config) GetDur() time.Duration {
-	return fileutil.GetDurOrDefault(c.ContainerWait, defaultContainerWait)
-}
+//func (c Config) GetDur() time.Duration {
+//	return fileutil.GetDurOrDefault(c.ContainerWait, defaultContainerWait)
+//}

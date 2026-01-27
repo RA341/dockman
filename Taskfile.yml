@@ -63,6 +63,12 @@ tasks:
       - task: ui:dep
       - task: ui
 
+  local:
+    dir: core
+    cmds:
+      - task ui:b:server
+      - task go:b:server OUT_EXE=./dockman PROD=1
+
   ui:
     desc: "Build the latest web ui in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
@@ -140,6 +146,9 @@ tasks:
       DEFAULT_OUT_EXE: '{{.OUT}}/{{.CMD_NAME}}{{.EXE_EXT}}'
       OUT_EXE: '{{.OUT_EXE| default .DEFAULT_OUT_EXE}}'
 
+      DEFAUT_BDCMD: build
+      BDCMD: '{{.BDCMD| default .DEFAUT_BDCMD}}'
+
       INFO_PACKAGE: "github.com/RA341/dockman/internal/info"
 
       VERSION:
@@ -168,8 +177,8 @@ tasks:
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
     cmds:
       - '{{if eq .OUT_EXE .DEFAULT_OUT_EXE}} mkdir -p {{.OUT}} {{end}}'
-      - CGO_ENABLED=1 go build -ldflags "{{.LDFLAGS}}" -v
-        -o {{ .OUT_EXE }}
+      - CGO_ENABLED=1 go {{.BDCMD}} -ldflags "{{.LDFLAGS}}" -v
+        {{if eq .BDCMD .DEFAULT_BDCMD}} -o {{ .OUT_EXE }} {{end}}
         ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 
   go:*:
