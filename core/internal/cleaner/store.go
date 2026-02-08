@@ -25,6 +25,7 @@ type PruneConfig struct {
 	gorm.Model
 	Enabled  bool
 	Interval time.Duration
+	Host     string `gorm:"uniqueIndex"`
 
 	Volumes    bool
 	Networks   bool
@@ -47,6 +48,7 @@ func (r OpResult) Val() string {
 }
 
 type Store interface {
+	GetEnabled() ([]PruneConfig, error)
 	GetConfig(string) (PruneConfig, error)
 	UpdateConfig(*PruneConfig) error
 	InitConfig() error

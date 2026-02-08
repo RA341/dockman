@@ -19,7 +19,7 @@ var migrationDir embed.FS
 
 const migrationPath = "migrations/sqlite"
 
-const dockmanDB = "dockman2.db"
+const dockmanDB = "dockman.db"
 
 func New(basepath string, devMode bool) *gorm.DB {
 	gormDB, err := connect(basepath, devMode)

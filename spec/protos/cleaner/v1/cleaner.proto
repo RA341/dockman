@@ -8,9 +8,20 @@ service CleanerService {
   rpc ListHistory(ListHistoryRequest) returns (ListHistoryResponse) {}
   rpc RunCleaner(RunCleanerRequest) returns (RunCleanerResponse) {}
   rpc SpaceStatus(SpaceStatusRequest) returns (SpaceStatusResponse) {}
+  rpc CleanOnce(CleanOnceRequest) returns (CleanOnceResponse) {}
+
 
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
   rpc EditConfig(EditConfigRequest) returns (EditConfigResponse) {}
+}
+
+
+message CleanOnceRequest {
+  PruneConfig config = 1;
+}
+
+message CleanOnceResponse {
+
 }
 
 
