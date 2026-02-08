@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 
-	"github.com/RA341/dockman/internal/database"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
@@ -16,9 +15,7 @@ type UserConfigDB struct {
 }
 
 // NewUserConfigDB creates a new instance of UserConfigDB.
-func NewUserConfigDB(db *gorm.DB) *UserConfigDB {
-	database.Migrate(db, &UserConfig{})
-
+func NewUserConfigDB(db *gorm.DB) Store {
 	u := &UserConfigDB{db: db}
 	if _, err := u.GetConfig(); errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Debug().Msg("empty user config, setting default value")

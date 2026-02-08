@@ -3,7 +3,6 @@ package auth
 import (
 	"errors"
 
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -13,7 +12,6 @@ type UserGormDB struct {
 }
 
 func NewUserGormDB(db *gorm.DB) UserStore {
-	database.Migrate(db, &Session{})
 	return &UserGormDB{db: db}
 }
 

@@ -1,7 +1,6 @@
 package host
 
 import (
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -10,7 +9,6 @@ type gormStore struct {
 }
 
 func NewStore(db *gorm.DB) Store {
-	database.Migrate(db, &Config{})
 	return &gormStore{db: db}
 }
 

@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -12,7 +11,6 @@ type KeyManagerDB struct {
 
 // NewGormKeyManager creates a new instance of KeyManagerDB.
 func NewGormKeyManager(db *gorm.DB) *KeyManagerDB {
-	database.Migrate(db, &KeyConfig{})
 	return &KeyManagerDB{db: db}
 }
 

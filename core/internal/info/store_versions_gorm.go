@@ -3,7 +3,6 @@ package info
 import (
 	"errors"
 
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +12,6 @@ type VersionDB struct {
 
 // NewVersionHistoryManager creates a new instance of VersionHistoryManager
 func NewVersionHistoryManager(db *gorm.DB) *VersionDB {
-	database.Migrate(db, &VersionHistory{})
 	return &VersionDB{db: db}
 }
 

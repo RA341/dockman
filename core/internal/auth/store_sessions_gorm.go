@@ -3,7 +3,6 @@ package auth
 import (
 	"time"
 
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +12,6 @@ type SessionGormDB struct {
 }
 
 func NewSessionGormDB(db *gorm.DB, maxSessions uint) SessionStore {
-	database.Migrate(db, &Session{})
 	return &SessionGormDB{db: db, maxSessionsPerUser: maxSessions}
 }
 

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +12,6 @@ type GormStore struct {
 }
 
 func NewStore(db *gorm.DB) *GormStore {
-	database.Migrate(db, &PruneConfig{}, &PruneResult{})
 	return &GormStore{db: db}
 }
 
