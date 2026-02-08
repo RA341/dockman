@@ -201,16 +201,20 @@ func (a *App) registerRoutes(mux *http.ServeMux) {
 }
 
 func (a *App) registerFrontend(router *http.ServeMux) {
-	var uiHandler http.Handler
-
-	if a.Config.UIFS == nil {
-		log.Warn().Msg("no ui files found, setting default page")
-		uiHandler = ui.NewDefaultUIHandler()
-	} else {
-		uiHandler = ui.NewSpaHandler(a.Config.UIFS)
+	if a.Config.UIProxy != nil {
+		log.Info().Msg("using ui proxy")
+		router.Handle("/", a.Config.UIProxy)
+		return
 	}
 
-	router.Handle("/", middleware.Gzip(uiHandler))
+	if a.Config.UIFS != nil {
+		log.Info().Msg("using ui fs")
+		router.Handle("/", middleware.Gzip(ui.NewSpaHandler(a.Config.UIFS)))
+		return
+	}
+
+	log.Info().Msg("no ui files found, setting default page")
+	router.Handle("/", middleware.Gzip(ui.NewDefaultUIHandler()))
 }
 
 func (a *App) registerApiAuthRoutes(authRouter *http.ServeMux) {

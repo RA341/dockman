@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"strings"
 
 	"github.com/RA341/dockman/internal/auth"
@@ -29,6 +30,7 @@ type AppConfig struct {
 
 	UIFS          fs.FS
 	ServerContext context.Context
+	UIProxy       http.Handler
 }
 
 func (c *AppConfig) GetAllowedOrigins() []string {

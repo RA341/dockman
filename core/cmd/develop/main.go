@@ -1,9 +1,9 @@
 package main
 
 import (
-	"embed"
-	"io/fs"
 	"log"
+	"net/http/httputil"
+	"net/url"
 	"os"
 
 	"github.com/RA341/dockman/internal/app"
@@ -16,15 +16,10 @@ func init() {
 	app.InitMeta(info.FlavourDevelop)
 }
 
-//go:embed dist
-var frontendDir embed.FS
-
-// useful for developing sets some default options
 func main() {
 	prefixer := argos.Prefixer(config.EnvPrefix)
 
-	info.Version = info.VersionDev
-
+	// useful for developing
 	envMap := map[string]string{
 		"AUTH_USERNAME": "test",
 		"AUTH_PASSWORD": "test",
@@ -50,10 +45,12 @@ func main() {
 	for k, v := range envMap {
 		_ = os.Setenv(prefixer(k), v)
 	}
-	subFS, err := fs.Sub(frontendDir, "dist")
+
+	parse, err := url.Parse("http://localhost:5173")
 	if err != nil {
-		log.Fatal("Error loading frontend directory", err)
+		log.Fatal("could not parse url", err)
 	}
 
-	app.StartServer(config.WithUIFS(subFS))
+	proxy := httputil.NewSingleHostReverseProxy(parse)
+	app.StartServer(config.WithUIProxy(proxy))
 }

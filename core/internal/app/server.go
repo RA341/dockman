@@ -19,9 +19,9 @@ import (
 )
 
 func InitMeta(flavour info.FlavourType) {
+	logger.InitDefault()
 	info.SetFlavour(flavour)
 	info.PrintInfo()
-	logger.InitDefault()
 }
 
 func StartServer(opt ...config.ServerOpt) {
