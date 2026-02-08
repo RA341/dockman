@@ -32,10 +32,6 @@ func NewService(cont GetService, store Store) *Service {
 		store: store,
 		log:   log.With().Str("service", "docker cleaner").Logger(),
 	}
-	err := s.store.InitConfig()
-	if err != nil {
-		s.log.Fatal().Err(err).Msg("Failed to initialize default cleaner config")
-	}
 
 	schd, err := gocron.NewScheduler()
 	if err != nil {

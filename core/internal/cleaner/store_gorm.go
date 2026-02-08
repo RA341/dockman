@@ -1,9 +1,6 @@
 package cleaner
 
 import (
-	"errors"
-	"fmt"
-
 	"gorm.io/gorm"
 )
 
@@ -15,32 +12,10 @@ func NewStore(db *gorm.DB) *GormStore {
 	return &GormStore{db: db}
 }
 
-func (g *GormStore) InitConfig() error {
-	var config PruneConfig
-	config.ID = configID
-
-	err := g.db.First(&config).Error
-	if err == nil {
-		return nil
-	}
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		err = g.db.Create(&config).Error
-		if err != nil {
-			return fmt.Errorf("failed to create default config: %w", err)
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("failed to query config: %w", err)
-}
-
 func (g *GormStore) GetConfig(host string) (PruneConfig, error) {
 	dest := PruneConfig{}
-	dest.Model.ID = configID
 
-	err := g.db.Find(&dest).Error
+	err := g.db.Where("host = ?", host).Find(&dest).Error
 	if err != nil {
 		return PruneConfig{}, err
 	}
@@ -49,7 +24,6 @@ func (g *GormStore) GetConfig(host string) (PruneConfig, error) {
 }
 
 func (g *GormStore) UpdateConfig(config *PruneConfig) error {
-	config.Model.ID = configID
 	return g.db.Updates(config).Error
 }
 

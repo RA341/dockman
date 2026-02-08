@@ -6,8 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const configID = 1
-
 type PruneResult struct {
 	gorm.Model
 	// machine on which it was cleaned
@@ -51,7 +49,6 @@ type Store interface {
 	GetEnabled() ([]PruneConfig, error)
 	GetConfig(string) (PruneConfig, error)
 	UpdateConfig(*PruneConfig) error
-	InitConfig() error
 
 	AddResult(*PruneResult) error
 	ListResult(host string) ([]PruneResult, error)
