@@ -7,13 +7,13 @@ require (
 	connectrpc.com/cors v0.1.0
 	dario.cat/mergo v1.0.2
 	github.com/coreos/go-oidc/v3 v3.17.0
-	github.com/docker/compose/v5 v5.0.1
+	github.com/docker/compose/v5 v5.0.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fatih/color v1.18.0
-	github.com/gabriel-vasile/mimetype v1.4.12
+	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/getlantern/systray v1.2.2
 	github.com/gliderlabs/ssh v0.3.8
-	github.com/go-co-op/gocron/v2 v2.19.0
+	github.com/go-co-op/gocron/v2 v2.19.1
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
