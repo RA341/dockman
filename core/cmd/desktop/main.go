@@ -2,125 +2,69 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"io/fs"
+
 	"os"
-	"os/exec"
 
 	"github.com/RA341/dockman/internal/app"
 	"github.com/RA341/dockman/internal/config"
+	"github.com/RA341/dockman/internal/desktop"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/pkg/argos"
-	"github.com/rs/zerolog"
-	"golang.org/x/sync/errgroup"
-
-	"github.com/getlantern/systray"
-	log2 "github.com/rs/zerolog/log"
+	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 )
 
-var log *zerolog.Logger
+//go:embed dist
+var frontendDir embed.FS
 
 func init() {
 	app.InitMeta(info.FlavourDesktop)
-	logger := log2.With().Str("desktop", "").Logger()
-	log = &logger
 }
 
 func main() {
-	exitIfAlreadyRunning()
+	sm := NewSocketManager()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	sm.exitIfAlreadyRunning()
 
-	subFS, err := setupEmbeddedFrontend()
+	loadEnvFile()
+	frontend, err := setupEmbeddedFrontend()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to setup embedded frontend filesystem")
-	}
-	executable, workingDir, err := setupElectronExecPath()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to find executable path")
+		log.Fatal().Err(err).Msg("error loading embedded frontend")
 	}
 
-	setupEnvs()
-
-	// 3. Start Systray in its own goroutine (it blocks, but we use onReady)
-	// We pass 'cancel' so the tray can shut down the whole app
-	go systray.Run(
-		func() {
-			onReady(cancel)
-		},
-		onExit,
+	// don't need to pass in ctx here tray handles it internally
+	desk := desktop.NewDesktop(
+		frontend,
+		config.WithUIFS(frontend),
 	)
 
-	g, ctx := errgroup.WithContext(ctx)
-
-	g.Go(func() error {
-		app.StartServer(config.WithUIFS(subFS), config.WithCtx(ctx))
-		return nil
-	})
-
-	g.Go(func() error {
-		defer cancel()
-		return startDesktopUI(ctx, executable, workingDir)
-	})
-
-	g.Go(func() error {
-		return setupSocketHandler(ctx)
-	})
-
-	if err := g.Wait(); err != nil {
-		log.Error().Err(err).Msg("App execution error")
-	}
-
-	fmt.Println("Shutdown complete goodbye...")
-}
-
-func onReady(cancel context.CancelFunc) {
-	file, err := frontendDir.ReadFile("dist/dockman.svg")
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to load icon")
-	}
-
-	systray.SetIcon(file)
-	systray.AddMenuItem("Dockman Desktop", "")
-	systray.AddSeparator()
-
-	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
-	//uiQuit := systray.AddMenuItem("Quit UI", "Quit the ui")
-
+	ctx := context.Background()
 	go func() {
-		select {
-		case <-mQuit.ClickedCh:
-			systray.Quit()
-			cancel()
-			//case <-uiQuit.ClickedCh:
-			//	log.Printf("exiting ui")
+		err := sm.setupSocketHandler(ctx, desk.StartUI)
+		if err != nil {
+			log.Fatal().Err(err).Msg("error setting up socket handler")
 		}
 	}()
+
+	desk.Start()
 }
 
-func onExit() {
-}
-
-func startDesktopUI(ctx context.Context, fullpath string, wd string) error {
-	cmd := exec.CommandContext(ctx, fullpath)
-	cmd.Dir = wd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil && ctx.Err() == nil {
-		log.Error().Err(err).Msg("UI exited unexpectedly")
-		return err
+func setupEmbeddedFrontend() (fs.FS, error) {
+	subFS, err := fs.Sub(frontendDir, "dist")
+	if err != nil {
+		return nil, fmt.Errorf("error loading frontend directory: %w", err)
 	}
-	return nil
+	return subFS, nil
 }
 
-func startCoreServer(ctx context.Context, subFS fs.FS) {
-	app.StartServer(
-		config.WithUIFS(subFS),
-		config.WithCtx(ctx),
-	)
+func loadEnvFile() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Warn().Err(err).Msg("error loading .env file")
+	}
 }
 
 func setupEnvs() {

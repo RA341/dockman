@@ -52,5 +52,5 @@ func main() {
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(parse)
-	app.StartServer(config.WithUIProxy(proxy))
+	app.StartServerAndApp(config.WithUIProxy(proxy))
 }

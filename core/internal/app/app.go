@@ -24,6 +24,7 @@ import (
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/internal/viewer"
 	"github.com/RA341/dockman/pkg/argos"
+	"github.com/RA341/dockman/pkg/logger"
 
 	"github.com/rs/zerolog/log"
 )
@@ -58,8 +59,13 @@ func (a *App) VerifyServices() error {
 	return nil
 }
 
-func NewApp(conf *config.AppConfig) (app *App) {
-	var err error
+func NewApp(opt ...config.AppOpt) (app *App) {
+	conf, err := config.Load(opt...)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error parsing config")
+	}
+
+	logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
 
 	// db and info setup
 	gormDB := database.New(conf.ConfigDir, info.IsDev())

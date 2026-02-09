@@ -133,6 +133,15 @@ tasks:
     cmds:
       - npm run start
 
+  go:r:*:
+    vars:
+      CMD_NAME: "{{index .MATCH 0}}"
+    dir: '{{.BUILD_DIR}}/{{.CMD_NAME}}'
+    cmds:
+      - 'task go:b:{{.CMD_NAME}}'
+      - 'task '
+      - './{{.CMD_NAME}}'
+
   go:b:*:
     dir: "{{.CORE_DIR}}"
     desc: "Builds a Go target. Usage: task go:<target>"
@@ -201,11 +210,8 @@ tasks:
     vars:
       CMD_NAME: "desktop"
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
-    deps:
-      - desk:go
-      - desk:ui
     cmds:
-      - cd {{.CMD_NAME}} && ./{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
+      - task -p desk:go desk:ui
 
   desk:go:
     desc: "Builds the electron package"
@@ -246,15 +252,18 @@ tasks:
 
       - ARCH=x86_64 {{.APPIMAGE}} {{.APP_DIR}} {{.BUILD_DIR}}/dockman.Appimage
 
-  desk:ui:
+  desk:ui:*:
     dir: "{{.UI_DIR}}"
     desc: "Builds the electron package"
     vars:
-      DEFAULT_OUT: ../{{.BUILD_DIR}}/desktop
+      CMD_NAME: "{{index .MATCH 0}}"
+      DEFAULT_OUT: ../{{.BUILD_DIR}}/{{.CMD_NAME}}
       OUT: '{{.OUT| default .DEFAULT_OUT}}'
+      ELECTRON: '{{if eq OS "windows"}}win-unpacked{{else}}linux-unpacked{{end}}'
     cmds:
       - npm run desk:build
-      - mv -f release/*-unpacked {{.OUT}}
+      - 'mkdir -p {{.OUT}}'
+      - 'cp -r release/{{.ELECTRON}}/. {{.OUT}}/ui'
 
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"

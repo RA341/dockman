@@ -42,7 +42,7 @@ func (s *Service) SaveConfig(conf *UserConfig, updaterUpdater bool) error {
 	return nil
 }
 
-func Load(opts ...ServerOpt) (*AppConfig, error) {
+func Load(opts ...AppOpt) (*AppConfig, error) {
 	config, err := parseStruct()
 	if err != nil {
 		return nil, err

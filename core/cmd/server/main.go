@@ -17,6 +17,7 @@ var frontendDir embed.FS
 func init() {
 	app.InitMeta(info.FlavourServer)
 }
+
 func setupEmbeddedFrontend() (fs.FS, error) {
 	subFS, err := fs.Sub(frontendDir, "dist")
 	if err != nil {
@@ -24,13 +25,14 @@ func setupEmbeddedFrontend() (fs.FS, error) {
 	}
 	return subFS, nil
 }
+
 func main() {
 	subFS, err := setupEmbeddedFrontend()
 	if err != nil {
 		log.Fatal("Failed to setup embedded frontend filesystem", err)
 	}
 
-	app.StartServer(
+	app.StartServerAndApp(
 		config.WithUIFS(subFS),
 	)
 }

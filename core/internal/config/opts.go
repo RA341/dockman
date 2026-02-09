@@ -8,9 +8,9 @@ import (
 	"os"
 )
 
-type ServerOpt func(o *AppConfig)
+type AppOpt func(o *AppConfig)
 
-func WithCtx(ctx context.Context) ServerOpt {
+func WithCtx(ctx context.Context) AppOpt {
 	return func(o *AppConfig) {
 		o.ServerContext = ctx
 	}
@@ -25,13 +25,13 @@ func WithUIFromFile(path string) (fs.FS, error) {
 	return root.FS(), nil
 }
 
-func WithUIFS(uiFs fs.FS) ServerOpt {
+func WithUIFS(uiFs fs.FS) AppOpt {
 	return func(o *AppConfig) {
 		o.UIFS = uiFs
 	}
 }
 
-func WithUIProxy(handler http.Handler) ServerOpt {
+func WithUIProxy(handler http.Handler) AppOpt {
 	return func(o *AppConfig) {
 		o.UIProxy = handler
 	}

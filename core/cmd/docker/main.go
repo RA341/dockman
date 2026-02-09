@@ -10,5 +10,5 @@ func init() {
 }
 
 func main() {
-	app.StartServer()
+	app.StartServerAndApp()
 }

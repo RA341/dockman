@@ -1,5 +1,5 @@
 {
-  "name": "dockman",
+  "name": "ui",
   "version": "0.0.0",
   "description": "frontend for dockman",
   "private": true,
@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "desk:dev": "cross-env NODE_ENV=development electron .",
-    "desk:build": "npx electron-builder"
+    "desk:build": "npx electron-builder --dir"
   },
   "build": {
     "appId": "dev.radn.dockman",
@@ -21,6 +21,12 @@
     ],
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "icon": "public/dockman.png"
+    },
+    "linux": {
+      "icon": "public/dockman.png"
     }
   },
   "dependencies": {
