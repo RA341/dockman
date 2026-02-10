@@ -1,6 +1,6 @@
 module github.com/RA341/dockman
 
-go 1.25
+go 1.26
 
 require (
 	ariga.io/atlas-provider-gorm v0.6.0
@@ -15,7 +15,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-co-op/gocron/v2 v2.19.1
-	github.com/go-git/go-git/v5 v5.16.4
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
 	github.com/google/yamlfmt v0.21.0
@@ -35,9 +35,9 @@ require (
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.0
 	go.uber.org/zap v1.27.1
-	golang.org/x/crypto v0.47.0
-	golang.org/x/net v0.49.0
-	golang.org/x/oauth2 v0.34.0
+	golang.org/x/crypto v0.48.0
+	golang.org/x/net v0.50.0
+	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sync v0.19.0
 	google.golang.org/protobuf v1.36.11
 	gorm.io/driver/sqlite v1.6.0
@@ -172,9 +172,9 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/image v0.20.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/api v0.257.0 // indirect
 	google.golang.org/genproto v0.0.0-20251202230838-ff82c1b0f217 // indirect
