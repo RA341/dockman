@@ -27,5 +27,5 @@ jobs:
       source_branch: ${{ github.ref_name }}
       is_latest: false
       title: dockman
-      dockerfile: Dockerfile
+      dockerfile: pkg/docker/Dockerfile
     secrets: inherit

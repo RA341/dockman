@@ -5,8 +5,11 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-	"time"
+
+	"github.com/RA341/dockman/internal/host/filesystem"
+	"github.com/stretchr/testify/require"
 )
 
 func TestList(t *testing.T) {
@@ -25,9 +28,34 @@ func TestList(t *testing.T) {
 	//t.Log(list)
 }
 
-func CreateRandomDirStructure(maxDepth int) (string, error) {
-	rootDir := filepath.Join(os.TempDir(), fmt.Sprintf("random_dir_%d", time.Now().Unix()))
+func TestTemplateRead(t *testing.T) {
+	root := "./tmp/compose"
+	root, err := filepath.Abs(root)
+	require.NoError(t, err)
 
+	lfs := filesystem.NewLocal(root)
+
+	srv := New(func(host, alias string) (filesystem.FileSystem, error) {
+		return lfs, nil
+	}, nil)
+
+	tmpls, err := srv.GetTemplates("compose", "test")
+	require.NoError(t, err)
+
+	for _, tmpl := range tmpls {
+		for ke := range tmpl.vars {
+			delete(tmpl.vars, ke)
+			prefix := strings.TrimPrefix(ke, ".")
+			tmpl.vars[prefix] = ".dyn" + ke
+		}
+
+		err := srv.WriteTemplate("test", "compose/base", &tmpl)
+		require.NoError(t, err)
+		break
+	}
+}
+
+func CreateRandomDirStructure(rootDir string, maxDepth int) (string, error) {
 	err := os.MkdirAll(rootDir, 0755)
 	if err != nil {
 		return "", err

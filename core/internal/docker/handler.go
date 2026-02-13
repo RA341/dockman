@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	v1 "github.com/RA341/dockman/generated/docker/v1"
+	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
 	contSrv "github.com/RA341/dockman/internal/docker/container"
 	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/pkg/fileutil"
@@ -29,10 +30,11 @@ type Handler struct {
 	srv ServiceProvider
 }
 
-func NewConnectHandler(srv ServiceProvider) *Handler {
-	return &Handler{
+func NewConnectHandler(srv ServiceProvider) (string, http.Handler) {
+	h := &Handler{
 		srv: srv,
 	}
+	return dockerpc.NewDockerServiceHandler(h)
 }
 
 type HostGetter interface {

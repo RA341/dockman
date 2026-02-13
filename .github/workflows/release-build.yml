@@ -22,5 +22,6 @@ jobs:
       is_latest: true
       version_tag: ${{ github.event.inputs.tag_name }}
       source_branch: ${{ github.ref_name }}
+      dockerfile: pkg/docker/Dockerfile
       title: 'Dockman'
     secrets: inherit

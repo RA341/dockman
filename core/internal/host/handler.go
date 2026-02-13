@@ -3,10 +3,12 @@ package host
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/host/v1"
+	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/pkg/listutils"
 	"gorm.io/gorm"
@@ -16,10 +18,11 @@ type Handler struct {
 	srv *Service
 }
 
-func NewHandler(srv *Service) *Handler {
-	return &Handler{
+func NewHandler(srv *Service) (string, http.Handler) {
+	h := &Handler{
 		srv: srv,
 	}
+	return hostrpc.NewHostManagerServiceHandler(h)
 }
 
 func (h *Handler) BrowseFiles(_ context.Context, req *connect.Request[v1.BrowseFilesRequest]) (*connect.Response[v1.BrowseFilesResponse], error) {

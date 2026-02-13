@@ -169,7 +169,7 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	}
 
 	targetAddr := fmt.Sprintf("%s:8080", containerIP)
-	if !waitForPort(targetAddr, s.config.GetDur()) {
+	if !waitForPort(targetAddr, defaultContainerWait) {
 		// If it fails, maybe kill the container and return error
 		return "", nil, fmt.Errorf("container started but port 8080 did not open, this is likely a networking issue")
 	}

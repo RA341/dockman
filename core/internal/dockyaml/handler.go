@@ -2,9 +2,11 @@ package dockyaml
 
 import (
 	"context"
+	"net/http"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/dockyaml/v1"
+	dockyamlrpc "github.com/RA341/dockman/generated/dockyaml/v1/v1connect"
 	"github.com/RA341/dockman/internal/host/middleware"
 )
 
@@ -12,8 +14,9 @@ type Handler struct {
 	srv *Service
 }
 
-func NewHandler(srv *Service) *Handler {
-	return &Handler{srv: srv}
+func NewHandler(srv *Service) (string, http.Handler) {
+	h := &Handler{srv: srv}
+	return dockyamlrpc.NewDockyamlServiceHandler(h)
 }
 
 func (h *Handler) GetYaml(ctx context.Context, _ *connect.Request[v1.GetYamlRequest]) (*connect.Response[v1.GetYamlResponse], error) {

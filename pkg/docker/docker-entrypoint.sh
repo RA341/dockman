@@ -57,7 +57,7 @@ for DIR_VAR in $APP_DIRS; do
     if [ -n "$DIR_PATH" ]; then
         echo "Setting dir permissions: $DIR_PATH"
         mkdir -p "$DIR_PATH"
-        chown -R "$PUID:$PGID" "$DIR_PATH"
+        chown "$PUID:$PGID" "$DIR_PATH"
     else
         echo "Warning: $DIR_VAR is not set, skipping..."
     fi

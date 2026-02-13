@@ -2,15 +2,17 @@ const {app, BrowserWindow} = require('electron');
 
 async function createWindow() {
     const isDev = process.env.NODE_ENV === 'development';
-    let url = "http://localhost:5173"; // vite url
+    let url = 'http://localhost:5173';
     if (!isDev) {
-        url = 'http://localhost:8866';
+        const customPort = app.commandLine.getSwitchValue('port') || 9966;
+        console.log(`Electron is using port: ${customPort}`);
+        url = `http://localhost:${customPort}`;
     }
 
     const win = new BrowserWindow({
         width: 1200,
         height: 800,
-        icon: `${url}/dockman.svg`,
+        icon: `${url}/dockman.png`,
         autoHideMenuBar: true,
         webPreferences: {
             nodeIntegration: false,

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/RA341/dockman/internal/info"
 	"github.com/google/uuid"
 )
 
@@ -22,16 +21,18 @@ func NewHandlerHttp(srv *Service) http.Handler {
 	return subMux
 }
 
+const StateCookieName = "oidc_state"
+
 // OIDCLogin GET /auth/login/google
 func (h *HandlerHttp) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	state := uuid.New().String()
 	http.SetCookie(w, &http.Cookie{
-		Name:     "oidc_state",
+		Name:     StateCookieName,
 		Value:    state,
 		Path:     "/",
 		MaxAge:   300,
 		HttpOnly: true,
-		Secure:   !info.IsDev(),
+		Secure:   h.srv.config.OIDCHttp,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -50,7 +51,7 @@ func (h *HandlerHttp) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie, err := r.Cookie("oidc_state")
+	cookie, err := r.Cookie(StateCookieName)
 	if err != nil {
 		http.Error(w, "State cookie missing", http.StatusBadRequest)
 		return

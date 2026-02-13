@@ -10,7 +10,7 @@ COPY ui .
 
 RUN npm run build
 
-FROM golang:1-alpine AS back
+FROM golang:1.26-alpine AS back
 
 WORKDIR /build
 
@@ -50,7 +50,7 @@ FROM alpine:latest AS alpine
 
 RUN apk add --no-cache tzdata su-exec
 
-COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY pkg/docker/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY --from=compose_cli_downloader /download/docker-compose /usr/local/bin/docker-compose
@@ -72,6 +72,7 @@ EXPOSE 8866
 ENV DOCKMAN_UI_PATH=./dist
 ENV DOCKMAN_COMPOSE_ROOT=/compose
 ENV DOCKMAN_CONFIG=/config
+ENV DOCKMAN_YAML_PATH=/config/dockyaml
 
 ENTRYPOINT ["entrypoint.sh"]
 

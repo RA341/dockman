@@ -1,7 +1,6 @@
 package host
 
 import (
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +10,6 @@ type GormStore struct {
 
 // NewAliasStore creates a new instance of the store
 func NewAliasStore(db *gorm.DB) AliasStore {
-	database.Migrate(db, &FolderAlias{})
 	return &GormStore{db: db}
 }
 

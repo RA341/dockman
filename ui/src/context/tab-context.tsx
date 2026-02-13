@@ -179,7 +179,9 @@ export function TabsProvider({children}: { children: ReactNode }) {
 
     const handleCloseTab = useCallback((filename: string) => {
         const next = close(filename)
-        navigate(editorUrl(next, allTabs[next]))
+        if (next) {
+            navigate(editorUrl(next, allTabs[next]))
+        }
     }, [allTabs, close, editorUrl, navigate])
 
     const handleTabRename = useCallback((oldFilename: string, newFilename: string) => {

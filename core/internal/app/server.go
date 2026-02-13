@@ -19,19 +19,19 @@ import (
 )
 
 func InitMeta(flavour info.FlavourType) {
+	logger.InitDefault()
 	info.SetFlavour(flavour)
 	info.PrintInfo()
-	logger.InitDefault()
 }
 
-func StartServer(opt ...config.ServerOpt) {
-	conf, err := config.Load(opt...)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Error parsing config")
-	}
-	logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
+func StartServerAndApp(opt ...config.AppOpt) {
+	app := NewApp(opt...)
+	NewServer(app)
+}
 
-	app := NewApp(conf)
+// NewServer takes in an initialized app and starts the server
+func NewServer(app *App) {
+	conf := app.Config
 
 	router := http.NewServeMux()
 	app.registerRoutes(router)
@@ -77,13 +77,14 @@ func StartServer(opt ...config.ServerOpt) {
 
 	<-conf.ServerContext.Done()
 
-	fmt.Println("Context cancelled. Shutting down server...")
+	log.Info().Msg("Context cancelled. Shutting down server...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		fmt.Printf("Error occurred while shutting down server: %v\n", err)
+		log.Error().Err(err).Msg("Error occurred while shutting down server")
+		return
 	}
 
-	fmt.Println("Server gracefully stopped.")
+	log.Info().Msg("Server gracefully stopped.")
 }

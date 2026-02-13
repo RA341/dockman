@@ -16,10 +16,11 @@ type Config struct {
 	OIDCEnable       bool `config:"flag=eoc,env=AUTH_OIDC_ENABLE,default=false,usage=enable OIDC support"`
 	OIDCAutoRedirect bool `config:"flag=ear,env=AUTH_OIDC_AUTO_REDIRECT,default=true,usage=automatically redirect to OIDC login"`
 
-	OIDCIssuerURL    string `config:"flag=oiu,env=AUTH_OIDC_ISSUER,default=,usage=url for your oidc issuer"`
+	OIDCIssuerURL    string `config:"flag=oiu,env=AUTH_OIDC_ISSUER,default=,usage=url for your OIDC issuer"`
 	OIDCClientID     string `config:"flag=oicd,env=AUTH_OIDC_CLIENT_ID,default=,usage=client id for OIDC,hide=true"`
 	OIDCClientSecret string `config:"flag=oics,env=AUTH_OIDC_CLIENT_SECRET,default=,usage=client secret for OIDC,hide=true"`
 	OIDCRedirectURL  string `config:"flag=oiurl,env=AUTH_OIDC_REDIRECT_URL,default=,usage=redirect url for OIDC"`
+	OIDCHttp         bool   `config:"flag=oicook,env=AUTH_OIDC_SECURE,default=true,usage=disable https only for OIDC"`
 }
 
 const defaultCookieExpiry = time.Hour * 24

@@ -5,25 +5,21 @@ title: Overview
 
 ## **Why Dockman**
 
-I built Dockman because I wanted a simple, focused Docker management tool.
+I built dockman because I wanted a text editor on a web UI. That's it.
 
-My setup revolves entirely around Docker Compose, every container I run is part of a stack. I needed a web UI with a
-straightforward text editor where I could write my configs and deploy with a single button click. I enjoy writing
-compose files, but typing `cd somefolder && docker compose -f some-compose.yml up -d` over and over got old fast.
+I like writing compose files, but I was sick of the command line dance. And I sure as hell didn't want another tool with
+Enterprise™ bloat, nested menus, or a million config switches.
 
-So I built Dockman: no deeply nested menus, no Enterprise™ feature bloat, no paywalls. Everything is accessible and
-managed through a clean, (mostly) keyboard-friendly web UI.
+Dockman stays simple and focused. By design.
 
-Dockman is for people who know their way around Docker and prefer working directly with compose files, no abstractions,
-no distractions. If that sounds like you, you'll feel right at home.
+### Comparisons
 
-**Dockman is for people who:**
+**Portainer:** Too enterprisey, to many different toggles and features I don't need in a homelab context. Notably it is
+not transparent in where it keeps its compose files.
 
-* Prefer editing configuration files directly instead of clicking through GUIs
-* Care more about simplicity than having every feature under the sun
-* Enjoy working fast with keyboard shortcuts
-
-If that sounds like you, give it a star. If not, I’d still love to hear what you think is missing.
+**Dockge:** I don't use the UI editor. Once you've written compose files a few times, you don't need a GUI slowing you
+down, typing is faster. Also, it doesn't support editing other files such as envs or yaml. Not to mention the node ram
+usage, in this economy every MiB counts.
 
 Have ideas for new features?
 [open an issue](https://github.com/RA341/dockman/issues/new) to share your suggestions!

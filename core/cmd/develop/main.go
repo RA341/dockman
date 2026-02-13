@@ -1,9 +1,9 @@
 package main
 
 import (
-	"embed"
-	"io/fs"
 	"log"
+	"net/http/httputil"
+	"net/url"
 	"os"
 
 	"github.com/RA341/dockman/internal/app"
@@ -16,17 +16,11 @@ func init() {
 	app.InitMeta(info.FlavourDevelop)
 }
 
-//go:embed dist
-var frontendDir embed.FS
-
-// useful for developing sets some default options
 func main() {
 	prefixer := argos.Prefixer(config.EnvPrefix)
 
-	info.Version = info.VersionDev
-
+	// useful for developing
 	envMap := map[string]string{
-		//"AUTH_ENABLE":   "true",
 		"AUTH_USERNAME": "test",
 		"AUTH_PASSWORD": "test",
 		"LOG_LEVEL":     "debug",
@@ -34,29 +28,29 @@ func main() {
 		//"LOG_HTTP":      "true",
 		"CONFIG":       "./config",
 		"COMPOSE_ROOT": "./compose",
-		"UPDATER_HOST": "http://localhost:8869",
-
-		"GID":  "1000",
-		"PUID": "1000",
+		//"YAML_PATH":    "./dockyaml",
 
 		//"PUB_CERT_PATH": "./cert.pem",
 		//"PRIV_KEY_PATH": "./key.pem",
 
-		//"AUTH_OIDC_ENABLE":        "true",
-		"AUTH_OIDC_AUTO_REDIRECT": "false",
+		"AUTH_ENABLE": "false",
+		//"AUTH_OIDC_ENABLE": "true",
+		//"AUTH_OIDC_AUTO_REDIRECT": "false",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
-		"AUTH_OIDC_CLIENT_ID":     "ce5ab220-d534-4929-b30e-2661dc4a108a",
-		"AUTH_OIDC_CLIENT_SECRET": "HO5GcdofvZ8VSr9EVdRelbNeS9IChusw",
+		"AUTH_OIDC_CLIENT_ID":     "74347a8e-718d-4bb1-b0f6-e264b0c45bad",
+		"AUTH_OIDC_CLIENT_SECRET": "DIvLgg09ibXJhmVTtFYQXPjSrzBTJd2D",
 		"AUTH_OIDC_REDIRECT_URL":  "http://localhost:8866/api/auth/login/oidc/callback",
 	}
 
 	for k, v := range envMap {
 		_ = os.Setenv(prefixer(k), v)
 	}
-	subFS, err := fs.Sub(frontendDir, "dist")
+
+	parse, err := url.Parse("http://localhost:5173")
 	if err != nil {
-		log.Fatal("Error loading frontend directory", err)
+		log.Fatal("could not parse url", err)
 	}
 
-	app.StartServer(config.WithUIFS(subFS))
+	proxy := httputil.NewSingleHostReverseProxy(parse)
+	app.StartServerAndApp(config.WithUIProxy(proxy))
 }

@@ -32,10 +32,6 @@ func NewService(cont GetService, store Store) *Service {
 		store: store,
 		log:   log.With().Str("service", "docker cleaner").Logger(),
 	}
-	err := s.store.InitConfig()
-	if err != nil {
-		s.log.Fatal().Err(err).Msg("Failed to initialize default cleaner config")
-	}
 
 	schd, err := gocron.NewScheduler()
 	if err != nil {
@@ -43,6 +39,8 @@ func NewService(cont GetService, store Store) *Service {
 	}
 	s.schd = schd
 	schd.Start()
+
+	s.StartEnabled()
 
 	return s
 }
@@ -55,7 +53,74 @@ func (s *Service) cli(hostname string) (*container.Service, error) {
 	return cont.Container, nil
 }
 
-func (s *Service) Run(host string, edit bool) error {
+type DiskSpace struct {
+	Containers string
+	Image      string
+	Volumes    string
+	BuildCache string
+}
+
+func (s *Service) GetSystemStorage(ctx context.Context, hostname string) (client.DiskUsageResult, []network.Inspect, error) {
+	cli, err := s.cli(hostname)
+	if err != nil {
+		return client.DiskUsageResult{}, nil, err
+	}
+
+	usage, err := cli.Cli().DiskUsage(ctx, client.DiskUsageOptions{
+		Containers: true,
+		Images:     true,
+		BuildCache: true,
+		Volumes:    true,
+		Verbose:    true,
+	})
+	if err != nil {
+		return client.DiskUsageResult{}, nil, err
+	}
+
+	list, err := cli.NetworksList(ctx)
+	if err != nil {
+		return client.DiskUsageResult{}, nil, err
+	}
+
+	return usage, list, nil
+}
+
+func (s *Service) RunOnce(ctx context.Context, host string, pruneConfig *PruneConfig) error {
+	log.Debug().Msg("running manual docker cleaner")
+
+	cli, err := s.cli(host)
+	if err != nil {
+		return fmt.Errorf("could find docker client: %w", err)
+	}
+
+	var res PruneResult
+	res.Host = host
+
+	s.Prune(ctx, pruneConfig, cli.Client, &res)
+	err = s.store.AddResult(&res)
+	if err != nil {
+		s.log.Err(err).Msg("Failed to add result for cleaner")
+	}
+
+	return nil
+}
+
+func (s *Service) StartEnabled() {
+	enabled, err := s.store.GetEnabled()
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to get enabled cleaner configs")
+		return
+	}
+
+	for _, cf := range enabled {
+		err := s.RunWithScheduler(cf.Host, false)
+		if err != nil {
+			log.Warn().Err(err).Str("host", cf.Host).Msg("Failed to run cleaner")
+		}
+	}
+}
+
+func (s *Service) RunWithScheduler(host string, edit bool) error {
 	getConfig, err := s.store.GetConfig(host)
 	if err != nil {
 		return err
@@ -87,6 +152,8 @@ func (s *Service) Run(host string, edit bool) error {
 }
 
 func (s *Service) clean(ctx context.Context, host string) {
+	log.Debug().Msg("running automated docker cleaner")
+
 	result := PruneResult{
 		Host: host,
 	}
@@ -107,7 +174,7 @@ func (s *Service) clean(ctx context.Context, host string) {
 		return
 	}
 
-	s.Prune(ctx, pruneConfig, cli.Client, &result)
+	s.Prune(ctx, &pruneConfig, cli.Client, &result)
 
 	err = s.store.AddResult(&result)
 	if err != nil {
@@ -116,130 +183,121 @@ func (s *Service) clean(ctx context.Context, host string) {
 	}
 }
 
-type DiskSpace struct {
-	Containers string
-	Image      string
-	Volumes    string
-	BuildCache string
-}
-
-func (s *Service) SystemStorage(ctx context.Context, hostname string) (client.DiskUsageResult, []network.Inspect, error) {
-	cli, err := s.cli(hostname)
-	if err != nil {
-		return client.DiskUsageResult{}, nil, err
-	}
-
-	usage, err := cli.Cli().DiskUsage(ctx, client.DiskUsageOptions{
-		Containers: true,
-		Images:     true,
-		BuildCache: true,
-		Volumes:    true,
-		Verbose:    true,
-	})
-	if err != nil {
-		return client.DiskUsageResult{}, nil, err
-	}
-
-	list, err := cli.NetworksList(ctx)
-	if err != nil {
-		return client.DiskUsageResult{}, nil, err
-	}
-
-	return usage, list, nil
-}
-
 func (s *Service) Prune(
 	ctx context.Context,
-	opts PruneConfig,
+	opts *PruneConfig,
 	cli *client.Client,
 	result *PruneResult,
 ) {
 	if opts.Containers {
-		containerReport, err := cli.ContainerPrune(ctx, client.ContainerPruneOptions{})
-		var res OpResult
-		if err != nil {
-			res.Err = err.Error()
-		} else {
-			res.Success = fmt.Sprintf(
-				"Deleted Containers: %d\nReclaimed: %s\n",
-				len(containerReport.Report.ContainersDeleted),
-				humanize.Bytes(containerReport.Report.SpaceReclaimed),
-			)
-		}
-
-		result.Containers = res
+		result.Containers = s.pruneContainers(ctx, cli)
 	}
 
 	if opts.Images {
-		imageFilters := client.Filters{}
-		// all unused images
-		imageFilters.Add("dangling", "false")
-
-		imageReport, err := cli.ImagePrune(ctx, client.ImagePruneOptions{
-			Filters: imageFilters,
-		})
-		var res OpResult
-		if err != nil {
-			res.Err = err.Error()
-		} else {
-			res.Success = fmt.Sprintf(
-				"Deleted Images: %d\nReclaimed: %s\n",
-				len(imageReport.Report.ImagesDeleted),
-				humanize.Bytes(imageReport.Report.SpaceReclaimed),
-			)
-		}
-		result.Images = res
+		result.Images = s.pruneImages(ctx, cli)
 	}
 
 	if opts.BuildCache {
-		buildCacheOpts := client.BuildCachePruneOptions{
-			// todo proper filters
-			//All: true,
-			//Filters: nil,
-		}
-		rep, err := cli.BuildCachePrune(ctx, buildCacheOpts)
-
-		var res OpResult
-		if err != nil {
-			res.Err = err.Error()
-		} else {
-			buildCacheReport := rep.Report
-			res.Success = fmt.Sprintf(
-				"Deleted Build Cache: %d\nReclaimed: %s\n",
-				len(buildCacheReport.CachesDeleted),
-				humanize.Bytes(buildCacheReport.SpaceReclaimed),
-			)
-		}
-
-		result.BuildCache = res
+		result.BuildCache = s.pruneBuildCache(ctx, cli)
 	}
 
 	if opts.Networks {
-		networkReport, err := cli.NetworkPrune(ctx, client.NetworkPruneOptions{})
-
-		var res OpResult
-		if err != nil {
-			res.Err = err.Error()
-		} else {
-			res.Success = fmt.Sprintf("Deleted Networks: %d", len(networkReport.Report.NetworksDeleted))
-		}
-
-		result.Networks = res
+		result.Networks = s.pruneNetworks(ctx, cli)
 	}
 
 	if opts.Volumes {
-		prune, err := cli.VolumePrune(ctx, client.VolumePruneOptions{})
-		var res OpResult
-		if err != nil {
-			res.Err = err.Error()
-		} else {
-			res.Success = fmt.Sprintf(
-				"Deleted Volumes: %d\nReclaimed: %s",
-				len(prune.Report.VolumesDeleted),
-				humanize.Bytes(prune.Report.SpaceReclaimed),
-			)
-		}
-
-		result.Volumes = res
+		result.Volumes = s.pruneVolumes(ctx, cli)
 	}
+}
+
+func (s *Service) pruneVolumes(ctx context.Context, cli *client.Client) OpResult {
+	prune, err := cli.VolumePrune(ctx, client.VolumePruneOptions{
+		All: true,
+	})
+	var res OpResult
+	if err != nil {
+		res.Err = err.Error()
+	} else {
+		res.Success = fmt.Sprintf(
+			"Deleted Volumes: %d\nReclaimed: %s",
+			len(prune.Report.VolumesDeleted),
+			humanize.Bytes(prune.Report.SpaceReclaimed),
+		)
+	}
+
+	return res
+}
+
+func (s *Service) pruneNetworks(ctx context.Context, cli *client.Client) OpResult {
+	networkReport, err := cli.NetworkPrune(ctx, client.NetworkPruneOptions{})
+
+	var res OpResult
+	if err != nil {
+		res.Err = err.Error()
+	} else {
+		res.Success = fmt.Sprintf("Deleted Networks: %d", len(networkReport.Report.NetworksDeleted))
+	}
+
+	return res
+}
+
+func (s *Service) pruneBuildCache(ctx context.Context, cli *client.Client) OpResult {
+	buildCacheOpts := client.BuildCachePruneOptions{
+		// todo proper filters
+		//All: true,
+		//Filters: nil,
+	}
+	rep, err := cli.BuildCachePrune(ctx, buildCacheOpts)
+
+	var res OpResult
+	if err != nil {
+		res.Err = err.Error()
+	} else {
+		buildCacheReport := rep.Report
+		res.Success = fmt.Sprintf(
+			"Deleted Build Cache: %d\nReclaimed: %s\n",
+			len(buildCacheReport.CachesDeleted),
+			humanize.Bytes(buildCacheReport.SpaceReclaimed),
+		)
+	}
+
+	return res
+}
+
+func (s *Service) pruneImages(ctx context.Context, cli *client.Client) OpResult {
+	imageFilters := client.Filters{}
+	// all unused images
+	imageFilters.Add("dangling", "false")
+
+	imageReport, err := cli.ImagePrune(ctx, client.ImagePruneOptions{
+		Filters: imageFilters,
+	})
+	var res OpResult
+	if err != nil {
+		res.Err = err.Error()
+	} else {
+		res.Success = fmt.Sprintf(
+			"Deleted Images: %d\nReclaimed: %s\n",
+			len(imageReport.Report.ImagesDeleted),
+			humanize.Bytes(imageReport.Report.SpaceReclaimed),
+		)
+	}
+
+	return res
+}
+
+func (s *Service) pruneContainers(ctx context.Context, cli *client.Client) OpResult {
+	containerReport, err := cli.ContainerPrune(ctx, client.ContainerPruneOptions{})
+	var res OpResult
+	if err != nil {
+		res.Err = err.Error()
+	} else {
+		res.Success = fmt.Sprintf(
+			"Deleted Containers: %d\nReclaimed: %s\n",
+			len(containerReport.Report.ContainersDeleted),
+			humanize.Bytes(containerReport.Report.SpaceReclaimed),
+		)
+	}
+
+	return res
 }

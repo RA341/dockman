@@ -6,8 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const configID = 1
-
 type PruneResult struct {
 	gorm.Model
 	// machine on which it was cleaned
@@ -25,6 +23,7 @@ type PruneConfig struct {
 	gorm.Model
 	Enabled  bool
 	Interval time.Duration
+	Host     string `gorm:"uniqueIndex"`
 
 	Volumes    bool
 	Networks   bool
@@ -47,9 +46,9 @@ func (r OpResult) Val() string {
 }
 
 type Store interface {
+	GetEnabled() ([]PruneConfig, error)
 	GetConfig(string) (PruneConfig, error)
 	UpdateConfig(*PruneConfig) error
-	InitConfig() error
 
 	AddResult(*PruneResult) error
 	ListResult(host string) ([]PruneResult, error)

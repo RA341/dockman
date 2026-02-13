@@ -9,17 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	authrpc "github.com/RA341/dockman/generated/auth/v1/v1connect"
-	cleanerrpc "github.com/RA341/dockman/generated/cleaner/v1/v1connect"
-	configrpc "github.com/RA341/dockman/generated/config/v1/v1connect"
-	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
-	dockyamlrpc "github.com/RA341/dockman/generated/dockyaml/v1/v1connect"
-	filesrpc "github.com/RA341/dockman/generated/files/v1/v1connect"
-	hostrpc "github.com/RA341/dockman/generated/host/v1/v1connect"
-	inforpc "github.com/RA341/dockman/generated/info/v1/v1connect"
-	viewerrpc "github.com/RA341/dockman/generated/viewer/v1/v1connect"
-
-	mid "github.com/RA341/dockman/internal/app/middleware"
+	"github.com/RA341/dockman/internal/app/middleware"
 	"github.com/RA341/dockman/internal/app/ui"
 	"github.com/RA341/dockman/internal/auth"
 	"github.com/RA341/dockman/internal/cleaner"
@@ -29,11 +19,12 @@ import (
 	"github.com/RA341/dockman/internal/dockyaml"
 	"github.com/RA341/dockman/internal/files"
 	"github.com/RA341/dockman/internal/host"
-	hostMid "github.com/RA341/dockman/internal/host/middleware"
+	hostMiddleware "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/internal/info"
 	"github.com/RA341/dockman/internal/ssh"
 	"github.com/RA341/dockman/internal/viewer"
 	"github.com/RA341/dockman/pkg/argos"
+	"github.com/RA341/dockman/pkg/logger"
 
 	"github.com/rs/zerolog/log"
 )
@@ -68,8 +59,13 @@ func (a *App) VerifyServices() error {
 	return nil
 }
 
-func NewApp(conf *config.AppConfig) (app *App) {
-	var err error
+func NewApp(opt ...config.AppOpt) (app *App) {
+	conf, err := config.Load(opt...)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error parsing config")
+	}
+
+	logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
 
 	// db and info setup
 	gormDB := database.New(conf.ConfigDir, info.IsDev())
@@ -95,7 +91,12 @@ func NewApp(conf *config.AppConfig) (app *App) {
 	machDb := ssh.NewGormMachineManger(gormDB)
 	sshSrv := ssh.NewService(sshDb, machDb)
 
-	store := dockyaml.NewStore(filepath.Join(conf.ConfigDir, "dockyaml"))
+	dockyamlPath := filepath.Join(conf.ConfigDir, "dockyaml")
+	if conf.DockYaml != "" {
+		dockyamlPath = conf.DockYaml
+	}
+
+	store := dockyaml.NewStore(dockyamlPath)
 	dockyamlSrv := dockyaml.New(store)
 
 	aliasStore := host.NewAliasStore(gormDB)
@@ -132,7 +133,7 @@ func NewApp(conf *config.AppConfig) (app *App) {
 	viewerSrv := viewer.New(
 		hostManager.GetDockerService,
 		func(input, host string) (root string, relpath string, err error) {
-			fs, relpath, err := fileSrv.LoadAll(input, host)
+			fs, relpath, _, err := fileSrv.LoadAll(input, host)
 			if err != nil {
 				return "", "", err
 			}
@@ -186,29 +187,6 @@ func setupComposeRoot(composeRoot string) (cr string) {
 	return composeRoot
 }
 
-//type connectHandler func() (string, http.Handler)
-//
-//type Middleware func(http.Handler) http.Handler
-//
-//func (a *App) registerHttpHandler(basePath string, subMux http.Handler, middleware ...Middleware) (string, http.Handler) {
-//	if !strings.HasSuffix(basePath, "/") {
-//		basePath = basePath + "/"
-//	}
-//
-//	baseHandler := http.StripPrefix(strings.TrimSuffix(basePath, "/"), subMux)
-//
-//	if a.Config.Auth.Enable {
-//		httpAuth := auth.NewHttpAuthMiddleware(a.Auth)
-//		baseHandler = httpAuth(baseHandler)
-//	}
-//
-//	for _, mid := range middleware {
-//		baseHandler = mid(baseHandler)
-//	}
-//
-//	return basePath, baseHandler
-//}
-
 /*
 Registers all routes required by dockman with the following hierarchy
 
@@ -221,26 +199,28 @@ Registers all routes required by dockman with the following hierarchy
 	|-----|-----/:host/* <- endpoints require hosts info
 */
 func (a *App) registerRoutes(mux *http.ServeMux) {
-	// /api
 	apiRouter := http.NewServeMux()
 	a.registerApiRoutes(apiRouter)
 	withSubRouter(mux, "/api", a.withLogger(apiRouter))
 
-	// / UI (Catch-all)
 	a.registerFrontend(mux)
 }
 
 func (a *App) registerFrontend(router *http.ServeMux) {
-	var uiHandler http.Handler
-
-	if a.Config.UIFS == nil {
-		log.Warn().Msg("no ui files found, setting default page")
-		uiHandler = ui.NewDefaultUIHandler()
-	} else {
-		uiHandler = ui.NewSpaHandler(a.Config.UIFS)
+	if a.Config.UIProxy != nil {
+		log.Info().Msg("using ui proxy")
+		router.Handle("/", a.Config.UIProxy)
+		return
 	}
 
-	router.Handle("/", mid.GzipMiddleware(uiHandler))
+	if a.Config.UIFS != nil {
+		log.Info().Msg("using ui fs")
+		router.Handle("/", middleware.Gzip(ui.NewSpaHandler(a.Config.UIFS)))
+		return
+	}
+
+	log.Info().Msg("no ui files found, setting default page")
+	router.Handle("/", middleware.Gzip(ui.NewDefaultUIHandler()))
 }
 
 func (a *App) registerApiAuthRoutes(authRouter *http.ServeMux) {
@@ -248,11 +228,7 @@ func (a *App) registerApiAuthRoutes(authRouter *http.ServeMux) {
 		return
 	}
 
-	authRouter.Handle(
-		authrpc.NewAuthServiceHandler(
-			auth.NewConnectHandler(a.Auth),
-		),
-	)
+	authRouter.Handle(auth.NewConnectHandler(a.Auth))
 
 	if a.Config.Auth.OIDCEnable {
 		withSubRouter(
@@ -265,9 +241,9 @@ func (a *App) registerApiAuthRoutes(authRouter *http.ServeMux) {
 
 func (a *App) registerApiRoutes(publicApiMux *http.ServeMux) {
 	publicApiMux.HandleFunc(
-		"/hola",
+		"/hello",
 		func(writer http.ResponseWriter, request *http.Request) {
-			_, err := writer.Write([]byte("Fuck you"))
+			_, err := writer.Write([]byte("Fuck off"))
 			if err != nil {
 				return
 			}
@@ -304,23 +280,11 @@ func (a *App) registerApiProtectedRoutes(protectedApiMux *http.ServeMux) {
 	)
 
 	// info
-	protectedApiMux.Handle(
-		inforpc.NewInfoServiceHandler(
-			info.NewConnectHandler(a.Info),
-		),
-	)
+	protectedApiMux.Handle(info.NewConnectHandler(a.Info))
 	// user config
-	protectedApiMux.Handle(
-		configrpc.NewConfigServiceHandler(
-			config.NewConnectHandler(a.UserConfigSrv),
-		),
-	)
+	protectedApiMux.Handle(config.NewConnectHandler(a.UserConfigSrv))
 	// host manager
-	protectedApiMux.Handle(
-		hostrpc.NewHostManagerServiceHandler(
-			host.NewHandler(a.HostManager),
-		),
-	)
+	protectedApiMux.Handle(host.NewHandler(a.HostManager))
 
 	// viewer http doesnt need hosts uses uuid
 	withSubRouter(
@@ -354,18 +318,10 @@ func withSubRouter(parent *http.ServeMux, path string, child http.Handler) {
 // /api/protected/:host
 func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
 	// dockyaml
-	hostMux.Handle(
-		dockyamlrpc.NewDockyamlServiceHandler(
-			dockyaml.NewHandler(a.DockYaml),
-		),
-	)
+	hostMux.Handle(dockyaml.NewHandler(a.DockYaml))
 
 	// files
-	hostMux.Handle(
-		filesrpc.NewFileServiceHandler(
-			files.NewConnectHandler(a.File),
-		),
-	)
+	hostMux.Handle(files.NewHandler(a.File))
 	// files http handlers
 	hostMux.Handle(
 		"/file/",
@@ -375,10 +331,8 @@ func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
 	)
 	// docker
 	hostMux.Handle(
-		dockerpc.NewDockerServiceHandler(
-			docker.NewConnectHandler(
-				a.HostManager.GetDockerService,
-			),
+		docker.NewConnectHandler(
+			a.HostManager.GetDockerService,
 		),
 	)
 	// docker http
@@ -388,18 +342,9 @@ func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
 		docker.NewHandlerHttp(a.HostManager.GetDockerService),
 	)
 	// cleaner
-	hostMux.Handle(
-		cleanerrpc.NewCleanerServiceHandler(
-			cleaner.NewHandler(a.CleanerSrv),
-		),
-	)
+	hostMux.Handle(cleaner.NewHandler(a.CleanerSrv))
 	// viewer
-	hostMux.Handle(
-		viewerrpc.NewViewerServiceHandler(
-			viewer.NewHandler(a.Viewer),
-		),
-	)
-
+	hostMux.Handle(viewer.NewHandler(a.Viewer))
 }
 
 func (a *App) HostPathMiddleware(next http.Handler) http.Handler {
@@ -410,7 +355,7 @@ func (a *App) HostPathMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		hostCtx := hostMid.SetHost(
+		hostCtx := hostMiddleware.SetHost(
 			r.Context(),
 			hostname,
 		)
@@ -427,7 +372,7 @@ func (a *App) HostPathMiddleware(next http.Handler) http.Handler {
 func (a *App) withLogger(mux http.Handler) http.Handler {
 	var apiHandler = mux
 	if a.Config.Log.HttpLogger {
-		apiHandler = mid.LoggingMiddleware(apiHandler)
+		apiHandler = middleware.LoggingMiddleware(apiHandler)
 	}
 	return apiHandler
 }
@@ -455,7 +400,7 @@ func printAuthWarning() {
 
 	// List of message lines
 	messages := []string{
-		argos.Colorize("Warning: Authentication Disabled", argos.ColorYellow),
+		argos.Colorize("Caution: Authentication Disabled", argos.ColorYellow),
 		argos.Colorize("Running without auth is fine for testing", argos.ColorCyan),
 		argos.Colorize("but you should enable it before exposing Dockman", argos.ColorCyan),
 		argos.Colorize("to a network or using it regularly.", argos.ColorCyan),

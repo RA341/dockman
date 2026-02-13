@@ -42,7 +42,7 @@ func (s *Service) SaveConfig(conf *UserConfig, updaterUpdater bool) error {
 	return nil
 }
 
-func Load(opts ...ServerOpt) (*AppConfig, error) {
+func Load(opts ...AppOpt) (*AppConfig, error) {
 	config, err := parseStruct()
 	if err != nil {
 		return nil, err
@@ -67,6 +67,7 @@ func parseStruct() (*AppConfig, error) {
 	pathsToResolve := []*string{
 		&conf.ConfigDir,
 		&conf.ComposeRoot,
+		&conf.DockYaml,
 	}
 	for _, p := range pathsToResolve {
 		absPath, err := filepath.Abs(*p)

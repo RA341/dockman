@@ -3,10 +3,12 @@ package files
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/RA341/dockman/generated/files/v1"
+	"github.com/RA341/dockman/generated/files/v1/v1connect"
 	"github.com/RA341/dockman/internal/host/middleware"
 )
 
@@ -14,8 +16,9 @@ type Handler struct {
 	srv *Service
 }
 
-func NewConnectHandler(service *Service) *Handler {
-	return &Handler{srv: service}
+func NewHandler(service *Service) (string, http.Handler) {
+	h := &Handler{srv: service}
+	return v1connect.NewFileServiceHandler(h)
 }
 
 func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
@@ -24,6 +27,48 @@ func ToMap[T any, Q any](input []T, mapper func(T) Q) []Q {
 		result = append(result, mapper(t))
 	}
 	return result
+}
+
+func (h *Handler) GetTmpls(ctx context.Context, req *connect.Request[v1.GetTmplsRequest]) (*connect.Response[v1.GetTmplsResponse], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tmpls, err := h.srv.GetTemplates(req.Msg.Alias, hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	rpcTmpls := ToMap(tmpls, func(t Template) *v1.Template {
+		return &v1.Template{
+			Name: t.name,
+			Vars: t.vars,
+		}
+	})
+
+	return connect.NewResponse(&v1.GetTmplsResponse{
+		Templs: rpcTmpls,
+	}), nil
+}
+
+func (h *Handler) WriteTmpl(ctx context.Context, c *connect.Request[v1.WriteTmplRequest]) (*connect.Response[v1.WriteTmplResponse], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tmpl := Template{
+		name: c.Msg.Tmpl.Name,
+		vars: c.Msg.Tmpl.Vars,
+	}
+
+	err = h.srv.WriteTemplate(hostname, c.Msg.Dir, &tmpl)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.WriteTmplResponse{}), nil
 }
 
 func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]) (*connect.Response[v1.ListResponse], error) {

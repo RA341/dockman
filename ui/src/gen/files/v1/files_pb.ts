@@ -2,15 +2,105 @@
 // @generated from file files/v1/files.proto (package files.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Message } from "@bufbuild/protobuf";
+import type {GenFile, GenMessage, GenService} from "@bufbuild/protobuf/codegenv2";
+import {fileDesc, messageDesc, serviceDesc} from "@bufbuild/protobuf/codegenv2";
+import type {Message} from "@bufbuild/protobuf";
 
 /**
  * Describes the file files/v1/files.proto.
  */
 export const file_files_v1_files: GenFile = /*@__PURE__*/
-  fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiSwoLQ29weVJlcXVlc3QSHgoGc291cmNlGAEgASgLMg4uZmlsZXMudjEuRmlsZRIcCgRkZXN0GAIgASgLMg4uZmlsZXMudjEuRmlsZSIOCgxDb3B5UmVzcG9uc2UiGwoLTGlzdFJlcXVlc3QSDAoEcGF0aBgBIAEoCSIyCgxMaXN0UmVzcG9uc2USIgoHZW50cmllcxgBIAMoCzIRLmZpbGVzLnYxLkZzRW50cnkiIQoNRm9ybWF0UmVxdWVzdBIQCghmaWxlbmFtZRgBIAEoCSIiCg5Gb3JtYXRSZXNwb25zZRIQCghjb250ZW50cxgBIAEoCSJ7CgdGc0VudHJ5EhAKCGZpbGVuYW1lGAIgASgJEg0KBWlzRGlyGAMgASgIEiMKCHN1YkZpbGVzGAQgAygLMhEuZmlsZXMudjEuRnNFbnRyeRIRCglpc0ZldGNoZWQYBSABKAgSFwoPaXNDb21wb3NlRm9sZGVyGAYgASgJIjYKClJlbmFtZUZpbGUSEwoLb2xkRmlsZVBhdGgYASABKAkSEwoLbmV3RmlsZVBhdGgYAiABKAkiJwoERmlsZRIQCghmaWxlbmFtZRgBIAEoCRINCgVpc0RpchgCIAEoCCIHCgVFbXB0eTL4AgoLRmlsZVNlcnZpY2USNwoETGlzdBIVLmZpbGVzLnYxLkxpc3RSZXF1ZXN0GhYuZmlsZXMudjEuTGlzdFJlc3BvbnNlIgASKwoGQ3JlYXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASNwoEQ29weRIVLmZpbGVzLnYxLkNvcHlSZXF1ZXN0GhYuZmlsZXMudjEuQ29weVJlc3BvbnNlIgASKwoGRGVsZXRlEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASKwoGRXhpc3RzEg4uZmlsZXMudjEuRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASMQoGUmVuYW1lEhQuZmlsZXMudjEuUmVuYW1lRmlsZRoPLmZpbGVzLnYxLkVtcHR5IgASPQoGRm9ybWF0EhcuZmlsZXMudjEuRm9ybWF0UmVxdWVzdBoYLmZpbGVzLnYxLkZvcm1hdFJlc3BvbnNlIgBCiAEKDGNvbS5maWxlcy52MUIKRmlsZXNQcm90b1ABWitnaXRodWIuY29tL1JBMzQxL2RvY2ttYW4vZ2VuZXJhdGVkL2ZpbGVzL3YxogIDRlhYqgIIRmlsZXMuVjHKAghGaWxlc1xWMeICFEZpbGVzXFYxXEdQQk1ldGFkYXRh6gIJRmlsZXM6OlYxYgZwcm90bzM");
+    fileDesc("ChRmaWxlcy92MS9maWxlcy5wcm90bxIIZmlsZXMudjEiQQoQV3JpdGVUbXBsUmVxdWVzdBILCgNkaXIYAiABKAkSIAoEdG1wbBgBIAEoCzISLmZpbGVzLnYxLlRlbXBsYXRlIhMKEVdyaXRlVG1wbFJlc3BvbnNlIiAKD0dldFRtcGxzUmVxdWVzdBINCgVhbGlhcxgBIAEoCSJxCghUZW1wbGF0ZRIMCgROYW1lGAEgASgJEioKBHZhcnMYAiADKAsyHC5maWxlcy52MS5UZW1wbGF0ZS5WYXJzRW50cnkaKwoJVmFyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNgoQR2V0VG1wbHNSZXNwb25zZRIiCgZ0ZW1wbHMYASADKAsyEi5maWxlcy52MS5UZW1wbGF0ZSJLCgtDb3B5UmVxdWVzdBIeCgZzb3VyY2UYASABKAsyDi5maWxlcy52MS5GaWxlEhwKBGRlc3QYAiABKAsyDi5maWxlcy52MS5GaWxlIg4KDENvcHlSZXNwb25zZSIbCgtMaXN0UmVxdWVzdBIMCgRwYXRoGAEgASgJIjIKDExpc3RSZXNwb25zZRIiCgdlbnRyaWVzGAEgAygLMhEuZmlsZXMudjEuRnNFbnRyeSIhCg1Gb3JtYXRSZXF1ZXN0EhAKCGZpbGVuYW1lGAEgASgJIiIKDkZvcm1hdFJlc3BvbnNlEhAKCGNvbnRlbnRzGAEgASgJInsKB0ZzRW50cnkSEAoIZmlsZW5hbWUYAiABKAkSDQoFaXNEaXIYAyABKAgSIwoIc3ViRmlsZXMYBCADKAsyES5maWxlcy52MS5Gc0VudHJ5EhEKCWlzRmV0Y2hlZBgFIAEoCBIXCg9pc0NvbXBvc2VGb2xkZXIYBiABKAkiNgoKUmVuYW1lRmlsZRITCgtvbGRGaWxlUGF0aBgBIAEoCRITCgtuZXdGaWxlUGF0aBgCIAEoCSInCgRGaWxlEhAKCGZpbGVuYW1lGAEgASgJEg0KBWlzRGlyGAIgASgIIgcKBUVtcHR5MoUECgtGaWxlU2VydmljZRI3CgRMaXN0EhUuZmlsZXMudjEuTGlzdFJlcXVlc3QaFi5maWxlcy52MS5MaXN0UmVzcG9uc2UiABIrCgZDcmVhdGUSDi5maWxlcy52MS5GaWxlGg8uZmlsZXMudjEuRW1wdHkiABI3CgRDb3B5EhUuZmlsZXMudjEuQ29weVJlcXVlc3QaFi5maWxlcy52MS5Db3B5UmVzcG9uc2UiABIrCgZEZWxldGUSDi5maWxlcy52MS5GaWxlGg8uZmlsZXMudjEuRW1wdHkiABIrCgZFeGlzdHMSDi5maWxlcy52MS5GaWxlGg8uZmlsZXMudjEuRW1wdHkiABIxCgZSZW5hbWUSFC5maWxlcy52MS5SZW5hbWVGaWxlGg8uZmlsZXMudjEuRW1wdHkiABJDCghHZXRUbXBscxIZLmZpbGVzLnYxLkdldFRtcGxzUmVxdWVzdBoaLmZpbGVzLnYxLkdldFRtcGxzUmVzcG9uc2UiABJGCglXcml0ZVRtcGwSGi5maWxlcy52MS5Xcml0ZVRtcGxSZXF1ZXN0GhsuZmlsZXMudjEuV3JpdGVUbXBsUmVzcG9uc2UiABI9CgZGb3JtYXQSFy5maWxlcy52MS5Gb3JtYXRSZXF1ZXN0GhguZmlsZXMudjEuRm9ybWF0UmVzcG9uc2UiAEKIAQoMY29tLmZpbGVzLnYxQgpGaWxlc1Byb3RvUAFaK2dpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvZmlsZXMvdjGiAgNGWFiqAghGaWxlcy5WMcoCCEZpbGVzXFYx4gIURmlsZXNcVjFcR1BCTWV0YWRhdGHqAglGaWxlczo6VjFiBnByb3RvMw");
+
+/**
+ * @generated from message files.v1.WriteTmplRequest
+ */
+export type WriteTmplRequest = Message<"files.v1.WriteTmplRequest"> & {
+  /**
+   * @generated from field: string dir = 2;
+   */
+  dir: string;
+
+  /**
+   * @generated from field: files.v1.Template tmpl = 1;
+   */
+  tmpl?: Template;
+};
+
+/**
+ * Describes the message files.v1.WriteTmplRequest.
+ * Use `create(WriteTmplRequestSchema)` to create a new message.
+ */
+export const WriteTmplRequestSchema: GenMessage<WriteTmplRequest> = /*@__PURE__*/
+    messageDesc(file_files_v1_files, 0);
+
+/**
+ * @generated from message files.v1.WriteTmplResponse
+ */
+export type WriteTmplResponse = Message<"files.v1.WriteTmplResponse"> & {};
+
+/**
+ * Describes the message files.v1.WriteTmplResponse.
+ * Use `create(WriteTmplResponseSchema)` to create a new message.
+ */
+export const WriteTmplResponseSchema: GenMessage<WriteTmplResponse> = /*@__PURE__*/
+    messageDesc(file_files_v1_files, 1);
+
+/**
+ * @generated from message files.v1.GetTmplsRequest
+ */
+export type GetTmplsRequest = Message<"files.v1.GetTmplsRequest"> & {
+  /**
+   * @generated from field: string alias = 1;
+   */
+  alias: string;
+};
+
+/**
+ * Describes the message files.v1.GetTmplsRequest.
+ * Use `create(GetTmplsRequestSchema)` to create a new message.
+ */
+export const GetTmplsRequestSchema: GenMessage<GetTmplsRequest> = /*@__PURE__*/
+    messageDesc(file_files_v1_files, 2);
+
+/**
+ * @generated from message files.v1.Template
+ */
+export type Template = Message<"files.v1.Template"> & {
+  /**
+   * @generated from field: string Name = 1;
+   */
+  Name: string;
+
+  /**
+   * @generated from field: map<string, string> vars = 2;
+   */
+  vars: { [key: string]: string };
+};
+
+/**
+ * Describes the message files.v1.Template.
+ * Use `create(TemplateSchema)` to create a new message.
+ */
+export const TemplateSchema: GenMessage<Template> = /*@__PURE__*/
+    messageDesc(file_files_v1_files, 3);
+
+/**
+ * @generated from message files.v1.GetTmplsResponse
+ */
+export type GetTmplsResponse = Message<"files.v1.GetTmplsResponse"> & {
+  /**
+   * @generated from field: repeated files.v1.Template templs = 1;
+   */
+  templs: Template[];
+};
+
+/**
+ * Describes the message files.v1.GetTmplsResponse.
+ * Use `create(GetTmplsResponseSchema)` to create a new message.
+ */
+export const GetTmplsResponseSchema: GenMessage<GetTmplsResponse> = /*@__PURE__*/
+    messageDesc(file_files_v1_files, 4);
 
 /**
  * @generated from message files.v1.CopyRequest
@@ -32,7 +122,7 @@ export type CopyRequest = Message<"files.v1.CopyRequest"> & {
  * Use `create(CopyRequestSchema)` to create a new message.
  */
 export const CopyRequestSchema: GenMessage<CopyRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 0);
+    messageDesc(file_files_v1_files, 5);
 
 /**
  * @generated from message files.v1.CopyResponse
@@ -45,7 +135,7 @@ export type CopyResponse = Message<"files.v1.CopyResponse"> & {
  * Use `create(CopyResponseSchema)` to create a new message.
  */
 export const CopyResponseSchema: GenMessage<CopyResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 1);
+    messageDesc(file_files_v1_files, 6);
 
 /**
  * @generated from message files.v1.ListRequest
@@ -62,7 +152,7 @@ export type ListRequest = Message<"files.v1.ListRequest"> & {
  * Use `create(ListRequestSchema)` to create a new message.
  */
 export const ListRequestSchema: GenMessage<ListRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 2);
+    messageDesc(file_files_v1_files, 7);
 
 /**
  * @generated from message files.v1.ListResponse
@@ -79,7 +169,7 @@ export type ListResponse = Message<"files.v1.ListResponse"> & {
  * Use `create(ListResponseSchema)` to create a new message.
  */
 export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 3);
+    messageDesc(file_files_v1_files, 8);
 
 /**
  * @generated from message files.v1.FormatRequest
@@ -96,7 +186,7 @@ export type FormatRequest = Message<"files.v1.FormatRequest"> & {
  * Use `create(FormatRequestSchema)` to create a new message.
  */
 export const FormatRequestSchema: GenMessage<FormatRequest> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 4);
+    messageDesc(file_files_v1_files, 9);
 
 /**
  * @generated from message files.v1.FormatResponse
@@ -113,7 +203,7 @@ export type FormatResponse = Message<"files.v1.FormatResponse"> & {
  * Use `create(FormatResponseSchema)` to create a new message.
  */
 export const FormatResponseSchema: GenMessage<FormatResponse> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 5);
+    messageDesc(file_files_v1_files, 10);
 
 /**
  * @generated from message files.v1.FsEntry
@@ -152,7 +242,7 @@ export type FsEntry = Message<"files.v1.FsEntry"> & {
  * Use `create(FsEntrySchema)` to create a new message.
  */
 export const FsEntrySchema: GenMessage<FsEntry> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 6);
+    messageDesc(file_files_v1_files, 11);
 
 /**
  * @generated from message files.v1.RenameFile
@@ -174,7 +264,7 @@ export type RenameFile = Message<"files.v1.RenameFile"> & {
  * Use `create(RenameFileSchema)` to create a new message.
  */
 export const RenameFileSchema: GenMessage<RenameFile> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 7);
+    messageDesc(file_files_v1_files, 12);
 
 /**
  * @generated from message files.v1.File
@@ -196,7 +286,7 @@ export type File = Message<"files.v1.File"> & {
  * Use `create(FileSchema)` to create a new message.
  */
 export const FileSchema: GenMessage<File> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 8);
+    messageDesc(file_files_v1_files, 13);
 
 /**
  * @generated from message files.v1.Empty
@@ -209,7 +299,7 @@ export type Empty = Message<"files.v1.Empty"> & {
  * Use `create(EmptySchema)` to create a new message.
  */
 export const EmptySchema: GenMessage<Empty> = /*@__PURE__*/
-  messageDesc(file_files_v1_files, 9);
+    messageDesc(file_files_v1_files, 14);
 
 /**
  * @generated from service files.v1.FileService
@@ -262,6 +352,22 @@ export const FileService: GenService<{
     methodKind: "unary";
     input: typeof RenameFileSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * @generated from rpc files.v1.FileService.GetTmpls
+   */
+  getTmpls: {
+    methodKind: "unary";
+    input: typeof GetTmplsRequestSchema;
+    output: typeof GetTmplsResponseSchema;
+  },
+  /**
+   * @generated from rpc files.v1.FileService.WriteTmpl
+   */
+  writeTmpl: {
+    methodKind: "unary";
+    input: typeof WriteTmplRequestSchema;
+    output: typeof WriteTmplResponseSchema;
   },
   /**
    * @generated from rpc files.v1.FileService.Format

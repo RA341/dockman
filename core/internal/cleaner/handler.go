@@ -3,11 +3,13 @@ package cleaner
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/RA341/dockman/generated/cleaner/v1"
+	cleanerrpc "github.com/RA341/dockman/generated/cleaner/v1/v1connect"
 	"github.com/RA341/dockman/internal/host/middleware"
 
 	"github.com/dustin/go-humanize"
@@ -17,8 +19,26 @@ type Handler struct {
 	srv *Service
 }
 
-func NewHandler(srv *Service) *Handler {
-	return &Handler{srv: srv}
+func NewHandler(srv *Service) (string, http.Handler) {
+	h := &Handler{srv: srv}
+	return cleanerrpc.NewCleanerServiceHandler(h)
+}
+
+func (h *Handler) CleanOnce(ctx context.Context, c *connect.Request[v1.CleanOnceRequest]) (*connect.Response[v1.CleanOnceResponse], error) {
+	hostname, err := middleware.GetHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var pc PruneConfig
+	pc.FromProto(c.Msg.Config)
+
+	err = h.srv.RunOnce(ctx, hostname, &pc)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.CleanOnceResponse{}), nil
 }
 
 func (h *Handler) ListHistory(ctx context.Context, _ *connect.Request[v1.ListHistoryRequest]) (*connect.Response[v1.ListHistoryResponse], error) {
@@ -52,13 +72,13 @@ func (h *Handler) ListHistory(ctx context.Context, _ *connect.Request[v1.ListHis
 	}), nil
 }
 
-func (h *Handler) SpaceStatus(ctx context.Context, req *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
+func (h *Handler) SpaceStatus(ctx context.Context, _ *connect.Request[v1.SpaceStatusRequest]) (*connect.Response[v1.SpaceStatusResponse], error) {
 	hostname, err := middleware.GetHost(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	sys, net, err := h.srv.SystemStorage(ctx, hostname)
+	sys, net, err := h.srv.GetSystemStorage(ctx, hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +143,7 @@ func (h *Handler) RunCleaner(ctx context.Context, _ *connect.Request[v1.RunClean
 		return nil, err
 	}
 
-	err = h.srv.Run(hostname, false)
+	err = h.srv.RunWithScheduler(hostname, false)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +163,7 @@ func (h *Handler) GetConfig(ctx context.Context, _ *connect.Request[v1.GetConfig
 	}
 	resp := connect.NewResponse(
 		&v1.GetConfigResponse{
-			Config: ToRpcPruneConfig(config),
+			Config: config.ToProto(),
 		},
 	)
 
@@ -156,19 +176,11 @@ func (h *Handler) EditConfig(ctx context.Context, req *connect.Request[v1.EditCo
 		return nil, err
 	}
 
-	rpcConfig := req.Msg.Config
-	var config = PruneConfig{
-		Enabled:  rpcConfig.Enabled,
-		Interval: time.Duration(rpcConfig.IntervalInHours) * time.Hour,
+	var cf PruneConfig
+	cf.FromProto(req.Msg.Config)
+	cf.Host = hostname
 
-		Volumes:    rpcConfig.Volumes,
-		Networks:   rpcConfig.Networks,
-		Images:     rpcConfig.Images,
-		Containers: rpcConfig.Containers,
-		BuildCache: rpcConfig.BuildCache,
-	}
-
-	err = h.srv.store.UpdateConfig(&config)
+	err = h.srv.store.UpdateConfig(&cf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update config: %v", err)
 	}
@@ -178,24 +190,12 @@ func (h *Handler) EditConfig(ctx context.Context, req *connect.Request[v1.EditCo
 		return nil, err
 	}
 
-	err = h.srv.Run(hostname, true)
+	err = h.srv.RunWithScheduler(hostname, true)
 	if err != nil {
 		return nil, err
 	}
 
 	return connect.NewResponse(&v1.EditConfigResponse{
-		Config: ToRpcPruneConfig(getConfig),
+		Config: getConfig.ToProto(),
 	}), nil
-}
-
-func ToRpcPruneConfig(config PruneConfig) *v1.PruneConfig {
-	return &v1.PruneConfig{
-		Enabled:         config.Enabled,
-		IntervalInHours: uint32(config.Interval.Hours()),
-		Volumes:         config.Volumes,
-		Networks:        config.Networks,
-		Images:          config.Images,
-		Containers:      config.Containers,
-		BuildCache:      config.BuildCache,
-	}
 }

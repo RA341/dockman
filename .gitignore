@@ -19,10 +19,10 @@ install/stacks/
 /ui/'../
 /**/.task
 /core/internal/git/git_test/
-/install/docker/data/dockman/dockman.db
-/install/docker/data/dockman/dockman.db-shm
-/install/docker/data/dockman/dockman.db-wal
+/install/docker/data/**/dockman.db
 /install/docker/stacks/
+
+/**/tmp/
 /core/internal/git/tests/
 /core/internal/backup/tests/
 /install/docker/

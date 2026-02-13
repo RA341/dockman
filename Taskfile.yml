@@ -63,6 +63,12 @@ tasks:
       - task: ui:dep
       - task: ui
 
+  local:
+    dir: core
+    cmds:
+      - task ui:b:server
+      - task go:b:server OUT_EXE=./dockman PROD=1
+
   ui:
     desc: "Build the latest web ui in {{.UI_DIR}}"
     dir: "{{.UI_DIR}}"
@@ -122,6 +128,20 @@ tasks:
       - go mod download
       - go mod tidy -v -x
 
+  docs:
+    dir: website
+    cmds:
+      - npm run start
+
+  go:r:*:
+    vars:
+      CMD_NAME: "{{index .MATCH 0}}"
+    dir: '{{.BUILD_DIR}}/{{.CMD_NAME}}'
+    cmds:
+      - 'task go:b:{{.CMD_NAME}}'
+      - 'task '
+      - './{{.CMD_NAME}}'
+
   go:b:*:
     dir: "{{.CORE_DIR}}"
     desc: "Builds a Go target. Usage: task go:<target>"
@@ -134,6 +154,9 @@ tasks:
 
       DEFAULT_OUT_EXE: '{{.OUT}}/{{.CMD_NAME}}{{.EXE_EXT}}'
       OUT_EXE: '{{.OUT_EXE| default .DEFAULT_OUT_EXE}}'
+
+      DEFAULT_BDCMD: build
+      BDCMD: '{{.BDCMD| default .DEFAULT_BDCMD}}'
 
       INFO_PACKAGE: "github.com/RA341/dockman/internal/info"
 
@@ -163,8 +186,8 @@ tasks:
       Output: '{{.BUILD_DIR}}/{{.CMD_NAME}}{{.EXE_EXT}}'
     cmds:
       - '{{if eq .OUT_EXE .DEFAULT_OUT_EXE}} mkdir -p {{.OUT}} {{end}}'
-      - CGO_ENABLED=1 go build -ldflags "{{.LDFLAGS}}" -v
-        -o {{ .OUT_EXE }}
+      - CGO_ENABLED=1 go {{.BDCMD}} -ldflags "{{.LDFLAGS}}" -v
+        {{if eq .BDCMD .DEFAULT_BDCMD}} -o {{ .OUT_EXE }} {{end}}
         ./{{.GO_CMD_DIR}}/{{.CMD_NAME}}
 
   go:*:
@@ -187,11 +210,8 @@ tasks:
     vars:
       CMD_NAME: "desktop"
       EXE_EXT: '{{if eq OS "windows"}}.exe{{end}}'
-    deps:
-      - desk:go
-      - desk:ui
     cmds:
-      - cd {{.CMD_NAME}} && ./{{.CMD_NAME}}{{.EXE_EXT}}{{.ARGS}}
+      - task -p desk:go desk:ui
 
   desk:go:
     desc: "Builds the electron package"
@@ -232,15 +252,18 @@ tasks:
 
       - ARCH=x86_64 {{.APPIMAGE}} {{.APP_DIR}} {{.BUILD_DIR}}/dockman.Appimage
 
-  desk:ui:
+  desk:ui:*:
     dir: "{{.UI_DIR}}"
     desc: "Builds the electron package"
     vars:
-      DEFAULT_OUT: ../{{.BUILD_DIR}}/desktop
+      CMD_NAME: "{{index .MATCH 0}}"
+      DEFAULT_OUT: ../{{.BUILD_DIR}}/{{.CMD_NAME}}
       OUT: '{{.OUT| default .DEFAULT_OUT}}'
+      ELECTRON: '{{if eq OS "windows"}}win-unpacked{{else}}linux-unpacked{{end}}'
     cmds:
       - npm run desk:build
-      - mv -f release/*-unpacked {{.OUT}}
+      - 'mkdir -p {{.OUT}}'
+      - 'cp -r release/{{.ELECTRON}}/. {{.OUT}}/ui'
 
   go:
     desc: "Builds and runs the default Go target of develop. Usage: task go"
@@ -257,7 +280,7 @@ tasks:
   dk:b:
     desc: "Builds the main dockman image for a specific target. Usage: task dk:b"
     cmds:
-      - docker build . -t {{.DOCKMAN_IMAGE_BASE}}
+      - docker build . -f pkg/docker/Dockerfile -t {{.DOCKMAN_IMAGE_BASE}}
 
   dk:r:
     desc: "Builds and runs the main dockman image for a specific target. Usage: task dk:r:<target>"

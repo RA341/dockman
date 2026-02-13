@@ -87,6 +87,22 @@ DOCKMAN_AUTH_OIDC_REDIRECT_URL: "http://localhost:8866/api/auth/login/oidc/callb
 
 If you encounter issues, please open a [discussion on GitHub](https://github.com/RA341/dockman/discussions).
 
+### Disable https cookie
+
+Dockman uses a state cookie that is https only by default.
+
+This can cause issues for users using dockman in http.
+
+Since the cookie is never set OIDC flow cannot be completed.
+
+[Original Issue](https://github.com/RA341/dockman/discussions/172)
+
+You can disabled this behavior by setting the flag, this will allow the cookie to be set in a http instance
+
+```
+DOCKMAN_AUTH_OIDC_SECURE=false
+```
+
 ### Prevent auto redirect
 
 By default, once OIDC is enabled dockman will automatically redirect you to your provider

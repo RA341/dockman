@@ -1,10 +1,6 @@
 package cleaner
 
 import (
-	"errors"
-	"fmt"
-
-	"github.com/RA341/dockman/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -13,36 +9,13 @@ type GormStore struct {
 }
 
 func NewStore(db *gorm.DB) *GormStore {
-	database.Migrate(db, &PruneConfig{}, &PruneResult{})
 	return &GormStore{db: db}
 }
 
-func (g *GormStore) InitConfig() error {
-	var config PruneConfig
-	config.ID = configID
-
-	err := g.db.First(&config).Error
-	if err == nil {
-		return nil
-	}
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		err = g.db.Create(&config).Error
-		if err != nil {
-			return fmt.Errorf("failed to create default config: %w", err)
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("failed to query config: %w", err)
-}
-
-func (g *GormStore) GetConfig(string) (PruneConfig, error) {
+func (g *GormStore) GetConfig(host string) (PruneConfig, error) {
 	dest := PruneConfig{}
-	dest.Model.ID = configID
 
-	err := g.db.Find(&dest).Error
+	err := g.db.Where("host = ?", host).Find(&dest).Error
 	if err != nil {
 		return PruneConfig{}, err
 	}
@@ -51,15 +24,22 @@ func (g *GormStore) GetConfig(string) (PruneConfig, error) {
 }
 
 func (g *GormStore) UpdateConfig(config *PruneConfig) error {
-	config.Model.ID = configID
-	return g.db.Save(config).Error
+	return g.db.Updates(config).Error
 }
 
 const maxPruneResults = 10
 
-func (g *GormStore) AddResult(result *PruneResult) error {
-	//return g.db.Save(result).Error
+func (g *GormStore) GetEnabled() ([]PruneConfig, error) {
+	var results []PruneConfig
+	err := g.db.
+		Where("enabled = ?", true).
+		Find(&results).
+		Error
 
+	return results, err
+}
+
+func (g *GormStore) AddResult(result *PruneResult) error {
 	return g.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(&result).Error
 		if err != nil {
@@ -99,7 +79,6 @@ func (g *GormStore) AddResult(result *PruneResult) error {
 
 		return nil
 	})
-
 }
 
 func (g *GormStore) ListResult(host string) ([]PruneResult, error) {
@@ -117,11 +96,4 @@ func (g *GormStore) ListResult(host string) ([]PruneResult, error) {
 
 func (g *GormStore) DeleteResult(id int) error {
 	return g.db.Delete(&PruneResult{}, id).Error
-}
-
-func (g *GormStore) GetModels() []interface{} {
-	return []interface{}{
-		&PruneConfig{},
-		&PruneResult{},
-	}
 }

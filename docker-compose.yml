@@ -5,16 +5,23 @@ services:
     container_name: dockman-dev
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: pkg/docker/Dockerfile
     environment:
-      DOCKMAN_PUID: 1000
-      DOCKMAN_GID: 1000
+      DOCKMAN_AUTH_ENABLE: true
+      DOCKMAN_AUTH_OIDC_ENABLE: true
+      DOCKMAN_AUTH_OIDC_ISSUER: "https://localhost"
+      DOCKMAN_AUTH_OIDC_CLIENT_ID: 74347a8e-718d-4bb1-b0f6-e264b0c45bad
+      DOCKMAN_AUTH_OIDC_CLIENT_SECRET: DIvLgg09ibXJhmVTtFYQXPjSrzBTJd2D
+      DOCKMAN_AUTH_OIDC_REDIRECT_URL: "http://localhost:8866/api/auth/login/oidc/callback"
+
       DOCKMAN_COMPOSE_ROOT: /home/ra341/Dev/Go/dockman/compose
     volumes:
-      - /home/ra341/Dev/Go/dockman/compose:/home/ra341/Dev/Go/dockman/compose
+      - ./dockman/compose:/home/ra341/Dev/Go/dockman/compose
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8221:8866"
+    depends_on:
+      - pocket-id
 
   caddy:
     image: caddy:alpine
@@ -32,10 +39,11 @@ services:
   pocket-id:
     image: ghcr.io/pocket-id/pocket-id:latest
     environment:
-      - APP_URL=https://localhost  # The public URL you will use
-      - TRUST_PROXY=true           # Required when running behind Caddy
+      - ENCRYPTION_KEY=ZLEAiNYTFgxFgSomYSsWGC1xdH1U26Z6sScFHM8gcoM=
+      - APP_URL=https://localhost
+      - TRUST_PROXY=true
     volumes:
-      - pocket_id_data:/app/backend/data
+      - ./.build/pocket_id:/app/backend/data
     networks:
       - pocket-id-net
     restart: unless-stopped

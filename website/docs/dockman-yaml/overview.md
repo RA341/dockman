@@ -20,6 +20,16 @@ Edit the host-specific configuration by clicking the YAML button in the file lis
 
 ![dockm](./img/dock-file-actions.png)
 
+#### Custom Yaml folder
+
+By default, all YAML files are stored in a folder called dockyaml in the `/config` mount.
+
+You can to custom folder to store all the dockan.yaml files. By setting the following env
+
+```
+DOCKMAN_YAML_PATH=/custom/path/to/folder
+```
+
 ### Version 2
 
 Create a `.dockman.yaml` or `.dockman.yml` file in your compose root directory.
