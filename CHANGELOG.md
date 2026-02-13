@@ -1,3 +1,21 @@
+# [3.2.0](https://github.com/RA341/dockman/compare/v3.1.0...v3.2.0) (2026-02-13)
+
+
+### Bug Fixes
+
+* cleaner scheduler ([dd3dead](https://github.com/RA341/dockman/commit/dd3deadc2388a5cd097293398e9036ac014f3a1b))
+* custom dockman yaml folder path ([7d0930a](https://github.com/RA341/dockman/commit/7d0930a5bc4878fa8e82176fec13ec4a3696ed05)), closes [#175](https://github.com/RA341/dockman/issues/175)
+* flag to disable secure OIDC cookie ([795459f](https://github.com/RA341/dockman/commit/795459f9bb289cd6ec8f70111d247c3af22c6bc2)), closes [#174](https://github.com/RA341/dockman/issues/174)
+* remove hardcoded cleaner id ([ad99470](https://github.com/RA341/dockman/commit/ad9947002ff4c85bc8d518ca680dd4e6f952cd49))
+* remove recursive chown in entrypoint ([d320772](https://github.com/RA341/dockman/commit/d32077252a13320be6096d8965dc7e2a1c770a9f)), closes [#180](https://github.com/RA341/dockman/issues/180)
+* tab going to blank on close ([3fe7323](https://github.com/RA341/dockman/commit/3fe732301aabe31bac93607891f98c45b3b8cb0d))
+
+
+### Features
+
+* added desktop support ([c57f5a7](https://github.com/RA341/dockman/commit/c57f5a778739de3b2762dfe7299ac91de894868f))
+* added template support ([d2e0695](https://github.com/RA341/dockman/commit/d2e0695b76502cafcff9d4ba5aa8f4f0dec00ca2)), closes [#178](https://github.com/RA341/dockman/issues/178)
+
 # [3.1.0](https://github.com/RA341/dockman/compare/v3.0.0...v3.1.0) (2026-01-12)
 
 
