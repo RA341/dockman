@@ -45,18 +45,19 @@ func (s *Service) VolumesList(ctx context.Context) ([]VolumeInfo, error) {
 		}
 	}
 
-	volumeFilters := client.Filters{}
 	for i, vol := range listResp.Items {
-		val, ok := tmpMap[vol.Name]
-		if ok {
+		if val, ok := tmpMap[vol.Name]; ok {
 			listResp.Items[i] = val
 		}
-		volumeFilters.Add("volume", val.Name)
 	}
 
+	// List every container and derive volume usage from their mounts. A prior
+	// version filtered containers by the volume names reported in disk usage,
+	// but a volume missing from disk usage (e.g. a CIFS/network volume with no
+	// reported size) was then never matched to its container and shown as
+	// "Unused" even while mounted.
 	containers, err := s.Client.ContainerList(ctx, client.ContainerListOptions{
-		All:     true,
-		Filters: volumeFilters,
+		All: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
