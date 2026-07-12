@@ -1,4 +1,4 @@
-import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
+import {type JSX, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {callRPC, useHostClient} from "./api.ts";
 import {type DockmanYaml, DockyamlService} from "../gen/dockyaml/v1/dockyaml_pb.ts";
 
@@ -63,8 +63,22 @@ export function useSelection<T>(
 export const useSort = (initialField: string, initialSort: SortOrder = 'asc') => {
     const [sortField, setSortField] = useState<string>(initialField);
     const [sortOrder, setSortOrder] = useState<SortOrder>(initialSort);
+    // Stops the config from re-seeding once the user picks a column by hand.
+    const userSorted = useRef(false);
+
+    // The dockman.yml config that feeds initialField/initialSort is fetched
+    // asynchronously, so it typically lands AFTER the first render — when
+    // useState has already locked in the fallback. Without this, the configured
+    // column/order (and its header sort arrow) never take effect until the user
+    // clicks a header. Re-seed from the config until they sort manually.
+    useEffect(() => {
+        if (userSorted.current) return;
+        setSortField(initialField);
+        setSortOrder(initialSort);
+    }, [initialField, initialSort]);
 
     const handleSort = (field: string) => {
+        userSorted.current = true;
         if (sortField === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
