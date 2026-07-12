@@ -611,33 +611,41 @@ func (s *Service) sortFiles(a, b *Entry, host string) int {
 	if ra > rb {
 		return 1
 	}
-	return strings.Compare(a.fullpath, b.fullpath)
+
+	// Same rank: compare names case-insensitively (VS Code style), falling back
+	// to a case-sensitive compare so entries differing only by case stay in a
+	// deterministic order. A dotfile's leading "." naturally floats it to the
+	// top of its group.
+	an, bn := filepath.Base(a.fullpath), filepath.Base(b.fullpath)
+	if c := strings.Compare(strings.ToLower(an), strings.ToLower(bn)); c != 0 {
+		return c
+	}
+	return strings.Compare(an, bn)
 }
 
-// getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
+// getSortRank orders entries folders-first, then files: pinned files win (in
+// their configured order), then directories, then files (with a small bias so
+// compose/yaml files surface first). Dotfiles are NOT a separate group — the
+// case-insensitive name compare in sortFiles floats them to the top of their
+// own group, matching the folders-first behaviour of editors like VS Code.
 func (s *Service) getSortRank(entry *Entry, host string) int {
 	conf := s.dockYml(host)
 
 	base := filepath.Base(entry.fullpath)
-	// -1: pinned files (highest priority)
+	// Pinned files (explicit user-defined order) always come first.
 	if priority, ok := conf.PinnedFiles[base]; ok {
 		// potential bug, but if someone is manually writing the order of 100000 files i say get a life
 		// -999 > -12 in this context, pretty stupid but i cant be bothered to fix this mathematically
 		return priority - 100_000
 	}
 
-	// 0: dotfiles (highest priority)
-	if strings.HasPrefix(base, ".") {
-		return 1
-	}
-
-	// Check if it's a directory (has subfiles)
+	// Directories before files.
 	if entry.isDir {
-		return 2
+		return 0
 	}
 
-	// 2+: normal files, ranked by getFileSortRank
-	return 3 + s.getFileSortRank(entry.fullpath)
+	// Files, ranked so compose/yaml files surface first within the group.
+	return 1 + s.getFileSortRank(entry.fullpath)
 }
 
 // getFileSortRank assigns priority within normal files
