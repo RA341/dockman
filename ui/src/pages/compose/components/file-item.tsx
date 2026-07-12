@@ -515,7 +515,13 @@ const StatusIndicator = ({fileStatus}: { fileStatus: Status }) => {
                     height: 8,
                     borderRadius: '50%',
                     flexShrink: 0,
-                    bgcolor: stackStatus.color,
+                    boxSizing: 'border-box',
+                    // filled dot for active states, hollow ring for a stopped
+                    // stack so it reads clearly differently from a green dot.
+                    // borderColor (not the `border` shorthand) resolves the token.
+                    ...(stackStatus.filled
+                        ? {bgcolor: stackStatus.color}
+                        : {border: '2px solid', borderColor: stackStatus.color}),
                     ml: 1
                 }}
             />
@@ -529,11 +535,11 @@ const getStatusTheme = (status: Status | undefined) => {
     // Precedence: error > unhealthy > running > stopped. servicesDown carries the
     // "in error" count (crashed / dead / restarting / exited non-zero).
     if (!status) {
-        return {color: 'grey.500', label: 'Stopped'};
+        return {color: 'grey.500', label: 'Stopped', filled: false};
     }
-    if (status.servicesDown > 0) return {color: 'error.main', label: 'Error'};
-    if (status.servicesUnHealthy > 0) return {color: 'warning.main', label: 'Unhealthy'};
-    if (status.servicesUp > 0) return {color: 'success.main', label: 'Running'};
+    if (status.servicesDown > 0) return {color: 'error.main', label: 'Error', filled: true};
+    if (status.servicesUnHealthy > 0) return {color: 'warning.main', label: 'Unhealthy', filled: true};
+    if (status.servicesUp > 0) return {color: 'success.main', label: 'Running', filled: true};
     // no running/failed/unhealthy container -> stack is stopped
-    return {color: 'grey.500', label: 'Stopped'};
+    return {color: 'grey.500', label: 'Stopped', filled: false};
 };
