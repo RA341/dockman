@@ -103,16 +103,7 @@ export function ContainerStatTable({
                         {createSortHeader(SORT_FIELD.NAME, 'Container')}
                         {createSortHeader(SORT_FIELD.CPU, 'CPU Usage', 'center')}
                         {createSortHeader(SORT_FIELD.MEM, 'Memory')}
-                        <TableCell sx={{
-                            fontWeight: 700,
-                            fontSize: '0.75rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            bgcolor: 'background.paper',
-                            zIndex: 2
-                        }}>
-                            Started
-                        </TableCell>
+                        {createSortHeader(SORT_FIELD.STARTED, 'Started')}
                         <TableCell sx={{
                             fontWeight: 700,
                             fontSize: '0.75rem',

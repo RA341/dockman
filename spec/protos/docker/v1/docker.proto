@@ -346,6 +346,7 @@ enum SORT_FIELD {
   NETWORK_TX = 4;
   DISK_R = 5;
   DISK_W = 6;
+  STARTED = 7;
 }
 
 enum ORDER {

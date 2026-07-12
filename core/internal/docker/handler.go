@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
@@ -291,6 +292,13 @@ func getSortFn(field v1.SORT_FIELD) func(a, b contSrv.Stats) int {
 		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.BlockRead, a.BlockRead)
 		}
+	case v1.SORT_FIELD_STARTED:
+		return func(a, b contSrv.Stats) int {
+			// Compare parsed times, not the raw strings: RFC3339Nano trims
+			// trailing zeros, so lexicographic order is wrong across values
+			// with and without fractional seconds.
+			return parseStarted(b.StartedAt).Compare(parseStarted(a.StartedAt))
+		}
 	case v1.SORT_FIELD_NAME:
 		fallthrough
 	default:
@@ -298,6 +306,16 @@ func getSortFn(field v1.SORT_FIELD) func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.Name, a.Name)
 		}
 	}
+}
+
+// parseStarted parses a container's RFC3339 start time, returning the zero time
+// (sorts first) when empty or unparseable (e.g. a never-started container).
+func parseStarted(s string) time.Time {
+	t, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		return time.Time{}
+	}
+	return t
 }
 
 func sendReqToUpdater(addr, key, path string) {

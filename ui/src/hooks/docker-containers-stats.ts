@@ -13,6 +13,7 @@ const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
     [SORT_FIELD.NETWORK_TX]: 'networkTx',
     [SORT_FIELD.DISK_R]: 'blockRead',
     [SORT_FIELD.DISK_W]: 'blockWrite',
+    [SORT_FIELD.STARTED]: 'startedAt',
 };
 
 export function useDockerStats(selectedPage?: string) {
