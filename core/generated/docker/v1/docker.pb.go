@@ -31,6 +31,7 @@ const (
 	SORT_FIELD_NETWORK_TX SORT_FIELD = 4
 	SORT_FIELD_DISK_R     SORT_FIELD = 5
 	SORT_FIELD_DISK_W     SORT_FIELD = 6
+	SORT_FIELD_STARTED    SORT_FIELD = 7
 )
 
 // Enum value maps for SORT_FIELD.
@@ -43,6 +44,7 @@ var (
 		4: "NETWORK_TX",
 		5: "DISK_R",
 		6: "DISK_W",
+		7: "STARTED",
 	}
 	SORT_FIELD_value = map[string]int32{
 		"NAME":       0,
@@ -52,6 +54,7 @@ var (
 		"NETWORK_TX": 4,
 		"DISK_R":     5,
 		"DISK_W":     6,
+		"STARTED":    7,
 	}
 )
 
@@ -3802,7 +3805,7 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"\fcontainerIds\x18\x01 \x03(\tR\fcontainerIds\"U\n" +
 	"\vComposeFile\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12*\n" +
-	"\x10selectedServices\x18\x03 \x03(\tR\x10selectedServices*`\n" +
+	"\x10selectedServices\x18\x03 \x03(\tR\x10selectedServices*m\n" +
 	"\n" +
 	"SORT_FIELD\x12\b\n" +
 	"\x04NAME\x10\x00\x12\a\n" +
@@ -3815,7 +3818,8 @@ const file_docker_v1_docker_proto_rawDesc = "" +
 	"\n" +
 	"\x06DISK_R\x10\x05\x12\n" +
 	"\n" +
-	"\x06DISK_W\x10\x06*\x19\n" +
+	"\x06DISK_W\x10\x06\x12\v\n" +
+	"\aSTARTED\x10\a*\x19\n" +
 	"\x05ORDER\x12\a\n" +
 	"\x03DSC\x10\x00\x12\a\n" +
 	"\x03ASC\x10\x012\xa2\x12\n" +
