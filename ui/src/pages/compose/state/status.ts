@@ -42,7 +42,13 @@ export const useComposeFileState = create<OpenFilesState>()(
                     state.openFiles[key] = <Record<string, Status>>{};
                 }
 
-                state.openFiles[key][path] = createMessage(StatusSchema);
+                // Only initialise when not already tracked. Re-tracking a path
+                // (e.g. when a folder is expanded and its compose child mounts)
+                // must not reset an already-known status to empty, otherwise the
+                // dot flickers to grey until the next poll.
+                if (!state.openFiles[key][path]) {
+                    state.openFiles[key][path] = createMessage(StatusSchema);
+                }
             });
         },
 
