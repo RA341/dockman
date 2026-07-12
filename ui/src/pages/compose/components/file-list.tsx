@@ -84,8 +84,9 @@ export function FileList() {
                      overflow: 'hidden', // Keeps the header and resize handle fixed
                  }}
             >
-                {/* HEADER AREA */}
-                <Toolbar variant="dense" sx={{px: 1, gap: 1}}>
+                {/* HEADER AREA — also hosts the transient root-drop overlay */}
+                <Toolbar variant="dense" sx={{px: 1, gap: 1, position: 'relative'}}>
+                    <RootDropZone/>
                     <Box
                         sx={{
                             display: 'flex',
@@ -137,28 +138,16 @@ export function FileList() {
 
                 <Divider/>
 
-                {/* List area: a flex column so the transient root-drop banner sits
-                    above the scroll area (pushing it down) instead of overlapping
-                    the first row while dragging. */}
-                <Box sx={{
+                <Box ref={autoScroll} sx={{
                     flexGrow: 1,
                     minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    scrollbarGutter: 'stable',
+                    '&::-webkit-scrollbar': {width: '6px'},
+                    '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
                 }}>
-                    <RootDropZone/>
-                    <Box ref={autoScroll} sx={{
-                        flexGrow: 1,
-                        minHeight: 0,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        scrollbarGutter: 'stable',
-                        '&::-webkit-scrollbar': {width: '6px'},
-                        '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
-                    }}>
-                        <FileListInner/>
-                    </Box>
+                    <FileListInner/>
                 </Box>
 
                 {/* Resize Handle */}

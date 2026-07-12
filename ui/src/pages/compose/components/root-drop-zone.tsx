@@ -9,9 +9,11 @@ import {useFileComponents} from "../state/terminal.tsx";
 // dragged. It lets you move an entry back to the root of the tree — otherwise
 // impossible when the root has no sibling file to drop onto.
 //
-// It is rendered in-flow (only during a drag) so it never overlaps the first
-// row: when it appears it pushes the list down, keeping every folder reachable
-// as a drop target. Outside of a drag it renders nothing, taking no space.
+// It is rendered as an ABSOLUTE overlay covering the file-list header (the alias
+// bar), so it never overlaps a file row and — crucially — never shifts the list
+// layout. Shifting the list during a drag moves the dragged row and makes the
+// browser cancel the drag; an absolute overlay avoids that entirely. The parent
+// header must be position:relative.
 export function RootDropZone() {
     const dragging = useFileDrag(state => state.dragging);
     const setDragging = useFileDrag(state => state.setDragging);
@@ -60,18 +62,20 @@ export function RootDropZone() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             sx={{
-                flexShrink: 0,
-                m: 0.75,
-                height: 32,
+                position: 'absolute',
+                inset: 0,
+                zIndex: 6,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 0.75,
+                px: 1,
+                backgroundColor: isOver ? 'rgba(144,202,249,0.22)' : 'rgba(30,30,30,0.97)',
+                color: isOver ? 'primary.main' : 'rgba(255,255,255,0.85)',
+                border: '2px dashed',
+                borderColor: isOver ? 'primary.main' : 'rgba(255,255,255,0.4)',
                 borderRadius: 1,
-                border: '1.5px dashed',
-                borderColor: isOver ? 'primary.main' : 'rgba(255,255,255,0.35)',
-                backgroundColor: isOver ? 'rgba(144,202,249,0.18)' : 'rgba(255,255,255,0.04)',
-                color: isOver ? 'primary.main' : 'rgba(255,255,255,0.7)',
+                cursor: 'copy',
                 transition: 'background-color 80ms, border-color 80ms, color 80ms',
             }}
         >
