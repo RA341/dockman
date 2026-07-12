@@ -55,18 +55,30 @@ func SelfUpdate(ctx context.Context, dkSrv *Service) error {
 		return fmt.Errorf("failed to pull helper image %s: %w", selfUpdateHelperImage, err)
 	}
 
-	// Mount the compose file's parent directory so relative env_file paths such
-	// as `../.env` resolve inside the helper. Guard against mounting the host root.
-	mountDir := filepath.Dir(filepath.Dir(composeFile))
+	composeDir := filepath.Dir(composeFile)
+	// Mount the compose dir's parent so both the compose file and a parent-level
+	// env file (e.g. `env_file: ../.env`) are visible to the helper. Guard against
+	// mounting the host root.
+	mountDir := filepath.Dir(composeDir)
 	if mountDir == "/" || mountDir == "." || mountDir == "" {
-		mountDir = filepath.Dir(composeFile)
+		mountDir = composeDir
 	}
 
-	// sleep briefly so the HTTP response reaches the UI before Dockman is recreated.
-	script := fmt.Sprintf(
-		"set -e; sleep 3; echo 'Updating Dockman...'; docker compose -f %q -p %q up -d --pull always %q",
-		composeFile, project, service,
-	)
+	// The helper talks to the daemon over the raw docker socket (not Dockman's
+	// proxy) and recreates ONLY the Dockman service: --no-deps so sidecars such
+	// as a socket proxy are never touched, --force-recreate to guarantee a fresh
+	// container on the pulled image. A parent-level `../.env` is passed
+	// explicitly since compose only auto-loads a .env from the project directory.
+	// Identity is passed in via env, resolved by Dockman from its own container.
+	const script = `set -e
+sleep 3
+cd "$DK_COMPOSE_DIR"
+ENVFLAG=""
+[ -f ../.env ] && ENVFLAG="--env-file ../.env"
+PROJ=""
+[ -n "$DK_PROJECT" ] && PROJ="-p $DK_PROJECT"
+echo "Updating Dockman ($DK_SERVICE)..."
+docker compose $ENVFLAG $PROJ -f "$DK_COMPOSE_FILE" up -d --pull always --build --no-deps --force-recreate "$DK_SERVICE"`
 
 	created, err := cli.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Name: selfUpdateContainerName,
@@ -74,6 +86,12 @@ func SelfUpdate(ctx context.Context, dkSrv *Service) error {
 			Image:      selfUpdateHelperImage,
 			Entrypoint: []string{"sh"},
 			Cmd:        []string{"-c", script},
+			Env: []string{
+				"DK_COMPOSE_FILE=" + composeFile,
+				"DK_COMPOSE_DIR=" + composeDir,
+				"DK_PROJECT=" + project,
+				"DK_SERVICE=" + service,
+			},
 			// Never let Dockman mistake the helper for itself.
 			Labels: map[string]string{dockmanContainerLabel: "false"},
 		},
