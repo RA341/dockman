@@ -24,7 +24,7 @@ import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useFileDelete} from "../dialogs/file-delete.tsx";
 import {useFileRename} from "../dialogs/file-rename.tsx";
-import {useAliasStore, useHostStore, useOpenFiles} from "../state/files.ts";
+import {useAliasStore, useFileDrag, useHostStore, useOpenFiles} from "../state/files.ts";
 import {useConfig} from "../../../hooks/config.ts";
 import {useComposeFileState} from "../state/status.ts";
 import {getContextKey} from "../../../context/tab-context.tsx";
@@ -35,10 +35,18 @@ import {stripQueryParams} from "../../../lib/strings.ts";
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
     const {renameFile, uploadFilesFromPC} = useFiles();
+    const setDragging = useFileDrag(state => state.setDragging);
 
     const handleDragStart = (e: React.DragEvent) => {
         e.dataTransfer.setData("sourcePath", entry.filename);
         e.dataTransfer.effectAllowed = "move";
+        // Signal a drag is in progress so the transient "drop to root" banner appears.
+        setDragging(true);
+    };
+
+    const handleDragEnd = () => {
+        // Always clear the flag when the drag ends (dropped or cancelled).
+        setDragging(false);
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -69,7 +77,8 @@ export const useFileDnD = (entry: FsEntry) => {
         if (sourcePath) {
             if (sourcePath === entry.filename) return; // Can't drop on self
             const fileName = sourcePath.split('/').pop() || "";
-            const newPath = `${targetDir}/${fileName}`;
+            // At the root targetDir is "" — avoid producing a leading-slash "/name".
+            const newPath = targetDir === "" ? fileName : `${targetDir}/${fileName}`;
             // Only trigger if the path actually changes
             if (sourcePath !== newPath) {
                 await renameFile(sourcePath, newPath);
@@ -89,6 +98,7 @@ export const useFileDnD = (entry: FsEntry) => {
         dndProps: {
             draggable: true,
             onDragStart: handleDragStart,
+            onDragEnd: handleDragEnd,
             onDragOver: handleDragOver,
             onDragLeave: handleDragLeave,
             onDrop: handleDrop,

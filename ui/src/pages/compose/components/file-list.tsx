@@ -10,6 +10,8 @@ import {useFileSearch} from "../dialogs/file-search.tsx";
 import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useSideBarAction} from "../state/files.ts";
 import {YamlIcon} from "./file-icon.tsx";
+import {RootDropZone} from "./root-drop-zone.tsx";
+import {useDragAutoScroll} from "../hooks/drag-autoscroll.ts";
 import {useNavigate} from "react-router-dom";
 import {useEditorUrl} from "../../../lib/editor.ts";
 import {formatDockyaml} from "./viewer-dockyml.tsx";
@@ -63,6 +65,7 @@ export function FileList() {
     }, [])
 
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('right')
+    const autoScroll = useDragAutoScroll()
 
     return (
         <>
@@ -134,15 +137,28 @@ export function FileList() {
 
                 <Divider/>
 
+                {/* List area: a relative wrapper so the transient root-drop banner
+                    can overlay the top without scrolling or reflowing the list. */}
                 <Box sx={{
                     flexGrow: 1,
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    scrollbarGutter: 'stable',
-                    '&::-webkit-scrollbar': {width: '6px'},
-                    '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
+                    minHeight: 0,
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
                 }}>
-                    <FileListInner/>
+                    <RootDropZone/>
+                    <Box ref={autoScroll} sx={{
+                        flexGrow: 1,
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        scrollbarGutter: 'stable',
+                        '&::-webkit-scrollbar': {width: '6px'},
+                        '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
+                    }}>
+                        <FileListInner/>
+                    </Box>
                 </Box>
 
                 {/* Resize Handle */}
