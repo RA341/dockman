@@ -3,6 +3,7 @@ package files
 import (
 	b64 "encoding/base64"
 	"errors"
+	"io/fs"
 	"net/http"
 	"strconv"
 
@@ -56,12 +57,18 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 	reader, modTime, err := h.srv.LoadFilePath(filename, getHost, download)
 	if err != nil {
 		log.Error().Err(err).Str("path", filename).Msg("Error loading file")
-		if errors.Is(err, ErrFileNotSupported) {
+		switch {
+		case errors.Is(err, ErrFileNotSupported):
 			http.Error(w, "binary file detected, it will not be opened", http.StatusConflict)
-			return
+		case errors.Is(err, fs.ErrNotExist):
+			http.Error(w, "file not found", http.StatusNotFound)
+		case errors.Is(err, fs.ErrPermission):
+			http.Error(w, "permission denied: the server process cannot read this file. "+
+				"Check the file's owner/permissions, or grant the container CAP_DAC_READ_SEARCH.",
+				http.StatusForbidden)
+		default:
+			http.Error(w, "failed to read file", http.StatusInternalServerError)
 		}
-
-		http.Error(w, "Filename not found", http.StatusBadRequest)
 		return
 	}
 	defer fu.Close(reader)
