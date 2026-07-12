@@ -1,6 +1,12 @@
 import {useCallback, useEffect, useRef} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, Toolbar, Tooltip, Typography} from '@mui/material'
-import {Add as AddIcon, Cached, Search as SearchIcon} from '@mui/icons-material'
+import {
+    Add as AddIcon,
+    Cached,
+    PushPin as PushPinIcon,
+    PushPinOutlined as PushPinOutlinedIcon,
+    Search as SearchIcon
+} from '@mui/icons-material'
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
 import {useFileComponents} from "../state/terminal.tsx";
 import useResizeBar from "../hooks/resize-hook.ts";
@@ -8,7 +14,7 @@ import {FileItem} from "./file-item.tsx";
 import {useFiles} from "../../../context/file-context.tsx"
 import {useFileSearch} from "../dialogs/file-search.tsx";
 import {useFileCreate} from "../dialogs/file-create.tsx";
-import {useSideBarAction} from "../state/files.ts";
+import {usePinnedMode, useSideBarAction} from "../state/files.ts";
 import {YamlIcon} from "./file-icon.tsx";
 import {useNavigate} from "react-router-dom";
 import {useEditorUrl} from "../../../lib/editor.ts";
@@ -23,6 +29,8 @@ export function FileList() {
     const nav = useNavigate()
 
     const isSidebarCollapsed = useSideBarAction(state => state.isSidebarOpen)
+    const pinnedMode = usePinnedMode(state => state.enabled)
+    const togglePinnedMode = usePinnedMode(state => state.toggle)
 
     const {listFiles} = useFiles()
     const {host, alias} = useFileComponents()
@@ -117,6 +125,15 @@ export function FileList() {
                             </IconButton>
                         </Tooltip>
 
+                        <Tooltip arrow
+                                 title={pinnedMode ? "Pinned mode on — pinned files stay fixed while scrolling" : "Pinned mode off"}>
+                            <IconButton size="small" onClick={togglePinnedMode}
+                                        color={pinnedMode ? "primary" : "default"}>
+                                {pinnedMode ? <PushPinIcon fontSize="small"/> :
+                                    <PushPinOutlinedIcon fontSize="small"/>}
+                            </IconButton>
+                        </Tooltip>
+
                         <Tooltip arrow title={<ShortcutFormatter title="Add" keyCombo={["ALT", "A"]}/>}>
                             <IconButton size="small" onClick={showFileAdd} color="success">
                                 <AddIcon fontSize="small"/>
@@ -136,11 +153,10 @@ export function FileList() {
 
                 <Box sx={{
                     flexGrow: 1,
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    scrollbarGutter: 'stable',
-                    '&::-webkit-scrollbar': {width: '6px'},
-                    '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'}
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
                 }}>
                     <FileListInner/>
                 </Box>
@@ -169,9 +185,18 @@ export function FileList() {
     )
 }
 
+const scrollSx = {
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    scrollbarGutter: 'stable',
+    '&::-webkit-scrollbar': {width: '6px'},
+    '&::-webkit-scrollbar-thumb': {backgroundColor: 'rgba(255,255,255,0.1)'},
+} as const;
+
 const FileListInner = () => {
     const {files, isLoading} = useFiles()
     const {host, alias} = useFileComponents()
+    const pinnedMode = usePinnedMode(state => state.enabled)
 
     const openFiles = useComposeFileState(state => state.openFiles)
     const setStatus = useComposeFileState(state => state.setStatus)
@@ -200,23 +225,53 @@ const FileListInner = () => {
         return () => clearInterval(interval)
     }, [])
 
+    if (isLoading && files.length < 1) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <CircularProgress/>
+            </Box>
+        )
+    }
 
-    return (
-        <>
-            {isLoading && files.length < 1 ? (
-                <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                    <CircularProgress/>
+    // Pinned entries are always sorted first, so they form a contiguous prefix;
+    // the boundary is the first non-pinned entry (all-pinned -> everything).
+    const firstUnpinned = files.findIndex(f => !f.pinned)
+    const pinnedCount = firstUnpinned === -1 ? files.length : firstUnpinned
+    const hasPinned = pinnedCount > 0
+    const hasRest = pinnedCount < files.length
+
+    // Render a slice while preserving each entry's ORIGINAL index into `files`
+    // (used as the depthIndex that drives lazy-loading of nested folders).
+    const renderRange = (start: number, end: number) =>
+        files.slice(start, end).map((ele, i) => (
+            <FileItem key={ele.filename} entry={ele} index={start + i}/>
+        ))
+
+    // Pinned mode: pinned entries stay fixed at the top, only the rest scrolls.
+    if (pinnedMode && hasPinned) {
+        return (
+            <Box sx={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0}}>
+                <Box sx={{flexShrink: 0, maxHeight: '45%', ...scrollSx}}>
+                    <List>{renderRange(0, pinnedCount)}</List>
                 </Box>
-            ) : (
-                <List>
-                    {files.map((ele, inde) =>
-                        <FileItem
-                            key={ele.filename}
-                            entry={ele}
-                            index={inde}/>
-                    )}
-                </List>
-            )}
-        </>
-    );
+                <Divider sx={{borderBottomWidth: 2, borderColor: 'divider'}}/>
+                <Box sx={{flexGrow: 1, minHeight: 0, ...scrollSx}}>
+                    <List>{renderRange(pinnedCount, files.length)}</List>
+                </Box>
+            </Box>
+        )
+    }
+
+    // Default: a single scroll area with a visual separator after the pinned run.
+    return (
+        <Box sx={{flexGrow: 1, minHeight: 0, height: '100%', ...scrollSx}}>
+            <List>
+                {renderRange(0, pinnedCount)}
+                {hasPinned && hasRest && (
+                    <Divider component="div" sx={{my: 0.5, borderBottomWidth: 2, borderColor: 'divider'}}/>
+                )}
+                {renderRange(pinnedCount, files.length)}
+            </List>
+        </Box>
+    )
 };

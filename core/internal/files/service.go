@@ -614,6 +614,14 @@ func (s *Service) sortFiles(a, b *Entry, host string) int {
 	return strings.Compare(a.fullpath, b.fullpath)
 }
 
+// IsPinned reports whether an entry's basename is pinned in the host's
+// dockman.yml (pinnedFiles). Exposed so the RPC layer can flag pinned entries
+// for the UI without duplicating the pin lookup.
+func (s *Service) IsPinned(host, fullpath string) bool {
+	_, ok := s.dockYml(host).PinnedFiles[filepath.Base(fullpath)]
+	return ok
+}
+
 // getSortRank determines priority: dotfiles, directories, then files by getFileSortRank
 func (s *Service) getSortRank(entry *Entry, host string) int {
 	conf := s.dockYml(host)

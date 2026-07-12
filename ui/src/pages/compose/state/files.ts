@@ -1,6 +1,20 @@
 import {create} from 'zustand'
 import {getContextKey} from "../../../context/tab-context.tsx";
 import {immer} from "zustand/middleware/immer";
+import {persist} from "zustand/middleware";
+
+// usePinnedMode toggles the "pinned scroll" layout: when enabled, pinned
+// entries stay fixed at the top of the file tree and only the rest scrolls.
+// Persisted so the choice survives reloads.
+export const usePinnedMode = create<{ enabled: boolean; toggle: () => void }>()(
+    persist(
+        (set) => ({
+            enabled: false,
+            toggle: () => set((state) => ({enabled: !state.enabled})),
+        }),
+        {name: "dockman-pinned-mode"}
+    )
+);
 
 export const useAliasStore = create<{
     alias: string
