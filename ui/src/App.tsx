@@ -362,7 +362,17 @@ const darkTheme = createTheme({
                 body: {
                     height: '100%',
                     overflow: 'hidden',
+                    // Disable selecting UI chrome text (labels, buttons, table cells…);
+                    // it reads as a native app and avoids accidental highlights.
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
                     ...scrollbarStyles,
+                },
+                // …but keep selection where content actually matters: form fields,
+                // the code editor (Monaco), the terminal/logs (xterm) and code blocks.
+                'input, textarea, [contenteditable="true"], pre, code, .monaco-editor, .monaco-editor *, .xterm, .xterm *': {
+                    userSelect: 'text',
+                    WebkitUserSelect: 'text',
                 },
                 '*': scrollbarStyles,
             },
