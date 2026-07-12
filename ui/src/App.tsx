@@ -29,6 +29,7 @@ import ContainersPage from "./pages/containers/containers.tsx";
 import ImagesPage from "./pages/images/images.tsx";
 import ImageInspectPage from "./pages/images/inspect.tsx";
 import VolumesPage from "./pages/volumes/volumes.tsx";
+import VolumesInspect from "./pages/volumes/volumes-inspect.tsx";
 import NetworksPage from "./pages/networks/networks.tsx";
 import NetworksInspect from "./pages/networks/networks-inspect.tsx";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
@@ -83,6 +84,7 @@ export function App() {
 
                                         <Route path="volumes">
                                             <Route index element={<VolumesPage/>}/>
+                                            <Route path="inspect/:id" element={<VolumesInspect/>}/>
                                         </Route>
 
                                         <Route path="networks">

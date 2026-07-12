@@ -39,6 +39,7 @@ service DockerService {
   rpc VolumeList(ListVolumesRequest) returns (ListVolumesResponse) {}
   rpc VolumeCreate(CreateVolumeRequest) returns (CreateVolumeResponse) {}
   rpc VolumeDelete(DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
+  rpc VolumeInspect(VolumeInspectRequest) returns (VolumeInspectResponse) {}
 
   // networks
   rpc NetworkList(ListNetworksRequest) returns (ListNetworksResponse) {}
@@ -282,6 +283,27 @@ message DeleteVolumeRequest {
 }
 
 message DeleteVolumeResponse {
+}
+
+message VolumeInspectRequest {
+  string volumeName = 1;
+}
+
+message VolumeInspectResponse {
+  VolumeInspectInfo inspect = 1;
+}
+
+message VolumeInspectInfo {
+  Volume vol = 1;
+  repeated VolumeContainerInspect containers = 2;
+}
+
+message VolumeContainerInspect {
+  string name = 1;
+  string id = 2;
+  string destination = 3;
+  bool rw = 4;
+  string composeProject = 5;
 }
 
 // Network-related messages

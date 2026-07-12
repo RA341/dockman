@@ -42,6 +42,68 @@ func (h *Handler) VolumeList(ctx context.Context, req *connect.Request[v1.ListVo
 	return connect.NewResponse(&v1.ListVolumesResponse{Volumes: rpcVolumes}), nil
 }
 
+func (h *Handler) VolumeInspect(ctx context.Context, req *connect.Request[v1.VolumeInspectRequest]) (*connect.Response[v1.VolumeInspectResponse], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	name := req.Msg.VolumeName
+	if name == "" {
+		return nil, fmt.Errorf("volumeName is required")
+	}
+
+	// Reuse the list so the metadata matches exactly what the volumes table shows.
+	volumes, err := dkSrv.Container.VolumesList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var volProto *v1.Volume
+	for _, vol := range volumes {
+		if vol.Name != name {
+			continue
+		}
+		volProto = &v1.Volume{
+			Name:               vol.Name,
+			ContainerID:        vol.ContainerID,
+			Size:               safeGetSize(vol),
+			CreatedAt:          vol.CreatedAt,
+			Labels:             getVolumeProjectNameFromLabel(vol.Labels),
+			MountPoint:         vol.Mountpoint,
+			ComposePath:        h.getComposeFilePath(vol.ComposePath),
+			ComposeProjectName: vol.ComposeProjectName,
+		}
+		break
+	}
+	if volProto == nil {
+		return nil, fmt.Errorf("volume %q not found", name)
+	}
+
+	conts, err := dkSrv.Container.VolumeContainers(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	rpcConts := make([]*v1.VolumeContainerInspect, 0, len(conts))
+	for _, c := range conts {
+		rpcConts = append(rpcConts, &v1.VolumeContainerInspect{
+			Name:           c.Name,
+			Id:             c.ID,
+			Destination:    c.Destination,
+			Rw:             c.RW,
+			ComposeProject: c.ComposeProject,
+		})
+	}
+
+	return connect.NewResponse(&v1.VolumeInspectResponse{
+		Inspect: &v1.VolumeInspectInfo{
+			Vol:        volProto,
+			Containers: rpcConts,
+		},
+	}), nil
+}
+
 func safeGetSize(vol contSrv.VolumeInfo) int64 {
 	if vol.UsageData == nil {
 		return 0

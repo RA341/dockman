@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/mount"
@@ -92,6 +93,53 @@ func (s *Service) VolumesList(ctx context.Context) ([]VolumeInfo, error) {
 	}
 
 	return volumes, nil
+}
+
+// VolumeContainer describes one container mounting a given volume.
+type VolumeContainer struct {
+	ID             string
+	Name           string
+	Destination    string
+	RW             bool
+	ComposeProject string
+}
+
+// VolumeContainers returns every container that mounts the named volume, along
+// with where it is mounted and whether it is read-write. Docker's volume
+// inspect does not report this, so it is derived from the containers' mounts.
+func (s *Service) VolumeContainers(ctx context.Context, volumeName string) ([]VolumeContainer, error) {
+	filters := client.Filters{}
+	filters.Add("volume", volumeName)
+
+	resp, err := s.Client.ContainerList(ctx, client.ContainerListOptions{
+		All:     true,
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers for volume %s: %w", volumeName, err)
+	}
+
+	out := make([]VolumeContainer, 0, len(resp.Items))
+	for _, c := range resp.Items {
+		name := ""
+		if len(c.Names) > 0 {
+			name = strings.TrimPrefix(c.Names[0], "/")
+		}
+		for _, mn := range c.Mounts {
+			if mn.Type == mount.TypeVolume && mn.Name == volumeName {
+				out = append(out, VolumeContainer{
+					ID:             c.ID,
+					Name:           name,
+					Destination:    mn.Destination,
+					RW:             mn.RW,
+					ComposeProject: c.Labels[api.ProjectLabel],
+				})
+				break // one row per container even if it mounts the volume twice
+			}
+		}
+	}
+
+	return out, nil
 }
 
 func (s *Service) VolumesCreate(ctx context.Context, name string) (volume.Volume, error) {

@@ -3,6 +3,7 @@ import {
     Box,
     Checkbox,
     Chip,
+    IconButton,
     Paper,
     Stack,
     Table,
@@ -12,9 +13,15 @@ import {
     TableHead,
     TableRow,
     TableSortLabel,
+    Tooltip,
     Typography
 } from '@mui/material';
-import {CalendarToday as CalendarIcon, FolderOpen as FolderIcon} from '@mui/icons-material';
+import {
+    CalendarToday as CalendarIcon,
+    FolderOpen as FolderIcon,
+    InfoOutlined as InspectIcon
+} from '@mui/icons-material';
+import {useNavigate} from "react-router-dom";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import type {Volume} from "../../gen/docker/v1/docker_pb.ts";
 import {formatBytes} from "../../lib/editor.ts";
@@ -38,6 +45,7 @@ export const VolumeTable = ({
                             }: VolumeTableProps) => {
     const {handleCopy, copiedId} = useCopyButton();
     const {dockYaml} = useConfig();
+    const nav = useNavigate();
 
     const handleRowSelection = (volumeName: string) => {
         if (!onSelectionChange) return;
@@ -135,6 +143,27 @@ export const VolumeTable = ({
                             sx={{fontWeight: 700, fontSize: '0.65rem', height: 20, color: 'text.disabled'}}
                         />
                     )}
+                </TableCell>
+            )
+        },
+        Actions: {
+            getValue: () => 0,
+            header: () => <TableCell sx={headerStyles}>ACTIONS</TableCell>,
+            cell: (volume) => (
+                <TableCell>
+                    <Tooltip title="Inspect Volume" arrow>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                nav(`inspect/${encodeURIComponent(volume.name)}`);
+                            }}
+                            sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.5}}
+                        >
+                            <InspectIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
                 </TableCell>
             )
         },
