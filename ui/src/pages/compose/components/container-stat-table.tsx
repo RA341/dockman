@@ -29,7 +29,7 @@ import {
     RestartAlt as RestartIcon,
     Terminal as TerminalIcon
 } from "@mui/icons-material"
-import {useState} from "react"
+import {useState, useSyncExternalStore} from "react"
 import {type ContainerStats, DockerService, ORDER, SORT_FIELD} from "../../../gen/docker/v1/docker_pb"
 import {formatBytes, getUsageColor} from "../../../lib/editor.ts";
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
@@ -268,11 +268,12 @@ const RWData = ({up, down, type}: { up: number; down: number, type: 'net' | 'dis
 
 // formatUptime renders how long ago a container started, from an RFC3339 string:
 // "3d 4h", "5h 12m", "8m", "42s". Empty / zero-time (never started) -> "—".
-function formatUptime(startedAt: string): string {
+// `now` is passed in so the value can tick live (see useNow).
+function formatUptime(startedAt: string, now: number): string {
     if (!startedAt || startedAt.startsWith('0001')) return '—';
     const start = Date.parse(startedAt);
     if (isNaN(start)) return '—';
-    let secs = Math.floor((Date.now() - start) / 1000);
+    let secs = Math.floor((now - start) / 1000);
     if (secs < 0) secs = 0;
     const d = Math.floor(secs / 86400);
     const h = Math.floor((secs % 86400) / 3600);
@@ -283,14 +284,43 @@ function formatUptime(startedAt: string): string {
     return `${secs}s`;
 }
 
+// A single shared 1s ticker drives every uptime cell so they count up live,
+// without re-rendering the rest of the table (only cells calling useNow update).
+// The interval only runs while at least one cell is mounted.
+let tickNow = Date.now();
+const tickListeners = new Set<() => void>();
+let tickTimer: ReturnType<typeof setInterval> | null = null;
+
+function subscribeTick(cb: () => void): () => void {
+    tickListeners.add(cb);
+    if (tickTimer === null) {
+        tickTimer = setInterval(() => {
+            tickNow = Date.now();
+            tickListeners.forEach((l) => l());
+        }, 1000);
+    }
+    return () => {
+        tickListeners.delete(cb);
+        if (tickListeners.size === 0 && tickTimer !== null) {
+            clearInterval(tickTimer);
+            tickTimer = null;
+        }
+    };
+}
+
+function useNow(): number {
+    return useSyncExternalStore(subscribeTick, () => tickNow);
+}
+
 function StartedCell({startedAt}: { startedAt: string }) {
+    const now = useNow();
     const running = Boolean(startedAt) && !startedAt.startsWith('0001');
     const absolute = running ? new Date(startedAt).toLocaleString() : 'not running';
     return (
         <Tooltip title={absolute} arrow>
             <Typography variant="caption"
                         sx={{fontFamily: 'monospace', color: 'text.secondary', whiteSpace: 'nowrap'}}>
-                {formatUptime(startedAt)}
+                {formatUptime(startedAt, now)}
             </Typography>
         </Tooltip>
     );
