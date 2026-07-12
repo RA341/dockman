@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -17,9 +18,9 @@ import (
 	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
-	"github.com/RA341/dockman/pkg/syncmap"
 
 	"connectrpc.com/connect"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/container"
 	"github.com/rs/zerolog/log"
 )
@@ -61,42 +62,117 @@ func (h *Handler) getHost(ctx context.Context) (string, *Service, error) {
 ////////////////////////////////////////////
 
 func (h *Handler) ComposeFileStatus(ctx context.Context, c *connect.Request[v1.ComposeFileStatusRequest]) (*connect.Response[v1.ComposeFileStatusResponse], error) {
-	var results = syncmap.Map[string, *v1.Status]{}
-
-	wg := sync.WaitGroup{}
-
-	for _, file := range c.Msg.Files {
-		wg.Go(func() {
-			err := h.WithClient(ctx, func(dkSrv *Service) error {
-				stat, err := dkSrv.Compose.Status(ctx, file)
-				if err != nil {
-					return err
-				}
-
-				results.Store(file, &v1.Status{
-					ServicesUp:        int32(stat.UpCount),
-					ServicesDown:      int32(stat.DownCount),
-					ServicesHealthy:   int32(stat.HealthyCount),
-					ServicesUnHealthy: int32(stat.UnhealthyCount),
-				})
-
-				return nil
-			})
-			if err != nil {
-				log.Warn().Str("file", file).Err(err).Msg("Failed to get compose status")
-			}
-		})
-	}
-	wg.Wait()
-
 	finalResults := make(map[string]*v1.Status, len(c.Msg.Files))
-	results.Range(func(key string, value *v1.Status) bool {
-		finalResults[key] = value
-		return true
+
+	err := h.WithClient(ctx, func(dkSrv *Service) error {
+		// One container listing for the whole host, aggregated per compose file
+		// via the compose config-files label. This replaces one `docker compose
+		// ps` subprocess per stack, so reporting the status of every stack (even
+		// collapsed ones) stays cheap no matter how many there are.
+		containers, err := dkSrv.Container.ContainersList(ctx)
+		if err != nil {
+			return err
+		}
+
+		byFile := make(map[string]*stackStatus)
+		for i := range containers {
+			ct := containers[i]
+			cfg := ct.Labels[api.ConfigFilesLabel]
+			if cfg == "" {
+				continue
+			}
+			// config_files may list several files (compose + overrides)
+			for _, p := range strings.Split(cfg, ",") {
+				if p = strings.TrimSpace(p); p == "" {
+					continue
+				}
+				st := byFile[p]
+				if st == nil {
+					st = &stackStatus{}
+					byFile[p] = st
+				}
+				st.add(ct)
+			}
+		}
+
+		for _, file := range c.Msg.Files {
+			absPath, resolveErr := dkSrv.Compose.ComposeAbsPath(file)
+			if resolveErr != nil {
+				log.Debug().Str("file", file).Err(resolveErr).Msg("could not resolve compose path for status")
+				finalResults[file] = &v1.Status{}
+				continue
+			}
+			if st, ok := byFile[absPath]; ok {
+				finalResults[file] = st.toProto()
+			} else {
+				// no containers for this stack -> stopped
+				finalResults[file] = &v1.Status{}
+			}
+		}
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
 	return connect.NewResponse(&v1.ComposeFileStatusResponse{
 		Status: finalResults,
 	}), nil
+}
+
+// stackStatus aggregates the container states of a single compose stack.
+//
+// It maps onto the v1.Status fields the UI already consumes. ServicesDown carries
+// the "in error" count — a service that crashed, is dead, is stuck restarting, or
+// exited non-zero — so the UI can distinguish a real problem (red) from a stack
+// that is simply stopped (grey).
+type stackStatus struct {
+	up        int32
+	failed    int32
+	healthy   int32
+	unhealthy int32
+}
+
+func (s *stackStatus) add(ct container.Summary) {
+	switch string(ct.State) {
+	case "running":
+		s.up++
+		switch ct.Health.Status {
+		case container.Healthy:
+			s.healthy++
+		case container.Unhealthy:
+			s.unhealthy++
+		}
+	case "restarting", "dead":
+		s.failed++
+	case "exited":
+		if containerExitCode(ct) != 0 {
+			s.failed++
+		}
+		// exited(0) / created / paused / removing -> cleanly stopped, not counted
+	}
+}
+
+func (s *stackStatus) toProto() *v1.Status {
+	return &v1.Status{
+		ServicesUp:        s.up,
+		ServicesDown:      s.failed,
+		ServicesHealthy:   s.healthy,
+		ServicesUnHealthy: s.unhealthy,
+	}
+}
+
+// containerExitCode parses the exit code out of a container summary status line,
+// e.g. "Exited (137) 2 hours ago" -> 137. Returns 0 when it can't be determined.
+func containerExitCode(ct container.Summary) int {
+	l := strings.IndexByte(ct.Status, '(')
+	r := strings.IndexByte(ct.Status, ')')
+	if l >= 0 && r > l {
+		if code, err := strconv.Atoi(strings.TrimSpace(ct.Status[l+1 : r])); err == nil {
+			return code
+		}
+	}
+	return 0
 }
 
 func (h *Handler) ComposeUp(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {

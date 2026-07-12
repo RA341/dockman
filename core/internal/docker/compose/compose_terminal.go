@@ -407,6 +407,19 @@ type StackState struct {
 	UnhealthyCount uint
 }
 
+// ComposeAbsPath returns the absolute path of the compose file as Docker Compose
+// records it in the com.docker.compose.project.config_files label. It reuses the
+// exact resolution the compose commands use (working dir = Fs.Root(), -f Relpath),
+// so running containers can be matched back to their compose file from a single
+// container listing — no per-stack `docker compose ps` process.
+func (c *Service) ComposeAbsPath(filename string) (string, error) {
+	parts, err := c.parser(filename, c.hostname)
+	if err != nil {
+		return "", err
+	}
+	return parts.Fs.Join(parts.Fs.Root(), parts.Relpath), nil
+}
+
 func (c *Service) Validate(ctx context.Context, filename string) []error {
 	buf := new(bytes.Buffer)
 	err := c.withCmd(ctx, filename, buf,

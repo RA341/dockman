@@ -146,8 +146,10 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     }
 
     useEffect(() => {
-        if (!folderOpen && !isComposeFolder) {
-            closeComposeStatus(entry.filename)
+        if (!folderOpen) {
+            // Stop polling files nested inside the collapsed folder, but keep the
+            // folder's own stack status so its dot stays visible while collapsed.
+            closeComposeStatus(entry.filename, entry.isComposeFolder)
         }
     }, [folderOpen]);
 
@@ -174,10 +176,13 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const fileStatus = useComposeFileState(state => state.openFiles[getContextKey()]?.[entry.isComposeFolder])
     useEffect(() => {
-        if (isComposeFolder) {
+        // Track the stack status for any folder that contains a compose file,
+        // regardless of the useComposeFolders display mode, so the status dot is
+        // shown even while the folder is collapsed.
+        if (entry.isComposeFolder) {
             trackComposeStatus(entry.isComposeFolder);
         }
-    }, [isComposeFolder, entry.isComposeFolder]);
+    }, [entry.isComposeFolder]);
 
     const navigate = useNavigate()
     const createFileUrl = useEditorUrl()
@@ -502,7 +507,7 @@ const StatusIndicator = ({fileStatus}: { fileStatus: Status }) => {
 
     return ((fileStatus) &&
         <Tooltip
-            title={`${fileStatus.servicesUp} Up, ${fileStatus.servicesDown} Down, ${fileStatus.servicesHealthy} Healthy`}
+            title={`${fileStatus.servicesUp} running · ${fileStatus.servicesDown} failed · ${fileStatus.servicesHealthy} healthy`}
             arrow placement="right">
             <Box
                 sx={{
@@ -526,10 +531,11 @@ const getStatusTheme = (status: Status | undefined) => {
         return {color: 'text.disabled', label: ''};
     }
 
-    if (status.servicesUnHealthy > 0) return {color: 'error.main', label: 'Unhealthy'};
-    if (status.servicesDown > 0 && status.servicesUp > 0) return {color: 'warning.main', label: 'Partially Up'};
-    if (status.servicesDown > 0 && status.servicesUp === 0) return {color: 'error.light', label: 'Down'};
-    if (status.servicesHealthy > 0) return {color: 'success.main', label: 'Healthy'};
-    if (status.servicesUp > 0) return {color: 'success.light', label: 'Running'};
+    // servicesDown carries the "in error" count (crashed / dead / restarting /
+    // exited non-zero). Precedence: error > unhealthy > running > stopped.
+    if (status.servicesDown > 0) return {color: 'error.main', label: 'Error'};
+    if (status.servicesUnHealthy > 0) return {color: 'warning.main', label: 'Unhealthy'};
+    if (status.servicesUp > 0) return {color: 'success.main', label: 'Running'};
+    // stopped -> hollow grey dot
     return {color: 'text.disabled', label: ''};
 };

@@ -7,7 +7,7 @@ import {create} from "zustand";
 interface OpenFilesState {
     // contextKey -> Set of directory paths
     openFiles: Record<string, Record<string, Status>>;
-    delete: (dir: string) => void;
+    delete: (dir: string, keep?: string) => void;
     trackComposeStatus: (path: string) => void;
     setStatus: (status: { [p: string]: Status }) => void
 }
@@ -16,7 +16,7 @@ export const useComposeFileState = create<OpenFilesState>()(
     immer((set) => ({
         openFiles: {},
 
-        delete: (dir: string) => {
+        delete: (dir: string, keep?: string) => {
             const key = getContextKey();
             set((state) => {
                 const openStatuses = state.openFiles[key];
@@ -25,8 +25,10 @@ export const useComposeFileState = create<OpenFilesState>()(
                 }
 
                 for (const trackingFile of Object.keys(openStatuses)) {
-                    if (trackingFile.startsWith(dir)) {
-                        console.log(`Removing ${trackingFile} because ${dir} was closed`)
+                    // keep lets a collapsed stack folder retain its own compose
+                    // status (so its dot stays visible) while dropping the files
+                    // nested inside it.
+                    if (trackingFile !== keep && trackingFile.startsWith(dir)) {
                         delete state.openFiles[key][trackingFile];
                     }
                 }
