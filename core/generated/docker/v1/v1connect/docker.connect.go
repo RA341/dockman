@@ -109,6 +109,9 @@ const (
 	// DockerServiceVolumeDeleteProcedure is the fully-qualified name of the DockerService's
 	// VolumeDelete RPC.
 	DockerServiceVolumeDeleteProcedure = "/docker.v1.DockerService/VolumeDelete"
+	// DockerServiceVolumeInspectProcedure is the fully-qualified name of the DockerService's
+	// VolumeInspect RPC.
+	DockerServiceVolumeInspectProcedure = "/docker.v1.DockerService/VolumeInspect"
 	// DockerServiceNetworkListProcedure is the fully-qualified name of the DockerService's NetworkList
 	// RPC.
 	DockerServiceNetworkListProcedure = "/docker.v1.DockerService/NetworkList"
@@ -155,6 +158,7 @@ type DockerServiceClient interface {
 	VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	VolumeCreate(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	VolumeDelete(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
+	VolumeInspect(context.Context, *connect.Request[v1.VolumeInspectRequest]) (*connect.Response[v1.VolumeInspectResponse], error)
 	// networks
 	NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
@@ -329,6 +333,12 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("VolumeDelete")),
 			connect.WithClientOptions(opts...),
 		),
+		volumeInspect: connect.NewClient[v1.VolumeInspectRequest, v1.VolumeInspectResponse](
+			httpClient,
+			baseURL+DockerServiceVolumeInspectProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("VolumeInspect")),
+			connect.WithClientOptions(opts...),
+		),
 		networkList: connect.NewClient[v1.ListNetworksRequest, v1.ListNetworksResponse](
 			httpClient,
 			baseURL+DockerServiceNetworkListProcedure,
@@ -384,6 +394,7 @@ type dockerServiceClient struct {
 	volumeList        *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
 	volumeCreate      *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
 	volumeDelete      *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
+	volumeInspect     *connect.Client[v1.VolumeInspectRequest, v1.VolumeInspectResponse]
 	networkList       *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
 	networkCreate     *connect.Client[v1.CreateNetworkRequest, v1.CreateNetworkResponse]
 	networkDelete     *connect.Client[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse]
@@ -520,6 +531,11 @@ func (c *dockerServiceClient) VolumeDelete(ctx context.Context, req *connect.Req
 	return c.volumeDelete.CallUnary(ctx, req)
 }
 
+// VolumeInspect calls docker.v1.DockerService.VolumeInspect.
+func (c *dockerServiceClient) VolumeInspect(ctx context.Context, req *connect.Request[v1.VolumeInspectRequest]) (*connect.Response[v1.VolumeInspectResponse], error) {
+	return c.volumeInspect.CallUnary(ctx, req)
+}
+
 // NetworkList calls docker.v1.DockerService.NetworkList.
 func (c *dockerServiceClient) NetworkList(ctx context.Context, req *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error) {
 	return c.networkList.CallUnary(ctx, req)
@@ -572,6 +588,7 @@ type DockerServiceHandler interface {
 	VolumeList(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
 	VolumeCreate(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	VolumeDelete(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
+	VolumeInspect(context.Context, *connect.Request[v1.VolumeInspectRequest]) (*connect.Response[v1.VolumeInspectResponse], error)
 	// networks
 	NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error)
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
@@ -742,6 +759,12 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(dockerServiceMethods.ByName("VolumeDelete")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dockerServiceVolumeInspectHandler := connect.NewUnaryHandler(
+		DockerServiceVolumeInspectProcedure,
+		svc.VolumeInspect,
+		connect.WithSchema(dockerServiceMethods.ByName("VolumeInspect")),
+		connect.WithHandlerOptions(opts...),
+	)
 	dockerServiceNetworkListHandler := connect.NewUnaryHandler(
 		DockerServiceNetworkListProcedure,
 		svc.NetworkList,
@@ -820,6 +843,8 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceVolumeCreateHandler.ServeHTTP(w, r)
 		case DockerServiceVolumeDeleteProcedure:
 			dockerServiceVolumeDeleteHandler.ServeHTTP(w, r)
+		case DockerServiceVolumeInspectProcedure:
+			dockerServiceVolumeInspectHandler.ServeHTTP(w, r)
 		case DockerServiceNetworkListProcedure:
 			dockerServiceNetworkListHandler.ServeHTTP(w, r)
 		case DockerServiceNetworkCreateProcedure:
@@ -939,6 +964,10 @@ func (UnimplementedDockerServiceHandler) VolumeCreate(context.Context, *connect.
 
 func (UnimplementedDockerServiceHandler) VolumeDelete(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.VolumeDelete is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) VolumeInspect(context.Context, *connect.Request[v1.VolumeInspectRequest]) (*connect.Response[v1.VolumeInspectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.VolumeInspect is not implemented"))
 }
 
 func (UnimplementedDockerServiceHandler) NetworkList(context.Context, *connect.Request[v1.ListNetworksRequest]) (*connect.Response[v1.ListNetworksResponse], error) {
