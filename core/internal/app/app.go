@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -108,6 +109,12 @@ func NewApp(opt ...config.AppOpt) (app *App) {
 		conf.ComposeRoot,
 		conf.LocalAddr,
 	)
+
+	// best-effort: remove a leftover self-update helper container from a
+	// previous update once the local docker host is reachable.
+	if dkSrv, err := hostManager.GetDockerService(host.LocalDocker); err == nil {
+		docker.CleanupSelfUpdateHelper(context.Background(), dkSrv.Container.Cli())
+	}
 
 	fileSrv := files.New(
 		hostManager.GetAlias,

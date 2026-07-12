@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	contSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/debug"
 	hostMid "github.com/RA341/dockman/internal/host/middleware"
 	fu "github.com/RA341/dockman/pkg/fileutil"
@@ -34,8 +35,41 @@ func (h *HandlerHttp) register() http.Handler {
 	subMux := http.NewServeMux()
 	subMux.HandleFunc("GET /exec/{contId}", h.containerExec)
 	subMux.HandleFunc("GET /logs/{contId}", h.containerLogs)
+	subMux.HandleFunc("POST /update/dockman", h.updateDockman)
 
 	return subMux
+}
+
+// updateDockman triggers a manual self-update of the Dockman container on the
+// local host. It launches a detached helper that recreates Dockman with the
+// latest image; see SelfUpdate.
+func (h *HandlerHttp) updateDockman(w http.ResponseWriter, r *http.Request) {
+	host, err := hostMid.GetHost(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if host != contSrv.LocalClient {
+		http.Error(w, "self-update is only supported on the local host", http.StatusBadRequest)
+		return
+	}
+
+	dkSrv, err := h.srv(host)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error getting docker service: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Detached context: the update must finish even if the client disconnects
+	// (Dockman is about to restart anyway).
+	if err = SelfUpdate(context.Background(), dkSrv); err != nil {
+		log.Error().Err(err).Msg("dockman self-update failed")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = w.Write([]byte("Dockman update started; it will restart shortly."))
 }
 
 func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
