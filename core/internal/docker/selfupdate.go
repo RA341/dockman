@@ -29,9 +29,13 @@ const (
 // A container cannot recreate itself while running (stopping itself kills the
 // process doing the work), so Dockman launches a short-lived, DETACHED helper
 // container that runs `docker compose up -d` for the Dockman service and then
-// exits. The helper outlives Dockman during the swap. It is left in place after
-// it finishes (so its logs stay inspectable) and is removed on the next
-// successful Dockman startup by CleanupSelfUpdateHelper.
+// exits. The helper outlives Dockman during the swap.
+//
+// On a SUCCESSFUL update the helper removes itself (via the raw socket, so it
+// never depends on Dockman's socket proxy allowing a DELETE). On FAILURE it is
+// left in place so `docker logs dockman-self-update` stays inspectable; that
+// leftover is swept on the next successful Dockman startup by
+// CleanupSelfUpdateHelper.
 func SelfUpdate(ctx context.Context, dkSrv *Service) error {
 	cli := dkSrv.Container.Cli()
 
@@ -70,6 +74,10 @@ func SelfUpdate(ctx context.Context, dkSrv *Service) error {
 	// container on the pulled image. A parent-level `../.env` is passed
 	// explicitly since compose only auto-loads a .env from the project directory.
 	// Identity is passed in via env, resolved by Dockman from its own container.
+	//
+	// On success the helper removes itself over the same raw socket. `set -e`
+	// means a failed compose run skips the self-removal, leaving the helper (and
+	// its logs) in place for troubleshooting.
 	const script = `set -e
 sleep 3
 cd "$DK_COMPOSE_DIR"
@@ -78,7 +86,9 @@ ENVFLAG=""
 PROJ=""
 [ -n "$DK_PROJECT" ] && PROJ="-p $DK_PROJECT"
 echo "Updating Dockman ($DK_SERVICE)..."
-docker compose $ENVFLAG $PROJ -f "$DK_COMPOSE_FILE" up -d --pull always --build --no-deps --force-recreate "$DK_SERVICE"`
+docker compose $ENVFLAG $PROJ -f "$DK_COMPOSE_FILE" up -d --pull always --build --no-deps --force-recreate "$DK_SERVICE"
+echo "Update complete; removing helper."
+docker rm -f "$DK_SELF" || true`
 
 	created, err := cli.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Name: selfUpdateContainerName,
@@ -91,6 +101,7 @@ docker compose $ENVFLAG $PROJ -f "$DK_COMPOSE_FILE" up -d --pull always --build 
 				"DK_COMPOSE_DIR=" + composeDir,
 				"DK_PROJECT=" + project,
 				"DK_SERVICE=" + service,
+				"DK_SELF=" + selfUpdateContainerName,
 			},
 			// Never let Dockman mistake the helper for itself.
 			Labels: map[string]string{dockmanContainerLabel: "false"},
