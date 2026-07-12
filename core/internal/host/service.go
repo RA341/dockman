@@ -55,7 +55,12 @@ const RootAlias = "compose"
 const LocalDocker = "local"
 
 func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
-	conf, err := s.store.Get(LocalDocker)
+	// Look the local host up by its type, not by the reserved "local" name:
+	// the Name is user-editable, and keying on it meant that renaming the local
+	// host made this lookup fail on every startup, silently creating a duplicate
+	// local host (new ID) with only the default alias and orphaning the user's
+	// custom aliases (they are linked by host ID). Type is stable across renames.
+	conf, err := s.store.GetLocal()
 
 	// Case 1: Create new if it doesn't exist
 	if err != nil {
