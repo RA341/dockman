@@ -27,6 +27,12 @@ var defaultDockmanYaml = DockmanYaml{
 			Order: "asc",
 		},
 	},
+	StatsPage: StatsConfig{
+		Sort: Sort{
+			Field: "Memory",
+			Order: "desc",
+		},
+	},
 }
 
 type DockmanYaml struct {
@@ -53,6 +59,9 @@ type DockmanYaml struct {
 
 	ContainerPage ContainerConfig `yaml:"containers"`
 
+	// configure the stats (system resources) page
+	StatsPage StatsConfig `yaml:"stats"`
+
 	// define a max search limit for files
 	SearchLimit int `yaml:"searchLimit"`
 
@@ -72,6 +81,10 @@ type NetworkConfig struct {
 }
 
 type ImageConfig struct {
+	Sort Sort `yaml:"sort"`
+}
+
+type StatsConfig struct {
 	Sort Sort `yaml:"sort"`
 }
 

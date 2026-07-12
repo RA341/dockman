@@ -3,6 +3,7 @@ import {callRPC, useHostClient} from '../lib/api.ts';
 import {type ContainerStats, DockerService, ORDER, SORT_FIELD} from '../gen/docker/v1/docker_pb.ts';
 import {useSnackbar} from "./snackbar.ts";
 import {useHostStore} from "../pages/compose/state/files.ts";
+import {useConfig} from "./config.ts";
 
 // This map remains very useful for clean, client-side sorting.
 const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
@@ -15,10 +16,46 @@ const sortFieldToKeyMap: Record<SORT_FIELD, keyof ContainerStats> = {
     [SORT_FIELD.DISK_W]: 'blockWrite',
 };
 
+// Maps a dockman.yml `stats.sort.field` string to a SORT_FIELD. Accepts the
+// column labels and a few obvious aliases, case-insensitively. Falls back to
+// MEM, preserving the historical default.
+const configFieldToSortField = (field?: string): SORT_FIELD => {
+    switch ((field ?? '').trim().toLowerCase()) {
+        case 'name':
+        case 'container':
+            return SORT_FIELD.NAME;
+        case 'cpu':
+        case 'cpu usage':
+            return SORT_FIELD.CPU;
+        case 'mem':
+        case 'memory':
+        case 'memory usage':
+            return SORT_FIELD.MEM;
+        case 'network_rx':
+        case 'rx':
+            return SORT_FIELD.NETWORK_RX;
+        case 'network_tx':
+        case 'tx':
+            return SORT_FIELD.NETWORK_TX;
+        case 'disk_r':
+        case 'disk read':
+            return SORT_FIELD.DISK_R;
+        case 'disk_w':
+        case 'disk write':
+            return SORT_FIELD.DISK_W;
+        default:
+            return SORT_FIELD.MEM;
+    }
+};
+
+const configOrderToOrder = (order?: string): ORDER =>
+    (order ?? '').trim().toLowerCase() === 'asc' ? ORDER.ASC : ORDER.DSC;
+
 export function useDockerStats(selectedPage?: string) {
     const dockerService = useHostClient(DockerService)
     const {showError} = useSnackbar();
     const selectedHost = useHostStore(state => state.host)
+    const {dockYaml} = useConfig();
 
     const [rawContainers, setRawContainers] = useState<ContainerStats[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,6 +65,18 @@ export function useDockerStats(selectedPage?: string) {
     const [refreshInterval, setRefreshInterval] = useState(2500);
     const isInitialLoad = useRef(true);
     const resort = useRef(false)
+    // Once the user sorts by hand we stop applying the dockman.yml default so a
+    // late-arriving (or per-host) config never clobbers their choice.
+    const userSorted = useRef(false)
+
+    // Seed the sort from dockman.yml (stats.sort) until the user sorts manually.
+    useEffect(() => {
+        if (userSorted.current) return;
+        const cfg = dockYaml?.statsPage?.sort;
+        if (!cfg) return;
+        setSortField(configFieldToSortField(cfg.sortField));
+        setSortOrder(configOrderToOrder(cfg.sortOrder));
+    }, [dockYaml]);
 
     useEffect(() => {
         let isCancelled = false;
@@ -69,6 +118,8 @@ export function useDockerStats(selectedPage?: string) {
         setRawContainers([])
         setLoading(true)
         isInitialLoad.current = true;
+        // re-apply the configured default for the newly selected host
+        userSorted.current = false;
     }, [selectedHost]);
 
     // Optimistic Client-Side Sorting
@@ -101,6 +152,7 @@ export function useDockerStats(selectedPage?: string) {
 
 
     const handleSortChange = useCallback((newField: SORT_FIELD, newOrderBy: ORDER) => {
+        userSorted.current = true
         setSortField(newField)
         setSortOrder(newOrderBy)
         // immediate resort for ui

@@ -39,6 +39,7 @@ message DockmanYaml {
   NetworkConfig networkPage = 3;
   ImageConfig imagePage = 4;
   ContainerConfig containerPage = 5;
+  StatsConfig statsPage = 10;
 }
 
 message VolumesConfig {
@@ -54,6 +55,10 @@ message ImageConfig {
 }
 
 message ContainerConfig {
+  Sort sort = 1;
+}
+
+message StatsConfig {
   Sort sort = 1;
 }
 
