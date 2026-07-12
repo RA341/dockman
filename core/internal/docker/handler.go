@@ -261,6 +261,7 @@ func ToRPCStat(cont contSrv.Stats) *v1.ContainerStats {
 		NetworkTx:   cont.NetworkTx,
 		BlockRead:   cont.BlockRead,
 		BlockWrite:  cont.BlockWrite,
+		StartedAt:   cont.StartedAt,
 	}
 }
 

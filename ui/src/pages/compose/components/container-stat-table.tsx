@@ -1,10 +1,12 @@
 import {
     Box,
+    Button,
     CircularProgress,
     Divider,
     Fade,
     IconButton,
     Paper,
+    Popover,
     Skeleton,
     Stack,
     Table,
@@ -14,6 +16,7 @@ import {
     TableHead,
     TableRow,
     TableSortLabel,
+    Tooltip,
     Typography
 } from "@mui/material"
 import {
@@ -23,12 +26,16 @@ import {
     Edit as WriteIcon,
     GetApp as DownloadIcon,
     Publish as UploadIcon,
+    RestartAlt as RestartIcon,
     Terminal as TerminalIcon
 } from "@mui/icons-material"
-import {type ContainerStats, ORDER, SORT_FIELD} from "../../../gen/docker/v1/docker_pb"
+import {useState} from "react"
+import {type ContainerStats, DockerService, ORDER, SORT_FIELD} from "../../../gen/docker/v1/docker_pb"
 import {formatBytes, getUsageColor} from "../../../lib/editor.ts";
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 import {useCopyButton} from "../../../hooks/copy.ts";
+import {callRPC, useHostClient} from "../../../lib/api.ts";
+import {useSnackbar} from "../../../hooks/snackbar.ts";
 
 interface ContainersTableProps {
     activeSortField: SORT_FIELD
@@ -99,6 +106,16 @@ export function ContainerStatTable({
                         <TableCell sx={{
                             fontWeight: 700,
                             fontSize: '0.75rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            bgcolor: 'background.paper',
+                            zIndex: 2
+                        }}>
+                            Started
+                        </TableCell>
+                        <TableCell sx={{
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
                             bgcolor: 'background.paper',
                             zIndex: 2
                         }}>
@@ -107,6 +124,10 @@ export function ContainerStatTable({
                                 <span>DISK (W/R)</span>
                             </Stack>
                         </TableCell>
+                        <TableCell align="right" sx={{
+                            bgcolor: 'background.paper',
+                            zIndex: 2
+                        }}/>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -117,12 +138,15 @@ export function ContainerStatTable({
                                 <TableCell align="center"><Skeleton variant="circular" width={32} height={32}
                                                                     sx={{mx: 'auto'}}/></TableCell>
                                 <TableCell><Skeleton variant="rounded" height={24}/></TableCell>
+                                <TableCell><Skeleton variant="text" width={60}/></TableCell>
                                 <TableCell><Skeleton variant="rounded" height={24}/></TableCell>
+                                <TableCell align="right"><Skeleton variant="circular" width={24} height={24}
+                                                                   sx={{ml: 'auto'}}/></TableCell>
                             </TableRow>
                         ))
                     ) : isEmpty ? (
                         <TableRow>
-                            <TableCell colSpan={4} sx={{height: 200, textAlign: 'center'}}>
+                            <TableCell colSpan={6} sx={{height: 200, textAlign: 'center'}}>
                                 <Typography variant="body2" color="text.secondary">No statistics available</Typography>
                             </TableCell>
                         </TableRow>
@@ -163,6 +187,7 @@ export function ContainerStatTable({
                                         <UsageBar usage={Number(container.memoryUsage)}
                                                   limit={Number(container.memoryLimit)}/>
                                     </TableCell>
+                                    <TableCell><StartedCell startedAt={container.startedAt}/></TableCell>
                                     <TableCell>
                                         <Stack direction="row" spacing={4}
                                                divider={<Divider orientation="vertical" flexItem/>}>
@@ -171,6 +196,9 @@ export function ContainerStatTable({
                                             <RWData up={Number(container.blockRead)}
                                                     down={Number(container.blockWrite)} type="disk"/>
                                         </Stack>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <RestartButton containerId={container.id} name={container.name}/>
                                     </TableCell>
                                 </TableRow>
                             </Fade>
@@ -245,4 +273,87 @@ const RWData = ({up, down, type}: { up: number; down: number, type: 'net' | 'dis
             </Stack>
         </Stack>
     )
+}
+
+// formatUptime renders how long ago a container started, from an RFC3339 string:
+// "3d 4h", "5h 12m", "8m", "42s". Empty / zero-time (never started) -> "—".
+function formatUptime(startedAt: string): string {
+    if (!startedAt || startedAt.startsWith('0001')) return '—';
+    const start = Date.parse(startedAt);
+    if (isNaN(start)) return '—';
+    let secs = Math.floor((Date.now() - start) / 1000);
+    if (secs < 0) secs = 0;
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m`;
+    return `${secs}s`;
+}
+
+function StartedCell({startedAt}: { startedAt: string }) {
+    const running = Boolean(startedAt) && !startedAt.startsWith('0001');
+    const absolute = running ? new Date(startedAt).toLocaleString() : 'not running';
+    return (
+        <Tooltip title={absolute} arrow>
+            <Typography variant="caption"
+                        sx={{fontFamily: 'monospace', color: 'text.secondary', whiteSpace: 'nowrap'}}>
+                {formatUptime(startedAt)}
+            </Typography>
+        </Tooltip>
+    );
+}
+
+// RestartButton restarts a single container, gated behind a small confirm popover
+// so it can't fire on an accidental click while scanning the table.
+function RestartButton({containerId, name}: { containerId: string; name: string }) {
+    const dockerService = useHostClient(DockerService);
+    const {showSuccess, showError} = useSnackbar();
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    const doRestart = async () => {
+        setAnchorEl(null);
+        setBusy(true);
+        const {err} = await callRPC(() => dockerService.containerRestart({containerIds: [containerId]}));
+        setBusy(false);
+        if (err) {
+            showError(`Failed to restart ${name}: ${err}`);
+        } else {
+            showSuccess(`Restarting ${name}`);
+        }
+    };
+
+    return (
+        <>
+            <Tooltip title="Restart container" arrow>
+                <span>
+                    <IconButton size="small" color="warning" disabled={busy}
+                                onClick={(e) => setAnchorEl(e.currentTarget)}>
+                        {busy ? <CircularProgress size={16}/> : <RestartIcon sx={{fontSize: 18}}/>}
+                    </IconButton>
+                </span>
+            </Tooltip>
+            <Popover
+                open={Boolean(anchorEl)}
+                anchorEl={anchorEl}
+                onClose={() => setAnchorEl(null)}
+                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                transformOrigin={{vertical: 'top', horizontal: 'right'}}
+            >
+                <Box sx={{p: 1.5, maxWidth: 240}}>
+                    <Typography variant="body2" sx={{mb: 1.5}}>
+                        Restart <b>{name}</b>?
+                    </Typography>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button size="small" onClick={() => setAnchorEl(null)}>Cancel</Button>
+                        <Button size="small" variant="contained" color="warning" onClick={doRestart}>
+                            Restart
+                        </Button>
+                    </Stack>
+                </Box>
+            </Popover>
+        </>
+    );
 }

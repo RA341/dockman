@@ -407,6 +407,8 @@ message ContainerStats {
   uint64 block_read = 8;
   // Total bytes written to block devices.
   uint64 block_write = 9;
+  // Container start time (RFC3339). Empty if unknown / not running.
+  string started_at = 10;
 }
 
 

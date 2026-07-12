@@ -34,6 +34,16 @@ func (s *Service) getAndFormatStats(ctx context.Context, info container.Summary)
 	rx, tx := formatNetwork(statsJSON)
 	blkRead, blkWrite := formatDiskIO(statsJSON)
 
+	// StartedAt is not part of the stats stream; inspect for it. Cheap next to
+	// the ~1s stats sampling, and this runs concurrently per container anyway.
+	// Non-fatal: on error we just leave the start time empty.
+	startedAt := ""
+	if inspect, err := s.Client.ContainerInspect(ctx, info.ID, client.ContainerInspectOptions{}); err == nil {
+		if state := inspect.Container.State; state != nil {
+			startedAt = state.StartedAt
+		}
+	}
+
 	return Stats{
 		ID:          contId,
 		Name:        info.Names[0],
@@ -44,6 +54,7 @@ func (s *Service) getAndFormatStats(ctx context.Context, info container.Summary)
 		NetworkTx:   tx,
 		BlockRead:   blkRead,
 		BlockWrite:  blkWrite,
+		StartedAt:   startedAt,
 	}, nil
 }
 
@@ -98,4 +109,5 @@ type Stats struct {
 	NetworkTx   uint64 // bytes sent
 	BlockRead   uint64 // bytes read from block devices
 	BlockWrite  uint64 // bytes written to block devices
+	StartedAt   string // container start time, RFC3339 (empty if unknown)
 }
