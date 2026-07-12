@@ -77,8 +77,7 @@ export const useFileDnD = (entry: FsEntry) => {
         if (sourcePath) {
             if (sourcePath === entry.filename) return; // Can't drop on self
             const fileName = sourcePath.split('/').pop() || "";
-            // At the root targetDir is "" — avoid producing a leading-slash "/name".
-            const newPath = targetDir === "" ? fileName : `${targetDir}/${fileName}`;
+            const newPath = `${targetDir}/${fileName}`;
             // Only trigger if the path actually changes
             if (sourcePath !== newPath) {
                 await renameFile(sourcePath, newPath);

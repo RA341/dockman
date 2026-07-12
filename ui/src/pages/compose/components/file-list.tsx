@@ -137,12 +137,12 @@ export function FileList() {
 
                 <Divider/>
 
-                {/* List area: a relative wrapper so the transient root-drop banner
-                    can overlay the top without scrolling or reflowing the list. */}
+                {/* List area: a flex column so the transient root-drop banner sits
+                    above the scroll area (pushing it down) instead of overlapping
+                    the first row while dragging. */}
                 <Box sx={{
                     flexGrow: 1,
                     minHeight: 0,
-                    position: 'relative',
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',

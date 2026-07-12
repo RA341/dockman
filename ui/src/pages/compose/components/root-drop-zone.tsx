@@ -1,16 +1,17 @@
 import React, {useState} from "react";
 import {Box, Typography} from "@mui/material";
 import {VerticalAlignTop as MoveToRootIcon} from "@mui/icons-material";
-import {getDir, getEntryDisplayName, useFiles} from "../../../context/file-context.tsx";
+import {useFiles} from "../../../context/file-context.tsx";
 import {useFileDrag} from "../state/files.ts";
 import {useFileComponents} from "../state/terminal.tsx";
 
 // RootDropZone is a drop target that only exists while a file-tree entry is being
 // dragged. It lets you move an entry back to the root of the tree — otherwise
-// impossible when the root has no sibling file to drop onto. It is rendered as an
-// absolute overlay so it takes no layout space (and causes no reflow) outside of a
-// drag, and it stays pinned to the top of the list area so it is always reachable
-// without scrolling.
+// impossible when the root has no sibling file to drop onto.
+//
+// It is rendered in-flow (only during a drag) so it never overlaps the first
+// row: when it appears it pushes the list down, keeping every folder reachable
+// as a drop target. Outside of a drag it renders nothing, taking no space.
 export function RootDropZone() {
     const dragging = useFileDrag(state => state.dragging);
     const setDragging = useFileDrag(state => state.setDragging);
@@ -41,13 +42,16 @@ export function RootDropZone() {
 
         const sourcePath = e.dataTransfer.getData("sourcePath");
         if (!sourcePath) return;
-        // Already at the root (no parent directory) -> nothing to do.
-        if (getDir(sourcePath) === "") return;
 
-        const newPath = getEntryDisplayName(sourcePath);
-        if (newPath && newPath !== sourcePath) {
-            await renameFile(sourcePath, newPath);
-        }
+        // Tree paths are "<alias>/<relpath>": the first segment is the alias (the
+        // tree root), NOT part of the file path. A root move therefore keeps the
+        // alias prefix and drops everything in between -> "<alias>/<basename>".
+        const parts = sourcePath.split("/").filter(Boolean);
+        // Already at the root (only "<alias>/<name>") -> nothing to do.
+        if (parts.length <= 2) return;
+
+        const newPath = `${parts[0]}/${parts[parts.length - 1]}`;
+        await renameFile(sourcePath, newPath);
     };
 
     return (
@@ -56,12 +60,9 @@ export function RootDropZone() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             sx={{
-                position: 'absolute',
-                top: 6,
-                left: 6,
-                right: 6,
-                zIndex: 20,
-                height: 34,
+                flexShrink: 0,
+                m: 0.75,
+                height: 32,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -69,11 +70,9 @@ export function RootDropZone() {
                 borderRadius: 1,
                 border: '1.5px dashed',
                 borderColor: isOver ? 'primary.main' : 'rgba(255,255,255,0.35)',
-                backgroundColor: isOver ? 'rgba(144,202,249,0.18)' : 'rgba(30,30,30,0.94)',
-                color: isOver ? 'primary.main' : 'rgba(255,255,255,0.75)',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                backgroundColor: isOver ? 'rgba(144,202,249,0.18)' : 'rgba(255,255,255,0.04)',
+                color: isOver ? 'primary.main' : 'rgba(255,255,255,0.7)',
                 transition: 'background-color 80ms, border-color 80ms, color 80ms',
-                pointerEvents: 'auto',
             }}
         >
             <MoveToRootIcon sx={{fontSize: 18}}/>
