@@ -57,7 +57,7 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
     };
 
     const {sortField, sortOrder, handleSort} = useSort(
-        dockYaml?.networkPage?.sort?.sortField ?? 'Name',
+        dockYaml?.networkPage?.sort?.sortField ?? 'Network Name',
         (dockYaml?.networkPage?.sort?.sortOrder as SortOrder) ?? 'asc'
     );
 
@@ -79,13 +79,16 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
                 </TableCell>
             )
         },
-        Name: {
+        // Key must match the dockman.yml field name ("Network Name", the backend
+        // default) so a configured sort lights up the header arrow; the label is
+        // hardcoded to keep the column header short, like the columns below.
+        "Network Name": {
             getValue: (n) => n.name,
             header: (label) => (
                 <TableCell sx={headerStyles}>
                     <TableSortLabel active={sortField === label} direction={sortOrder}
                                     onClick={() => handleSort(label)}>
-                        {label}
+                        Name
                     </TableSortLabel>
                 </TableCell>
             ),
