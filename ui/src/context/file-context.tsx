@@ -9,6 +9,16 @@ import {useEditorUrl} from "../lib/editor.ts";
 import {useHostStore, useOpenFiles} from "../pages/compose/state/files.ts";
 import {useFileComponents} from "../pages/compose/state/terminal.tsx";
 
+// btoa only accepts Latin1, so a path with accents, curly quotes or any other
+// non-Latin1 character throws. Encode the UTF-8 bytes instead; the backend
+// base64-decodes this straight back to the raw UTF-8 path bytes.
+function encodePathToBase64(path: string): string {
+    const bytes = new TextEncoder().encode(path);
+    let binary = '';
+    bytes.forEach((b) => (binary += String.fromCharCode(b)));
+    return btoa(binary);
+}
+
 export interface FilesContextType {
     files: FsEntry[]
     isLoading: boolean
@@ -184,7 +194,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         return new Promise<string>((resolve) => {
             try {
                 const formData = new FormData();
-                formData.append('contents', fileBlob, btoa(fullPath));
+                formData.append('contents', fileBlob, encodePathToBase64(fullPath));
 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', url, true);
