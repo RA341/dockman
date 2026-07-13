@@ -114,11 +114,9 @@ const ImageInspectPage = () => {
             <Box sx={{
                 p: 3,
                 flexGrow: 1,
-                minHeight: 0, // let this flex child shrink so overflow:auto actually scrolls
-                overflow: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 3
+                overflowY: 'auto',
+                position: 'relative',
+                ...scrollbarStyles
             }}>
                 {loading ? (
                     <Box sx={{
@@ -136,7 +134,7 @@ const ImageInspectPage = () => {
                 ) : err ? (
                     <Alert severity="error" variant="outlined" sx={{borderRadius: 2}}>{err}</Alert>
                 ) : inspect && (
-                    <>
+                    <Stack spacing={3}>
                         {/* Summary Info Cards */}
                         {/* Unified Image Summary Card */}
                         <Paper
@@ -384,7 +382,7 @@ const ImageInspectPage = () => {
                             </TableContainer>
                         </Paper>
 
-                    </>
+                    </Stack>
                 )}
             </Box>
         </Box>
