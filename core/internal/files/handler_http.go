@@ -3,6 +3,7 @@ package files
 import (
 	b64 "encoding/base64"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -70,38 +71,14 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
-	// 10 MB is the maximum upload size
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		// A malformed upload must not take down the whole server: log.Fatal
-		// here would call os.Exit. Return a 400 instead.
-		log.Error().Err(err).Msg("Error parsing multipart form")
-		http.Error(w, "Could not parse multipart form", http.StatusBadRequest)
-		return
-	}
-
 	getHost, err := middleware.GetHost(r.Context())
 	if err != nil {
 		http.Error(w, "host not provided", http.StatusBadRequest)
 		return
 	}
 
-	content, meta, err := r.FormFile(fileContentsFormKey)
-	if err != nil {
-		log.Error().Err(err).Msg("Error retrieving file from form")
-		http.Error(w, "Error retrieving file from form", http.StatusBadRequest)
-		return
-	}
-	defer fu.Close(content)
-
-	decodedFileName, err := b64.StdEncoding.DecodeString(meta.Filename)
-	if err != nil {
-		http.Error(w, "Error converting file name from base64", http.StatusBadRequest)
-		return
-	}
-
 	createFile := false
-	createStr := r.URL.Query().Get(QueryKeyCreate)
-	if createStr != "" {
+	if createStr := r.URL.Query().Get(QueryKeyCreate); createStr != "" {
 		createFile, err = strconv.ParseBool(createStr)
 		if err != nil {
 			log.Warn().Err(err).Str("param", createStr).Msg("Error converting create query param to bool")
@@ -109,14 +86,50 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = h.srv.Save(string(decodedFileName), getHost, createFile, content)
+	// Stream the upload straight to disk. ParseMultipartForm would first buffer
+	// the whole file (up to 10 MB in memory, the rest in a temp file) before we
+	// write it — under a tight container memory limit a large upload can push
+	// the process into an OOM kill. A MultipartReader keeps memory flat.
+	reader, err := r.MultipartReader()
 	if err != nil {
-		log.Error().Err(err).Msg("Error saving file")
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("Error reading multipart body")
+		http.Error(w, "Could not read multipart body", http.StatusBadRequest)
 		return
 	}
 
-	//log.Debug().Str("filename", meta.Filename).Msg("Successfully saved File")
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			log.Error().Err(err).Msg("Error reading multipart part")
+			http.Error(w, "Error reading upload", http.StatusBadRequest)
+			return
+		}
+		if part.FormName() != fileContentsFormKey {
+			_ = part.Close()
+			continue
+		}
+
+		decodedFileName, err := b64.StdEncoding.DecodeString(part.FileName())
+		if err != nil {
+			_ = part.Close()
+			http.Error(w, "Error converting file name from base64", http.StatusBadRequest)
+			return
+		}
+
+		if err = h.srv.Save(string(decodedFileName), getHost, createFile, part); err != nil {
+			_ = part.Close()
+			log.Error().Err(err).Msg("Error saving file")
+			http.Error(w, "Error saving file", http.StatusInternalServerError)
+			return
+		}
+		_ = part.Close()
+		return
+	}
+
+	http.Error(w, "no file provided in form", http.StatusBadRequest)
 }
 
 var upgrader = websocket.Upgrader{
