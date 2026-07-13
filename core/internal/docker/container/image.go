@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/RA341/dockman/pkg/fileutil"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
@@ -41,6 +43,46 @@ func (s *Service) ImageInspect(ctx context.Context, id string) (client.ImageInsp
 	}
 
 	return inspect, hist, nil
+}
+
+// ImageContainer describes one container created from a given image.
+type ImageContainer struct {
+	ID             string
+	Name           string
+	State          string
+	ComposeProject string
+}
+
+// ImageContainers returns every container created from the given image. The
+// image inspect data does not carry this, so it is derived from the container
+// list filtered by the image "ancestor".
+func (s *Service) ImageContainers(ctx context.Context, imageID string) ([]ImageContainer, error) {
+	filters := client.Filters{}
+	filters.Add("ancestor", imageID)
+
+	resp, err := s.Client.ContainerList(ctx, client.ContainerListOptions{
+		All:     true,
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers for image %s: %w", imageID, err)
+	}
+
+	out := make([]ImageContainer, 0, len(resp.Items))
+	for _, c := range resp.Items {
+		name := ""
+		if len(c.Names) > 0 {
+			name = strings.TrimPrefix(c.Names[0], "/")
+		}
+		out = append(out, ImageContainer{
+			ID:             c.ID,
+			Name:           name,
+			State:          string(c.State),
+			ComposeProject: c.Labels[api.ProjectLabel],
+		})
+	}
+
+	return out, nil
 }
 
 func (s *Service) ImagePull(ctx context.Context, imageTag string, writer io.Writer) error {

@@ -168,6 +168,7 @@ message ImageInspect {
   string arch = 5;
   string createdIso = 4;
   repeated ImageLayer layers = 2;
+  repeated ImageContainerInspect containers = 7;
 }
 
 message ImageLayer {
@@ -175,6 +176,13 @@ message ImageLayer {
   string cmd = 1;
   string size = 2;
   string totalSizeAtLayer = 4;
+}
+
+message ImageContainerInspect {
+  string name = 1;
+  string id = 2;
+  string state = 3;
+  string composeProject = 4;
 }
 
 message ComposeValidateResponse {

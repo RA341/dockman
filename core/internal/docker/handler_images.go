@@ -156,6 +156,20 @@ func (h *Handler) ImageInspect(ctx context.Context, req *connect.Request[v1.Imag
 		name = sd
 	}
 
+	conts, err := dkSrv.Container.ImageContainers(ctx, req.Msg.ImageId)
+	if err != nil {
+		return nil, err
+	}
+	rpcConts := make([]*v1.ImageContainerInspect, 0, len(conts))
+	for _, c := range conts {
+		rpcConts = append(rpcConts, &v1.ImageContainerInspect{
+			Name:           c.Name,
+			Id:             c.ID,
+			State:          c.State,
+			ComposeProject: c.ComposeProject,
+		})
+	}
+
 	var insp = &v1.ImageInspect{
 		Name:       name,
 		Id:         inspect.ID,
@@ -163,6 +177,7 @@ func (h *Handler) ImageInspect(ctx context.Context, req *connect.Request[v1.Imag
 		Size:       humanize.Bytes(uint64(inspect.Size)),
 		CreatedIso: inspect.Created,
 		Layers:     layers,
+		Containers: rpcConts,
 	}
 
 	return connect.NewResponse(&v1.ImageInspectResponse{

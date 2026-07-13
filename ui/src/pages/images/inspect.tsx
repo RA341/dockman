@@ -25,7 +25,7 @@ import {
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
-import {ArrowBack, HistoryOutlined} from "@mui/icons-material";
+import {ArrowBack, HistoryOutlined, Inventory2Outlined} from "@mui/icons-material";
 
 const ImageInspectPage = () => {
     const dockerService = useHostClient(DockerService);
@@ -281,6 +281,100 @@ const ImageInspectPage = () => {
                                 </Table>
                             </TableContainer>
                         </Paper>
+
+                        {/* Containers using this image */}
+                        <Paper variant="outlined"
+                               sx={{
+                                   borderRadius: 3,
+                                   overflow: 'hidden',
+                                   display: 'flex',
+                                   flexDirection: 'column'
+                               }}>
+                            <Box sx={{
+                                p: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                bgcolor: 'background.paper'
+                            }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Inventory2Outlined sx={{fontSize: 18, color: 'text.disabled'}}/>
+                                    <Typography variant="subtitle2" sx={{fontWeight: 800}}>Used By</Typography>
+                                    <Chip
+                                        label={`${inspect.containers?.length || 0} containers`}
+                                        size="small"
+                                        color={inspect.containers?.length ? "success" : "default"}
+                                        sx={{height: 20, fontSize: '0.65rem', fontWeight: 700}}
+                                    />
+                                </Stack>
+                            </Box>
+
+                            {inspect.containers && inspect.containers.length > 0 ? (
+                                <TableContainer sx={{...scrollbarStyles}}>
+                                    <Table size="small" stickyHeader sx={{tableLayout: 'fixed'}}>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell sx={{...headerStyles}}>Container</TableCell>
+                                                <TableCell sx={{...headerStyles, width: 120}}>State</TableCell>
+                                                <TableCell sx={{...headerStyles, width: 180}}>Project</TableCell>
+                                                <TableCell sx={{...headerStyles, width: 130}}>ID</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {inspect.containers.map((c) => (
+                                                <TableRow key={c.id} hover>
+                                                    <TableCell sx={{
+                                                        fontWeight: 600,
+                                                        fontSize: '0.8rem',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {c.name || '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            label={c.state || 'unknown'}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color={stateColor(c.state)}
+                                                            sx={{
+                                                                height: 18,
+                                                                fontSize: '0.65rem',
+                                                                fontWeight: 700,
+                                                                textTransform: 'capitalize'
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell sx={{
+                                                        color: 'text.secondary',
+                                                        fontSize: '0.75rem',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {c.composeProject || '—'}
+                                                    </TableCell>
+                                                    <TableCell sx={{
+                                                        color: 'text.disabled',
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '0.7rem'
+                                                    }}>
+                                                        {c.id.substring(0, 12)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            ) : (
+                                <Box sx={{p: 3, textAlign: 'center'}}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        No containers are using this image.
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Paper>
                     </>
                 )}
             </Box>
@@ -294,6 +388,13 @@ const headerStyles = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     py: 1.5
+};
+
+const stateColor = (state: string): 'success' | 'error' | 'default' => {
+    const s = (state || '').toLowerCase();
+    if (s === 'running') return 'success';
+    if (s === 'exited' || s === 'dead') return 'error';
+    return 'default';
 };
 
 const DetailRow = ({label, value, mono}: { label: string, value: string, mono?: boolean }) => (
