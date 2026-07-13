@@ -3,9 +3,9 @@ import {CloudUpload} from '@mui/icons-material';
 import {useUploadProgress} from '../hooks/upload-progress.ts';
 
 // Global, self-managing progress toast shown while a batch of files uploads.
-// It mirrors the app's snackbar styling (bottom Alert) but sits slightly higher
-// so it does not clash with a regular snackbar, and disappears on completion —
-// the success/error toast then confirms the outcome.
+// It uses the same bottom-centered Alert as the app's snackbars and hides on
+// completion — the success/error snackbar then confirms the outcome. The two
+// never show at the same time, so they can share the same bottom slot.
 export function UploadProgressToast() {
     const active = useUploadProgress(s => s.active);
     const fileCount = useUploadProgress(s => s.fileCount);
@@ -23,12 +23,11 @@ export function UploadProgressToast() {
         <Snackbar
             open
             anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
-            sx={{bottom: {xs: 88, sm: 88}}}
         >
             <Alert
                 severity="info"
                 icon={<CloudUpload fontSize="inherit"/>}
-                sx={{width: '100%', minWidth: 300, alignItems: 'center'}}
+                sx={{width: '100%', minWidth: 320, alignItems: 'center'}}
             >
                 <Box sx={{width: '100%'}}>
                     <Typography variant="body2" sx={{fontWeight: 600, mb: 0.75}}>
