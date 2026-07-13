@@ -111,6 +111,9 @@ func (s *Service) ImageDive(ctx context.Context, imageId string) (*diveImg.Analy
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract image data %s: %w", imageId, err)
 	}
+	// body streams the whole image tar (can be many GB); it must be closed or
+	// the response body and the daemon-side export stay pinned in memory.
+	defer fileutil.Close(body)
 
 	parse, err := docker.NewImageArchive(body)
 	if err != nil {

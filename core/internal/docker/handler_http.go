@@ -85,13 +85,16 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		log.Debug().Msg("Attached to exec process")
 	}
 	defer func(resp *client.HijackedResponse) {
-		// IMPORTANT: use CloseWrite since it stops the internal process
-		// instead of Close which keeps it open
+		// CloseWrite sends EOF to the process stdin so a well-behaved program
+		// exits on its own. Close then tears down the hijacked connection so the
+		// reader goroutine below always unblocks: a process that ignores stdin
+		// EOF would otherwise leave resp.Reader.Read blocked forever, leaking the
+		// goroutine and the hijacked connection.
 		log.Debug().Err(err).Msg("closing con")
-		err = resp.CloseWrite()
-		if err != nil {
-			log.Warn().Err(err).Msg("error occurred while closing connection")
+		if cerr := resp.CloseWrite(); cerr != nil {
+			log.Warn().Err(cerr).Msg("error occurred while closing connection")
 		}
+		resp.Close()
 	}(&resp)
 
 	wsu.WInf(ws, "Connected to Container")
@@ -169,14 +172,20 @@ func (h *HandlerHttp) containerLogs(w http.ResponseWriter, r *http.Request) {
 
 	writer := wsu.NewWsWriter(ws)
 	go func() {
+		var copyErr error
 		if tty {
 			// tty streams dont need docker demultiplexing
-			_, err = io.Copy(writer, logsReader)
+			_, copyErr = io.Copy(writer, logsReader)
 		} else {
 			// docker multiplexed stream
-			_, err = stdcopy.StdCopy(writer, writer, logsReader)
+			_, copyErr = stdcopy.StdCopy(writer, writer, logsReader)
 		}
-		log.Debug().Err(err).Str("cont", contId).Msg("closing logs writer")
+		log.Debug().Err(copyErr).Str("cont", contId).Msg("closing logs writer")
+		// The log stream can end before the client disconnects (e.g. the
+		// container stops). Close the socket so the ws.ReadMessage loop below
+		// unblocks; otherwise this handler goroutine leaks, pinning the socket
+		// buffers and the moby follow connection until the browser tab closes.
+		_ = ws.Close()
 	}()
 
 	for {

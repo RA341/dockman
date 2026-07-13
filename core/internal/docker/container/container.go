@@ -129,6 +129,12 @@ func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd str
 	return resp.HijackedResponse, nil
 }
 
+// defaultLogTail bounds how much history is replayed when a log stream opens.
+// Without a Tail the daemon streams the container's entire json-file backlog
+// before following, a large transient memory spike on every open for a
+// long-lived container.
+const defaultLogTail = "1000"
+
 func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.ReadCloser, bool, error) {
 	inspect, err := s.Client.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
@@ -140,6 +146,7 @@ func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.Rea
 		ShowStderr: true,
 		Follow:     true,
 		Details:    true,
+		Tail:       defaultLogTail,
 	})
 	if err != nil {
 		return nil, false, fmt.Errorf("unable to get container logs: %w", err)
