@@ -27,6 +27,9 @@ var defaultDockmanYaml = DockmanYaml{
 			Order: "asc",
 		},
 	},
+	ComposePage: ComposeConfig{
+		DefaultTab: "editor",
+	},
 }
 
 type DockmanYaml struct {
@@ -53,6 +56,9 @@ type DockmanYaml struct {
 
 	ContainerPage ContainerConfig `yaml:"containers"`
 
+	// configure the compose stack view
+	ComposePage ComposeConfig `yaml:"compose"`
+
 	// define a max search limit for files
 	SearchLimit int `yaml:"searchLimit"`
 
@@ -73,6 +79,11 @@ type NetworkConfig struct {
 
 type ImageConfig struct {
 	Sort Sort `yaml:"sort"`
+}
+
+type ComposeConfig struct {
+	// tab shown when opening a compose stack: editor (default), deploy or stats
+	DefaultTab string `yaml:"defaultTab"`
 }
 
 type Sort struct {

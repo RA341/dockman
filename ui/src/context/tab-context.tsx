@@ -1,6 +1,7 @@
 import {createContext, type ReactNode, useCallback, useContext, useEffect} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom';
-import {useEditorUrl} from "../lib/editor.ts";
+import {stackDefaultTab, useEditorUrl} from "../lib/editor.ts";
+import {useConfig} from "../hooks/config.ts";
 import {create} from "zustand";
 import {immer} from "zustand/middleware/immer";
 import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
@@ -172,7 +173,7 @@ export const useTabs = (): TabsContextType => {
 };
 
 export function TabsProvider({children}: { children: ReactNode }) {
-    // const {dockYaml} = useConfig()
+    const {dockYaml} = useConfig()
     // const tabLimit = dockYaml?.tabLimit ?? 5
 
     const location = useLocation();
@@ -183,16 +184,17 @@ export function TabsProvider({children}: { children: ReactNode }) {
     const {active, load, rename, update, create, close} = useTabsStore()
 
     const handleTabClick = useCallback((filename: string, track: number = 0) => {
-        const tabDetail = load(filename)
+        // files opened for the first time start on the dockman.yml default tab
+        const tabDetail = load(filename) ?? stackDefaultTab(dockYaml, filename)
         const url = editorUrl(filename, tabDetail, track);
         navigate(url);
-    }, [editorUrl, navigate, load]);
+    }, [editorUrl, navigate, load, dockYaml]);
 
     const handleOpenTab = useCallback((filename: string, track: number = 0) => {
         const params = new URLSearchParams(location.search);
-        create(filename, track, Number(params.get("tab") ?? "0"))
+        create(filename, track, Number(params.get("tab") ?? stackDefaultTab(dockYaml, filename)))
         active(filename, track)
-    }, [location.search, create, active]);
+    }, [location.search, create, active, dockYaml]);
 
     const handleCloseTab = useCallback((filename: string, track: number = 0) => {
         const {next, wasActive} = close(filename, track)

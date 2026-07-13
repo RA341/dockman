@@ -3,7 +3,8 @@ import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip} from '@mui/material';
 import {useFileComponents} from "../state/terminal.tsx";
 import {callRPC, useHostClient} from "../../../lib/api.ts";
-import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
+import {isComposeFile, stackDefaultTab, useEditorUrl} from "../../../lib/editor.ts";
+import {useConfig} from "../../../hooks/config.ts";
 import TabEditor from "../tab-editor.tsx";
 import {ShortcutFormatter} from "./shortcut-formatter.tsx";
 import {TabDeploy} from "../tab-deploy.tsx";
@@ -43,9 +44,13 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
     const fileService = useHostClient(FileService);
 
     const navigate = useNavigate();
+    const {dockYaml} = useConfig()
     const [searchParams] = useSearchParams();
     const tabKey = track === 0 ? 'tab' : 'splitTab';
-    const selectedTab = parseTabType(searchParams.get(tabKey))
+    // no tab selected in the url yet: open on the dockman.yml default tab
+    const selectedTab = parseTabType(
+        searchParams.get(tabKey) ?? String(stackDefaultTab(dockYaml, filename))
+    )
 
     const [isLoading, setIsLoading] = useState(true);
     const [fileError, setFileError] = useState("");

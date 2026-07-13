@@ -39,6 +39,12 @@ message DockmanYaml {
   NetworkConfig networkPage = 3;
   ImageConfig imagePage = 4;
   ContainerConfig containerPage = 5;
+  ComposeConfig composePage = 11;
+}
+
+message ComposeConfig {
+  // tab shown when opening a compose stack: editor (default), deploy or stats
+  string defaultTab = 1;
 }
 
 message VolumesConfig {

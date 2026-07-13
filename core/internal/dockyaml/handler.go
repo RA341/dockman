@@ -71,6 +71,7 @@ func (d *DockmanYaml) ToProto() *v1.DockmanYaml {
 		NetworkPage:                d.NetworkPage.toProto(),
 		ImagePage:                  d.ImagePage.toProto(),
 		ContainerPage:              d.ContainerPage.toProto(),
+		ComposePage:                d.ComposePage.toProto(),
 	}
 }
 
@@ -102,5 +103,11 @@ func (n NetworkConfig) toProto() *v1.NetworkConfig {
 func (i ImageConfig) toProto() *v1.ImageConfig {
 	return &v1.ImageConfig{
 		Sort: i.Sort.toProto(),
+	}
+}
+
+func (c ComposeConfig) toProto() *v1.ComposeConfig {
+	return &v1.ComposeConfig{
+		DefaultTab: c.DefaultTab,
 	}
 }
