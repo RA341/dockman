@@ -111,7 +111,15 @@ const ImageInspectPage = () => {
                 </Stack>
             </Paper>
 
-            <Box sx={{p: 3, flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 3}}>
+            <Box sx={{
+                p: 3,
+                flexGrow: 1,
+                minHeight: 0, // let this flex child shrink so overflow:auto actually scrolls
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 3
+            }}>
                 {loading ? (
                     <Box sx={{
                         display: 'flex',
