@@ -272,6 +272,7 @@ type DockmanYaml struct {
 	NetworkPage                *NetworkConfig         `protobuf:"bytes,3,opt,name=networkPage,proto3" json:"networkPage,omitempty"`
 	ImagePage                  *ImageConfig           `protobuf:"bytes,4,opt,name=imagePage,proto3" json:"imagePage,omitempty"`
 	ContainerPage              *ContainerConfig       `protobuf:"bytes,5,opt,name=containerPage,proto3" json:"containerPage,omitempty"`
+	ComposePage                *ComposeConfig         `protobuf:"bytes,11,opt,name=composePage,proto3" json:"composePage,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -369,6 +370,58 @@ func (x *DockmanYaml) GetContainerPage() *ContainerConfig {
 	return nil
 }
 
+func (x *DockmanYaml) GetComposePage() *ComposeConfig {
+	if x != nil {
+		return x.ComposePage
+	}
+	return nil
+}
+
+type ComposeConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// tab shown when opening a compose stack: editor (default), deploy or stats
+	DefaultTab    string `protobuf:"bytes,1,opt,name=defaultTab,proto3" json:"defaultTab,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ComposeConfig) Reset() {
+	*x = ComposeConfig{}
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ComposeConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ComposeConfig) ProtoMessage() {}
+
+func (x *ComposeConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ComposeConfig.ProtoReflect.Descriptor instead.
+func (*ComposeConfig) Descriptor() ([]byte, []int) {
+	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ComposeConfig) GetDefaultTab() string {
+	if x != nil {
+		return x.DefaultTab
+	}
+	return ""
+}
+
 type VolumesConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Sort          *Sort                  `protobuf:"bytes,1,opt,name=sort,proto3" json:"sort,omitempty"`
@@ -378,7 +431,7 @@ type VolumesConfig struct {
 
 func (x *VolumesConfig) Reset() {
 	*x = VolumesConfig{}
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[7]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +443,7 @@ func (x *VolumesConfig) String() string {
 func (*VolumesConfig) ProtoMessage() {}
 
 func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[7]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +456,7 @@ func (x *VolumesConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumesConfig.ProtoReflect.Descriptor instead.
 func (*VolumesConfig) Descriptor() ([]byte, []int) {
-	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{7}
+	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *VolumesConfig) GetSort() *Sort {
@@ -422,7 +475,7 @@ type NetworkConfig struct {
 
 func (x *NetworkConfig) Reset() {
 	*x = NetworkConfig{}
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[8]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -434,7 +487,7 @@ func (x *NetworkConfig) String() string {
 func (*NetworkConfig) ProtoMessage() {}
 
 func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[8]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -447,7 +500,7 @@ func (x *NetworkConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetworkConfig.ProtoReflect.Descriptor instead.
 func (*NetworkConfig) Descriptor() ([]byte, []int) {
-	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{8}
+	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *NetworkConfig) GetSort() *Sort {
@@ -466,7 +519,7 @@ type ImageConfig struct {
 
 func (x *ImageConfig) Reset() {
 	*x = ImageConfig{}
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[9]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -478,7 +531,7 @@ func (x *ImageConfig) String() string {
 func (*ImageConfig) ProtoMessage() {}
 
 func (x *ImageConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[9]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -491,7 +544,7 @@ func (x *ImageConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageConfig.ProtoReflect.Descriptor instead.
 func (*ImageConfig) Descriptor() ([]byte, []int) {
-	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{9}
+	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ImageConfig) GetSort() *Sort {
@@ -510,7 +563,7 @@ type ContainerConfig struct {
 
 func (x *ContainerConfig) Reset() {
 	*x = ContainerConfig{}
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[10]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -522,7 +575,7 @@ func (x *ContainerConfig) String() string {
 func (*ContainerConfig) ProtoMessage() {}
 
 func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[10]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -535,7 +588,7 @@ func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerConfig.ProtoReflect.Descriptor instead.
 func (*ContainerConfig) Descriptor() ([]byte, []int) {
-	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{10}
+	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ContainerConfig) GetSort() *Sort {
@@ -555,7 +608,7 @@ type Sort struct {
 
 func (x *Sort) Reset() {
 	*x = Sort{}
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[11]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -567,7 +620,7 @@ func (x *Sort) String() string {
 func (*Sort) ProtoMessage() {}
 
 func (x *Sort) ProtoReflect() protoreflect.Message {
-	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[11]
+	mi := &file_dockyaml_v1_dockyaml_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -580,7 +633,7 @@ func (x *Sort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sort.ProtoReflect.Descriptor instead.
 func (*Sort) Descriptor() ([]byte, []int) {
-	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{11}
+	return file_dockyaml_v1_dockyaml_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Sort) GetSortOrder() string {
@@ -611,7 +664,7 @@ const file_dockyaml_v1_dockyaml_proto_rawDesc = "" +
 	"\bcontents\x18\x01 \x01(\fR\bcontents\"\x10\n" +
 	"\x0eGetYamlRequest\"?\n" +
 	"\x0fGetYamlResponse\x12,\n" +
-	"\x04dock\x18\x01 \x01(\v2\x18.dockyaml.v1.DockmanYamlR\x04dock\"\xbe\x04\n" +
+	"\x04dock\x18\x01 \x01(\v2\x18.dockyaml.v1.DockmanYamlR\x04dock\"\xfc\x04\n" +
 	"\vDockmanYaml\x12K\n" +
 	"\vcustomTools\x18\t \x03(\v2).dockyaml.v1.DockmanYaml.CustomToolsEntryR\vcustomTools\x12,\n" +
 	"\x11useComposeFolders\x18\x01 \x01(\bR\x11useComposeFolders\x12>\n" +
@@ -621,10 +674,15 @@ const file_dockyaml_v1_dockyaml_proto_rawDesc = "" +
 	"\vvolumesPage\x18\x02 \x01(\v2\x1a.dockyaml.v1.VolumesConfigR\vvolumesPage\x12<\n" +
 	"\vnetworkPage\x18\x03 \x01(\v2\x1a.dockyaml.v1.NetworkConfigR\vnetworkPage\x126\n" +
 	"\timagePage\x18\x04 \x01(\v2\x18.dockyaml.v1.ImageConfigR\timagePage\x12B\n" +
-	"\rcontainerPage\x18\x05 \x01(\v2\x1c.dockyaml.v1.ContainerConfigR\rcontainerPage\x1a>\n" +
+	"\rcontainerPage\x18\x05 \x01(\v2\x1c.dockyaml.v1.ContainerConfigR\rcontainerPage\x12<\n" +
+	"\vcomposePage\x18\v \x01(\v2\x1a.dockyaml.v1.ComposeConfigR\vcomposePage\x1a>\n" +
 	"\x10CustomToolsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"6\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"/\n" +
+	"\rComposeConfig\x12\x1e\n" +
+	"\n" +
+	"defaultTab\x18\x01 \x01(\tR\n" +
+	"defaultTab\"6\n" +
 	"\rVolumesConfig\x12%\n" +
 	"\x04sort\x18\x01 \x01(\v2\x11.dockyaml.v1.SortR\x04sort\"6\n" +
 	"\rNetworkConfig\x12%\n" +
@@ -654,7 +712,7 @@ func file_dockyaml_v1_dockyaml_proto_rawDescGZIP() []byte {
 	return file_dockyaml_v1_dockyaml_proto_rawDescData
 }
 
-var file_dockyaml_v1_dockyaml_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_dockyaml_v1_dockyaml_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_dockyaml_v1_dockyaml_proto_goTypes = []any{
 	(*SaveRequest)(nil),     // 0: dockyaml.v1.SaveRequest
 	(*SaveResponse)(nil),    // 1: dockyaml.v1.SaveResponse
@@ -663,35 +721,37 @@ var file_dockyaml_v1_dockyaml_proto_goTypes = []any{
 	(*GetYamlRequest)(nil),  // 4: dockyaml.v1.GetYamlRequest
 	(*GetYamlResponse)(nil), // 5: dockyaml.v1.GetYamlResponse
 	(*DockmanYaml)(nil),     // 6: dockyaml.v1.DockmanYaml
-	(*VolumesConfig)(nil),   // 7: dockyaml.v1.VolumesConfig
-	(*NetworkConfig)(nil),   // 8: dockyaml.v1.NetworkConfig
-	(*ImageConfig)(nil),     // 9: dockyaml.v1.ImageConfig
-	(*ContainerConfig)(nil), // 10: dockyaml.v1.ContainerConfig
-	(*Sort)(nil),            // 11: dockyaml.v1.Sort
-	nil,                     // 12: dockyaml.v1.DockmanYaml.CustomToolsEntry
+	(*ComposeConfig)(nil),   // 7: dockyaml.v1.ComposeConfig
+	(*VolumesConfig)(nil),   // 8: dockyaml.v1.VolumesConfig
+	(*NetworkConfig)(nil),   // 9: dockyaml.v1.NetworkConfig
+	(*ImageConfig)(nil),     // 10: dockyaml.v1.ImageConfig
+	(*ContainerConfig)(nil), // 11: dockyaml.v1.ContainerConfig
+	(*Sort)(nil),            // 12: dockyaml.v1.Sort
+	nil,                     // 13: dockyaml.v1.DockmanYaml.CustomToolsEntry
 }
 var file_dockyaml_v1_dockyaml_proto_depIdxs = []int32{
 	6,  // 0: dockyaml.v1.GetYamlResponse.dock:type_name -> dockyaml.v1.DockmanYaml
-	12, // 1: dockyaml.v1.DockmanYaml.customTools:type_name -> dockyaml.v1.DockmanYaml.CustomToolsEntry
-	7,  // 2: dockyaml.v1.DockmanYaml.volumesPage:type_name -> dockyaml.v1.VolumesConfig
-	8,  // 3: dockyaml.v1.DockmanYaml.networkPage:type_name -> dockyaml.v1.NetworkConfig
-	9,  // 4: dockyaml.v1.DockmanYaml.imagePage:type_name -> dockyaml.v1.ImageConfig
-	10, // 5: dockyaml.v1.DockmanYaml.containerPage:type_name -> dockyaml.v1.ContainerConfig
-	11, // 6: dockyaml.v1.VolumesConfig.sort:type_name -> dockyaml.v1.Sort
-	11, // 7: dockyaml.v1.NetworkConfig.sort:type_name -> dockyaml.v1.Sort
-	11, // 8: dockyaml.v1.ImageConfig.sort:type_name -> dockyaml.v1.Sort
-	11, // 9: dockyaml.v1.ContainerConfig.sort:type_name -> dockyaml.v1.Sort
-	2,  // 10: dockyaml.v1.DockyamlService.Get:input_type -> dockyaml.v1.GetRequest
-	0,  // 11: dockyaml.v1.DockyamlService.Save:input_type -> dockyaml.v1.SaveRequest
-	4,  // 12: dockyaml.v1.DockyamlService.GetYaml:input_type -> dockyaml.v1.GetYamlRequest
-	3,  // 13: dockyaml.v1.DockyamlService.Get:output_type -> dockyaml.v1.GetResponse
-	1,  // 14: dockyaml.v1.DockyamlService.Save:output_type -> dockyaml.v1.SaveResponse
-	5,  // 15: dockyaml.v1.DockyamlService.GetYaml:output_type -> dockyaml.v1.GetYamlResponse
-	13, // [13:16] is the sub-list for method output_type
-	10, // [10:13] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	13, // 1: dockyaml.v1.DockmanYaml.customTools:type_name -> dockyaml.v1.DockmanYaml.CustomToolsEntry
+	8,  // 2: dockyaml.v1.DockmanYaml.volumesPage:type_name -> dockyaml.v1.VolumesConfig
+	9,  // 3: dockyaml.v1.DockmanYaml.networkPage:type_name -> dockyaml.v1.NetworkConfig
+	10, // 4: dockyaml.v1.DockmanYaml.imagePage:type_name -> dockyaml.v1.ImageConfig
+	11, // 5: dockyaml.v1.DockmanYaml.containerPage:type_name -> dockyaml.v1.ContainerConfig
+	7,  // 6: dockyaml.v1.DockmanYaml.composePage:type_name -> dockyaml.v1.ComposeConfig
+	12, // 7: dockyaml.v1.VolumesConfig.sort:type_name -> dockyaml.v1.Sort
+	12, // 8: dockyaml.v1.NetworkConfig.sort:type_name -> dockyaml.v1.Sort
+	12, // 9: dockyaml.v1.ImageConfig.sort:type_name -> dockyaml.v1.Sort
+	12, // 10: dockyaml.v1.ContainerConfig.sort:type_name -> dockyaml.v1.Sort
+	2,  // 11: dockyaml.v1.DockyamlService.Get:input_type -> dockyaml.v1.GetRequest
+	0,  // 12: dockyaml.v1.DockyamlService.Save:input_type -> dockyaml.v1.SaveRequest
+	4,  // 13: dockyaml.v1.DockyamlService.GetYaml:input_type -> dockyaml.v1.GetYamlRequest
+	3,  // 14: dockyaml.v1.DockyamlService.Get:output_type -> dockyaml.v1.GetResponse
+	1,  // 15: dockyaml.v1.DockyamlService.Save:output_type -> dockyaml.v1.SaveResponse
+	5,  // 16: dockyaml.v1.DockyamlService.GetYaml:output_type -> dockyaml.v1.GetYamlResponse
+	14, // [14:17] is the sub-list for method output_type
+	11, // [11:14] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_dockyaml_v1_dockyaml_proto_init() }
@@ -705,7 +765,7 @@ func file_dockyaml_v1_dockyaml_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dockyaml_v1_dockyaml_proto_rawDesc), len(file_dockyaml_v1_dockyaml_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
