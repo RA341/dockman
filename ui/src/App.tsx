@@ -14,6 +14,7 @@ import {
     Typography
 } from '@mui/material';
 import {SnackbarProvider} from "./context/snackbar-context.tsx";
+import {UploadProgressToast} from "./components/upload-progress-toast.tsx";
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams} from "react-router-dom";
 import {AuthProvider} from "./context/auth-context.tsx";
 import React from 'react';
@@ -48,6 +49,7 @@ export function App() {
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
             <SnackbarProvider>
+                <UploadProgressToast/>
                 <AuthProvider>
                     <BrowserRouter>
                         <Routes>

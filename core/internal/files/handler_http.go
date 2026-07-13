@@ -72,7 +72,9 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 	// 10 MB is the maximum upload size
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		log.Fatal().Err(err).Msg("Error parsing multipart form")
+		// A malformed upload must not take down the whole server: log.Fatal
+		// here would call os.Exit. Return a 400 instead.
+		log.Error().Err(err).Msg("Error parsing multipart form")
 		http.Error(w, "Could not parse multipart form", http.StatusBadRequest)
 		return
 	}
