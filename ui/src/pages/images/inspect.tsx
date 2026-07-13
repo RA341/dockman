@@ -220,76 +220,6 @@ const ImageInspectPage = () => {
                             </Stack>
                         </Paper>
 
-                        {/* Layers Table */}
-                        <Paper variant="outlined"
-                               sx={{
-                                   // width: 800,
-                                   borderRadius: 3,
-                                   overflow: 'hidden',
-                                   display: 'flex',
-                                   flexDirection: 'column'
-                               }}>
-                            <Box sx={{
-                                p: 2,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                bgcolor: 'background.paper'
-                            }}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <HistoryOutlined sx={{fontSize: 18, color: 'text.disabled'}}/>
-                                    <Typography variant="subtitle2" sx={{fontWeight: 800}}>History Layers</Typography>
-                                    <Chip
-                                        label={`${inspect.layers?.length || 0} layers`}
-                                        size="small"
-                                        color="info"
-                                        sx={{height: 20, fontSize: '0.65rem', fontWeight: 700}}
-                                    />
-                                </Stack>
-                            </Box>
-
-                            <TableContainer sx={{...scrollbarStyles}}>
-                                <Table size="small" stickyHeader
-                                       sx={{tableLayout: 'fixed'}}> {/* Added fixed layout for strict width control */}
-                                    <TableHead>
-                                        <TableRow>
-                                            {/* Fixed small widths for metadata */}
-                                            <TableCell sx={{...headerStyles, width: 50}}>#</TableCell>
-                                            <TableCell sx={{...headerStyles, width: 120}}>Layer Size</TableCell>
-                                            <TableCell sx={{...headerStyles, width: 150}}>Cumulative</TableCell>
-                                            {/* Max width on the header */}
-                                            <TableCell sx={{...headerStyles, maxWidth: '500px'}}>Cmd</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {inspect.layers?.map((layer, idx) => (
-                                            <TableRow key={idx} hover>
-                                                <TableCell sx={{
-                                                    color: 'text.disabled',
-                                                    fontFamily: 'monospace',
-                                                    fontSize: '0.7rem'
-                                                }}>
-                                                    {idx}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <LayerSizeChip size={layer.size}/>
-                                                </TableCell>
-                                                <TableCell sx={{
-                                                    color: 'text.secondary',
-                                                    fontFamily: 'monospace',
-                                                    fontSize: '0.75rem'
-                                                }}>
-                                                    {layer.totalSizeAtLayer || '--'}
-                                                </TableCell>
-                                                {/* The Cell component now handles its own internal constraints */}
-                                                <DockerCommandCell command={layer.cmd || ''}/>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        </Paper>
-
                         {/* Containers using this image */}
                         <Paper variant="outlined"
                                sx={{
@@ -383,6 +313,77 @@ const ImageInspectPage = () => {
                                 </Box>
                             )}
                         </Paper>
+
+                        {/* Layers Table */}
+                        <Paper variant="outlined"
+                               sx={{
+                                   // width: 800,
+                                   borderRadius: 3,
+                                   overflow: 'hidden',
+                                   display: 'flex',
+                                   flexDirection: 'column'
+                               }}>
+                            <Box sx={{
+                                p: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                bgcolor: 'background.paper'
+                            }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <HistoryOutlined sx={{fontSize: 18, color: 'text.disabled'}}/>
+                                    <Typography variant="subtitle2" sx={{fontWeight: 800}}>History Layers</Typography>
+                                    <Chip
+                                        label={`${inspect.layers?.length || 0} layers`}
+                                        size="small"
+                                        color="info"
+                                        sx={{height: 20, fontSize: '0.65rem', fontWeight: 700}}
+                                    />
+                                </Stack>
+                            </Box>
+
+                            <TableContainer sx={{...scrollbarStyles}}>
+                                <Table size="small" stickyHeader
+                                       sx={{tableLayout: 'fixed'}}> {/* Added fixed layout for strict width control */}
+                                    <TableHead>
+                                        <TableRow>
+                                            {/* Fixed small widths for metadata */}
+                                            <TableCell sx={{...headerStyles, width: 50}}>#</TableCell>
+                                            <TableCell sx={{...headerStyles, width: 120}}>Layer Size</TableCell>
+                                            <TableCell sx={{...headerStyles, width: 150}}>Cumulative</TableCell>
+                                            {/* Max width on the header */}
+                                            <TableCell sx={{...headerStyles, maxWidth: '500px'}}>Cmd</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {inspect.layers?.map((layer, idx) => (
+                                            <TableRow key={idx} hover>
+                                                <TableCell sx={{
+                                                    color: 'text.disabled',
+                                                    fontFamily: 'monospace',
+                                                    fontSize: '0.7rem'
+                                                }}>
+                                                    {idx}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <LayerSizeChip size={layer.size}/>
+                                                </TableCell>
+                                                <TableCell sx={{
+                                                    color: 'text.secondary',
+                                                    fontFamily: 'monospace',
+                                                    fontSize: '0.75rem'
+                                                }}>
+                                                    {layer.totalSizeAtLayer || '--'}
+                                                </TableCell>
+                                                {/* The Cell component now handles its own internal constraints */}
+                                                <DockerCommandCell command={layer.cmd || ''}/>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </Paper>
+
                     </>
                 )}
             </Box>
