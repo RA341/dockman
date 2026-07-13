@@ -25,6 +25,7 @@ import (
 	"github.com/RA341/dockman/internal/viewer"
 	"github.com/RA341/dockman/pkg/argos"
 	"github.com/RA341/dockman/pkg/logger"
+	"github.com/RA341/dockman/pkg/memlimit"
 
 	"github.com/rs/zerolog/log"
 )
@@ -66,6 +67,11 @@ func NewApp(opt ...config.AppOpt) (app *App) {
 	}
 
 	logger.InitConsole(conf.Log.Level, conf.Log.Verbose)
+
+	// Cap the Go heap to the container's cgroup memory limit. The runtime does
+	// not do this on its own, so without it a transient spike inflates RSS and
+	// stays resident. No-op outside a memory-limited container.
+	memlimit.Configure()
 
 	// db and info setup
 	gormDB := database.New(conf.ConfigDir, info.IsDev())
