@@ -379,8 +379,8 @@ func (x *DockmanYaml) GetEditorPage() *EditorConfig {
 
 type EditorConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// allow scrolling until the last line reaches the top of the view,
-	// for files taller than the viewport (classic Monaco behavior)
+	// allow scrolling half a viewport past the last line (it stops at
+	// mid-view), for files taller than the viewport
 	ScrollPastEnd bool `protobuf:"varint,1,opt,name=scrollPastEnd,proto3" json:"scrollPastEnd,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

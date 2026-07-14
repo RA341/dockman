@@ -169,8 +169,8 @@ export const DockmanYamlSchema: GenMessage<DockmanYaml> = /*@__PURE__*/
  */
 export type EditorConfig = Message<"dockyaml.v1.EditorConfig"> & {
   /**
-   * allow scrolling until the last line reaches the top of the view,
-   * for files taller than the viewport (classic Monaco behavior)
+   * allow scrolling half a viewport past the last line (it stops at
+   * mid-view), for files taller than the viewport
    *
    * @generated from field: bool scrollPastEnd = 1;
    */
