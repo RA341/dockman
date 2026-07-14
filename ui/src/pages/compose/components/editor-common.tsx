@@ -97,7 +97,10 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     }
 
     return (
-        <Box sx={{flexGrow: 1, position: 'relative'}}>
+        // clip Monaco overlays (e.g. the sticky scroll band, which keeps a
+        // stale width when the widget panel resizes the editor) so they can
+        // never paint over neighboring panels
+        <Box sx={{flexGrow: 1, position: 'relative', overflow: 'hidden'}}>
             <MonacoEditor
                 selectedFile={filename}
                 fileContent={contents}

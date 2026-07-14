@@ -6,6 +6,7 @@ import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {useTabs, useTabsStore} from "../../../context/tab-context.tsx";
 import {FileService} from "../../../gen/files/v1/files_pb.ts";
+import {useConfig} from "../../../hooks/config.ts";
 
 interface MonacoEditorProps {
     selectedFile: string;
@@ -27,6 +28,38 @@ export function MonacoEditor(
 
     const [mounted, setMounted] = useState(false);
     const {setTabDetails} = useTabs()
+
+    const {dockYaml} = useConfig()
+    const scrollPastEnd = dockYaml?.editorPage?.scrollPastEnd ?? false
+
+    // dockman.yml editor.scrollPastEnd re-enables Monaco's scroll-beyond-last-line,
+    // but only while the file is taller than the viewport: short files never
+    // scroll past their end, long files can bring the last line to the top
+    useEffect(() => {
+        if (!mounted) return;
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        if (!scrollPastEnd) {
+            editor.updateOptions({scrollBeyondLastLine: false});
+            return;
+        }
+
+        const apply = () => {
+            const lineHeight = editor.getOption(monacoEditor.editor.EditorOption.lineHeight);
+            const lineCount = editor.getModel()?.getLineCount() ?? 0;
+            const overflows = lineCount * lineHeight > editor.getLayoutInfo().height;
+            editor.updateOptions({scrollBeyondLastLine: overflows});
+        };
+
+        apply();
+        const contentSub = editor.onDidChangeModelContent(apply);
+        const layoutSub = editor.onDidLayoutChange(apply);
+        return () => {
+            contentSub.dispose();
+            layoutSub.dispose();
+        };
+    }, [scrollPastEnd, mounted]);
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;
@@ -124,7 +157,11 @@ export function MonacoEditor(
                 // stop the view from scrolling past the last line: short files
                 // no longer show a useless scrollbar and long files stop with
                 // the last line at the bottom, like classic editors
+                // (dockman.yml editor.scrollPastEnd re-enables it dynamically)
                 scrollBeyondLastLine: false,
+                // hover/suggest widgets render position:fixed so the overflow
+                // clip on the editor container cannot cut them off
+                fixedOverflowWidgets: true,
             }}
         />
     );

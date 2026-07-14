@@ -53,6 +53,9 @@ type DockmanYaml struct {
 
 	ContainerPage ContainerConfig `yaml:"containers"`
 
+	// configure the file editor
+	EditorPage EditorConfig `yaml:"editor"`
+
 	// define a max search limit for files
 	SearchLimit int `yaml:"searchLimit"`
 
@@ -73,6 +76,12 @@ type NetworkConfig struct {
 
 type ImageConfig struct {
 	Sort Sort `yaml:"sort"`
+}
+
+type EditorConfig struct {
+	// allow scrolling until the last line reaches the top of the view,
+	// for files taller than the viewport (classic Monaco behavior)
+	ScrollPastEnd bool `yaml:"scrollPastEnd"`
 }
 
 type Sort struct {

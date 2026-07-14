@@ -39,6 +39,13 @@ message DockmanYaml {
   NetworkConfig networkPage = 3;
   ImageConfig imagePage = 4;
   ContainerConfig containerPage = 5;
+  EditorConfig editorPage = 12;
+}
+
+message EditorConfig {
+  // allow scrolling until the last line reaches the top of the view,
+  // for files taller than the viewport (classic Monaco behavior)
+  bool scrollPastEnd = 1;
 }
 
 message VolumesConfig {
