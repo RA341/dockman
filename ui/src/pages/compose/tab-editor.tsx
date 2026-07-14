@@ -222,7 +222,7 @@ const SidebarContent = (
         activeAction: string | null;
         actions: Record<string, ActionItem>
     }) => {
-    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left', 450)
+    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left', 280)
 
     return (
         <Box ref={panelRef}
