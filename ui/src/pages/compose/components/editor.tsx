@@ -27,6 +27,10 @@ export function MonacoEditor(
     const saveLineNum = useSaveLineNum()
 
     const [mounted, setMounted] = useState(false);
+    // bumped on every editor instance creation: the component remounts per
+    // file (key={selectedFile}) while `mounted` stays true, so effects that
+    // must re-attach to the new instance depend on this counter instead
+    const [editorGen, setEditorGen] = useState(0);
     const {setTabDetails} = useTabs()
 
     const {dockYaml} = useConfig()
@@ -36,7 +40,6 @@ export function MonacoEditor(
     // but only while the file is taller than the viewport: short files never
     // scroll past their end, long files can bring the last line to the top
     useEffect(() => {
-        if (!mounted) return;
         const editor = editorRef.current;
         if (!editor) return;
 
@@ -59,11 +62,12 @@ export function MonacoEditor(
             contentSub.dispose();
             layoutSub.dispose();
         };
-    }, [scrollPastEnd, mounted]);
+    }, [scrollPastEnd, editorGen]);
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;
         setMounted(true);
+        setEditorGen(gen => gen + 1);
         editor.focus();
 
         editor.addCommand(
