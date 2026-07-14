@@ -79,8 +79,8 @@ type ImageConfig struct {
 }
 
 type EditorConfig struct {
-	// allow scrolling until the last line reaches the top of the view,
-	// for files taller than the viewport (classic Monaco behavior)
+	// allow scrolling half a viewport past the last line (it stops at
+	// mid-view), for files taller than the viewport
 	ScrollPastEnd bool `yaml:"scrollPastEnd"`
 }
 

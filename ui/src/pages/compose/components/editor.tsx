@@ -36,23 +36,25 @@ export function MonacoEditor(
     const {dockYaml} = useConfig()
     const scrollPastEnd = dockYaml?.editorPage?.scrollPastEnd ?? false
 
-    // dockman.yml editor.scrollPastEnd re-enables Monaco's scroll-beyond-last-line,
-    // but only while the file is taller than the viewport: short files never
-    // scroll past their end, long files can bring the last line to the top
+    // dockman.yml editor.scrollPastEnd lets long files scroll half a viewport
+    // past their end (the last line stops at mid-view, not at the top), via a
+    // bottom padding applied only while the file is taller than the viewport:
+    // short files never scroll past their end
     useEffect(() => {
         const editor = editorRef.current;
         if (!editor) return;
 
         if (!scrollPastEnd) {
-            editor.updateOptions({scrollBeyondLastLine: false});
+            editor.updateOptions({padding: {bottom: 0}});
             return;
         }
 
         const apply = () => {
             const lineHeight = editor.getOption(monacoEditor.editor.EditorOption.lineHeight);
             const lineCount = editor.getModel()?.getLineCount() ?? 0;
-            const overflows = lineCount * lineHeight > editor.getLayoutInfo().height;
-            editor.updateOptions({scrollBeyondLastLine: overflows});
+            const height = editor.getLayoutInfo().height;
+            const overflows = lineCount * lineHeight > height;
+            editor.updateOptions({padding: {bottom: overflows ? Math.round(height / 2) : 0}});
         };
 
         apply();
