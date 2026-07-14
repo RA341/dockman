@@ -121,6 +121,10 @@ export function MonacoEditor(
                 selectOnLineNumbers: true,
                 minimap: {enabled: false},
                 automaticLayout: true,
+                // stop the view from scrolling past the last line: short files
+                // no longer show a useless scrollbar and long files stop with
+                // the last line at the bottom, like classic editors
+                scrollBeyondLastLine: false,
             }}
         />
     );
