@@ -70,12 +70,53 @@ func (s *Service) ImageDelete(ctx context.Context, imageId string) ([]image.Dele
 	return remove.Items, err
 }
 
+// ImageUsageCounts returns, per image ID, how many containers (running or
+// stopped) were created from it. The image list's own Containers field is
+// unreliable (-1 when not computed, 0 on some image stores), while image
+// prune decides from the daemon's actual reference counts — so usage comes
+// from the disk-usage report (the daemon-computed count) complemented by the
+// container list, and matches what prune would really do.
+func (s *Service) ImageUsageCounts(ctx context.Context) (map[string]int64, error) {
+	counts := make(map[string]int64)
+
+	diskUsage, err := s.Client.DiskUsage(ctx, client.DiskUsageOptions{
+		Images:  true,
+		Verbose: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get disk usage data: %w", err)
+	}
+	for _, img := range diskUsage.Images.Items {
+		if img.Containers > 0 {
+			counts[img.ID] = img.Containers
+		}
+	}
+
+	// an image missing from disk usage (or reported without a computed count)
+	// must still show as used while a container references it
+	resp, err := s.Client.ContainerList(ctx, client.ContainerListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers: %w", err)
+	}
+	perID := make(map[string]int64, len(resp.Items))
+	for _, c := range resp.Items {
+		perID[c.ImageID]++
+	}
+	for id, n := range perID {
+		if n > counts[id] {
+			counts[id] = n
+		}
+	}
+
+	return counts, nil
+}
+
 func (s *Service) ImagePruneUntagged(ctx context.Context) (image.PruneReport, error) {
 	filter := client.Filters{}
 	// removes dangling (untagged) mostly due to image being updated
 	filter.Add("dangling", "true")
 
-	prune, err := s.Client.ImagePrune(ctx, client.ImagePruneOptions{})
+	prune, err := s.Client.ImagePrune(ctx, client.ImagePruneOptions{Filters: filter})
 	if err != nil {
 		return prune.Report, err
 	}

@@ -35,6 +35,13 @@ func (h *Handler) ImageList(ctx context.Context, req *connect.Request[v1.ListIma
 	//	return nil, err
 	//}
 
+	// usage comes from the container list rather than the summary's
+	// Containers field, so the unused count matches what prune would do
+	usage, err := dkSrv.Container.ImageUsageCounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	var unusedContainers int64
 	var totalDisk int64
 	var untagged int64
@@ -47,12 +54,13 @@ func (h *Handler) ImageList(ctx context.Context, req *connect.Request[v1.ListIma
 			untagged++
 		}
 
-		if img.Containers == 0 {
+		containers := usage[img.ID]
+		if containers == 0 {
 			unusedContainers++
 		}
 
 		rpcImages = append(rpcImages, &v1.Image{
-			Containers:  img.Containers,
+			Containers:  containers,
 			Created:     img.Created,
 			Id:          img.ID,
 			Labels:      img.Labels,
