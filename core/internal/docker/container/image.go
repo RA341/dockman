@@ -111,6 +111,25 @@ func (s *Service) ImageUsageCounts(ctx context.Context) (map[string]int64, error
 	return counts, nil
 }
 
+// ImageDescendantContainers reports how many containers were created from the
+// image or from any image built on top of it, via the daemon's "ancestor"
+// filter. This catches base/parent images with no direct container: prune
+// keeps them because a dependent child image is still in use, so they must
+// not be reported as unused.
+func (s *Service) ImageDescendantContainers(ctx context.Context, imageID string) (int64, error) {
+	filters := client.Filters{}
+	filters.Add("ancestor", imageID)
+
+	resp, err := s.Client.ContainerList(ctx, client.ContainerListOptions{
+		All:     true,
+		Filters: filters,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to list containers for image %s: %w", imageID, err)
+	}
+	return int64(len(resp.Items)), nil
+}
+
 func (s *Service) ImagePruneUntagged(ctx context.Context) (image.PruneReport, error) {
 	filter := client.Filters{}
 	// removes dangling (untagged) mostly due to image being updated

@@ -56,6 +56,15 @@ func (h *Handler) ImageList(ctx context.Context, req *connect.Request[v1.ListIma
 
 		containers := usage[img.ID]
 		if containers == 0 {
+			// no direct container: the image may still be the base of an
+			// image whose containers run — prune keeps those, so they must
+			// count as used too
+			containers, err = dkSrv.Container.ImageDescendantContainers(ctx, img.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if containers == 0 {
 			unusedContainers++
 		}
 
