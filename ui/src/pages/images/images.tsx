@@ -26,10 +26,13 @@ const ImagesPage = () => {
 
     const filteredImages = useMemo(() => {
         if (search) {
+            // untagged (dangling) images have no repoTags at all — indexing
+            // [0] blindly crashed the whole page on the first keystroke.
+            // Match any tag or the id, case-insensitively.
+            const query = search.toLowerCase();
             return images.filter(image =>
-                image.repoTags[0]
-                    .toLowerCase()
-                    .includes(search))
+                image.repoTags.some(tag => tag.toLowerCase().includes(query)) ||
+                image.id.toLowerCase().includes(query))
         }
         return images;
     }, [images, search]);
