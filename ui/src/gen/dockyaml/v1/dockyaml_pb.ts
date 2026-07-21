@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dockyaml/v1/dockyaml.proto.
  */
 export const file_dockyaml_v1_dockyaml: GenFile = /*@__PURE__*/
-  fileDesc("Chpkb2NreWFtbC92MS9kb2NreWFtbC5wcm90bxILZG9ja3lhbWwudjEiHwoLU2F2ZVJlcXVlc3QSEAoIY29udGVudHMYAiABKAwiDgoMU2F2ZVJlc3BvbnNlIgwKCkdldFJlcXVlc3QiHwoLR2V0UmVzcG9uc2USEAoIY29udGVudHMYASABKAwiEAoOR2V0WWFtbFJlcXVlc3QiOQoPR2V0WWFtbFJlc3BvbnNlEiYKBGRvY2sYASABKAsyGC5kb2NreWFtbC52MS5Eb2NrbWFuWWFtbCKrAwoLRG9ja21hbllhbWwSPgoLY3VzdG9tVG9vbHMYCSADKAsyKS5kb2NreWFtbC52MS5Eb2NrbWFuWWFtbC5DdXN0b21Ub29sc0VudHJ5EhkKEXVzZUNvbXBvc2VGb2xkZXJzGAEgASgIEiIKGmRpc2FibGVDb21wb3NlUXVpY2tBY3Rpb25zGAcgASgIEhMKC3NlYXJjaExpbWl0GAggASgFEhAKCHRhYkxpbWl0GAYgASgFEi8KC3ZvbHVtZXNQYWdlGAIgASgLMhouZG9ja3lhbWwudjEuVm9sdW1lc0NvbmZpZxIvCgtuZXR3b3JrUGFnZRgDIAEoCzIaLmRvY2t5YW1sLnYxLk5ldHdvcmtDb25maWcSKwoJaW1hZ2VQYWdlGAQgASgLMhguZG9ja3lhbWwudjEuSW1hZ2VDb25maWcSMwoNY29udGFpbmVyUGFnZRgFIAEoCzIcLmRvY2t5YW1sLnYxLkNvbnRhaW5lckNvbmZpZxoyChBDdXN0b21Ub29sc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiMAoNVm9sdW1lc0NvbmZpZxIfCgRzb3J0GAEgASgLMhEuZG9ja3lhbWwudjEuU29ydCIwCg1OZXR3b3JrQ29uZmlnEh8KBHNvcnQYASABKAsyES5kb2NreWFtbC52MS5Tb3J0Ii4KC0ltYWdlQ29uZmlnEh8KBHNvcnQYASABKAsyES5kb2NreWFtbC52MS5Tb3J0IjIKD0NvbnRhaW5lckNvbmZpZxIfCgRzb3J0GAEgASgLMhEuZG9ja3lhbWwudjEuU29ydCIsCgRTb3J0EhEKCXNvcnRPcmRlchgBIAEoCRIRCglzb3J0RmllbGQYAiABKAky1AEKD0RvY2t5YW1sU2VydmljZRI6CgNHZXQSFy5kb2NreWFtbC52MS5HZXRSZXF1ZXN0GhguZG9ja3lhbWwudjEuR2V0UmVzcG9uc2UiABI9CgRTYXZlEhguZG9ja3lhbWwudjEuU2F2ZVJlcXVlc3QaGS5kb2NreWFtbC52MS5TYXZlUmVzcG9uc2UiABJGCgdHZXRZYW1sEhsuZG9ja3lhbWwudjEuR2V0WWFtbFJlcXVlc3QaHC5kb2NreWFtbC52MS5HZXRZYW1sUmVzcG9uc2UiAEKdAQoPY29tLmRvY2t5YW1sLnYxQg1Eb2NreWFtbFByb3RvUAFaLmdpdGh1Yi5jb20vUkEzNDEvZG9ja21hbi9nZW5lcmF0ZWQvZG9ja3lhbWwvdjGiAgNEWFiqAgtEb2NreWFtbC5WMcoCC0RvY2t5YW1sXFYx4gIXRG9ja3lhbWxcVjFcR1BCTWV0YWRhdGHqAgxEb2NreWFtbDo6VjFiBnByb3RvMw");
+  fileDesc("Chpkb2NreWFtbC92MS9kb2NreWFtbC5wcm90bxILZG9ja3lhbWwudjEiHwoLU2F2ZVJlcXVlc3QSEAoIY29udGVudHMYAiABKAwiDgoMU2F2ZVJlc3BvbnNlIgwKCkdldFJlcXVlc3QiHwoLR2V0UmVzcG9uc2USEAoIY29udGVudHMYASABKAwiEAoOR2V0WWFtbFJlcXVlc3QiOQoPR2V0WWFtbFJlc3BvbnNlEiYKBGRvY2sYASABKAsyGC5kb2NreWFtbC52MS5Eb2NrbWFuWWFtbCL+BAoLRG9ja21hbllhbWwSPgoLY3VzdG9tVG9vbHMYCSADKAsyKS5kb2NreWFtbC52MS5Eb2NrbWFuWWFtbC5DdXN0b21Ub29sc0VudHJ5EhkKEXVzZUNvbXBvc2VGb2xkZXJzGAEgASgIEiIKGmRpc2FibGVDb21wb3NlUXVpY2tBY3Rpb25zGAcgASgIEhMKC3NlYXJjaExpbWl0GAggASgFEhAKCHRhYkxpbWl0GAYgASgFEi8KC3ZvbHVtZXNQYWdlGAIgASgLMhouZG9ja3lhbWwudjEuVm9sdW1lc0NvbmZpZxIvCgtuZXR3b3JrUGFnZRgDIAEoCzIaLmRvY2t5YW1sLnYxLk5ldHdvcmtDb25maWcSKwoJaW1hZ2VQYWdlGAQgASgLMhguZG9ja3lhbWwudjEuSW1hZ2VDb25maWcSMwoNY29udGFpbmVyUGFnZRgFIAEoCzIcLmRvY2t5YW1sLnYxLkNvbnRhaW5lckNvbmZpZxIrCglzdGF0c1BhZ2UYCiABKAsyGC5kb2NreWFtbC52MS5TdGF0c0NvbmZpZxIvCgtjb21wb3NlUGFnZRgLIAEoCzIaLmRvY2t5YW1sLnYxLkNvbXBvc2VDb25maWcSLQoKZWRpdG9yUGFnZRgMIAEoCzIZLmRvY2t5YW1sLnYxLkVkaXRvckNvbmZpZxIvCgttb25pdG9yUGFnZRgNIAEoCzIaLmRvY2t5YW1sLnYxLk1vbml0b3JDb25maWcSEwoLZGVmYXVsdFZpZXcYDiABKAkaMgoQQ3VzdG9tVG9vbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIiIKDU1vbml0b3JDb25maWcSEQoJc3RhY2tSb3dzGAEgASgJIiMKDUNvbXBvc2VDb25maWcSEgoKZGVmYXVsdFRhYhgBIAEoCSIlCgxFZGl0b3JDb25maWcSFQoNc2Nyb2xsUGFzdEVuZBgBIAEoCCIwCg1Wb2x1bWVzQ29uZmlnEh8KBHNvcnQYASABKAsyES5kb2NreWFtbC52MS5Tb3J0IjAKDU5ldHdvcmtDb25maWcSHwoEc29ydBgBIAEoCzIRLmRvY2t5YW1sLnYxLlNvcnQiLgoLSW1hZ2VDb25maWcSHwoEc29ydBgBIAEoCzIRLmRvY2t5YW1sLnYxLlNvcnQiMgoPQ29udGFpbmVyQ29uZmlnEh8KBHNvcnQYASABKAsyES5kb2NreWFtbC52MS5Tb3J0Ii4KC1N0YXRzQ29uZmlnEh8KBHNvcnQYASABKAsyES5kb2NreWFtbC52MS5Tb3J0IiwKBFNvcnQSEQoJc29ydE9yZGVyGAEgASgJEhEKCXNvcnRGaWVsZBgCIAEoCTLUAQoPRG9ja3lhbWxTZXJ2aWNlEjoKA0dldBIXLmRvY2t5YW1sLnYxLkdldFJlcXVlc3QaGC5kb2NreWFtbC52MS5HZXRSZXNwb25zZSIAEj0KBFNhdmUSGC5kb2NreWFtbC52MS5TYXZlUmVxdWVzdBoZLmRvY2t5YW1sLnYxLlNhdmVSZXNwb25zZSIAEkYKB0dldFlhbWwSGy5kb2NreWFtbC52MS5HZXRZYW1sUmVxdWVzdBocLmRvY2t5YW1sLnYxLkdldFlhbWxSZXNwb25zZSIAQp0BCg9jb20uZG9ja3lhbWwudjFCDURvY2t5YW1sUHJvdG9QAVouZ2l0aHViLmNvbS9SQTM0MS9kb2NrbWFuL2dlbmVyYXRlZC9kb2NreWFtbC92MaICA0RYWKoCC0RvY2t5YW1sLlYxygILRG9ja3lhbWxcVjHiAhdEb2NreWFtbFxWMVxHUEJNZXRhZGF0YeoCDERvY2t5YW1sOjpWMWIGcHJvdG8z");
 
 /**
  * @generated from message dockyaml.v1.SaveRequest
@@ -150,6 +150,34 @@ export type DockmanYaml = Message<"dockyaml.v1.DockmanYaml"> & {
    * @generated from field: dockyaml.v1.ContainerConfig containerPage = 5;
    */
   containerPage?: ContainerConfig;
+
+  /**
+   * @generated from field: dockyaml.v1.StatsConfig statsPage = 10;
+   */
+  statsPage?: StatsConfig;
+
+  /**
+   * @generated from field: dockyaml.v1.ComposeConfig composePage = 11;
+   */
+  composePage?: ComposeConfig;
+
+  /**
+   * @generated from field: dockyaml.v1.EditorConfig editorPage = 12;
+   */
+  editorPage?: EditorConfig;
+
+  /**
+   * @generated from field: dockyaml.v1.MonitorConfig monitorPage = 13;
+   */
+  monitorPage?: MonitorConfig;
+
+  /**
+   * view opened when landing on a host: files (default), monitor, stats,
+   * containers, images, volumes, networks or cleaner
+   *
+   * @generated from field: string defaultView = 14;
+   */
+  defaultView: string;
 };
 
 /**
@@ -158,6 +186,65 @@ export type DockmanYaml = Message<"dockyaml.v1.DockmanYaml"> & {
  */
 export const DockmanYamlSchema: GenMessage<DockmanYaml> = /*@__PURE__*/
   messageDesc(file_dockyaml_v1_dockyaml, 6);
+
+/**
+ * @generated from message dockyaml.v1.MonitorConfig
+ */
+export type MonitorConfig = Message<"dockyaml.v1.MonitorConfig"> & {
+  /**
+   * stack row density in the monitor view: "full" (default) shows CPU/RAM
+   * values with their charts, "compact" shows the values only
+   *
+   * @generated from field: string stackRows = 1;
+   */
+  stackRows: string;
+};
+
+/**
+ * Describes the message dockyaml.v1.MonitorConfig.
+ * Use `create(MonitorConfigSchema)` to create a new message.
+ */
+export const MonitorConfigSchema: GenMessage<MonitorConfig> = /*@__PURE__*/
+  messageDesc(file_dockyaml_v1_dockyaml, 7);
+
+/**
+ * @generated from message dockyaml.v1.ComposeConfig
+ */
+export type ComposeConfig = Message<"dockyaml.v1.ComposeConfig"> & {
+  /**
+   * tab shown when opening a compose stack: editor (default), deploy or stats
+   *
+   * @generated from field: string defaultTab = 1;
+   */
+  defaultTab: string;
+};
+
+/**
+ * Describes the message dockyaml.v1.ComposeConfig.
+ * Use `create(ComposeConfigSchema)` to create a new message.
+ */
+export const ComposeConfigSchema: GenMessage<ComposeConfig> = /*@__PURE__*/
+  messageDesc(file_dockyaml_v1_dockyaml, 8);
+
+/**
+ * @generated from message dockyaml.v1.EditorConfig
+ */
+export type EditorConfig = Message<"dockyaml.v1.EditorConfig"> & {
+  /**
+   * allow scrolling half a viewport past the last line (it stops at
+   * mid-view), for files taller than the viewport
+   *
+   * @generated from field: bool scrollPastEnd = 1;
+   */
+  scrollPastEnd: boolean;
+};
+
+/**
+ * Describes the message dockyaml.v1.EditorConfig.
+ * Use `create(EditorConfigSchema)` to create a new message.
+ */
+export const EditorConfigSchema: GenMessage<EditorConfig> = /*@__PURE__*/
+  messageDesc(file_dockyaml_v1_dockyaml, 9);
 
 /**
  * @generated from message dockyaml.v1.VolumesConfig
@@ -174,7 +261,7 @@ export type VolumesConfig = Message<"dockyaml.v1.VolumesConfig"> & {
  * Use `create(VolumesConfigSchema)` to create a new message.
  */
 export const VolumesConfigSchema: GenMessage<VolumesConfig> = /*@__PURE__*/
-  messageDesc(file_dockyaml_v1_dockyaml, 7);
+  messageDesc(file_dockyaml_v1_dockyaml, 10);
 
 /**
  * @generated from message dockyaml.v1.NetworkConfig
@@ -191,7 +278,7 @@ export type NetworkConfig = Message<"dockyaml.v1.NetworkConfig"> & {
  * Use `create(NetworkConfigSchema)` to create a new message.
  */
 export const NetworkConfigSchema: GenMessage<NetworkConfig> = /*@__PURE__*/
-  messageDesc(file_dockyaml_v1_dockyaml, 8);
+  messageDesc(file_dockyaml_v1_dockyaml, 11);
 
 /**
  * @generated from message dockyaml.v1.ImageConfig
@@ -208,7 +295,7 @@ export type ImageConfig = Message<"dockyaml.v1.ImageConfig"> & {
  * Use `create(ImageConfigSchema)` to create a new message.
  */
 export const ImageConfigSchema: GenMessage<ImageConfig> = /*@__PURE__*/
-  messageDesc(file_dockyaml_v1_dockyaml, 9);
+  messageDesc(file_dockyaml_v1_dockyaml, 12);
 
 /**
  * @generated from message dockyaml.v1.ContainerConfig
@@ -225,7 +312,24 @@ export type ContainerConfig = Message<"dockyaml.v1.ContainerConfig"> & {
  * Use `create(ContainerConfigSchema)` to create a new message.
  */
 export const ContainerConfigSchema: GenMessage<ContainerConfig> = /*@__PURE__*/
-  messageDesc(file_dockyaml_v1_dockyaml, 10);
+  messageDesc(file_dockyaml_v1_dockyaml, 13);
+
+/**
+ * @generated from message dockyaml.v1.StatsConfig
+ */
+export type StatsConfig = Message<"dockyaml.v1.StatsConfig"> & {
+  /**
+   * @generated from field: dockyaml.v1.Sort sort = 1;
+   */
+  sort?: Sort;
+};
+
+/**
+ * Describes the message dockyaml.v1.StatsConfig.
+ * Use `create(StatsConfigSchema)` to create a new message.
+ */
+export const StatsConfigSchema: GenMessage<StatsConfig> = /*@__PURE__*/
+  messageDesc(file_dockyaml_v1_dockyaml, 14);
 
 /**
  * @generated from message dockyaml.v1.Sort
@@ -247,7 +351,7 @@ export type Sort = Message<"dockyaml.v1.Sort"> & {
  * Use `create(SortSchema)` to create a new message.
  */
 export const SortSchema: GenMessage<Sort> = /*@__PURE__*/
-  messageDesc(file_dockyaml_v1_dockyaml, 11);
+  messageDesc(file_dockyaml_v1_dockyaml, 15);
 
 /**
  * @generated from service dockyaml.v1.DockyamlService

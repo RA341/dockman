@@ -6,6 +6,7 @@ import (
 
 	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/internal/info"
+	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/syncmap"
 	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/container"
@@ -112,6 +113,8 @@ func (s *Service) StartSession(ctx context.Context, relPath string, alias string
 	if err != nil {
 		return "", nil, err
 	}
+	// close the pull-progress stream so its response body/connection is released
+	defer fileutil.Close(progress)
 
 	err = progress.Wait(context.Background())
 	if err != nil {

@@ -12,10 +12,14 @@ const NetworksEmpty = () => {
             textAlign: 'center',
             gap: 2
         }}>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{
+                color: "text.secondary"
+            }}>
                 No networks found
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+                color: "text.secondary"
+            }}>
                 Better start networking or run some containers let them do it for you
             </Typography>
         </Box>

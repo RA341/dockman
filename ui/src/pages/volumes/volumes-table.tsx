@@ -3,6 +3,7 @@ import {
     Box,
     Checkbox,
     Chip,
+    IconButton,
     Paper,
     Stack,
     Table,
@@ -12,9 +13,14 @@ import {
     TableHead,
     TableRow,
     TableSortLabel,
+    Tooltip,
     Typography
 } from '@mui/material';
-import {CalendarToday as CalendarIcon, FolderOpen as FolderIcon} from '@mui/icons-material';
+import {
+    CalendarToday as CalendarIcon,
+    FolderOpen as FolderIcon,
+    InfoOutlined as InspectIcon
+} from '@mui/icons-material';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import type {Volume} from "../../gen/docker/v1/docker_pb.ts";
 import {formatBytes} from "../../lib/editor.ts";
@@ -29,12 +35,14 @@ interface VolumeTableProps {
     volumes: Volume[];
     selectedVolumes?: string[];
     onSelectionChange?: (selectedIds: string[]) => void;
+    onInspect: (volumeName: string) => void;
 }
 
 export const VolumeTable = ({
                                 volumes,
                                 selectedVolumes = [],
-                                onSelectionChange
+                                onSelectionChange,
+                                onInspect,
                             }: VolumeTableProps) => {
     const {handleCopy, copiedId} = useCopyButton();
     const {dockYaml} = useConfig();
@@ -87,7 +95,9 @@ export const VolumeTable = ({
             ),
             cell: (volume) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Stack direction="row" spacing={1.5} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5}}>
                             <Typography variant="body2" sx={{
                                 fontWeight: 500,
@@ -138,6 +148,27 @@ export const VolumeTable = ({
                 </TableCell>
             )
         },
+        Actions: {
+            getValue: () => 0,
+            header: () => <TableCell sx={headerStyles}>ACTIONS</TableCell>,
+            cell: (volume) => (
+                <TableCell>
+                    <Tooltip title="Inspect Volume" arrow>
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onInspect(volume.name);
+                            }}
+                            sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.5}}
+                        >
+                            <InspectIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+                </TableCell>
+            )
+        },
         Project: {
             getValue: (volume) => volume.composeProjectName || '',
             header: (label) => (
@@ -151,14 +182,18 @@ export const VolumeTable = ({
             cell: (volume) => (
                 <TableCell>
                     {volume.composeProjectName ? (
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack direction="row" spacing={1} sx={{
+                            alignItems: "center"
+                        }}>
                             <ComposeLink
                                 servicePath={volume.composePath}
                                 stackName={volume.composeProjectName}
                             />
                         </Stack>
                     ) : (
-                        <Typography variant="caption" color="text.disabled">—</Typography>
+                        <Typography variant="caption" sx={{
+                            color: "text.disabled"
+                        }}>—</Typography>
                     )}
                 </TableCell>
             )
@@ -193,7 +228,9 @@ export const VolumeTable = ({
             ),
             cell: (volume) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                    }}>
                         <FolderIcon sx={{fontSize: 14, color: 'text.disabled'}}/>
                         <Typography variant="caption"
                                     sx={{fontFamily: 'monospace', color: 'text.secondary', wordBreak: 'break-all'}}>
@@ -221,7 +258,13 @@ export const VolumeTable = ({
             ),
             cell: (volume) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{color: 'text.secondary'}}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                            alignItems: "center",
+                            color: 'text.secondary'
+                        }}>
                         <CalendarIcon sx={{fontSize: 14}}/>
                         <Typography variant="body2" sx={{whiteSpace: 'nowrap'}}>
                             {formatDate(volume.createdAt)}

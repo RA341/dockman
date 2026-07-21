@@ -17,47 +17,41 @@ const useResizeBar = (
         e.preventDefault();
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-        if (!isResizing || !panelRef.current) return;
-
-        const panelRect = panelRef.current.getBoundingClientRect();
-        let newSize: number;
-
-        switch (direction) {
-            case 'right':
-                newSize = e.clientX - panelRect.left;
-                break;
-            case 'left':
-                newSize = panelRect.right - e.clientX;
-                break;
-            case 'bottom':
-                newSize = e.clientY - panelRect.top;
-                break;
-            case 'top':
-                newSize = panelRect.bottom - e.clientY;
-                break;
-            default:
-                return;
-        }
-
-        setPanelSize(Math.max(min, Math.min(max, newSize)));
-    };
-
-    const handleMouseUp = () => {
-        setIsResizing(false);
-    };
-
     useEffect(() => {
-        if (isResizing) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
+        if (!isResizing) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!panelRef.current) return;
+
+            const panelRect = panelRef.current.getBoundingClientRect();
+            let newSize: number;
+
+            switch (direction) {
+                case 'right':
+                    newSize = e.clientX - panelRect.left;
+                    break;
+                case 'left':
+                    newSize = panelRect.right - e.clientX;
+                    break;
+                case 'bottom':
+                    newSize = e.clientY - panelRect.top;
+                    break;
+                case 'top':
+                    newSize = panelRect.bottom - e.clientY;
+                    break;
+            }
+
+            setPanelSize(Math.max(min, Math.min(max, newSize)));
+        };
+        const handleMouseUp = () => setIsResizing(false);
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
         }
-        // eslint-disable-next-line
-    }, [isResizing]);
+    }, [direction, isResizing, max, min]);
 
     const isHorizontal = direction === 'left' || direction === 'right';
     const cursor = isHorizontal ? 'ew-resize' : 'ns-resize';

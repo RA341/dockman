@@ -1,0 +1,254 @@
+name: Fork Integration Build
+
+# Builds and pushes Dockman images to GHCR for THIS fork (not upstream).
+#
+#   - push to `integration`  -> image tag `integration`
+#                               = the stacked image containing every merged subject,
+#                                 for end-to-end testing on the homelab.
+#   - manual dispatch (`ref`) -> build any single branch in isolation,
+#                               tag = sanitized branch name (or custom `tag`).
+#
+# This workflow lives ONLY on the `integration` branch, on purpose:
+# contribution branches (fix/*, feat/*) stay clean so their PRs to the
+# upstream repo never carry any of our CI files. Zero-conflict by design.
+
+on:
+  push:
+    branches:
+      - integration
+    paths:
+      - 'core/**'
+      - 'ui/**'
+      - 'pkg/docker/**'
+      - '.dockerignore'
+      - '.github/workflows/fork-integration-build.yml'
+      - 'scripts/ghcr-retention.py'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Optional branch or ref to build (defaults to the workflow ref)'
+        required: false
+        type: string
+      tag:
+        description: 'Optional image tag override (defaults to sanitized ref)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: fork-build-${{ github.event.inputs.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.p.outputs.ref }}
+      tag: ${{ steps.p.outputs.tag }}
+      history_tag: ${{ steps.p.outputs.history_tag }}
+      image: ${{ steps.p.outputs.image }}
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+          fetch-depth: 1
+
+      - id: p
+        run: |
+          REF="${{ github.event.inputs.ref || github.ref_name }}"
+          RAW="${{ github.event.inputs.tag || github.event.inputs.ref || github.ref_name }}"
+          TAG="$(echo "$RAW" | tr '[:upper:]' '[:lower:]' | tr '/' '-' | sed 's/[^a-z0-9._-]/-/g')"
+          COMMIT="$(git rev-parse HEAD)"
+          HISTORY_TAG=""
+          if [[ "$TAG" == "integration" ]]; then
+            HISTORY_TAG="integration-${COMMIT:0:12}"
+          fi
+          IMAGE="$(echo "ghcr.io/${{ github.repository_owner }}/dockman" | tr '[:upper:]' '[:lower:]')"
+          echo "ref=$REF"   >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"   >> "$GITHUB_OUTPUT"
+          echo "history_tag=$HISTORY_TAG" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "Building ref='$REF' -> '$IMAGE:$TAG' history='$HISTORY_TAG'"
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            machine: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            machine: ubuntu-24.04-arm
+            arch: arm64
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.machine }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Resolve source metadata
+        id: source
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (${{ matrix.arch }})
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: pkg/docker/Dockerfile
+          push: true
+          sbom: true
+          provenance: mode=max
+          platforms: ${{ matrix.platform }}
+          tags: |
+            ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+            ${{ needs.prepare.outputs.history_tag != '' && format('{0}:{1}-{2}', needs.prepare.outputs.image, needs.prepare.outputs.history_tag, matrix.arch) || '' }}
+          cache-to: type=gha,mode=max,scope=${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+          cache-from: |
+            type=gha,scope=${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+            type=registry,ref=${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.tag }}
+            COMMIT_INFO=${{ steps.source.outputs.commit }}
+            BUILD_DATE=${{ steps.source.outputs.build_date }}
+            BRANCH=${{ needs.prepare.outputs.ref }}
+
+      - name: Report all vulnerabilities (${{ matrix.arch }})
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+          version: v0.72.0
+          format: json
+          output: trivy-${{ matrix.arch }}.json
+          vuln-type: os,library
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          scanners: vuln
+        env:
+          TRIVY_PLATFORM: ${{ matrix.platform }}
+
+      - name: Upload vulnerability report (${{ matrix.arch }})
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-${{ matrix.arch }}
+          path: trivy-${{ matrix.arch }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Gate fixable high and critical vulnerabilities (${{ matrix.arch }})
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+          version: v0.72.0
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          scanners: vuln
+          trivyignores: .trivyignore.yaml
+        env:
+          TRIVY_PLATFORM: ${{ matrix.platform }}
+
+  manifest:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        id: image
+        run: |
+          IMAGE="${{ needs.prepare.outputs.image }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
+          docker buildx imagetools create -t "$IMAGE:$TAG" \
+            "$IMAGE:$TAG-amd64" \
+            "$IMAGE:$TAG-arm64"
+          HISTORY_TAG="${{ needs.prepare.outputs.history_tag }}"
+          if [[ -n "$HISTORY_TAG" ]]; then
+            docker buildx imagetools create -t "$IMAGE:$HISTORY_TAG" \
+              "$IMAGE:$HISTORY_TAG-amd64" \
+              "$IMAGE:$HISTORY_TAG-arm64"
+          fi
+          INSPECT="$(docker buildx imagetools inspect "$IMAGE:$TAG")"
+          echo "$INSPECT"
+          DIGEST="$(awk '$1 == "Digest:" {print $2; exit}' <<< "$INSPECT")"
+          if [[ ! "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "Unable to resolve the multi-arch image digest" >&2
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "### Image \`$IMAGE:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Digest: \`$DIGEST\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.2
+
+      - name: Sign multi-arch image
+        env:
+          IMAGE: ${{ needs.prepare.outputs.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+
+  retention:
+    name: Retain three integration builds
+    needs: [prepare, manifest]
+    if: needs.prepare.outputs.tag == 'integration'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout retention policy
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Remove unreachable GHCR versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/ghcr-retention.py \
+            --owner "${{ github.repository_owner }}" \
+            --package dockman \
+            --tag integration \
+            --keep 3 \
+            --dry-run
+          python3 scripts/ghcr-retention.py \
+            --owner "${{ github.repository_owner }}" \
+            --package dockman \
+            --tag integration \
+            --keep 3

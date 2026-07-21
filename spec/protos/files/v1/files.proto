@@ -70,6 +70,8 @@ message FsEntry {
   // flag for lazy loading
   bool isFetched = 5;
   string isComposeFolder = 6;
+  // set when the entry's name is pinned in dockman.yml (pinnedFiles)
+  bool pinned = 7;
 }
 
 message RenameFile {

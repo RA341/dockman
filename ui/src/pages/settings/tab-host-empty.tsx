@@ -33,15 +33,18 @@ function EmptyHostDisplay({onAdd}: { onAdd: () => void }) {
             >
                 <DnsOutlined sx={{fontSize: 40}}/>
             </Box>
-
             <Typography variant="h6" sx={{fontWeight: 800, mb: 1}}>
                 No Hosts Detected
             </Typography>
-
-            <Typography variant="body2" color="text.secondary" sx={{maxWidth: 400, mb: 4}}>
+            <Typography
+                variant="body2"
+                sx={{
+                    color: "text.secondary",
+                    maxWidth: 400,
+                    mb: 4
+                }}>
                 No Docker hosts found. Add hosts to get started.
             </Typography>
-
             <Stack direction="row" spacing={2}>
                 <Button
                     variant="contained"

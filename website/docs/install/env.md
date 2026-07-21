@@ -31,6 +31,20 @@ dockman:
     - DOCKMAN_AUTH_ENABLE=true
 ```
 
+## Temporarily allowing Exec into Dockman
+
+Interactive Exec sessions into a container built from the Dockman image are blocked by default. This protects the
+configuration and credentials mounted inside Dockman. To enable self-Exec temporarily for troubleshooting, add:
+
+```yaml title="docker-compose.yaml"
+dockman:
+  environment:
+    DOCKMAN_ALLOW_SELF_EXEC: "true"
+```
+
+Recreate the Dockman container for the setting to take effect. Remove the variable (or set it to `false`) and recreate
+the container again as soon as troubleshooting is complete. Exec into other managed containers is unaffected.
+
 ### **Environment File:**
 
 ```bash title="dockman.env"

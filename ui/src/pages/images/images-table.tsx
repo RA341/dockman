@@ -88,7 +88,9 @@ export const ImageTable = ({images, selectedImages = [], onSelectionChange}: Ima
             ),
             cell: (image) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Stack direction="row" spacing={1.5} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{minWidth: 0}}>
                             {image.repoTags.length > 0 ? (
                                 <Link
@@ -116,7 +118,9 @@ export const ImageTable = ({images, selectedImages = [], onSelectionChange}: Ima
                                     untagged
                                 </Typography>
                             )}
-                            <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Stack direction="row" spacing={0.5} sx={{
+                                alignItems: "center"
+                            }}>
                                 <Typography variant="caption"
                                             sx={{fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.7rem'}}>
                                     {image.id.substring(0, 12)}
@@ -233,7 +237,13 @@ export const ImageTable = ({images, selectedImages = [], onSelectionChange}: Ima
             ),
             cell: (image) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{color: 'text.secondary'}}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                            alignItems: "center",
+                            color: 'text.secondary'
+                        }}>
                         <CalendarIcon sx={{fontSize: 14}}/>
                         <Typography variant="body2" sx={{whiteSpace: 'nowrap'}}>
                             {formatDate(image.created)}

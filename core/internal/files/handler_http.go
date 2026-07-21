@@ -3,11 +3,14 @@ package files
 import (
 	b64 "encoding/base64"
 	"errors"
+	"io"
+	"io/fs"
 	"net/http"
 	"strconv"
 
 	"github.com/RA341/dockman/internal/host/middleware"
 	fu "github.com/RA341/dockman/pkg/fileutil"
+	wsu "github.com/RA341/dockman/pkg/ws"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -56,12 +59,18 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 	reader, modTime, err := h.srv.LoadFilePath(filename, getHost, download)
 	if err != nil {
 		log.Error().Err(err).Str("path", filename).Msg("Error loading file")
-		if errors.Is(err, ErrFileNotSupported) {
+		switch {
+		case errors.Is(err, ErrFileNotSupported):
 			http.Error(w, "binary file detected, it will not be opened", http.StatusConflict)
-			return
+		case errors.Is(err, fs.ErrNotExist):
+			http.Error(w, "file not found", http.StatusNotFound)
+		case errors.Is(err, fs.ErrPermission):
+			http.Error(w, "permission denied: the server process cannot read this file. "+
+				"Check the file's owner/permissions, or grant the container CAP_DAC_READ_SEARCH.",
+				http.StatusForbidden)
+		default:
+			http.Error(w, "failed to read file", http.StatusInternalServerError)
 		}
-
-		http.Error(w, "Filename not found", http.StatusBadRequest)
 		return
 	}
 	defer fu.Close(reader)
@@ -70,36 +79,14 @@ func (h *FileHandler) loadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
-	// 10 MB is the maximum upload size
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		log.Fatal().Err(err).Msg("Error parsing multipart form")
-		http.Error(w, "Could not parse multipart form", http.StatusBadRequest)
-		return
-	}
-
 	getHost, err := middleware.GetHost(r.Context())
 	if err != nil {
 		http.Error(w, "host not provided", http.StatusBadRequest)
 		return
 	}
 
-	content, meta, err := r.FormFile(fileContentsFormKey)
-	if err != nil {
-		log.Error().Err(err).Msg("Error retrieving file from form")
-		http.Error(w, "Error retrieving file from form", http.StatusBadRequest)
-		return
-	}
-	defer fu.Close(content)
-
-	decodedFileName, err := b64.StdEncoding.DecodeString(meta.Filename)
-	if err != nil {
-		http.Error(w, "Error converting file name from base64", http.StatusBadRequest)
-		return
-	}
-
 	createFile := false
-	createStr := r.URL.Query().Get(QueryKeyCreate)
-	if createStr != "" {
+	if createStr := r.URL.Query().Get(QueryKeyCreate); createStr != "" {
 		createFile, err = strconv.ParseBool(createStr)
 		if err != nil {
 			log.Warn().Err(err).Str("param", createStr).Msg("Error converting create query param to bool")
@@ -107,14 +94,86 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = h.srv.Save(string(decodedFileName), getHost, createFile, content)
+	// Stream the upload straight to disk. ParseMultipartForm would first buffer
+	// the whole file (up to 10 MB in memory, the rest in a temp file) before we
+	// write it — under a tight container memory limit a large upload can push
+	// the process into an OOM kill. A MultipartReader keeps memory flat.
+	reader, err := r.MultipartReader()
 	if err != nil {
-		log.Error().Err(err).Msg("Error saving file")
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("Error reading multipart body")
+		writeUploadError(w, err, "Could not read multipart body", http.StatusBadRequest)
 		return
 	}
 
-	//log.Debug().Str("filename", meta.Filename).Msg("Successfully saved File")
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			log.Error().Err(err).Msg("Error reading multipart part")
+			writeUploadError(w, err, "Error reading upload", http.StatusBadRequest)
+			return
+		}
+		if part.FormName() != fileContentsFormKey {
+			_ = part.Close()
+			continue
+		}
+
+		decodedFileName, err := decodeUploadFilename(part.FileName())
+		if err != nil {
+			_ = part.Close()
+			http.Error(w, "Error converting file name from base64", http.StatusBadRequest)
+			return
+		}
+
+		if err = h.srv.Save(string(decodedFileName), getHost, createFile, part); err != nil {
+			_ = part.Close()
+			log.Error().Err(err).
+				Str("host", getHost).
+				Str("path", string(decodedFileName)).
+				Bool("create", createFile).
+				Msg("Error saving file")
+			switch {
+			case errors.Is(err, fs.ErrPermission):
+				http.Error(w, "permission denied while saving file", http.StatusForbidden)
+			case errors.Is(err, fs.ErrNotExist):
+				http.Error(w, "file path not found", http.StatusNotFound)
+			case isRequestTooLarge(err):
+				http.Error(w, "upload exceeds the configured size limit", http.StatusRequestEntityTooLarge)
+			default:
+				http.Error(w, "Error saving file", http.StatusInternalServerError)
+			}
+			return
+		}
+		_ = part.Close()
+		return
+	}
+
+	http.Error(w, "no file provided in form", http.StatusBadRequest)
+}
+
+func isRequestTooLarge(err error) bool {
+	var maxBytesErr *http.MaxBytesError
+	return errors.As(err, &maxBytesErr)
+}
+
+func writeUploadError(w http.ResponseWriter, err error, message string, fallbackStatus int) {
+	if isRequestTooLarge(err) {
+		http.Error(w, "upload exceeds the configured size limit", http.StatusRequestEntityTooLarge)
+		return
+	}
+	http.Error(w, message, fallbackStatus)
+}
+
+func decodeUploadFilename(encoded string) ([]byte, error) {
+	decoded, err := b64.RawURLEncoding.DecodeString(encoded)
+	if err == nil {
+		return decoded, nil
+	}
+
+	// Accept uploads from older frontends during rolling upgrades.
+	return b64.StdEncoding.DecodeString(encoded)
 }
 
 var upgrader = websocket.Upgrader{
@@ -145,6 +204,7 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fu.Close(ws)
+	wsu.LimitClientMessages(ws)
 
 	var response SearchResponse
 

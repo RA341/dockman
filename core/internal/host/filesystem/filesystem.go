@@ -1,11 +1,14 @@
 package filesystem
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"time"
 )
+
+var ErrPathOutsideRoot = errors.New("path is outside the configured root")
 
 type FileSystem interface {
 	Root() string

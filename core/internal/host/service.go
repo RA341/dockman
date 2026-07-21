@@ -3,9 +3,11 @@ package host
 import (
 	"fmt"
 	fs2 "io/fs"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/RA341/dockman/internal/docker"
 	"github.com/RA341/dockman/internal/docker/compose"
@@ -55,7 +57,12 @@ const RootAlias = "compose"
 const LocalDocker = "local"
 
 func (s *Service) initLocalDocker(composeRoot string, localAddr string) {
-	conf, err := s.store.Get(LocalDocker)
+	// Look the local host up by its type, not by the reserved "local" name:
+	// the Name is user-editable, and keying on it meant that renaming the local
+	// host made this lookup fail on every startup, silently creating a duplicate
+	// local host (new ID) with only the default alias and orphaning the user's
+	// custom aliases (they are linked by host ID). Type is stable across renames.
+	conf, err := s.store.GetLocal()
 
 	// Case 1: Create new if it doesn't exist
 	if err != nil {
@@ -164,6 +171,26 @@ func (s *Service) GetDockerService(name string) (*docker.Service, error) {
 		},
 	)
 
+	// reverse of the parser above: map the daemon's absolute compose-file
+	// path back to "alias/relpath" by matching it against the alias roots,
+	// so containers can link back to the dockman file that deployed them
+	service.Compose.SetPathResolver(func(absPath string) string {
+		aliases, err := val.As.List()
+		if err != nil {
+			return ""
+		}
+		for _, alias := range aliases {
+			root := strings.TrimSuffix(filepath.ToSlash(alias.Fullpath), "/")
+			if root == "" {
+				continue
+			}
+			if rel, found := strings.CutPrefix(absPath, root+"/"); found {
+				return alias.Alias + "/" + rel
+			}
+		}
+		return ""
+	})
+
 	return service, nil
 }
 
@@ -252,11 +279,15 @@ func (s *Service) LoadAll() {
 
 	for _, host := range all {
 		wg.Go(func() {
-			err2 := s.Add(&host, false)
-			if err2 != nil {
-				log.Error().
+			if err2 := s.Add(&host, false); err2 != nil {
+				// The Docker daemon may simply not be reachable yet (e.g. dockman
+				// started before dockerd finished coming up after a reboot).
+				// Keep trying in the background instead of dropping the host,
+				// which otherwise leaves it "lost" until manually re-added.
+				log.Warn().
 					Err(err2).Str("name", host.Name).
-					Msg("Failed to load host")
+					Msg("host not reachable at startup, retrying in background")
+				go s.retryLoad(host.Name)
 			}
 		})
 	}
@@ -264,6 +295,44 @@ func (s *Service) LoadAll() {
 	wg.Wait()
 
 	log.Info().Strs("clients", s.activeClients.Keys()).Msg("loaded hosts")
+}
+
+// retryLoad keeps trying to connect a host that failed its initial load, so a
+// host whose Docker daemon isn't ready yet at startup is recovered
+// automatically instead of staying "lost" until it is manually re-added. It
+// re-reads the host each attempt (stopping if it was disabled or removed),
+// backs off exponentially, and gives up after a bounded number of attempts so
+// a permanently unreachable host cannot leak a goroutine forever.
+func (s *Service) retryLoad(name string) {
+	const maxAttempts = 10
+	const maxDelay = 30 * time.Second
+	delay := 2 * time.Second
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		time.Sleep(delay)
+
+		conf, err := s.store.Get(name)
+		if err != nil || !conf.Enable {
+			// removed or disabled in the meantime, stop retrying
+			return
+		}
+
+		if err = s.Add(&conf, false); err != nil {
+			log.Debug().Err(err).Str("name", name).Int("attempt", attempt).
+				Msg("host reconnect attempt failed")
+			delay *= 2
+			if delay > maxDelay {
+				delay = maxDelay
+			}
+			continue
+		}
+
+		log.Info().Str("name", name).Int("attempt", attempt).Msg("host reconnected")
+		return
+	}
+
+	log.Error().Str("name", name).
+		Msg("gave up connecting host after retries; re-enable it once its Docker daemon is reachable")
 }
 
 func (s *Service) Add(config *Config, create bool) (err error) {

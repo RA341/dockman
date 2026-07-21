@@ -4,6 +4,8 @@ import {useEffect, useState} from "react";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
 
+type ContainerActionRpc = 'containerStart' | 'containerStop' | 'containerRestart' | 'containerRemove';
+
 export const useContainerAction = ({onActionComplete, containerId, removeRemoveAction = false}: {
     containerId?: string,
     removeRemoveAction?: boolean,
@@ -19,8 +21,7 @@ export const useContainerAction = ({onActionComplete, containerId, removeRemoveA
         }
     }, [containerId]);
 
-    async function handleContainerAction(name: string, rpcName: keyof typeof dockerService, message: string) {
-        // @ts-ignore
+    async function handleContainerAction(name: string, rpcName: ContainerActionRpc, message: string) {
         const {err} = await callRPC(() => dockerService[rpcName]({containerIds: selectedContainers}));
         if (err) {
             showError(`Failed to ${name} Containers: ${err}`);

@@ -2,14 +2,13 @@ package container
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
+	"strings"
 
-	lu "github.com/RA341/dockman/pkg/listutils"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
-	"github.com/rs/zerolog/log"
 )
 
 // LocalClient is the name given to the local docker daemon instance
@@ -81,6 +80,26 @@ func (s *Service) ContainersStop(ctx context.Context, containerId ...string) err
 	return nil
 }
 
+func (s *Service) ContainersPause(ctx context.Context, containerId ...string) error {
+	for _, cont := range containerId {
+		_, err := s.Client.ContainerPause(ctx, cont, client.ContainerPauseOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to pause Container: %s => %w", cont, err)
+		}
+	}
+	return nil
+}
+
+func (s *Service) ContainersUnpause(ctx context.Context, containerId ...string) error {
+	for _, cont := range containerId {
+		_, err := s.Client.ContainerUnpause(ctx, cont, client.ContainerUnpauseOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to unpause Container: %s => %w", cont, err)
+		}
+	}
+	return nil
+}
+
 func (s *Service) ContainersRestart(ctx context.Context, containerId ...string) error {
 	for _, cont := range containerId {
 		_, err := s.Client.ContainerRestart(ctx, cont, client.ContainerRestartOptions{})
@@ -103,13 +122,14 @@ func (s *Service) ContainersRemove(ctx context.Context, containerId ...string) e
 	return nil
 }
 
-func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd string) (client.HijackedResponse, error) {
+func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd string, user string) (client.HijackedResponse, error) {
 	execConfig := client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		TTY:          true,
 		Cmd:          []string{cmd},
+		User:         user,
 	}
 
 	execResp, err := s.Client.ExecCreate(ctx, containerID, execConfig)
@@ -129,6 +149,12 @@ func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd str
 	return resp.HijackedResponse, nil
 }
 
+// defaultLogTail bounds how much history is replayed when a log stream opens.
+// Without a Tail the daemon streams the container's entire json-file backlog
+// before following, a large transient memory spike on every open for a
+// long-lived container.
+const defaultLogTail = "1000"
+
 func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.ReadCloser, bool, error) {
 	inspect, err := s.Client.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
 	if err != nil {
@@ -140,6 +166,7 @@ func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.Rea
 		ShowStderr: true,
 		Follow:     true,
 		Details:    true,
+		Tail:       defaultLogTail,
 	})
 	if err != nil {
 		return nil, false, fmt.Errorf("unable to get container logs: %w", err)
@@ -148,12 +175,40 @@ func (s *Service) ContainerLogs(ctx context.Context, containerID string) (io.Rea
 	return logStream, inspect.Container.Config.Tty, nil
 }
 
+// ContainersListRunning lists ALL containers (any state) and prunes cached
+// sampling state for containers that no longer exist (this is the host-wide
+// listing the stats views poll). Non-running containers flow through the
+// stats stream as identity-only rows — statsFor skips their metric read —
+// so state counts (stopped/paused/...) stay truthful without extra cost.
+func (s *Service) ContainersListRunning(ctx context.Context) ([]container.Summary, error) {
+	list, err := s.Client.ContainerList(ctx, client.ContainerListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("could not list containers: %w", err)
+	}
+
+	live := make(map[string]struct{}, len(list.Items))
+	for _, c := range list.Items {
+		live[c.ID] = struct{}{}
+	}
+	cacheFor(s.Client).prune(live)
+
+	return list.Items, nil
+}
+
 func (s *Service) Stats(ctx context.Context, filter client.ContainerListOptions) ([]Stats, error) {
 	contRes, err := s.Client.ContainerList(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("could not list containers: %w", err)
 	}
 	containers := contRes.Items
+
+	// this is the host-wide listing: drop cached sampling state for
+	// containers that no longer exist
+	live := make(map[string]struct{}, len(containers))
+	for _, c := range containers {
+		live[c.ID] = struct{}{}
+	}
+	cacheFor(s.Client).prune(live)
 
 	if len(containers) == 0 {
 		return []Stats{}, nil
@@ -164,14 +219,33 @@ func (s *Service) Stats(ctx context.Context, filter client.ContainerListOptions)
 }
 
 func (s *Service) ContainerGetStatsFromList(ctx context.Context, containers []container.Summary) []Stats {
-	return lu.ParallelLoop(containers, func(r container.Summary) (Stats, bool) {
-		stats, err := s.getAndFormatStats(ctx, r)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			log.Warn().Err(err).Str("container", r.ID[:12]).Msg("could not convert stats, skipping...")
-			return Stats{}, false
+	return s.collectStats(ctx, containers)
+}
+
+// ContainerListByComposeFile returns every container whose compose
+// config-files label references the given absolute compose file path. One
+// host-wide listing matched in memory: a label equality filter can't be used
+// because config_files may hold several comma-separated paths (overrides).
+func (s *Service) ContainerListByComposeFile(ctx context.Context, absPath string) ([]container.Summary, error) {
+	list, err := s.Client.ContainerList(ctx, client.ContainerListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("could not list containers: %w", err)
+	}
+
+	var out []container.Summary
+	for _, ct := range list.Items {
+		cfg := ct.Labels[api.ConfigFilesLabel]
+		if cfg == "" {
+			continue
 		}
-		return stats, true
-	})
+		for _, p := range strings.Split(cfg, ",") {
+			if strings.TrimSpace(p) == absPath {
+				out = append(out, ct)
+				break
+			}
+		}
+	}
+	return out, nil
 }
 
 func (s *Service) Inspect(ctx context.Context, containerId string) (container.InspectResponse, error) {

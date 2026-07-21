@@ -18,17 +18,17 @@ import {
     Typography
 } from "@mui/material";
 import {
-    AddCircleOutline,
+    AddCircleOutlined,
     ArrowBack,
     AutoAwesome,
     Cancel,
-    CheckCircleOutline,
+    CheckCircleOutlined,
     ChevronRight,
     ContentCopy,
     CreateNewFolder,
     DescriptionOutlined,
     Folder,
-    HelpOutline,
+    HelpOutlined,
     InsertDriveFile,
     SettingsSuggestOutlined,
     Terminal
@@ -41,6 +41,7 @@ import {FileService, type Template} from "../../../gen/files/v1/files_pb.ts";
 
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
+import {debugError} from "../../../lib/debug.ts";
 
 export type PresetType = 'file' | 'folder' | 'templates';
 export type CreationStep = 'preset-selection' | 'name-input' | 'template-create';
@@ -145,7 +146,7 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
         const trimmedName = name.trim();
         if (!trimmedName) return;
 
-        let finalPath = rootPath ? `${rootPath.replace(/\/$/, '')}/${trimmedName}` : trimmedName;
+        const finalPath = rootPath ? `${rootPath.replace(/\/$/, '')}/${trimmedName}` : trimmedName;
         const selectedPreset = FILE_PRESETS[selectedPresetIndex].type;
 
         try {
@@ -156,7 +157,7 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
             }
             closeDialog();
         } catch (err) {
-            console.error("File operation failed", err);
+            debugError("File operation failed", err);
         }
     };
 
@@ -193,7 +194,9 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
             }}
         >
             <DialogTitle sx={{p: 3, pb: 2}}>
-                <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Stack direction="row" spacing={1.5} sx={{
+                    alignItems: "center"
+                }}>
                     <Box sx={{
                         p: 1,
                         borderRadius: 1.5,
@@ -203,19 +206,20 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
                     }}>
                         {copyMode ? <ContentCopy fontSize="small"/> :
                             step === 'template-create' ? <AutoAwesome fontSize="small"/> :
-                                <AddCircleOutline fontSize="small"/>}
+                                <AddCircleOutlined fontSize="small"/>}
                     </Box>
                     <Box>
                         <Typography variant="h6" sx={{fontWeight: 800, lineHeight: 1.2}}>
                             {copyMode ? 'Duplicate Item' : step === 'template-create' ? 'Select Template' : 'Create New'}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{
+                            color: "text.secondary"
+                        }}>
                             Location: <code style={{color: grey[400]}}>{rootPath || '/'}</code>
                         </Typography>
                     </Box>
                 </Stack>
             </DialogTitle>
-
             <DialogContent sx={{p: 3, pt: 1}}>
                 {step === 'preset-selection' && (
                     <Stack spacing={1.5} sx={{mt: 1}}>
@@ -237,13 +241,17 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
                                     '&:hover': {borderColor: 'primary.main'}
                                 }}
                             >
-                                <Stack direction="row" alignItems="center" spacing={2}>
+                                <Stack direction="row" spacing={2} sx={{
+                                    alignItems: "center"
+                                }}>
                                     <Box sx={{p: 1, bgcolor: 'background.default', borderRadius: 1}}>{preset.icon}</Box>
                                     <Box sx={{flex: 1}}>
                                         <Typography variant="subtitle2"
                                                     sx={{fontWeight: 700}}>{preset.title}</Typography>
                                         <Typography variant="caption"
-                                                    color="text.secondary">{preset.description}</Typography>
+                                                    sx={{
+                                                        color: "text.secondary"
+                                                    }}>{preset.description}</Typography>
                                     </Box>
                                     <ChevronRight
                                         sx={{color: index === selectedPresetIndex ? 'primary.main' : 'text.disabled'}}/>
@@ -267,15 +275,17 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 sx={{mt: 0.5}}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            {copyMode ? (isDir ? <Folder fontSize="small"/> :
-                                                    <InsertDriveFile fontSize="small"/>) :
-                                                (currentPreset.type === 'folder' ? <CreateNewFolder fontSize="small"/> :
-                                                    <InsertDriveFile fontSize="small"/>)}
-                                        </InputAdornment>
-                                    ),
+                                slotProps={{
+                                    input: {
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                {copyMode ? (isDir ? <Folder fontSize="small"/> :
+                                                        <InsertDriveFile fontSize="small"/>) :
+                                                    (currentPreset.type === 'folder' ? <CreateNewFolder fontSize="small"/> :
+                                                        <InsertDriveFile fontSize="small"/>)}
+                                            </InputAdornment>
+                                        ),
+                                    },
                                 }}
                             />
                         </Box>
@@ -305,10 +315,7 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
                     </Box>
                 )}
             </DialogContent>
-
             <Divider/>
-
-
             <DialogActions sx={{p: 2.5}}>
                 <Button
                     variant="outlined"
@@ -353,13 +360,14 @@ const TemplateCreate = ({rootPath, onClose}: {
     const [formVars, setFormVars] = useState<{ [key: string]: string }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const runner = useRPCRunner(() => fileService.getTmpls({
+    const templateRunner = useRPCRunner(() => fileService.getTmpls({
         alias: rootPath,
     }));
+    const loadTemplates = templateRunner.runner;
 
     useEffect(() => {
-        runner.runner().then();
-    }, [rootPath]);
+        loadTemplates().then();
+    }, [rootPath, loadTemplates]);
 
     const handleSelectTemplate = (tmpl: Template) => {
         setSelectedTmpl(tmpl);
@@ -384,9 +392,15 @@ const TemplateCreate = ({rootPath, onClose}: {
         await listFiles("", [])
     };
 
-    if (runner.loading) {
+    if (templateRunner.loading) {
         return (
-            <Stack alignItems="center" justifyContent="center" sx={{py: 10, gap: 2}}>
+            <Stack
+                sx={{
+                    alignItems: "center",
+                    justifyContent: "center",
+                    py: 10,
+                    gap: 2
+                }}>
                 <CircularProgress size={40} thickness={5}/>
                 <Typography variant="body2" sx={{fontWeight: 700, color: 'text.secondary'}}>
                     Scanning for local templates...
@@ -395,12 +409,12 @@ const TemplateCreate = ({rootPath, onClose}: {
         );
     }
 
-    if (runner.err) {
+    if (templateRunner.err) {
         return (
             <Box sx={{py: 4}}>
                 <Alert severity="error" variant="outlined" sx={{borderRadius: 2}}>
-                    {runner.err}
-                    <Button size="small" color="inherit" sx={{ml: 2, fontWeight: 700}} onClick={() => runner.runner()}>
+                    {templateRunner.err}
+                    <Button size="small" color="inherit" sx={{ml: 2, fontWeight: 700}} onClick={() => loadTemplates()}>
                         Retry
                     </Button>
                 </Alert>
@@ -408,7 +422,7 @@ const TemplateCreate = ({rootPath, onClose}: {
         );
     }
 
-    if (!runner.val?.templs || runner.val.templs.length === 0) {
+    if (!templateRunner.val?.templs || templateRunner.val.templs.length === 0) {
         return (
             <Paper
                 variant="outlined"
@@ -428,7 +442,13 @@ const TemplateCreate = ({rootPath, onClose}: {
                     <SettingsSuggestOutlined sx={{fontSize: 32, color: 'text.disabled'}}/>
                 </Box>
                 <Typography variant="subtitle1" sx={{fontWeight: 800}}>No Templates Found</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{mb: 3, maxWidth: 350}}>
+                <Typography
+                    variant="body2"
+                    sx={{
+                        color: "text.secondary",
+                        mb: 3,
+                        maxWidth: 350
+                    }}>
                     To use this feature, create a <code style={{color: amber[900]}}>templates </code>
                     dir in your root and add some <code>.tmpl</code> template files.
                 </Typography>
@@ -436,7 +456,7 @@ const TemplateCreate = ({rootPath, onClose}: {
                     component={Link}
                     href="https://dockman.radn.dev/docs/templates"
                     target="_blank"
-                    endIcon={<HelpOutline fontSize="small"/>}
+                    endIcon={<HelpOutlined fontSize="small"/>}
                 >
                     View Documentation
                 </Button>
@@ -472,8 +492,13 @@ const TemplateCreate = ({rootPath, onClose}: {
                         ))}
                     </Grid>
                 </Paper>
-
-                <Stack direction="row" spacing={2} justifyContent="space-between" sx={{mt: 2}}>
+                <Stack
+                    direction="row"
+                    spacing={2}
+                    sx={{
+                        justifyContent: "space-between",
+                        mt: 2
+                    }}>
                     <Button color="inherit" onClick={() => setSelectedTmpl(null)} sx={{fontWeight: 700}}>
                         template select
                     </Button>
@@ -481,7 +506,7 @@ const TemplateCreate = ({rootPath, onClose}: {
                         variant="contained"
                         onClick={handleConfirm}
                         disabled={isSubmitting}
-                        startIcon={isSubmitting ? <CircularProgress size={16} color="inherit"/> : <CheckCircleOutline/>}
+                        startIcon={isSubmitting ? <CircularProgress size={16} color="inherit"/> : <CheckCircleOutlined/>}
                         sx={{borderRadius: 2, px: 4, fontWeight: 700}}
                     >
                         Create from Template
@@ -498,7 +523,7 @@ const TemplateCreate = ({rootPath, onClose}: {
             </Typography>
             <Box sx={{maxHeight: '400px', overflowY: 'auto', ...scrollbarStyles, px: 0.5}}>
                 <Stack spacing={1.5}>
-                    {runner.val.templs.map((tmpl, idx) => (
+                    {templateRunner.val.templs.map((tmpl, idx) => (
                         <Paper
                             key={idx}
                             variant="outlined"
@@ -513,7 +538,9 @@ const TemplateCreate = ({rootPath, onClose}: {
                                 }
                             }}
                         >
-                            <Stack direction="row" alignItems="center" spacing={2}>
+                            <Stack direction="row" spacing={2} sx={{
+                                alignItems: "center"
+                            }}>
                                 <Box sx={{
                                     p: 1,
                                     bgcolor: 'background.paper',
@@ -526,7 +553,9 @@ const TemplateCreate = ({rootPath, onClose}: {
                                 </Box>
                                 <Box sx={{flex: 1}}>
                                     <Typography variant="subtitle2" sx={{fontWeight: 800}}>{tmpl.Name}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" sx={{
+                                        color: "text.secondary"
+                                    }}>
                                         {Object.keys(tmpl.vars).length} variables required
                                     </Typography>
                                 </Box>

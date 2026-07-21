@@ -30,29 +30,40 @@ function StorageInuse({refetch}: { refetch: boolean }) {
     const cleaner = useHostClient(CleanerService);
     const {showError} = useSnackbar();
 
-    const spaceStatusRpc = useRPCRunner(() => cleaner.spaceStatus({}));
+    const {runner, val, loading, err} = useRPCRunner(() => cleaner.spaceStatus({}));
 
-    async function fetchStorage() {
-        await spaceStatusRpc.runner();
-        if (spaceStatusRpc.err) showError(spaceStatusRpc.err);
-    }
-
-    const refetcher = useCallback(async () => {
-        await fetchStorage();
-    }, [refetch]);
+    const fetchStorage = useCallback(async () => {
+        await runner();
+    }, [runner]);
 
     useEffect(() => {
-        refetcher().then();
-    }, [refetcher]);
+        if (err) showError(err);
+    }, [err, showError]);
+
+    useEffect(() => {
+        fetchStorage().then();
+    }, [fetchStorage, refetch]);
 
     return (
         <Paper variant="elevation" sx={{borderRadius: 3}}>
             <Box sx={{p: 3, flexGrow: 1, overflow: 'auto', ...scrollbarStyles}}>
-                {(spaceStatusRpc.loading || !spaceStatusRpc.val) ? (
-                    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" height="60vh"
-                         gap={2}>
+                {(loading || !val) ? (
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            height: "60vh",
+                            gap: 2
+                        }}>
                         <CircularProgress size={32} thickness={5}/>
-                        <Typography variant="body2" color="text.secondary" sx={{fontWeight: 600}}>Calculating disk
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: "text.secondary",
+                                fontWeight: 600
+                            }}>Calculating disk
                             usage...</Typography>
                     </Box>
                 ) : (
@@ -60,23 +71,23 @@ function StorageInuse({refetch}: { refetch: boolean }) {
                         <Grid container spacing={3}>
                             <Grid size={{xs: 12, sm: 6, md: 4, lg: 2.4}}>
                                 <SpaceStateDisplay icon={<Inventory2Outlined/>} onClean={fetchStorage}
-                                                   title="Containers" stat={spaceStatusRpc.val.Containers}/>
+                                                   title="Containers" stat={val.Containers}/>
                             </Grid>
                             <Grid size={{xs: 12, sm: 6, md: 4, lg: 2.4}}>
                                 <SpaceStateDisplay icon={<ImageOutlined/>} onClean={fetchStorage} title="Images"
-                                                   stat={spaceStatusRpc.val.Images}/>
+                                                   stat={val.Images}/>
                             </Grid>
                             <Grid size={{xs: 12, sm: 6, md: 4, lg: 2.4}}>
                                 <SpaceStateDisplay icon={<FolderSpecialOutlined/>} onClean={fetchStorage}
-                                                   title="Volumes" stat={spaceStatusRpc.val.Volumes}/>
+                                                   title="Volumes" stat={val.Volumes}/>
                             </Grid>
                             <Grid size={{xs: 12, sm: 6, md: 4, lg: 2.4}}>
                                 <SpaceStateDisplay icon={<StorageOutlined/>} onClean={fetchStorage} title="BuildCache"
-                                                   stat={spaceStatusRpc.val.BuildCache}/>
+                                                   stat={val.BuildCache}/>
                             </Grid>
                             <Grid size={{xs: 12, sm: 6, md: 4, lg: 2.4}}>
                                 <SpaceStateDisplay icon={<LanOutlined/>} onClean={fetchStorage} title="Networks"
-                                                   stat={spaceStatusRpc.val.Network}/>
+                                                   stat={val.Network}/>
                             </Grid>
                         </Grid>
                     </Fade>
@@ -116,8 +127,15 @@ const SpaceStateDisplay = ({stat, title, icon, onClean}: {
             transition: 'all 0.2s', '&:hover': {borderColor: 'primary.main', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}
         }}>
             <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                    direction="row"
+                    sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                    }}>
+                    <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{color: 'text.disabled', display: 'flex'}}>{icon}</Box>
                         <Typography variant="subtitle2"
                                     sx={{fontWeight: 400, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
@@ -134,8 +152,13 @@ const SpaceStateDisplay = ({stat, title, icon, onClean}: {
                 </Stack>
 
                 <Box sx={{py: 1}}>
-                    <Typography variant="caption" color="text.disabled"
-                                sx={{fontWeight: 700, textTransform: 'uppercase'}}>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            color: "text.disabled",
+                            fontWeight: 700,
+                            textTransform: 'uppercase'
+                        }}>
                         Reclaimable
                     </Typography>
                     <Typography variant="h5" sx={{
@@ -174,8 +197,13 @@ const SpaceStateDisplay = ({stat, title, icon, onClean}: {
 
 const StatInfo = ({label, value, mono = false}: { label: string, value: string, mono?: boolean }) => (
     <Grid size={{xs: 6}}>
-        <Typography variant="caption" color="text.disabled"
-                    sx={{fontWeight: 700, display: 'block'}}>{label}</Typography>
+        <Typography
+            variant="caption"
+            sx={{
+                color: "text.disabled",
+                fontWeight: 700,
+                display: 'block'
+            }}>{label}</Typography>
         <Typography variant="body2" sx={{fontWeight: 700, fontFamily: mono ? 'monospace' : 'inherit'}}>
             {value}
         </Typography>

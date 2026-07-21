@@ -116,3 +116,31 @@ func (h *Handler) NetworkDelete(ctx context.Context, req *connect.Request[v1.Del
 
 	return connect.NewResponse(&v1.DeleteNetworkResponse{}), nil
 }
+
+func (h *Handler) NetworkConnectContainer(ctx context.Context, req *connect.Request[v1.NetworkConnectContainerRequest]) (*connect.Response[v1.NetworkConnectContainerResponse], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg.NetworkId == "" || req.Msg.ContainerId == "" {
+		return nil, fmt.Errorf("network and container are required")
+	}
+	if err := dkSrv.Container.NetworkConnectContainer(ctx, req.Msg.NetworkId, req.Msg.ContainerId); err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&v1.NetworkConnectContainerResponse{}), nil
+}
+
+func (h *Handler) NetworkDisconnectContainer(ctx context.Context, req *connect.Request[v1.NetworkDisconnectContainerRequest]) (*connect.Response[v1.NetworkDisconnectContainerResponse], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg.NetworkId == "" || req.Msg.ContainerId == "" {
+		return nil, fmt.Errorf("network and container are required")
+	}
+	if err := dkSrv.Container.NetworkDisconnectContainer(ctx, req.Msg.NetworkId, req.Msg.ContainerId); err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&v1.NetworkDisconnectContainerResponse{}), nil
+}

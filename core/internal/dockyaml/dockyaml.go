@@ -27,6 +27,19 @@ var defaultDockmanYaml = DockmanYaml{
 			Order: "asc",
 		},
 	},
+	StatsPage: StatsConfig{
+		Sort: Sort{
+			Field: "Memory",
+			Order: "desc",
+		},
+	},
+	ComposePage: ComposeConfig{
+		DefaultTab: "editor",
+	},
+	MonitorPage: MonitorConfig{
+		StackRows: "full",
+	},
+	DefaultView: "files",
 }
 
 type DockmanYaml struct {
@@ -53,6 +66,22 @@ type DockmanYaml struct {
 
 	ContainerPage ContainerConfig `yaml:"containers"`
 
+	// configure the stats (system resources) page
+	StatsPage StatsConfig `yaml:"stats"`
+
+	// configure the compose stack view
+	ComposePage ComposeConfig `yaml:"compose"`
+
+	// configure the monitor view
+	MonitorPage MonitorConfig `yaml:"monitor"`
+
+	// view opened when landing on a host: files (default), monitor, stats,
+	// containers, images, volumes, networks or cleaner
+	DefaultView string `yaml:"defaultView"`
+
+	// configure the file editor
+	EditorPage EditorConfig `yaml:"editor"`
+
 	// define a max search limit for files
 	SearchLimit int `yaml:"searchLimit"`
 
@@ -73,6 +102,27 @@ type NetworkConfig struct {
 
 type ImageConfig struct {
 	Sort Sort `yaml:"sort"`
+}
+
+type StatsConfig struct {
+	Sort Sort `yaml:"sort"`
+}
+
+type ComposeConfig struct {
+	// tab shown when opening a compose stack: editor (default), deploy or stats
+	DefaultTab string `yaml:"defaultTab"`
+}
+
+type MonitorConfig struct {
+	// stack row density in the monitor view: "full" (default) shows CPU/RAM
+	// values with their charts, "compact" shows the values only
+	StackRows string `yaml:"stackRows"`
+}
+
+type EditorConfig struct {
+	// allow scrolling half a viewport past the last line (it stops at
+	// mid-view), for files taller than the viewport
+	ScrollPastEnd bool `yaml:"scrollPastEnd"`
 }
 
 type Sort struct {

@@ -24,7 +24,7 @@ export function useDockerVolumes() {
         }
 
         setVolumes(val?.volumes || [])
-    }, [dockerService, selectedHost])
+    }, [dockerService, showWarning])
 
     const loadVolumes = useCallback(() => {
         fetchVolumes().finally(() => setLoading(false))

@@ -180,6 +180,10 @@ func (h *Handler) EditConfig(ctx context.Context, req *connect.Request[v1.EditCo
 	cf.FromProto(req.Msg.Config)
 	cf.Host = hostname
 
+	if cf.Enabled && cf.Interval <= 0 {
+		return nil, fmt.Errorf("set a maintenance interval greater than 0 to enable auto-pruning")
+	}
+
 	err = h.srv.store.UpdateConfig(&cf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update config: %v", err)
@@ -190,9 +194,14 @@ func (h *Handler) EditConfig(ctx context.Context, req *connect.Request[v1.EditCo
 		return nil, err
 	}
 
-	err = h.srv.RunWithScheduler(hostname, true)
-	if err != nil {
-		return nil, err
+	// Only (re)schedule when enabled; saving a disabled config must tear down any
+	// running job instead of erroring out.
+	if getConfig.Enabled {
+		if err = h.srv.RunWithScheduler(hostname, true); err != nil {
+			return nil, err
+		}
+	} else {
+		h.srv.StopScheduler(hostname)
 	}
 
 	return connect.NewResponse(&v1.EditConfigResponse{

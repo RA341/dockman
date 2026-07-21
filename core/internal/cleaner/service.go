@@ -126,7 +126,10 @@ func (s *Service) RunWithScheduler(host string, edit bool) error {
 		return err
 	}
 	if !getConfig.Enabled {
-		return fmt.Errorf("enabled cleaner run")
+		return fmt.Errorf("cleaner is disabled for host %q; enable it first", host)
+	}
+	if getConfig.Interval <= 0 {
+		return fmt.Errorf("cleaner interval must be greater than 0 for host %q", host)
 	}
 
 	var jb gocron.Job
@@ -149,6 +152,19 @@ func (s *Service) RunWithScheduler(host string, edit bool) error {
 
 	s.taskList.Store(host, jb)
 	return jb.RunNow()
+}
+
+// StopScheduler removes any scheduled cleaner job for the host. It is a no-op
+// when nothing is scheduled, so it is safe to call whenever a config is saved
+// with the cleaner disabled.
+func (s *Service) StopScheduler(host string) {
+	jb, ok := s.taskList.LoadAndDelete(host)
+	if !ok {
+		return
+	}
+	if err := s.schd.RemoveJob(jb.ID()); err != nil {
+		s.log.Warn().Err(err).Str("host", host).Msg("failed to remove cleaner job")
+	}
 }
 
 func (s *Service) clean(ctx context.Context, host string) {
