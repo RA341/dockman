@@ -8,8 +8,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	v1 "github.com/RA341/dockman/generated/docker/v1"
 	dockerpc "github.com/RA341/dockman/generated/docker/v1/v1connect"
@@ -17,9 +19,9 @@ import (
 	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
-	"github.com/RA341/dockman/pkg/syncmap"
 
 	"connectrpc.com/connect"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/moby/moby/api/types/container"
 	"github.com/rs/zerolog/log"
 )
@@ -61,42 +63,117 @@ func (h *Handler) getHost(ctx context.Context) (string, *Service, error) {
 ////////////////////////////////////////////
 
 func (h *Handler) ComposeFileStatus(ctx context.Context, c *connect.Request[v1.ComposeFileStatusRequest]) (*connect.Response[v1.ComposeFileStatusResponse], error) {
-	var results = syncmap.Map[string, *v1.Status]{}
-
-	wg := sync.WaitGroup{}
-
-	for _, file := range c.Msg.Files {
-		wg.Go(func() {
-			err := h.WithClient(ctx, func(dkSrv *Service) error {
-				stat, err := dkSrv.Compose.Status(ctx, file)
-				if err != nil {
-					return err
-				}
-
-				results.Store(file, &v1.Status{
-					ServicesUp:        int32(stat.UpCount),
-					ServicesDown:      int32(stat.DownCount),
-					ServicesHealthy:   int32(stat.HealthyCount),
-					ServicesUnHealthy: int32(stat.UnhealthyCount),
-				})
-
-				return nil
-			})
-			if err != nil {
-				log.Warn().Str("file", file).Err(err).Msg("Failed to get compose status")
-			}
-		})
-	}
-	wg.Wait()
-
 	finalResults := make(map[string]*v1.Status, len(c.Msg.Files))
-	results.Range(func(key string, value *v1.Status) bool {
-		finalResults[key] = value
-		return true
+
+	err := h.WithClient(ctx, func(dkSrv *Service) error {
+		// One container listing for the whole host, aggregated per compose file
+		// via the compose config-files label. This replaces one `docker compose
+		// ps` subprocess per stack, so reporting the status of every stack (even
+		// collapsed ones) stays cheap no matter how many there are.
+		containers, err := dkSrv.Container.ContainersList(ctx)
+		if err != nil {
+			return err
+		}
+
+		byFile := make(map[string]*stackStatus)
+		for i := range containers {
+			ct := containers[i]
+			cfg := ct.Labels[api.ConfigFilesLabel]
+			if cfg == "" {
+				continue
+			}
+			// config_files may list several files (compose + overrides)
+			for _, p := range strings.Split(cfg, ",") {
+				if p = strings.TrimSpace(p); p == "" {
+					continue
+				}
+				st := byFile[p]
+				if st == nil {
+					st = &stackStatus{}
+					byFile[p] = st
+				}
+				st.add(ct)
+			}
+		}
+
+		for _, file := range c.Msg.Files {
+			absPath, resolveErr := dkSrv.Compose.ComposeAbsPath(file)
+			if resolveErr != nil {
+				log.Debug().Str("file", file).Err(resolveErr).Msg("could not resolve compose path for status")
+				finalResults[file] = &v1.Status{}
+				continue
+			}
+			if st, ok := byFile[absPath]; ok {
+				finalResults[file] = st.toProto()
+			} else {
+				// no containers for this stack -> stopped
+				finalResults[file] = &v1.Status{}
+			}
+		}
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
 	return connect.NewResponse(&v1.ComposeFileStatusResponse{
 		Status: finalResults,
 	}), nil
+}
+
+// stackStatus aggregates the container states of a single compose stack.
+//
+// It maps onto the v1.Status fields the UI already consumes. ServicesDown carries
+// the "in error" count — a service that crashed, is dead, is stuck restarting, or
+// exited non-zero — so the UI can distinguish a real problem (red) from a stack
+// that is simply stopped (grey).
+type stackStatus struct {
+	up        int32
+	failed    int32
+	healthy   int32
+	unhealthy int32
+}
+
+func (s *stackStatus) add(ct container.Summary) {
+	switch string(ct.State) {
+	case "running":
+		s.up++
+		switch ct.Health.Status {
+		case container.Healthy:
+			s.healthy++
+		case container.Unhealthy:
+			s.unhealthy++
+		}
+	case "restarting", "dead":
+		s.failed++
+	case "exited":
+		if containerExitCode(ct) != 0 {
+			s.failed++
+		}
+		// exited(0) / created / paused / removing -> cleanly stopped, not counted
+	}
+}
+
+func (s *stackStatus) toProto() *v1.Status {
+	return &v1.Status{
+		ServicesUp:        s.up,
+		ServicesDown:      s.failed,
+		ServicesHealthy:   s.healthy,
+		ServicesUnHealthy: s.unhealthy,
+	}
+}
+
+// containerExitCode parses the exit code out of a container summary status line,
+// e.g. "Exited (137) 2 hours ago" -> 137. Returns 0 when it can't be determined.
+func containerExitCode(ct container.Summary) int {
+	l := strings.IndexByte(ct.Status, '(')
+	r := strings.IndexByte(ct.Status, ')')
+	if l >= 0 && r > l {
+		if code, err := strconv.Atoi(strings.TrimSpace(ct.Status[l+1 : r])); err == nil {
+			return code
+		}
+	}
+	return 0
 }
 
 func (h *Handler) ComposeUp(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
@@ -155,6 +232,19 @@ func (h *Handler) ComposeRestart(ctx context.Context, req *connect.Request[v1.Co
 
 }
 
+func (h *Handler) ComposeRedeploy(ctx context.Context, req *connect.Request[v1.ComposeRedeployRequest], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+	return h.WithClientAndStream(ctx, responseStream, func(dkSrv *Service, writer io.Writer) error {
+		file := req.Msg.GetFile()
+		return dkSrv.Compose.Redeploy(
+			ctx,
+			file.GetFilename(),
+			writer,
+			req.Msg.GetPull(), req.Msg.GetBuild(), req.Msg.GetRecreate(),
+			file.GetSelectedServices()...,
+		)
+	})
+}
+
 func (h *Handler) ComposeUpdate(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.WithClientAndStream(ctx, responseStream, func(dkSrv *Service, writer io.Writer) error {
 		return dkSrv.Compose.Update(ctx, req.Msg.Filename, writer, req.Msg.SelectedServices...)
@@ -163,6 +253,12 @@ func (h *Handler) ComposeUpdate(ctx context.Context, req *connect.Request[v1.Com
 	// todo
 	//go sendReqToUpdater(h.addr, h.pass, "")
 	//return nil
+}
+
+func (h *Handler) DockerCommand(ctx context.Context, req *connect.Request[v1.DockerCommandRequest], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+	return h.WithClientAndStream(ctx, responseStream, func(dkSrv *Service, writer io.Writer) error {
+		return dkSrv.Compose.RunDockerCommand(ctx, req.Msg.GetCommand(), writer)
+	})
 }
 
 func (h *Handler) ComposeValidate(ctx context.Context, req *connect.Request[v1.ComposeFile]) (*connect.Response[v1.ComposeValidateResponse], error) {
@@ -252,15 +348,21 @@ func (l *LogStreamWriter) Write(p []byte) (n int, err error) {
 
 func ToRPCStat(cont contSrv.Stats) *v1.ContainerStats {
 	return &v1.ContainerStats{
-		Id:          cont.ID,
-		Name:        strings.TrimPrefix(cont.Name, "/"),
-		CpuUsage:    cont.CPUUsage,
-		MemoryUsage: cont.MemoryUsage,
-		MemoryLimit: cont.MemoryLimit,
-		NetworkRx:   cont.NetworkRx,
-		NetworkTx:   cont.NetworkTx,
-		BlockRead:   cont.BlockRead,
-		BlockWrite:  cont.BlockWrite,
+		Id:           cont.ID,
+		Name:         strings.TrimPrefix(cont.Name, "/"),
+		Image:        cont.Image,
+		State:        cont.State,
+		Health:       cont.Health,
+		IpAddress:    cont.IPAddress,
+		RestartCount: cont.RestartCount,
+		CpuUsage:     cont.CPUUsage,
+		MemoryUsage:  cont.MemoryUsage,
+		MemoryLimit:  cont.MemoryLimit,
+		NetworkRx:    cont.NetworkRx,
+		NetworkTx:    cont.NetworkTx,
+		BlockRead:    cont.BlockRead,
+		BlockWrite:   cont.BlockWrite,
+		StartedAt:    cont.StartedAt,
 	}
 }
 
@@ -290,6 +392,13 @@ func getSortFn(field v1.SORT_FIELD) func(a, b contSrv.Stats) int {
 		return func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.BlockRead, a.BlockRead)
 		}
+	case v1.SORT_FIELD_STARTED:
+		return func(a, b contSrv.Stats) int {
+			// Compare parsed times, not the raw strings: RFC3339Nano trims
+			// trailing zeros, so lexicographic order is wrong across values
+			// with and without fractional seconds.
+			return parseStarted(b.StartedAt).Compare(parseStarted(a.StartedAt))
+		}
 	case v1.SORT_FIELD_NAME:
 		fallthrough
 	default:
@@ -297,6 +406,16 @@ func getSortFn(field v1.SORT_FIELD) func(a, b contSrv.Stats) int {
 			return cmp.Compare(b.Name, a.Name)
 		}
 	}
+}
+
+// parseStarted parses a container's RFC3339 start time, returning the zero time
+// (sorts first) when empty or unparseable (e.g. a never-started container).
+func parseStarted(s string) time.Time {
+	t, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
+		return time.Time{}
+	}
+	return t
 }
 
 func sendReqToUpdater(addr, key, path string) {
@@ -358,16 +477,6 @@ func toRPCPort(p container.PortSummary) *v1.Port {
 		Host:    p.IP.String(),
 		Type:    p.Type,
 	}
-}
-
-func (h *Handler) getComposeFilePath(fullPath string) string {
-	// todo
-	//composePath := filepath.ToSlash(
-	//	strings.TrimPrefix(
-	//		fullPath, h.compose().ComposeRoot,
-	//	),
-	//)
-	return strings.TrimPrefix("", "/")
 }
 
 type ContainerLogWriter struct {

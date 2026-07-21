@@ -9,6 +9,14 @@ type WsWriter struct {
 	ws *websocket.Conn
 }
 
+// LimitClientMessages bounds browser-to-server frames without constraining
+// server-to-browser log and terminal streams. Terminal input, resize events
+// and file-search queries are all tiny; 1 MiB leaves ample compatibility
+// headroom while preventing a single frame from exhausting server memory.
+func LimitClientMessages(ws *websocket.Conn) {
+	ws.SetReadLimit(1 << 20)
+}
+
 func NewWsWriter(ws *websocket.Conn) *WsWriter {
 	return &WsWriter{
 		ws: ws,

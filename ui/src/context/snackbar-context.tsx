@@ -1,4 +1,4 @@
-import React, {type ReactNode, useState} from 'react';
+import React, {type ReactNode, useCallback, useMemo, useState} from 'react';
 import {Alert, type AlertColor, Snackbar} from '@mui/material';
 import {SnackbarContext, type SnackbarContextType, type SnackbarOptions} from '../hooks/snackbar.ts';
 
@@ -23,7 +23,7 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({children}) =>
         action: null,
     });
 
-    const showSnackbar = (message: string, options: SnackbarOptions = {}) => {
+    const showSnackbar = useCallback((message: string, options: SnackbarOptions = {}) => {
         setSnackbar({
             open: true,
             message,
@@ -31,40 +31,40 @@ export const SnackbarProvider: React.FC<SnackbarProviderProps> = ({children}) =>
             duration: options.duration || 3000,
             action: options.action || null,
         });
-    };
+    }, []);
 
-    const hideSnackbar = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+    const hideSnackbar = useCallback((_event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') {
             return;
         }
         setSnackbar(prev => ({...prev, open: false}));
-    };
+    }, []);
 
     // Convenience methods
-    const showSuccess = (message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
+    const showSuccess = useCallback((message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
         showSnackbar(message, {...options, severity: 'success'});
-    };
+    }, [showSnackbar]);
 
-    const showError = (message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
+    const showError = useCallback((message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
         showSnackbar(message, {...options, severity: 'error'});
-    };
+    }, [showSnackbar]);
 
-    const showWarning = (message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
+    const showWarning = useCallback((message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
         showSnackbar(message, {...options, severity: 'warning'});
-    };
+    }, [showSnackbar]);
 
-    const showInfo = (message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
+    const showInfo = useCallback((message: string, options: Omit<SnackbarOptions, 'severity'> = {}) => {
         showSnackbar(message, {...options, severity: 'info'});
-    };
+    }, [showSnackbar]);
 
-    const value: SnackbarContextType = {
+    const value: SnackbarContextType = useMemo(() => ({
         showSnackbar,
         showSuccess,
         showError,
         showWarning,
         showInfo,
         hideSnackbar,
-    };
+    }), [hideSnackbar, showError, showInfo, showSnackbar, showSuccess, showWarning]);
 
     return (
         <SnackbarContext.Provider value={value}>

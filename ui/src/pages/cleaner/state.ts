@@ -2,6 +2,7 @@ import {CleanerService, type PruneConfig} from "../../gen/cleaner/v1/cleaner_pb.
 import {create} from "zustand";
 import {callRPC} from "../../lib/api.ts";
 import type {Client} from "@connectrpc/connect";
+import {debugWarn} from "../../lib/debug.ts";
 
 export type CleanerConfig = Omit<PruneConfig, "$typeName" | "$unknown">
 
@@ -18,7 +19,7 @@ export const useCleanerConfig = create<{
     isLoading: false,
     Save: async (client, showErr, onSuccess) => {
         if (!get().config) {
-            console.warn("No prev config found");
+            debugWarn("Cleaner configuration is not loaded");
             return;
         }
 

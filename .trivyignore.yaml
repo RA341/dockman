@@ -1,0 +1,8 @@
+vulnerabilities:
+  - id: CVE-2026-34040
+    statement: >-
+      Not affected: Dockman and its bundled Compose executable use Moby only
+      as Docker API clients. The vulnerable authorization middleware belongs
+      to the Docker daemon, which is neither embedded nor executed in this
+      image; deployments connect to an external socket proxy.
+    expired_at: 2026-10-31

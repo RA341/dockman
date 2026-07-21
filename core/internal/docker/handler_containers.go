@@ -3,12 +3,14 @@ package docker
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
 	"net/netip"
-	"regexp"
+	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,6 +70,34 @@ func (h *Handler) ContainerStop(ctx context.Context, req *connect.Request[v1.Con
 	}
 
 	err = dkSrv.Container.ContainersStop(ctx, req.Msg.ContainerIds...)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.LogsMessage{}), nil
+}
+
+func (h *Handler) ContainerPause(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = dkSrv.Container.ContainersPause(ctx, req.Msg.ContainerIds...)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.LogsMessage{}), nil
+}
+
+func (h *Handler) ContainerUnpause(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.LogsMessage], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = dkSrv.Container.ContainersUnpause(ctx, req.Msg.ContainerIds...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +187,15 @@ func (h *Handler) ContainerInspect(ctx context.Context, req *connect.Request[v1.
 		ExposedPorts: exposedPorts,
 	}
 
+	// Keep the typed legacy fields above for existing consumers, and expose
+	// the complete daemon response for the details view.  Marshaling the
+	// embedded API value (rather than hand-copying fields) also makes Dockman
+	// forward-compatible with inspect fields added by newer daemon APIs.
+	rawInspect, err := json.MarshalIndent(inspect, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("encode container inspect: %w", err)
+	}
+
 	return connect.NewResponse(&v1.ContainerInspectMessage{
 		ID:        inspect.ID,
 		Name:      inspect.Name,
@@ -166,6 +205,7 @@ func (h *Handler) ContainerInspect(ctx context.Context, req *connect.Request[v1.
 		Image:     inspect.Image,
 		HostsPath: inspect.HostsPath,
 		Mounts:    mounts,
+		RawJson:   string(rawInspect),
 	}), nil
 }
 
@@ -192,18 +232,21 @@ func (h *Handler) ContainerTop(ctx context.Context, req *connect.Request[v1.Cont
 	}), nil
 }
 
-func (h *Handler) ContainerUpdate(ctx context.Context, req *connect.Request[v1.ContainerRequest]) (*connect.Response[v1.Empty], error) {
-	_, _, err := h.getHost(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// todo
-	//err = h.updater(host).ContainersUpdateByContainerID(ctx, req.Msg.ContainerIds...)
-	//if err != nil {
-	//	return nil, err
-	//}
-	return connect.NewResponse(&v1.Empty{}), nil
+// ContainerUpdate force-updates the given containers' images and streams
+// per-step progress: pull the tag through the compose CLI runner (so the
+// host's registry credentials apply), and when a newer image came down,
+// recreate the container on it with rollback on failure.
+func (h *Handler) ContainerUpdate(ctx context.Context, req *connect.Request[v1.ContainerRequest], responseStream *connect.ServerStream[v1.LogsMessage]) error {
+	return h.WithClientAndStream(ctx, responseStream, func(dkSrv *Service, writer io.Writer) error {
+		return dkSrv.Updater.ContainersForceUpdate(
+			ctx,
+			func(pullCtx context.Context, imageTag string) error {
+				return dkSrv.Compose.PullImage(pullCtx, imageTag, writer)
+			},
+			writer,
+			req.Msg.ContainerIds...,
+		)
+	})
 }
 
 func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.StatsRequest]) (*connect.Response[v1.StatsResponse], error) {
@@ -251,6 +294,111 @@ func (h *Handler) ContainerStats(ctx context.Context, req *connect.Request[v1.St
 	}), nil
 }
 
+func (h *Handler) HostStats(ctx context.Context, _ *connect.Request[v1.Empty]) (*connect.Response[v1.HostStatsResponse], error) {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	stats, err := dkSrv.Compose.HostStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.HostStatsResponse{
+		CpuPercent: stats.CPUPercent,
+		MemUsed:    stats.MemUsed,
+		MemTotal:   stats.MemTotal,
+		Cpus:       stats.CPUs,
+	}), nil
+}
+
+// ContainerStatsStream emits each container's stats as soon as its one-shot
+// read completes, so the client paints progressively instead of waiting for
+// the slowest container.
+// No server-side sort: order is arrival order, the client sorts.
+func (h *Handler) ContainerStatsStream(ctx context.Context, req *connect.Request[v1.StatsRequest], stream *connect.ServerStream[v1.ContainerStats]) error {
+	file := req.Msg.GetFile()
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return err
+	}
+
+	var containers []container.Summary
+	if file != nil && file.Filename != "" {
+		absPath, err := dkSrv.Compose.ComposeAbsPath(file.Filename)
+		if err != nil {
+			return err
+		}
+		containers, err = dkSrv.Container.ContainerListByComposeFile(ctx, absPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		containers, err = dkSrv.Container.ContainersListRunning(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	// paint-first: emit each container's identity immediately (metrics
+	// pending) so every view fills in the time of a container listing; the
+	// real stats replace the rows as each one-shot read completes
+	for _, ct := range containers {
+		if err := stream.Send(ToRPCStat(contSrv.IdentityStats(ct))); err != nil {
+			return err
+		}
+	}
+
+	var sendErr error
+	dkSrv.Container.StatsStream(ctx, containers, func(st contSrv.Stats) {
+		if sendErr != nil {
+			return
+		}
+		sendErr = stream.Send(ToRPCStat(st))
+	})
+	return sendErr
+}
+
+// ContainerEvents streams this host's filtered container lifecycle events to
+// the client. A keepalive frame goes out every 30s so an otherwise silent
+// stream survives reverse-proxy idle timeouts. One daemon subscription is
+// shared by every connected client (see container.SubscribeEvents).
+func (h *Handler) ContainerEvents(ctx context.Context, req *connect.Request[v1.EventsRequest], stream *connect.ServerStream[v1.ContainerEvent]) error {
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return err
+	}
+
+	eventsCh, unsubscribe := dkSrv.Container.SubscribeEvents()
+	defer unsubscribe()
+
+	keepalive := time.NewTicker(30 * time.Second)
+	defer keepalive.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case ev := <-eventsCh:
+			if err := stream.Send(&v1.ContainerEvent{
+				Action:        ev.Action,
+				Status:        ev.Status,
+				ContainerId:   ev.ID,
+				ContainerName: ev.Name,
+				Image:         ev.Image,
+				TimeNano:      ev.TimeNano,
+			}); err != nil {
+				return err
+			}
+		case <-keepalive.C:
+			if err := stream.Send(&v1.ContainerEvent{}); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.ContainerLogsRequest], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	if req.Msg.GetContainerID() == "" {
 		return fmt.Errorf("container id is required")
@@ -283,6 +431,82 @@ func (h *Handler) ContainerLogs(ctx context.Context, req *connect.Request[v1.Con
 	}
 
 	return nil
+}
+
+// logsKeepAliveInterval paces empty LogLine frames so proxies do not cut the
+// stream during quiet periods. 5s survives even aggressive idle timeouts
+// (Traefik defaults to 10s); DOCKMAN_LOGS_KEEPALIVE overrides it in seconds.
+var logsKeepAliveInterval = func() time.Duration {
+	if raw := os.Getenv("DOCKMAN_LOGS_KEEPALIVE"); raw != "" {
+		if secs, err := strconv.Atoi(raw); err == nil && secs > 0 {
+			return time.Duration(secs) * time.Second
+		}
+	}
+	return 5 * time.Second
+}()
+
+func (h *Handler) ContainerLogsStream(ctx context.Context, req *connect.Request[v1.LogsStreamRequest], responseStream *connect.ServerStream[v1.LogLine]) error {
+	ids := req.Msg.GetContainerIds()
+	if len(ids) == 0 {
+		return fmt.Errorf("at least one container id is required")
+	}
+	_, dkSrv, err := h.getHost(ctx)
+	if err != nil {
+		return err
+	}
+
+	streamCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	lines := make(chan contSrv.LogLine, 256)
+	streamErr := make(chan error, 1)
+	go func() {
+		streamErr <- dkSrv.Container.LogsStream(streamCtx, ids, contSrv.LogsStreamOptions{
+			Tail:   req.Msg.GetTail(),
+			Since:  req.Msg.GetSince(),
+			Until:  req.Msg.GetUntil(),
+			Follow: req.Msg.GetFollow(),
+		}, func(l contSrv.LogLine) {
+			select {
+			case lines <- l:
+			case <-streamCtx.Done():
+			}
+		})
+		// all reader goroutines are done: closing drains the buffered lines
+		// through the single receive loop below, then ends the stream
+		close(lines)
+	}()
+
+	keepalive := time.NewTicker(logsKeepAliveInterval)
+	defer keepalive.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case line, ok := <-lines:
+			if !ok {
+				return <-streamErr
+			}
+			if err := responseStream.Send(logLineToProto(line)); err != nil {
+				return err
+			}
+		case <-keepalive.C:
+			if err := responseStream.Send(&v1.LogLine{}); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func logLineToProto(l contSrv.LogLine) *v1.LogLine {
+	return &v1.LogLine{
+		ContainerId:   l.ContainerID,
+		ContainerName: l.ContainerName,
+		Text:          l.Text,
+		TimeNano:      l.TimeNano,
+		Stream:        l.Stream,
+	}
 }
 
 func (h *Handler) containersToRpc(result []container.Summary, host string, srv *Service) ([]*v1.ContainerList, map[string]int32) {
@@ -335,16 +559,17 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 			stack,
 			portSlice,
 			updater.ImageUpdate{},
+			srv.Compose.DockmanPath(stack.Labels[api.ConfigFilesLabel]),
 		))
 	}
 	return dockerResult, statusCount
 }
 
-func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
+func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate, servicePath string) *v1.ContainerList {
 	ipAddr := extractIPAddr(stack)
 
 	var he string
-	if stack.Health.Status != container.NoHealthcheck {
+	if stack.Health != nil && stack.Health.Status != container.NoHealthcheck {
 		he = string(stack.Health.Status)
 	}
 
@@ -361,7 +586,7 @@ func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update 
 		Ports:           portSlice,
 		ServiceName:     stack.Labels[api.ServiceLabel],
 		StackName:       stack.Labels[api.ProjectLabel],
-		ServicePath:     h.getComposeFilePath(stack.Labels[api.ConfigFilesLabel]),
+		ServicePath:     servicePath,
 	}
 }
 
@@ -383,33 +608,5 @@ func extractIPAddr(stack container.Summary) (hosts []string) {
 }
 
 func extractTraefikLabel(labels map[string]string) (hosts []string) {
-	val, ok := labels["traefik.enable"]
-	if !(ok && val == "true") {
-		return hosts
-	}
-
-	// looks for the Host() or HostRegexp() functions
-	// It captures everything inside the parenthesis
-	hostRegex := regexp.MustCompile(`Host(?:Regexp)?\((.*?)\)`)
-	// This regex identifies the actual domain names inside the quotes/backticks
-	domainRegex := regexp.MustCompile(`[` + "`" + `"]([^` + "`" + `",\s]+)[` + "`" + `"]`)
-	for key, value := range labels {
-		if strings.HasPrefix(key, "traefik.http.routers.") && strings.HasSuffix(key, ".rule") {
-			// Find all Host(...) or HostRegexp(...) occurrences in the rule
-			matches := hostRegex.FindAllStringSubmatch(value, -1)
-			for _, match := range matches {
-				if len(match) > 1 {
-					// (Handles comma separated: Host(`a.com`, `b.com`))
-					domains := domainRegex.FindAllStringSubmatch(match[1], -1)
-					for _, d := range domains {
-						if len(d) > 1 {
-							hosts = append(hosts, d[1])
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return hosts
+	return contSrv.TraefikHosts(labels)
 }

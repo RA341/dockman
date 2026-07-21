@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/RA341/dockman/pkg/argos"
 	"github.com/RA341/dockman/pkg/fileutil"
@@ -91,10 +90,6 @@ func defaultIfNotSet(config *AppConfig) {
 		if file, err := WithUIFromFile(uiPath); err == nil {
 			config.UIFS = file
 		}
-	}
-
-	if len(strings.TrimSpace(config.AllowedOrigins)) == 0 {
-		config.AllowedOrigins = "*" // allow all origins
 	}
 
 	if config.Port == 0 {

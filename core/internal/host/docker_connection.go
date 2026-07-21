@@ -24,6 +24,11 @@ func testDockerConnection(cli *client.Client) (system.Info, error) {
 func NewDockerLocalClient() (*client.Client, error) {
 	return client.New(
 		client.FromEnv,
+		// Negotiate the API version with the daemon so an older Docker engine
+		// (whose max supported API is below our client's default) doesn't reject
+		// calls with "client version is too new" — which otherwise fails the
+		// connection test and drops the host at startup.
+		client.WithAPIVersionNegotiation(),
 	)
 }
 
@@ -32,6 +37,7 @@ func newDockerSSHClient(cli *ssh.Client) (*client.Client, error) {
 	// Create a Docker client using the custom dialer.
 	return client.New(
 		client.WithDialContext(dockerSSHDialer(cli)),
+		client.WithAPIVersionNegotiation(),
 	)
 }
 

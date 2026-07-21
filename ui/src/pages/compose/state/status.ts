@@ -1,13 +1,13 @@
 import {immer} from "zustand/middleware/immer";
 import {getContextKey} from "../../../context/tab-context.tsx";
 import {type Status, StatusSchema} from "../../../gen/docker/v1/docker_pb.ts";
-import {create as createMessage} from "@bufbuild/protobuf";
+import {create as createMessage, equals} from "@bufbuild/protobuf";
 import {create} from "zustand";
 
 interface OpenFilesState {
     // contextKey -> Set of directory paths
     openFiles: Record<string, Record<string, Status>>;
-    delete: (dir: string) => void;
+    delete: (dir: string, keep?: string) => void;
     trackComposeStatus: (path: string) => void;
     setStatus: (status: { [p: string]: Status }) => void
 }
@@ -16,7 +16,7 @@ export const useComposeFileState = create<OpenFilesState>()(
     immer((set) => ({
         openFiles: {},
 
-        delete: (dir: string) => {
+        delete: (dir: string, keep?: string) => {
             const key = getContextKey();
             set((state) => {
                 const openStatuses = state.openFiles[key];
@@ -25,8 +25,10 @@ export const useComposeFileState = create<OpenFilesState>()(
                 }
 
                 for (const trackingFile of Object.keys(openStatuses)) {
-                    if (trackingFile.startsWith(dir)) {
-                        console.log(`Removing ${trackingFile} because ${dir} was closed`)
+                    // keep lets a collapsed stack folder retain its own compose
+                    // status (so its dot stays visible) while dropping the files
+                    // nested inside it.
+                    if (trackingFile !== keep && trackingFile.startsWith(dir)) {
                         delete state.openFiles[key][trackingFile];
                     }
                 }
@@ -40,7 +42,13 @@ export const useComposeFileState = create<OpenFilesState>()(
                     state.openFiles[key] = <Record<string, Status>>{};
                 }
 
-                state.openFiles[key][path] = createMessage(StatusSchema);
+                // Only initialise when not already tracked. Re-tracking a path
+                // (e.g. when a folder is expanded and its compose child mounts)
+                // must not reset an already-known status to empty, otherwise the
+                // dot flickers to grey until the next poll.
+                if (!state.openFiles[key][path]) {
+                    state.openFiles[key][path] = createMessage(StatusSchema);
+                }
             });
         },
 
@@ -51,8 +59,12 @@ export const useComposeFileState = create<OpenFilesState>()(
                 if (!state.openFiles[key]) return;
 
                 for (const [file, value] of Object.entries(input)) {
-                    // Only update if file is still tracked
-                    if (state.openFiles[key][file]) {
+                    // Only update tracked files whose status ACTUALLY changed:
+                    // blindly assigning fresh message objects gives openFiles a
+                    // new identity on every poll, which re-renders every dot —
+                    // and re-triggers any effect depending on the store.
+                    const existing = state.openFiles[key][file];
+                    if (existing && !equals(StatusSchema, existing as Status, value)) {
                         state.openFiles[key][file] = value;
                     }
                 }

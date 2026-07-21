@@ -44,7 +44,13 @@ const AliasDialog = ({host}: {host: string}) => {
             }}
         >
             <DialogTitle sx={{p: 3, pb: 0}}>
-                <Stack direction="row" alignItems="center" spacing={1.5} sx={{mb: 2}}>
+                <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                        alignItems: "center",
+                        mb: 2
+                    }}>
                     <Box sx={{
                         p: 1,
                         borderRadius: 1.5,
@@ -61,20 +67,17 @@ const AliasDialog = ({host}: {host: string}) => {
                     </Box>
                 </Stack>
             </DialogTitle>
-
             <DialogContent sx={{p: 3, minHeight: 450, ...scrollbarStyles}}>
                 <HostAliasManager hostname={host} hostId={0}/>
             </DialogContent>
-
             <Divider/>
-
             <DialogActions sx={{p: 2.5}}>
                 <Button variant="outlined" color="inherit" onClick={onClose}
                         sx={{borderRadius: 2, fontWeight: 700}}>Close</Button>
                 <Box sx={{flex: 1}}/>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default AliasDialog

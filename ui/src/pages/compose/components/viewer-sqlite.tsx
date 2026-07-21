@@ -90,7 +90,13 @@ const ViewerSqlite = ({filename}: { filename: string }) => {
                         }}
                     />
                 ) : (
-                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                    <Box
+                        sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            minHeight: "200px"
+                        }}>
                         <Typography variant="h6">
                             Connecting to sqlite web ui...
                             <br/>

@@ -1,0 +1,52 @@
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directory: /core
+    target-branch: integration
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    groups:
+      go-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /ui
+    target-branch: integration
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:15"
+      timezone: Europe/Paris
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: docker
+    directory: /pkg/docker
+    target-branch: integration
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: Europe/Paris
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: integration
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:45"
+      timezone: Europe/Paris
+    groups:
+      github-actions:
+        patterns:
+          - "*"

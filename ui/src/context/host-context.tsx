@@ -43,7 +43,7 @@ function HostProvider({children}: { children: ReactNode }) {
 
         setAvailableHosts(val?.hosts || [])
         setLoading(false)
-    }, [hostManagerClient]);
+    }, [hostManagerClient, showError]);
 
     useEffect(() => {
         fetchHosts().then()

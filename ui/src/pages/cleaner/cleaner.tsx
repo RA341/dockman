@@ -73,7 +73,12 @@ function DockerCleanerPage() {
                 gap: 2
             }}>
                 <CircularProgress size={40} thickness={5}/>
-                <Typography variant="body2" sx={{fontWeight: 700}} color="text.secondary">Loading cleaner
+                <Typography
+                    variant="body2"
+                    sx={{
+                        color: "text.secondary",
+                        fontWeight: 700
+                    }}>Loading cleaner
                     config...</Typography>
             </Box>
         );
@@ -98,9 +103,16 @@ function DockerCleanerPage() {
                 borderBottom: '1px solid', borderColor: 'divider',
                 bgcolor: 'background.paper', py: 2, px: 3, flexShrink: 0
             }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                    direction="row"
+                    sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                    }}>
                     <Box>
-                        <Stack direction="row" spacing={2} alignItems="center">
+                        <Stack direction="row" spacing={2} sx={{
+                            alignItems: "center"
+                        }}>
                             <Box sx={{
                                 p: 1,
                                 bgcolor: 'primary.lighter',
@@ -114,7 +126,9 @@ function DockerCleanerPage() {
                                 <Typography variant="h5" sx={{fontWeight: 800, letterSpacing: -0.5}}>
                                     Docker Cleaner
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" sx={{
+                                    color: "text.secondary"
+                                }}>
                                     Automated pruning of unused resources
                                 </Typography>
                             </Box>
@@ -141,12 +155,17 @@ function DockerCleanerPage() {
                     </Stack>
                 </Stack>
             </Paper>
-
             <Box sx={{flexGrow: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 3}}>
                 <StorageInuse refetch={refetchUsage}/>
 
                 <Paper variant="outlined" sx={{p: 3, borderRadius: 3}}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 2.5}}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                            alignItems: "center",
+                            mb: 2.5
+                        }}>
                         <SettingsIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
                         <Typography variant="subtitle2"
                                     sx={{fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em'}}>
@@ -154,7 +173,9 @@ function DockerCleanerPage() {
                         </Typography>
                     </Stack>
 
-                    <Stack direction={{xs: 'column', md: 'row'}} spacing={4} alignItems="center">
+                    <Stack direction={{xs: 'column', md: 'row'}} spacing={4} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{
                             p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider',
                             bgcolor: config?.Enabled ? 'success.lighter' : '',
@@ -227,7 +248,14 @@ function DockerCleanerPage() {
 
                 {/* History Section */}
                 <Box>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 1, px: 1}}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                            alignItems: "center",
+                            mb: 1,
+                            px: 1
+                        }}>
                         <HistoryIcon sx={{fontSize: 18, color: 'text.secondary'}}/>
                         <Typography variant="overline" sx={{fontWeight: 800, color: 'text.secondary'}}>
                             Maintenance History

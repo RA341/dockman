@@ -1,6 +1,8 @@
 import {useMemo, useState} from 'react';
-import {Box, Button, Card, CircularProgress, Fade, Tooltip, Typography} from '@mui/material';
-import {CleaningServices, Delete, DryCleaning, Refresh} from '@mui/icons-material';
+import {Box, Divider, Fade, Paper} from '@mui/material';
+import {CleaningServices, Delete, DryCleaning, Storage as VolumeIcon} from '@mui/icons-material';
+import PageHeader, {RefreshButton} from "../../components/page-header.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 import {VolumeTable} from './volumes-table.tsx';
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import VolumesLoading from "./volumes-loading.tsx";
@@ -15,6 +17,7 @@ const VolumesPage = () => {
     const [selectedVolumes, setSelectedVolumes] = useState<string[]>([]);
 
     const {search, setSearch, searchInputRef} = useSearch();
+    const host = useHostStore(state => state.host);
 
     const filteredVolumes = useMemo(() => {
         if (search) {
@@ -68,59 +71,45 @@ const VolumesPage = () => {
             overflow: 'hidden',
             ...scrollbarStyles
         }}>
-            <Card
+            <PageHeader
+                icon={<VolumeIcon/>}
+                title="Volumes"
+                count={volumes.length}
+                host={host}
+            />
+
+            <Paper
+                variant="outlined"
                 sx={{
-                    mb: 3,
-                    p: 2,
+                    px: 1.5,
+                    py: 1,
+                    mb: 1.5,
                     display: 'flex',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 3,
-                    backgroundColor: 'background.paper',
-                    boxShadow: 2,
+                    gap: 1.5,
                     borderRadius: 2,
                     flexShrink: 0,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}
             >
-                {/* Title and Stats */}
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    <Typography variant="h6" sx={{fontWeight: 'bold'}}>
-                        Docker Volumes
-                    </Typography>
+                <Box sx={{flex: 1, maxWidth: 270}}>
+                    <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
                 </Box>
 
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    <Typography variant="h6">
-                        {volumes.length} volumes
-                    </Typography>
+                <Divider orientation="vertical" flexItem sx={{mx: 0.5}}/>
+
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, flex: 1}}>
+                    <ActionButtons actions={actions}/>
+                    <RefreshButton onClick={loadVolumes} loading={loading}/>
                 </Box>
-
-                <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
-
-                <Tooltip title={loading ? 'Refreshing...' : 'Refresh volumes'}>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={loadVolumes}
-                        disabled={loading}
-                        sx={{minWidth: 'auto', px: 1.5}}
-                    >
-                        {loading ? <CircularProgress size={16} color="inherit"/> : <Refresh/>}
-                    </Button>
-                </Tooltip>
-
-                {/* Spacer */}
-                <Box sx={{flexGrow: 0.95}}/>
-
-                <ActionButtons actions={actions}/>
-            </Card>
+            </Paper>
 
             {/* Table Container */}
             <Box sx={{
                 flexGrow: 1,
-                border: '3px ridge',
-                borderColor: 'rgba(255, 255, 255, 0.23)',
-                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',

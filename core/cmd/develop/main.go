@@ -34,6 +34,7 @@ func main() {
 		//"PRIV_KEY_PATH": "./key.pem",
 
 		"AUTH_ENABLE": "false",
+		"ORIGINS":     "http://localhost:5173",
 		//"AUTH_OIDC_ENABLE": "true",
 		//"AUTH_OIDC_AUTO_REDIRECT": "false",
 		"AUTH_OIDC_ISSUER":        "https://localhost",
