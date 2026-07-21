@@ -7,6 +7,7 @@ import (
 
 type Store interface {
 	Get(Host string) (Config, error)
+	GetLocal() (Config, error)
 	Add(conf *Config) error
 	Delete(conf *Config) error
 	Update(conf *Config) error

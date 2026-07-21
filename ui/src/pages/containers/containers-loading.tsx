@@ -9,10 +9,12 @@ export const ContainersLoading = () => {
             width: '100%',
             flex: 1 // Use flex: 1 instead of height: '100%'
     }}>
-        <CircularProgress sx={{mr: 2}}/>
-        <Typography variant="body1" color="text.secondary">
-            Loading containers...
-        </Typography>
-    </Box>
+            <CircularProgress sx={{mr: 2}}/>
+            <Typography variant="body1" sx={{
+                color: "text.secondary"
+            }}>
+                Loading containers...
+            </Typography>
+        </Box>
     );
 };

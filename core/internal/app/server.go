@@ -43,7 +43,7 @@ func NewServer(app *App) {
 		AllowedHeaders:      connectcors.AllowedHeaders(),
 		ExposedHeaders:      connectcors.ExposedHeaders(),
 	})
-	finalMux := corsConfig.Handler(router)
+	finalMux := enforceOriginPolicy(conf, corsConfig.Handler(limitRequestBodies(conf, router)))
 
 	port := fmt.Sprintf(":%d", conf.Port)
 	log.Info().Str("port", port).
@@ -53,8 +53,11 @@ func NewServer(app *App) {
 	ht2Srv := &http2.Server{}
 
 	srv := &http.Server{
-		Addr:    port,
-		Handler: h2c.NewHandler(finalMux, ht2Srv),
+		Addr:              port,
+		Handler:           h2c.NewHandler(finalMux, ht2Srv),
+		ReadHeaderTimeout: time.Duration(conf.HTTPReadHeaderSeconds) * time.Second,
+		IdleTimeout:       time.Duration(conf.HTTPIdleSeconds) * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	go func() {

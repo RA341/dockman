@@ -35,6 +35,13 @@ func (h *Handler) ImageList(ctx context.Context, req *connect.Request[v1.ListIma
 	//	return nil, err
 	//}
 
+	// usage comes from the container list rather than the summary's
+	// Containers field, so the unused count matches what prune would do
+	usage, err := dkSrv.Container.ImageUsageCounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	var unusedContainers int64
 	var totalDisk int64
 	var untagged int64
@@ -47,12 +54,22 @@ func (h *Handler) ImageList(ctx context.Context, req *connect.Request[v1.ListIma
 			untagged++
 		}
 
-		if img.Containers == 0 {
+		containers := usage[img.ID]
+		if containers == 0 {
+			// no direct container: the image may still be the base of an
+			// image whose containers run — prune keeps those, so they must
+			// count as used too
+			containers, err = dkSrv.Container.ImageDescendantContainers(ctx, img.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if containers == 0 {
 			unusedContainers++
 		}
 
 		rpcImages = append(rpcImages, &v1.Image{
-			Containers:  img.Containers,
+			Containers:  containers,
 			Created:     img.Created,
 			Id:          img.ID,
 			Labels:      img.Labels,
@@ -156,6 +173,20 @@ func (h *Handler) ImageInspect(ctx context.Context, req *connect.Request[v1.Imag
 		name = sd
 	}
 
+	conts, err := dkSrv.Container.ImageContainers(ctx, req.Msg.ImageId)
+	if err != nil {
+		return nil, err
+	}
+	rpcConts := make([]*v1.ImageContainerInspect, 0, len(conts))
+	for _, c := range conts {
+		rpcConts = append(rpcConts, &v1.ImageContainerInspect{
+			Name:           c.Name,
+			Id:             c.ID,
+			State:          c.State,
+			ComposeProject: c.ComposeProject,
+		})
+	}
+
 	var insp = &v1.ImageInspect{
 		Name:       name,
 		Id:         inspect.ID,
@@ -163,6 +194,7 @@ func (h *Handler) ImageInspect(ctx context.Context, req *connect.Request[v1.Imag
 		Size:       humanize.Bytes(uint64(inspect.Size)),
 		CreatedIso: inspect.Created,
 		Layers:     layers,
+		Containers: rpcConts,
 	}
 
 	return connect.NewResponse(&v1.ImageInspectResponse{

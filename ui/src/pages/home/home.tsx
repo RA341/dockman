@@ -1,11 +1,11 @@
 import {Box, Divider, Drawer, List, ListItemButton, ListItemIcon, Tooltip,} from '@mui/material';
-import {FolderDelete, Logout, Settings} from '@mui/icons-material';
+import {FolderDelete, Logout, Settings, SpaceDashboardOutlined} from '@mui/icons-material';
 import {Link as RouterLink, Outlet, useLocation, useNavigate, useParams} from 'react-router-dom';
 
 import HostSelectDropdown from "./host-selector.tsx";
 import {useAuth} from "../../hooks/auth.ts";
 import {ShortcutFormatter} from "../compose/components/shortcut-formatter.tsx";
-import React, {useEffect, useMemo} from "react";
+import React, {useEffect, useMemo, useRef} from "react";
 import {
     ContainerIcon,
     DockerFolderIcon,
@@ -14,8 +14,9 @@ import {
     StatsIcon,
     VolumeIcon
 } from "../compose/components/file-icon.tsx";
+import {useHostStore, useLastOpened} from "../compose/state/files.ts";
 import {useTabsStore} from "../../context/tab-context.tsx";
-import {useHostStore} from "../compose/state/files.ts";
+import {useTerminalTabs} from "../compose/state/terminal.tsx";
 
 const MAIN_SIDEBAR_WIDTH = 72;
 
@@ -28,13 +29,21 @@ export function RootLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const {logout} = useAuth();
-    const {lastOpened} = useTabsStore();
-
     const host = useHostFromUrl()
     const setHost = useHostStore(state => state.setHost)
+    const resetTabs = useTabsStore(state => state.reset)
+    const clearTerminalTabs = useTerminalTabs(state => state.clearAll)
+    const clearLastOpened = useLastOpened(state => state.clear)
+    const previousHost = useRef(host)
     useEffect(() => {
+        if (previousHost.current !== host) {
+            resetTabs()
+            clearTerminalTabs()
+            clearLastOpened()
+            previousHost.current = host
+        }
         setHost(host)
-    }, [host]);
+    }, [clearLastOpened, clearTerminalTabs, host, resetTabs, setHost]);
 
     const handleLogout = () => {
         logout();
@@ -43,13 +52,14 @@ export function RootLayout() {
 
     const navigationItems = useMemo(() => [
         {title: 'Files', path: `/${host}/files`, icon: DockerFolderIcon},
+        {title: 'Monitor', path: `/${host}/monitor`, icon: () => <SpaceDashboardOutlined sx={{color: '#4db6ac'}}/>},
         {title: 'Stats', path: `/${host}/stats`, icon: StatsIcon},
         {title: 'Containers', path: `/${host}/containers`, icon: ContainerIcon},
         {title: 'Images', path: `/${host}/images`, icon: ImagesIcon},
         {title: 'Volumes', path: `/${host}/volumes`, icon: VolumeIcon},
         {title: 'Networks', path: `/${host}/networks`, icon: NetworkIcon},
         {title: 'Cleaner', path: `/${host}/cleaner`, icon: () => <FolderDelete sx={{color: 'greenyellow'}}/>},
-    ], [lastOpened, host, navigate]);
+    ], [host]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

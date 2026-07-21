@@ -1,8 +1,8 @@
 import {MonacoEditor} from "./editor.tsx";
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {Alert, AlertTitle, Box, Button, CircularProgress, Link, Typography} from '@mui/material';
-import {ErrorOutline, WarningAmber} from '@mui/icons-material';
+import {ErrorOutlined, WarningAmber} from '@mui/icons-material';
 import {type SaveState, useSaveStatus} from "../hooks/status-hook.tsx";
 import {ErrFileNotSupported} from "../../../context/file-context.tsx";
 
@@ -21,18 +21,18 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     const [contents, setContents] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
+    const loadRequest = useRef(0);
 
     const {status, handleContentChange} = useSaveStatus(500, filename);
 
-    const refreshFile = async () => {
-        await getFile(filename)
-    }
-
-    const loadFile = async () => {
+    const loadFile = useCallback(async () => {
+        const request = ++loadRequest.current;
         setErr("")
         setLoading(true)
 
         const {contents, err} = await getFile(filename)
+        if (request !== loadRequest.current) return;
+
         if (err) {
             setErr(err)
         } else {
@@ -40,9 +40,9 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         }
 
         setLoading(false);
-    };
+    }, [filename, getFile]);
 
-    const saveContents = async (newContent: string): Promise<SaveState> => {
+    const saveContents = useCallback(async (newContent: string): Promise<SaveState> => {
         const err = await saveFile(filename, newContent);
         if (err) {
             showError(`Could not save contents: ${err}`);
@@ -50,20 +50,20 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         } else {
             return 'success'
         }
-    };
+    }, [filename, saveFile, showError]);
 
     useEffect(() => {
         setFileSaveStatus(status)
-    }, [status]);
+    }, [setFileSaveStatus, status]);
 
     useEffect(() => {
         loadFile().then();
-    }, []);
+    }, [loadFile]);
 
-    const onContentChange = (value: string | undefined) => {
-        if (!value) return;
+    const onContentChange = useCallback((value: string | undefined) => {
+        if (value === undefined) return;
         handleContentChange(value, saveContents)
-    }
+    }, [handleContentChange, saveContents])
 
     if (loading) {
         return (
@@ -76,7 +76,9 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
                 gap: 2
             }}>
                 <CircularProgress size={40}/>
-                <Typography variant="body2" color="text.secondary">Loading {filename}...</Typography>
+                <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                }}>Loading {filename}...</Typography>
             </Box>
         );
     }
@@ -89,7 +91,7 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
                         <BinaryErrView err={err}/> :
                         <NormalErrView
                             err={err}
-                            retry={refreshFile}
+                            retry={loadFile}
                         />
                 }
             </Box>
@@ -97,7 +99,10 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     }
 
     return (
-        <Box sx={{flexGrow: 1, position: 'relative'}}>
+        // clip Monaco overlays (e.g. the sticky scroll band, which keeps a
+        // stale width when the widget panel resizes the editor) so they can
+        // never paint over neighboring panels
+        <Box sx={{flexGrow: 1, position: 'relative', overflow: 'hidden'}}>
             <MonacoEditor
                 selectedFile={filename}
                 fileContent={contents}
@@ -112,7 +117,7 @@ const NormalErrView = ({err, retry}: { err: string, retry: () => void }) => {
         <Alert
             severity="error"
             variant="outlined"
-            icon={<ErrorOutline/>}
+            icon={<ErrorOutlined/>}
             sx={{borderRadius: 2, bgcolor: 'background.paper'}}
         >
             <AlertTitle sx={{fontWeight: 700}}>
@@ -150,7 +155,12 @@ const BinaryErrView = ({err}: { err: string }) => {
                 Dockman has determined that this is not a valid text file. To prevent accidental
                 corruption, editing binary files is not allowed.
             </Typography>
-            <Typography variant="caption" color="text.secondary" display="block">
+            <Typography
+                variant="caption"
+                sx={{
+                    color: "text.secondary",
+                    display: "block"
+                }}>
                 If you believe this file should be editable,{' '}
                 <Link
                     href="https://github.com/ra341/dockman/issues"
@@ -172,7 +182,7 @@ const BinaryErrView = ({err}: { err: string }) => {
                 {err}
             </Box>
         </Alert>
-    )
+    );
 }
 
 export default EditorCommon;

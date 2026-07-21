@@ -10,12 +10,30 @@ service DockerService {
   rpc ContainerStop(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerRemove(ContainerRequest) returns (LogsMessage) {}
   rpc ContainerRestart(ContainerRequest) returns (LogsMessage) {}
-  rpc ContainerUpdate(ContainerRequest) returns (Empty) {}
+  rpc ContainerPause(ContainerRequest) returns (LogsMessage) {}
+  rpc ContainerUnpause(ContainerRequest) returns (LogsMessage) {}
+  // force-updates the containers' images (pull, recreate when the image
+  // changed, rollback on failure), streaming per-step progress
+  rpc ContainerUpdate(ContainerRequest) returns (stream LogsMessage) {}
   rpc ContainerTop(ContainerTopRequest) returns (ContainerTopResponse) {}
 
   rpc ContainerList(ContainerListRequest) returns (ListResponse) {}
   rpc ContainerStats(StatsRequest) returns (StatsResponse) {}
+  // streams each container's stats as soon as its read completes, so the UI
+  // fills in progressively instead of waiting for the slowest container
+  // (fully qualified return type: the sibling ContainerStats rpc otherwise
+  // shadows the message name inside the service scope)
+  rpc ContainerStatsStream(StatsRequest) returns (stream .docker.v1.ContainerStats) {}
+  // real host-level usage (from /proc via the host's runner, so it works for
+  // ssh hosts too) — the general stats view shows this instead of summing
+  // per-container numbers
+  rpc HostStats(Empty) returns (HostStatsResponse) {}
   rpc ContainerLogs(ContainerLogsRequest) returns (stream LogsMessage) {}
+  // pushes filtered container lifecycle events (start/stop/die/health
+  // transitions...) so views can refresh reactively instead of polling;
+  // empty-action messages are keepalives
+  rpc ContainerEvents(EventsRequest) returns (stream ContainerEvent) {}
+  rpc ContainerLogsStream(LogsStreamRequest) returns (stream LogLine) {}
   rpc ContainerInspect(ContainerLogsRequest) returns (ContainerInspectMessage) {}
 
   // compose
@@ -25,9 +43,16 @@ service DockerService {
   rpc ComposeStop(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeRestart(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeUpdate(ComposeFile) returns (stream LogsMessage) {}
+  // compose up -d with explicit force flags (pull / build / recreate),
+  // so a stack can be redeployed in one action
+  rpc ComposeRedeploy(ComposeRedeployRequest) returns (stream LogsMessage) {}
   rpc ComposeList(ComposeFile) returns (ListResponse) {}
   rpc ComposeValidate(ComposeFile) returns (ComposeValidateResponse) {}
   rpc ComposeFileStatus(ComposeFileStatusRequest) returns (ComposeFileStatusResponse) {}
+
+  // runs a user-provided docker CLI command on the selected host and streams
+  // its combined output; only the docker binary is allowed
+  rpc DockerCommand(DockerCommandRequest) returns (stream LogsMessage) {}
 
   // images
   rpc ImageList(ListImagesRequest) returns (ListImagesResponse) {}
@@ -39,12 +64,15 @@ service DockerService {
   rpc VolumeList(ListVolumesRequest) returns (ListVolumesResponse) {}
   rpc VolumeCreate(CreateVolumeRequest) returns (CreateVolumeResponse) {}
   rpc VolumeDelete(DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
+  rpc VolumeInspect(VolumeInspectRequest) returns (VolumeInspectResponse) {}
 
   // networks
   rpc NetworkList(ListNetworksRequest) returns (ListNetworksResponse) {}
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
   rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
+  rpc NetworkConnectContainer(NetworkConnectContainerRequest) returns (NetworkConnectContainerResponse) {}
+  rpc NetworkDisconnectContainer(NetworkDisconnectContainerRequest) returns (NetworkDisconnectContainerResponse) {}
 }
 
 
@@ -89,6 +117,9 @@ message ContainerInspectMessage {
   string HostsPath = 5;
   repeated ContainerMount mounts = 6;
   ContainerConfig config = 8;
+  // Complete daemon inspect response. This deliberately stays JSON so newer
+  // daemon fields remain visible without forcing a Dockman protocol release.
+  string raw_json = 9;
 }
 
 message ContainerConfig {
@@ -168,6 +199,7 @@ message ImageInspect {
   string arch = 5;
   string createdIso = 4;
   repeated ImageLayer layers = 2;
+  repeated ImageContainerInspect containers = 7;
 }
 
 message ImageLayer {
@@ -175,6 +207,13 @@ message ImageLayer {
   string cmd = 1;
   string size = 2;
   string totalSizeAtLayer = 4;
+}
+
+message ImageContainerInspect {
+  string name = 1;
+  string id = 2;
+  string state = 3;
+  string composeProject = 4;
 }
 
 message ComposeValidateResponse {
@@ -284,6 +323,27 @@ message DeleteVolumeRequest {
 message DeleteVolumeResponse {
 }
 
+message VolumeInspectRequest {
+  string volumeName = 1;
+}
+
+message VolumeInspectResponse {
+  VolumeInspectInfo inspect = 1;
+}
+
+message VolumeInspectInfo {
+  Volume vol = 1;
+  repeated VolumeContainerInspect containers = 2;
+}
+
+message VolumeContainerInspect {
+  string name = 1;
+  string id = 2;
+  string destination = 3;
+  bool rw = 4;
+  string composeProject = 5;
+}
+
 // Network-related messages
 message Network {
   string name = 1;
@@ -325,12 +385,81 @@ message DeleteNetworkRequest {
 message DeleteNetworkResponse {
 }
 
+message NetworkConnectContainerRequest {
+  string network_id = 1;
+  string container_id = 2;
+}
+
+message NetworkConnectContainerResponse {
+}
+
+message NetworkDisconnectContainerRequest {
+  string network_id = 1;
+  string container_id = 2;
+}
+
+message NetworkDisconnectContainerResponse {
+}
+
+message EventsRequest {
+  string host = 1;
+}
+
+message ContainerEvent {
+  // create / start / stop / die / kill / restart / pause / unpause /
+  // destroy / rename / update / oom / health_status.
+  // Empty for keepalive frames.
+  string action = 1;
+  // health_status only: healthy / unhealthy / ...
+  string status = 2;
+  string containerId = 3;
+  string containerName = 4;
+  string image = 5;
+  int64 timeNano = 6;
+}
+
 message ContainerLogsRequest {
   string containerID = 1;
 }
 
 message LogsMessage {
   string message = 1;
+}
+
+message LogsStreamRequest {
+  // one id = single container view, several = merged stack view
+  repeated string containerIds = 1;
+  // number of trailing lines per container, <= 0 means the server default
+  int32 tail = 2;
+  // unix seconds bounds, 0 means unbounded
+  int64 since = 3;
+  int64 until = 4;
+  // keep the stream open for new lines; false ends it once history is sent
+  bool follow = 5;
+}
+
+// a frame with an empty containerId and text is a keepalive
+message LogLine {
+  string containerId = 1;
+  string containerName = 2;
+  // line content without the daemon timestamp prefix
+  string text = 3;
+  int64 timeNano = 4;
+  // 1 = stdout, 2 = stderr
+  int32 stream = 5;
+}
+
+message DockerCommandRequest {
+  // full command line, e.g. "docker run --rm -p 8080:80 nginx:alpine"
+  string command = 1;
+}
+
+message HostStatsResponse {
+  // whole-host cpu usage in percent (0-100), 0 until two samples exist
+  double cpuPercent = 1;
+  int64 memUsed = 2;
+  int64 memTotal = 3;
+  int32 cpus = 4;
 }
 
 message StatsResponse {
@@ -346,6 +475,7 @@ enum SORT_FIELD {
   NETWORK_TX = 4;
   DISK_R = 5;
   DISK_W = 6;
+  STARTED = 7;
 }
 
 enum ORDER {
@@ -407,6 +537,19 @@ message ContainerStats {
   uint64 block_read = 8;
   // Total bytes written to block devices.
   uint64 block_write = 9;
+  // Container start time (RFC3339). Empty if unknown / not running.
+  string started_at = 10;
+  // Image reference the container was created from.
+  string image = 11;
+  // Container state: running, exited, paused, restarting...
+  string state = 12;
+  // Health status: healthy / unhealthy / starting. Empty when the container
+  // has no healthcheck.
+  string health = 13;
+  // Container network IP addresses.
+  repeated string ip_address = 14;
+  // How many times the container restarted.
+  int32 restart_count = 15;
 }
 
 
@@ -428,4 +571,14 @@ message ComposeFile {
   string filename = 1;
 
   repeated string selectedServices = 3;
+}
+
+message ComposeRedeployRequest {
+  ComposeFile file = 1;
+  // force-pull images (--pull always)
+  bool pull = 2;
+  // force-build images (--build)
+  bool build = 3;
+  // recreate containers even when nothing changed (--force-recreate)
+  bool recreate = 4;
 }

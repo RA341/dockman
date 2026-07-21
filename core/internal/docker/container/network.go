@@ -56,3 +56,16 @@ func (s *Service) NetworksPrune(ctx context.Context) error {
 	_, err := s.Client.NetworkPrune(ctx, client.NetworkPruneOptions{})
 	return err
 }
+
+func (s *Service) NetworkConnectContainer(ctx context.Context, networkID, containerID string) error {
+	_, err := s.Client.NetworkConnect(ctx, networkID, client.NetworkConnectOptions{Container: containerID})
+	return err
+}
+
+func (s *Service) NetworkDisconnectContainer(ctx context.Context, networkID, containerID string) error {
+	_, err := s.Client.NetworkDisconnect(ctx, networkID, client.NetworkDisconnectOptions{
+		Container: containerID,
+		Force:     false,
+	})
+	return err
+}
