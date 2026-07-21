@@ -1,16 +1,17 @@
-name: Clean up untagged GHCR images
-# todo this removes cached layers that tagged images rely on figure out how to bypass this
+name: Clean up Dockman GHCR images
 on:
-#   schedule:
-#     # Run every Sunday at 2 AM UTC
-#     - cron: '0 2 * * 0'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
     inputs:
       dry_run:
-        description: 'enable dry run'
+        description: 'Only report what would be removed'
         type: boolean
         required: false
         default: true
+      keep:
+        description: 'Number of immutable integration builds to keep'
+        type: number
+        required: false
+        default: 3
 
 jobs:
   cleanup:
@@ -19,25 +20,20 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Debug package information
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Repository name: ${{ github.event.repository.name }}"
-          echo "Repository owner: ${{ github.repository_owner }}"
-          echo "Expected package name: ${{ github.event.repository.name }}"
+      - name: Checkout retention policy
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Delete untagged images only
-        uses: snok/container-retention-policy@v3.0.0
-        with:
-          account: user
-          token: ${{ secrets.GITHUB_TOKEN }}
-          image-names: ${{ github.event.repository.name }}
-          tag-selection: untagged
-          cut-off: 1d
-          dry-run: ${{ inputs.dry_run || false }}
-          rust-log: container_retention_policy=debug
-
-      - name: Log cleanup completion
+      - name: Apply reachability-aware retention
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "GHCR cleanup completed at $(date)"
-          echo "Deleted untagged images for repository: ${{ github.repository }}"
+          ARGS=(
+            --owner "${{ github.repository_owner }}"
+            --package dockman
+            --tag integration
+            --keep "${{ inputs.keep || 3 }}"
+          )
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            ARGS+=(--dry-run)
+          fi
+          python3 scripts/ghcr-retention.py "${ARGS[@]}"

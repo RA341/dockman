@@ -144,6 +144,9 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
     useEffect(() => {void load();}, [load]);
 
     const navigate = (next: string) => {
+        // React deliberately ignores state updates to the current value. Do not
+        // enter the loading state unless changing directory will trigger load().
+        if (next === directory) return;
         requestRef.current += 1;
         setLoading(true);
         const cached = cacheRef.current.get(next);
@@ -202,7 +205,7 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
     return <Paper variant="outlined" sx={{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', bgcolor: t.panel, borderColor: t.border}}>
         <Stack direction="row" sx={{alignItems: 'center', gap: 0.4, px: 1, py: 0.75, flexShrink: 0, borderBottom: `1px solid ${t.border}`}}>
             <Tooltip title="Parent folder"><span><IconButton size="small" disabled={directory === '/'} onClick={() => navigate(parentPath(directory))}><ArrowBack/></IconButton></span></Tooltip>
-            <IconButton size="small" onClick={() => navigate('/')}><HomeOutlined/></IconButton>
+            <Tooltip title="Root folder"><span><IconButton size="small" disabled={directory === '/'} onClick={() => navigate('/')}><HomeOutlined/></IconButton></span></Tooltip>
             <Typography component="span" sx={{color: t.textDim}}>/</Typography>
             {breadcrumbs.map((part, index) => <Button key={`${part}-${index}`} size="small" color="inherit" onClick={() => navigate('/' + breadcrumbs.slice(0, index + 1).join('/'))}
                 sx={{textTransform: 'none', minWidth: 0, px: 0.4, fontFamily: t.mono}}>{part}{index < breadcrumbs.length - 1 ? ' /' : ''}</Button>)}

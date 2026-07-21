@@ -22,6 +22,7 @@ on:
       - 'pkg/docker/**'
       - '.dockerignore'
       - '.github/workflows/fork-integration-build.yml'
+      - 'scripts/ghcr-retention.py'
   workflow_dispatch:
     inputs:
       ref:
@@ -47,18 +48,31 @@ jobs:
     outputs:
       ref: ${{ steps.p.outputs.ref }}
       tag: ${{ steps.p.outputs.tag }}
+      history_tag: ${{ steps.p.outputs.history_tag }}
       image: ${{ steps.p.outputs.image }}
     steps:
+      - name: Checkout target ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+          fetch-depth: 1
+
       - id: p
         run: |
           REF="${{ github.event.inputs.ref || github.ref_name }}"
           RAW="${{ github.event.inputs.tag || github.event.inputs.ref || github.ref_name }}"
           TAG="$(echo "$RAW" | tr '[:upper:]' '[:lower:]' | tr '/' '-' | sed 's/[^a-z0-9._-]/-/g')"
+          COMMIT="$(git rev-parse HEAD)"
+          HISTORY_TAG=""
+          if [[ "$TAG" == "integration" ]]; then
+            HISTORY_TAG="integration-${COMMIT:0:12}"
+          fi
           IMAGE="$(echo "ghcr.io/${{ github.repository_owner }}/dockman" | tr '[:upper:]' '[:lower:]')"
           echo "ref=$REF"   >> "$GITHUB_OUTPUT"
           echo "tag=$TAG"   >> "$GITHUB_OUTPUT"
+          echo "history_tag=$HISTORY_TAG" >> "$GITHUB_OUTPUT"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "Building ref='$REF' -> '$IMAGE:$TAG'"
+          echo "Building ref='$REF' -> '$IMAGE:$TAG' history='$HISTORY_TAG'"
 
   build:
     needs: prepare
@@ -109,7 +123,9 @@ jobs:
           sbom: true
           provenance: mode=max
           platforms: ${{ matrix.platform }}
-          tags: ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+          tags: |
+            ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
+            ${{ needs.prepare.outputs.history_tag != '' && format('{0}:{1}-{2}', needs.prepare.outputs.image, needs.prepare.outputs.history_tag, matrix.arch) || '' }}
           cache-to: type=gha,mode=max,scope=${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
           cache-from: |
             type=gha,scope=${{ needs.prepare.outputs.tag }}-${{ matrix.arch }}
@@ -181,6 +197,12 @@ jobs:
           docker buildx imagetools create -t "$IMAGE:$TAG" \
             "$IMAGE:$TAG-amd64" \
             "$IMAGE:$TAG-arm64"
+          HISTORY_TAG="${{ needs.prepare.outputs.history_tag }}"
+          if [[ -n "$HISTORY_TAG" ]]; then
+            docker buildx imagetools create -t "$IMAGE:$HISTORY_TAG" \
+              "$IMAGE:$HISTORY_TAG-amd64" \
+              "$IMAGE:$HISTORY_TAG-arm64"
+          fi
           INSPECT="$(docker buildx imagetools inspect "$IMAGE:$TAG")"
           echo "$INSPECT"
           DIGEST="$(awk '$1 == "Digest:" {print $2; exit}' <<< "$INSPECT")"
@@ -202,3 +224,31 @@ jobs:
           IMAGE: ${{ needs.prepare.outputs.image }}
           DIGEST: ${{ steps.image.outputs.digest }}
         run: cosign sign --yes "$IMAGE@$DIGEST"
+
+  retention:
+    name: Retain three integration builds
+    needs: [prepare, manifest]
+    if: needs.prepare.outputs.tag == 'integration'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout retention policy
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Remove unreachable GHCR versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/ghcr-retention.py \
+            --owner "${{ github.repository_owner }}" \
+            --package dockman \
+            --tag integration \
+            --keep 3 \
+            --dry-run
+          python3 scripts/ghcr-retention.py \
+            --owner "${{ github.repository_owner }}" \
+            --package dockman \
+            --tag integration \
+            --keep 3
