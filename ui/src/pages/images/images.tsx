@@ -1,6 +1,8 @@
 import {useMemo, useState} from 'react';
-import {Box, Button, Card, CircularProgress, Fade, Link, Paper, Tooltip, Typography} from '@mui/material';
-import {CleaningServices, Delete, Refresh, Sanitizer, Storage} from '@mui/icons-material';
+import {Box, CircularProgress, Divider, Fade, Link, Paper, Typography} from '@mui/material';
+import {CleaningServices, Delete, Sanitizer, Storage} from '@mui/icons-material';
+import PageHeader, {RefreshButton} from "../../components/page-header.tsx";
+import {useHostStore} from "../compose/state/files.ts";
 import {ImageTable} from './images-table.tsx';
 import {formatBytes} from "../../lib/editor.ts";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
@@ -23,13 +25,17 @@ const ImagesPage = () => {
 
     const {search, setSearch, searchInputRef} = useSearch();
     const [selectedImages, setSelectedImages] = useState<string[]>([])
+    const host = useHostStore(state => state.host)
 
     const filteredImages = useMemo(() => {
         if (search) {
+            // untagged (dangling) images have no repoTags at all — indexing
+            // [0] blindly crashed the whole page on the first keystroke.
+            // Match any tag or the id, case-insensitively.
+            const query = search.toLowerCase();
             return images.filter(image =>
-                image.repoTags[0]
-                    .toLowerCase()
-                    .includes(search))
+                image.repoTags.some(tag => tag.toLowerCase().includes(query)) ||
+                image.id.toLowerCase().includes(query))
         }
         return images;
     }, [images, search]);
@@ -77,59 +83,46 @@ const ImagesPage = () => {
             overflow: 'hidden',
             ...scrollbarStyles
         }}>
-            <Card
+            <PageHeader
+                icon={<Storage/>}
+                title="Images"
+                count={images.length}
+                extra={formatBytes(totalImageSize) ?? '0B'}
+                host={host}
+            />
+
+            <Paper
+                variant="outlined"
                 sx={{
-                    mb: 3,
-                    p: 2,
+                    px: 1.5,
+                    py: 1,
+                    mb: 1.5,
                     display: 'flex',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 3,
-                    backgroundColor: 'background.paper',
-                    boxShadow: 2,
+                    gap: 1.5,
                     borderRadius: 2,
                     flexShrink: 0,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}
             >
-                {/* Title and Stats */}
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    <Typography variant="h6" sx={{fontWeight: 'bold'}}>
-                        Docker Images
-                    </Typography>
+                <Box sx={{flex: 1, maxWidth: 270}}>
+                    <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
                 </Box>
 
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    <Typography variant="h6">
-                        {images.length} images • {formatBytes(totalImageSize) ?? '0B'}
-                    </Typography>
+                <Divider orientation="vertical" flexItem sx={{mx: 0.5}}/>
+
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, flex: 1}}>
+                    <ActionButtons actions={actions}/>
+                    <RefreshButton onClick={refreshImages} loading={loading}/>
                 </Box>
-
-                <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
-
-                <Tooltip title={loading ? 'Refreshing...' : 'Refresh images'}>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={refreshImages}
-                        disabled={loading}
-                        sx={{minWidth: 'auto', px: 1.5}}
-                    >
-                        {loading ? <CircularProgress size={16} color="inherit"/> : <Refresh/>}
-                    </Button>
-                </Tooltip>
-
-                {/* Spacer */}
-                <Box sx={{flexGrow: 0.95}}/>
-
-                <ActionButtons actions={actions}/>
-            </Card>
+            </Paper>
 
             {/* Table Container */}
             <Box sx={{
                 flexGrow: 1,
-                border: '3px ridge',
-                borderColor: 'rgba(255, 255, 255, 0.23)',
-                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
@@ -173,7 +166,9 @@ const ImagesLoading = () => {
             flex: 1
         }}>
             <CircularProgress sx={{mr: 2}}/>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+                color: "text.secondary"
+            }}>
                 Loading images...
             </Typography>
         </Box>
@@ -198,12 +193,12 @@ const ImagesEmpty = ({searchTerm}: { searchTerm: string }) => {
                 mb: 2,
                 mx: 'auto'
             }}/>
-
             <Typography variant="h6" sx={{mb: 1}}>
                 {searchTerm ? 'No images found' : 'No images available'}
             </Typography>
-
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+                color: "text.secondary"
+            }}>
                 {searchTerm ? (
                     'Try adjusting your search criteria.'
                 ) : (

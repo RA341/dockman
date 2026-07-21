@@ -14,7 +14,7 @@ const KeyUserCtx = "user"
 
 func Middleware(service *Service, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ok := CheckAuth(w, r, service)
+		r, ok := CheckAuth(w, r, service)
 		if !ok {
 			return
 		}
@@ -24,14 +24,20 @@ func Middleware(service *Service, next http.Handler) http.Handler {
 
 const oidcPage = "/api/auth/login/oidc"
 
-func CheckAuth(w http.ResponseWriter, r *http.Request, srv *Service) (ok bool) {
+// CheckAuth verifies the request's auth cookie. On success it returns a request
+// whose context carries the authenticated user (under KeyUserCtx) together with
+// ok=true; callers must forward the returned request downstream. On failure it
+// writes the appropriate response and returns ok=false.
+func CheckAuth(w http.ResponseWriter, r *http.Request, srv *Service) (*http.Request, bool) {
 	u, err := verifyCookie(r.Cookies(), srv)
 	if err == nil {
-		r.WithContext(context.WithValue(
+		// http.Request.WithContext returns a shallow copy; we must return it so
+		// the enriched context actually reaches the downstream handler.
+		r = r.WithContext(context.WithValue(
 			r.Context(),
 			KeyUserCtx, u,
 		))
-		return true
+		return r, true
 	}
 
 	if srv.config.OIDCEnable && srv.config.OIDCAutoRedirect {
@@ -42,11 +48,11 @@ func CheckAuth(w http.ResponseWriter, r *http.Request, srv *Service) (ok bool) {
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to write response")
 		}
-		return false
+		return r, false
 	}
 
 	http.Error(w, err.Error(), http.StatusUnauthorized)
-	return false
+	return r, false
 }
 
 func getCookie(cookieName string, cookies []*http.Cookie) (*http.Cookie, error) {

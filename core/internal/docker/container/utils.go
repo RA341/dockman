@@ -1,51 +1,8 @@
 package container
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-
-	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/client"
 )
-
-func (s *Service) getAndFormatStats(ctx context.Context, info container.Summary) (Stats, error) {
-	contId := info.ID[:12]
-	stats, err := s.Client.ContainerStats(ctx, info.ID, client.ContainerStatsOptions{
-		IncludePreviousSample: true,
-	})
-	if err != nil {
-		return Stats{}, fmt.Errorf("failed to get stats for cont %s: %w", contId, err)
-	}
-	defer fileutil.Close(stats.Body)
-
-	body, err := io.ReadAll(stats.Body)
-	if err != nil {
-		return Stats{}, fmt.Errorf("failed to read body for cont %s: %w", contId, err)
-	}
-	var statsJSON container.StatsResponse
-	if err := json.Unmarshal(body, &statsJSON); err != nil {
-		return Stats{}, fmt.Errorf("failed to unmarshal body for cont %s: %w", contId, err)
-	}
-
-	cpuPercent := formatCPU(statsJSON)
-	rx, tx := formatNetwork(statsJSON)
-	blkRead, blkWrite := formatDiskIO(statsJSON)
-
-	return Stats{
-		ID:          contId,
-		Name:        info.Names[0],
-		CPUUsage:    cpuPercent,
-		MemoryUsage: statsJSON.MemoryStats.Usage,
-		MemoryLimit: statsJSON.MemoryStats.Limit,
-		NetworkRx:   rx,
-		NetworkTx:   tx,
-		BlockRead:   blkRead,
-		BlockWrite:  blkWrite,
-	}, nil
-}
 
 func formatDiskIO(statsJSON container.StatsResponse) (uint64, uint64) {
 	var blkRead, blkWrite uint64
@@ -60,19 +17,18 @@ func formatDiskIO(statsJSON container.StatsResponse) (uint64, uint64) {
 	return blkRead, blkWrite
 }
 
-// Collect Network and Disk I/O
-func formatNetwork(statsJSON container.StatsResponse) (uint64, uint64) {
-	var rx, tx uint64
-	for _, v := range statsJSON.Networks {
-		rx += v.RxBytes
-		tx += v.TxBytes
+// formatCPU computes the CPU percentage exactly like `docker stats`: the
+// container delta over the system delta between two readings, scaled by
+// online CPUs. Keeping the baseline ourselves lets the daemon return each
+// reading immediately instead of sampling for an extra second per request.
+func formatCPU(statsJSON container.StatsResponse, previousTotal, previousSystem uint64) float64 {
+	currentTotal := statsJSON.CPUStats.CPUUsage.TotalUsage
+	currentSystem := statsJSON.CPUStats.SystemUsage
+	if currentTotal < previousTotal || currentSystem <= previousSystem {
+		return 0
 	}
-	return rx, tx
-}
-
-func formatCPU(statsJSON container.StatsResponse) float64 {
-	cpuDelta := float64(statsJSON.CPUStats.CPUUsage.TotalUsage - statsJSON.PreCPUStats.CPUUsage.TotalUsage)
-	systemCpuDelta := float64(statsJSON.CPUStats.SystemUsage - statsJSON.PreCPUStats.SystemUsage)
+	cpuDelta := float64(currentTotal - previousTotal)
+	systemCpuDelta := float64(currentSystem - previousSystem)
 	numberCPUs := float64(statsJSON.CPUStats.OnlineCPUs)
 	if numberCPUs == 0.0 {
 		numberCPUs = float64(len(statsJSON.CPUStats.CPUUsage.PercpuUsage))
@@ -84,18 +40,57 @@ func formatCPU(statsJSON container.StatsResponse) float64 {
 		cpuPercent = (cpuDelta / systemCpuDelta) * numberCPUs * 100.0
 	}
 
+	// a container's first samples after start can carry garbage deltas
+	// (zeroed precpu counters, clock jumps) that explode into absurd
+	// percentages; nothing real exceeds every core at 100%
+	if maxPercent := numberCPUs * 100.0; maxPercent > 0 && cpuPercent > maxPercent {
+		cpuPercent = maxPercent
+	}
+
 	return cpuPercent
+}
+
+// formatMemory reports the container's working-set memory, the same figure
+// `docker stats` shows: the raw cgroup usage includes the page cache
+// (inactive_file), which the kernel reclaims freely — a media server
+// "using" gigabytes of cache would otherwise dwarf its real footprint.
+// total_inactive_file is the cgroup v1 key, inactive_file the v2 one.
+func formatMemory(statsJSON container.StatsResponse) uint64 {
+	mem := statsJSON.MemoryStats
+	if v, ok := mem.Stats["total_inactive_file"]; ok && v < mem.Usage {
+		return mem.Usage - v
+	}
+	if v, ok := mem.Stats["inactive_file"]; ok && v < mem.Usage {
+		return mem.Usage - v
+	}
+	return mem.Usage
+}
+
+// Collect Network and Disk I/O
+func formatNetwork(statsJSON container.StatsResponse) (uint64, uint64) {
+	var rx, tx uint64
+	for _, v := range statsJSON.Networks {
+		rx += v.RxBytes
+		tx += v.TxBytes
+	}
+	return rx, tx
 }
 
 // Stats Stats holds metrics for a single Docker container.
 type Stats struct {
-	ID          string
-	Name        string
-	CPUUsage    float64
-	MemoryUsage uint64 // in bytes
-	MemoryLimit uint64 // in bytes
-	NetworkRx   uint64 // bytes received
-	NetworkTx   uint64 // bytes sent
-	BlockRead   uint64 // bytes read from block devices
-	BlockWrite  uint64 // bytes written to block devices
+	ID           string
+	Name         string
+	Image        string   // image reference the container was created from
+	State        string   // running / exited / paused / restarting ...
+	Health       string   // healthy / unhealthy / starting; empty when no healthcheck
+	IPAddress    []string // container network IPs
+	RestartCount int32
+	CPUUsage     float64
+	MemoryUsage  uint64 // in bytes
+	MemoryLimit  uint64 // in bytes
+	NetworkRx    uint64 // bytes received
+	NetworkTx    uint64 // bytes sent
+	BlockRead    uint64 // bytes read from block devices
+	BlockWrite   uint64 // bytes written to block devices
+	StartedAt    string // container start time, RFC3339 (empty if unknown)
 }

@@ -1,6 +1,7 @@
 import {create} from 'zustand'
 import type {Terminal} from "@xterm/xterm";
 import {useLocation, useParams} from "react-router-dom";
+import {debugLog, debugWarn} from "../../../lib/debug.ts";
 
 export const useFileComponents = (): { host: string; alias: string; filename: string; splitFilename: string | null } => {
     const params = useParams()
@@ -30,7 +31,6 @@ export const useFileComponents = (): { host: string; alias: string; filename: st
 }
 
 const writeTermErr = (term: Terminal, err: string) => {
-    console.error("Error", err);
     term.write('\r\n\x1b[31m*** Error ***\n');
     term.write(`${err}\x1b[0m\r`);
 }
@@ -48,6 +48,15 @@ export function makeID(length: number = 15): string {
 export function createTab(wsUrl: string, title: string, interactive: boolean) {
     let ws: WebSocket | undefined;
 
+    // host shells are PTY-backed: keystrokes go out as text frames, while
+    // size updates travel as binary JSON so they can't collide with input
+    const isHostShell = wsUrl.includes('/docker/shell')
+    const sendDims = (term: Terminal) => {
+        if (ws?.readyState === WebSocket.OPEN) {
+            ws.send(new TextEncoder().encode(JSON.stringify({cols: term.cols, rows: term.rows})))
+        }
+    }
+
     const tab: TabTerminal = {
         id: makeID(),
         title: title,
@@ -59,6 +68,9 @@ export function createTab(wsUrl: string, title: string, interactive: boolean) {
 
                 ws.onopen = () => {
                     term.focus();
+                    if (isHostShell) {
+                        sendDims(term)
+                    }
                 };
 
                 ws.onmessage = (event) => {
@@ -71,8 +83,7 @@ export function createTab(wsUrl: string, title: string, interactive: boolean) {
 
                 ws.onclose = () => {
                     term.write('\r\n\x1b[31m*** Connection Closed ***\x1b[0m\r\n');
-                    console.log(`Closing connection`)
-                    // onClose?.()
+                    debugLog("Terminal connection closed")
                 };
 
                 ws.onerror = (err) => {
@@ -84,6 +95,10 @@ export function createTab(wsUrl: string, title: string, interactive: boolean) {
                         ws?.send(data);
                     }
                 });
+
+                if (isHostShell) {
+                    term.onResize(() => sendDims(term));
+                }
             } catch (e: unknown) {
                 // @ts-expect-error: dumbass language
                 writeTermErr(term, e.toString());
@@ -96,22 +111,67 @@ export function createTab(wsUrl: string, title: string, interactive: boolean) {
     return tab;
 }
 
+// tabs are stored under an explicit unique key (host/alias/file/container)
+// while title stays the short display name — short names may collide across
+// stacks, keys must not
 export const useContainerExec = create<{
     execParams: (
+        key: string,
         title: string,
         wsUrl: string,
         interactive: boolean,
+        execSession?: ExecSession,
     ) => void
 }>(() => ({
-    execParams: (title, wsUrl, interactive) => {
+    execParams: (key, title, wsUrl, interactive, execSession) => {
         useTerminalAction.getState().open()
 
-        const tab = createTab(wsUrl, title, interactive);
+        const tabsStore = useTerminalTabs.getState()
+        if (tabsStore.tabs.has(key)) {
+            // never replace a live shell session, just focus it
+            tabsStore.setActiveTab(key)
+            return
+        }
 
-        useTerminalTabs.getState().addTab(title, tab)
+        tabsStore.addTab(key, {...createTab(wsUrl, title, interactive), execSession})
     },
 }))
 
+// opens (or re-activates) a structured log viewer tab in the bottom panel
+export const useLogsPanel = create<{
+    openLogs: (key: string, title: string, containers: { id: string; name?: string }[]) => void
+}>(() => ({
+    openLogs: (key, title, containers) => {
+        useTerminalAction.getState().open()
+
+        const tabsStore = useTerminalTabs.getState()
+        if (tabsStore.tabs.has(key)) {
+            // keep the buffer, but refresh the container set: ids go stale
+            // when a stack is redeployed (recreated containers get new ids)
+            tabsStore.updateTab(key, tab => ({...tab, title, logsContainers: containers}))
+            tabsStore.setActiveTab(key)
+            return
+        }
+
+        tabsStore.addTab(key, {
+            id: makeID(),
+            title,
+            interactive: false,
+            onTerminal: () => {
+            },
+            onClose: () => {
+            },
+            logsContainers: containers,
+        })
+    },
+}))
+
+
+export interface ExecSession {
+    containerID: string;
+    shell: string;
+    user: string;
+}
 
 export interface TabTerminal {
     id: string;
@@ -119,20 +179,43 @@ export interface TabTerminal {
     onTerminal: (term: Terminal) => void;
     onClose: () => void;
     interactive: boolean;
+    // when set, the tab hosts the structured log viewer instead of a terminal
+    logsContainers?: { id: string; name?: string }[];
+    // identifies an interactive container exec so the bottom panel can use
+    // the same controls and presentation as the details dialog
+    execSession?: ExecSession;
 }
+
+const FLOAT_MODE_KEY = 'dockman-panel-float';
 
 export const useTerminalAction = create<{
     isTerminalOpen: boolean;
+    // floating panel: only a slim header stays docked at the bottom, the
+    // body overlays the content while hovered
+    floatMode: boolean;
+    // bumped on every open(): all tab openers (logs, exec, last action,
+    // docker run) go through open(), so the floating body can pop up when
+    // content is requested even though the pointer never touched the panel
+    revealNonce: number;
+    toggleFloat: () => void;
     toggle: () => void;
     open: () => void
     close: () => void
 }>(set => ({
     isTerminalOpen: false,
+    revealNonce: 0,
+    floatMode: localStorage.getItem(FLOAT_MODE_KEY) === '1',
+    toggleFloat: () => set(state => {
+        const next = !state.floatMode;
+        localStorage.setItem(FLOAT_MODE_KEY, next ? '1' : '0');
+        return {floatMode: next};
+    }),
     toggle: () => set(state => ({
         isTerminalOpen: !state.isTerminalOpen
     })),
-    open: () => set(() => ({
-        isTerminalOpen: true
+    open: () => set(state => ({
+        isTerminalOpen: true,
+        revealNonce: state.revealNonce + 1,
     })),
     close: () => set(() => ({
         isTerminalOpen: false
@@ -161,11 +244,13 @@ export const useTerminalTabs = create<{
                 activeTab: null,
                 tabs: new Map<string, TabTerminal>,
             })
+            // an empty panel has nothing to show: collapse it
+            useTerminalAction.getState().close()
         },
         updateTab: (id, term) => {
             const tab = get().tabs.get(id)
             if (!tab) {
-                console.warn(`Unable to update: No tab with id found ${id}`)
+                debugWarn("Unable to update terminal: tab not found", id)
                 return
             }
 
@@ -204,6 +289,12 @@ export const useTerminalTabs = create<{
                     activeTab: newActiveTab
                 };
             });
+
+            // closing the last tab collapses the panel instead of leaving
+            // an empty shell open
+            if (get().tabs.size === 0) {
+                useTerminalAction.getState().close()
+            }
         },
     })
 )

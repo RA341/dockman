@@ -2,7 +2,6 @@ import {useCallback, useEffect, useState} from 'react'
 import {callRPC, useHostClient} from "../../lib/api.ts";
 import {DockerService, type Image} from "../../gen/docker/v1/docker_pb.ts";
 import {useSnackbar} from "../../hooks/snackbar.ts";
-import {useHostStore} from "../compose/state/files.ts";
 
 /**
  * Generates a clickable URL for a container image, pointing to its repository.
@@ -63,7 +62,6 @@ export const getImageHomePageUrl = (imageName: string): string => {
 export function useDockerImages() {
     const dockerService = useHostClient(DockerService)
     const {showWarning} = useSnackbar()
-    const selectedHost = useHostStore(state => state.host)
 
 
     const [images, setImages] = useState<Image[]>([])
@@ -91,14 +89,14 @@ export function useDockerImages() {
         setUnusedContainerCount(val?.unusedImageCount ?? BigInt(0))
         setImages(val?.images || [])
 
-    }, [dockerService, selectedHost])
+    }, [dockerService, showWarning])
 
     const refreshImages = useCallback(() => {
         fetchImages().finally(() => setLoading(false))
     }, [fetchImages]);
 
     const pruneUnused = useCallback(async (all = false) => {
-        const {val, err} = await callRPC(() => dockerService.imagePruneUnused({
+        const {err} = await callRPC(() => dockerService.imagePruneUnused({
             pruneAll: all,
         }))
         if (err) {
@@ -106,11 +104,10 @@ export function useDockerImages() {
             return
         }
 
-        console.info(val)
         fetchImages().finally(() => {
             setLoading(false)
         })
-    }, [dockerService, fetchImages])
+    }, [dockerService, fetchImages, showWarning])
 
     const deleteImages = useCallback(async (images: string[]) => {
         const {err} = await callRPC(() => dockerService.imageRemove({
@@ -124,7 +121,7 @@ export function useDockerImages() {
         fetchImages().finally(() => {
             setLoading(false)
         })
-    }, [dockerService, fetchImages])
+    }, [dockerService, fetchImages, showWarning])
 
     useEffect(() => {
         refreshImages()

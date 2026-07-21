@@ -36,6 +36,9 @@ type Service struct {
 	parser   FilenameParser
 	runner   CmdRunner
 	hostname string
+	// reverse of parser: absolute compose path -> dockman filename;
+	// injected by the host service which owns the alias table
+	pathResolver PathResolver
 }
 
 func NewComposeTerminal(
@@ -209,6 +212,35 @@ func (c *Service) Up(
 	)
 }
 
+// Redeploy runs `up -d` with explicit force flags so a stack can be
+// re-rolled in one action: pull images, rebuild, or recreate containers
+// even when nothing changed.
+func (c *Service) Redeploy(
+	ctx context.Context,
+	filename string,
+	out io.Writer,
+	pull, build, recreate bool,
+	services ...string,
+) error {
+	return c.withCmd(
+		ctx, filename, out,
+		func(cmdList []string) []string {
+			cmdList = append(cmdList, "up", "-d", "-y", "--remove-orphans")
+			if pull {
+				cmdList = append(cmdList, "--pull", "always")
+			}
+			if build {
+				cmdList = append(cmdList, "--build")
+			}
+			if recreate {
+				cmdList = append(cmdList, "--force-recreate")
+			}
+			return cmdList
+		},
+		services,
+	)
+}
+
 func (c *Service) Down(
 	ctx context.Context,
 	filename string,
@@ -312,11 +344,14 @@ func (c *Service) List(ctx context.Context, filename string) ([]container2.Summa
 }
 
 func (c *Service) Stats(ctx context.Context, filename string) ([]container.Stats, error) {
-	lines, err := c.listIds(ctx, filename)
+	// Match the stack's containers by the compose config-files label: one
+	// ContainerList against the daemon instead of spawning a `docker compose
+	// ps` subprocess plus a second listing on every stats poll.
+	absPath, err := c.ComposeAbsPath(filename)
 	if err != nil {
 		return nil, err
 	}
-	ds, err := c.cont.ContainerListByIDs(ctx, lines...)
+	ds, err := c.cont.ContainerListByComposeFile(ctx, absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -405,6 +440,19 @@ type StackState struct {
 	DownCount      uint
 	HealthyCount   uint
 	UnhealthyCount uint
+}
+
+// ComposeAbsPath returns the absolute path of the compose file as Docker Compose
+// records it in the com.docker.compose.project.config_files label. It reuses the
+// exact resolution the compose commands use (working dir = Fs.Root(), -f Relpath),
+// so running containers can be matched back to their compose file from a single
+// container listing — no per-stack `docker compose ps` process.
+func (c *Service) ComposeAbsPath(filename string) (string, error) {
+	parts, err := c.parser(filename, c.hostname)
+	if err != nil {
+		return "", err
+	}
+	return parts.Fs.Join(parts.Fs.Root(), parts.Relpath), nil
 }
 
 func (c *Service) Validate(ctx context.Context, filename string) []error {

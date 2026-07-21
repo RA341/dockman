@@ -40,7 +40,9 @@ const AliasSelector = () => {
                     '&:hover': {opacity: 1}
                 }}
             >
-                <Typography variant="h6" fontWeight="bold">
+                <Typography variant="h6" sx={{
+                    fontWeight: "bold"
+                }}>
                     {alias}
                 </Typography>
 
@@ -82,7 +84,7 @@ const AliasSelector = () => {
                                 primary={displayAlias}
                                 secondary={file.fullpath}
                                 slotProps={{
-                                    primary: {fontWeight: 500},
+                                    primary: {sx: {fontWeight: 500}},
                                     secondary: {
                                         sx: {
                                             overflow: 'hidden',

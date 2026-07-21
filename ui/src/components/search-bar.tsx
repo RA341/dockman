@@ -25,6 +25,7 @@ function SearchBar({inputRef, search, setSearch}: SearchBarProps) {
                 minWidth: 250,
                 '& .MuiOutlinedInput-root': {
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    height: 32,
                 }
             }}
         />

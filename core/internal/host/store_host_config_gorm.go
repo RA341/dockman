@@ -23,6 +23,21 @@ func (s *gormStore) Get(name string) (Config, error) {
 	return conf, err
 }
 
+// GetLocal retrieves the local host by its (immutable) Type rather than its
+// user-editable Name, so a renamed local host is still found instead of being
+// treated as missing. If several exist (e.g. duplicates from a previous bug),
+// the earliest-created one is returned so its aliases are preserved.
+func (s *gormStore) GetLocal() (Config, error) {
+	var conf Config
+	err := s.db.
+		Preload("SSHOptions").
+		Preload("FolderAliases").
+		Where("type = ?", LOCAL).
+		Order("created_at ASC").
+		First(&conf).Error
+	return conf, err
+}
+
 // Add inserts a new Config and its associations into the database
 func (s *gormStore) Add(conf *Config) error {
 	return s.db.Create(conf).Error

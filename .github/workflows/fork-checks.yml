@@ -1,0 +1,136 @@
+name: Fork Checks
+
+# Go build / vet / test for THIS fork, without touching contribution branches.
+#
+#   - push to `integration`  -> checks the stacked code (all merged subjects)
+#   - manual dispatch (`ref`) -> check any single branch in isolation, e.g. to
+#                                gate a subject before opening its upstream PR.
+#
+# Like the build workflow, this lives ONLY on `integration` so that fix/* and
+# feat/* branches stay pristine for zero-conflict PRs.
+
+on:
+  push:
+    branches:
+      - integration
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Optional branch or ref to check (defaults to the workflow ref)'
+        required: false
+        type: string
+      test_path:
+        description: 'Go package path passed to `go test` (owned/passing packages)'
+        required: false
+        default: './internal/auth/...'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go build / vet / test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - name: Verify module graph
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      # Scope to library code (./internal, ./pkg). The cmd/* main packages use
+      # //go:embed dist and need the frontend built first, which is out of scope
+      # for a Go check; the Docker image build already validates the full binary.
+      #
+      # Upstream has some rough edges we route around so checks reflect real,
+      # shipping code (extend these lists if we adopt one of them as a subject):
+      #   DEAD_PKGS    - not wired into any binary; `notifications` doesn't even
+      #                  compile. Excluded from everything.
+      #   STALE_TESTS  - package code compiles and ships, but its *_test.go files
+      #                  are stale (drifted from the API) and fail to compile.
+      #                  Excluded from vet/test only; still built.
+      - name: Resolve package lists
+        id: pkgs
+        run: |
+          DEAD_PKGS='/internal/(notifications|lsp)$'
+          STALE_TESTS='/internal/(host|ssh)$'
+          ALL="$(go list -e ./internal/... ./pkg/...)"
+          BUILD="$(echo "$ALL" | grep -vE "$DEAD_PKGS" | tr '\n' ' ')"
+          VET="$(echo "$ALL" | grep -vE "$DEAD_PKGS|$STALE_TESTS" | tr '\n' ' ')"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "vet=$VET"     >> "$GITHUB_OUTPUT"
+          echo "Build scope:"; echo "$BUILD" | tr ' ' '\n'
+
+      # `go build` across all shipping packages is the real anti-regression net
+      # for merges into `integration`: it catches any compile break introduced by
+      # a stacked subject, everywhere.
+      - name: Build
+        run: go build ${{ steps.pkgs.outputs.build }}
+
+      - name: Vet
+        run: go vet ${{ steps.pkgs.outputs.vet }}
+
+      # Only run tests we own and that pass in a plain CI runner. Upstream tests
+      # for docker/*, git, host and ssh require a live Docker daemon / SSH host
+      # (or are broken) and are intentionally not run here. This list grows as we
+      # add subjects; a dispatch can override it with `test_path`.
+      - name: Test
+        env:
+          CGO_ENABLED: "1"
+        run: go test ${{ github.event.inputs.test_path || './internal/auth/...' }}
+
+      - name: Build and test Docker target
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          go test ./cmd/docker
+          go build -trimpath -buildvcs=false -o "${RUNNER_TEMP}/dockman" ./cmd/docker
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
+
+      - name: Check reachable Go vulnerabilities
+        working-directory: .
+        run: bash scripts/check-govuln.sh
+
+  frontend:
+    name: Frontend audit / build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=low
+
+      - name: Build frontend
+        run: npm run build

@@ -2,10 +2,11 @@ package filesystem
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ type SftpFileSystem struct {
 }
 
 func (s *SftpFileSystem) Abs(path string) (string, error) {
-	return s.fullPath(path), nil
+	return s.fullPath(path)
 }
 
 func NewSftp(client *sftp.Client, root string) *SftpFileSystem {
@@ -35,12 +36,20 @@ func (s *SftpFileSystem) Root() string {
 }
 
 func (s *SftpFileSystem) MkdirAll(path string, perm os.FileMode) error {
-	return s.client.MkdirAll(s.fullPath(path))
+	full, err := s.fullPath(path)
+	if err != nil {
+		return err
+	}
+	return s.client.MkdirAll(full)
 }
 
 func (s *SftpFileSystem) ReadDir(path string) ([]fs.DirEntry, error) {
 	client := s.client
-	dirs, err := client.ReadDir(s.fullPath(path))
+	full, err := s.fullPath(path)
+	if err != nil {
+		return nil, err
+	}
+	dirs, err := client.ReadDir(full)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +62,11 @@ func (s *SftpFileSystem) ReadDir(path string) ([]fs.DirEntry, error) {
 }
 
 func (s *SftpFileSystem) OpenFile(filename string, flag int, perm fs.FileMode) (io.ReadWriteCloser, error) {
-	return s.client.OpenFile(s.fullPath(filename), flag)
+	full, err := s.fullPath(filename)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.OpenFile(full, flag)
 }
 
 func (s *SftpFileSystem) Join(elem ...string) string {
@@ -61,7 +74,11 @@ func (s *SftpFileSystem) Join(elem ...string) string {
 }
 
 func (s *SftpFileSystem) LoadFile(filename string) (io.ReadSeekCloser, time.Time, error) {
-	file, err := s.client.OpenFile(s.fullPath(filename), os.O_RDONLY)
+	full, err := s.fullPath(filename)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	file, err := s.client.OpenFile(full, os.O_RDONLY)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -74,19 +91,46 @@ func (s *SftpFileSystem) LoadFile(filename string) (io.ReadSeekCloser, time.Time
 }
 
 func (s *SftpFileSystem) Stat(filename string) (os.FileInfo, error) {
-	return s.client.Stat(s.fullPath(filename))
+	full, err := s.fullPath(filename)
+	if err != nil {
+		return nil, err
+	}
+	return s.client.Stat(full)
 }
 
-func (s *SftpFileSystem) RemoveAll(path string) error {
-	return s.client.RemoveAll(s.fullPath(path))
+func (s *SftpFileSystem) RemoveAll(name string) error {
+	full, err := s.fullPath(name)
+	if err != nil {
+		return err
+	}
+	realRoot, err := s.client.RealPath(path.Clean(filepathToSlash(s.root)))
+	if err != nil {
+		return fmt.Errorf("resolve SFTP root %q: %w", s.root, err)
+	}
+	if path.Clean(full) == path.Clean(realRoot) {
+		return fmt.Errorf("refusing to remove filesystem root: %w", ErrPathOutsideRoot)
+	}
+	return s.client.RemoveAll(full)
 }
 
 func (s *SftpFileSystem) Rename(name string, filename string) error {
-	return s.client.Rename(name, s.fullPath(filename))
+	oldFull, err := s.fullPath(name)
+	if err != nil {
+		return err
+	}
+	newFull, err := s.fullPath(filename)
+	if err != nil {
+		return err
+	}
+	return s.client.Rename(oldFull, newFull)
 }
 
 func (s *SftpFileSystem) ReadFile(fullpath string) ([]byte, error) {
-	open, err := s.client.Open(s.fullPath(fullpath))
+	full, err := s.fullPath(fullpath)
+	if err != nil {
+		return nil, err
+	}
+	open, err := s.client.Open(full)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +139,11 @@ func (s *SftpFileSystem) ReadFile(fullpath string) ([]byte, error) {
 }
 
 func (s *SftpFileSystem) WalkDir(root string, fn func(path string, d fs.DirEntry, err error) error) error {
-	walker := s.client.Walk(s.fullPath(root))
+	full, err := s.fullPath(root)
+	if err != nil {
+		return err
+	}
+	walker := s.client.Walk(full)
 	for walker.Step() {
 		err := walker.Err()
 		path := walker.Path()
@@ -116,13 +164,82 @@ func (s *SftpFileSystem) WalkDir(root string, fn func(path string, d fs.DirEntry
 	return nil
 }
 
-func (s *SftpFileSystem) fullPath(name string) string {
-	// todo possible bug: filepath.clean using local system may fail on windows
-	clean := s.Join(s.root, filepath.Clean(name))
-	if !strings.HasPrefix(clean, s.root) {
-		// todo maybe err its annoying
-		//return "", fmt.Errorf("security violation: path %s is outside root %s", name, l.root)
-		return s.root
+func (s *SftpFileSystem) fullPath(name string) (string, error) {
+	root := path.Clean(filepathToSlash(s.root))
+	clean := path.Clean(filepathToSlash(name))
+	if path.IsAbs(clean) {
+		var ok bool
+		clean, ok = remoteRelative(root, clean)
+		if !ok {
+			return "", fmt.Errorf("%w: %q", ErrPathOutsideRoot, name)
+		}
 	}
-	return clean
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", fmt.Errorf("%w: %q", ErrPathOutsideRoot, name)
+	}
+	candidate := path.Join(root, clean)
+
+	// Resolve existing paths (or the closest existing parent for creations)
+	// server-side. This prevents a symlink below the configured root from
+	// redirecting SFTP operations elsewhere on the remote host.
+	realRoot, err := s.client.RealPath(root)
+	if err != nil {
+		return "", fmt.Errorf("resolve SFTP root %q: %w", root, err)
+	}
+	realCandidate, err := s.realPathOrParent(candidate)
+	if err != nil {
+		return "", err
+	}
+	if !remotePathWithin(realRoot, realCandidate) {
+		return "", fmt.Errorf("%w: %q", ErrPathOutsideRoot, name)
+	}
+	return realCandidate, nil
+}
+
+func (s *SftpFileSystem) realPathOrParent(candidate string) (string, error) {
+	current := candidate
+	var missing []string
+	for {
+		resolved, err := s.client.RealPath(current)
+		if err == nil {
+			for i := len(missing) - 1; i >= 0; i-- {
+				resolved = path.Join(resolved, missing[i])
+			}
+			return resolved, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("resolve SFTP path %q: %w", candidate, err)
+		}
+		parent := path.Dir(current)
+		if parent == current {
+			return "", fmt.Errorf("resolve SFTP path %q: %w", candidate, err)
+		}
+		missing = append(missing, path.Base(current))
+		current = parent
+	}
+}
+
+func remotePathWithin(root, candidate string) bool {
+	_, ok := remoteRelative(path.Clean(root), path.Clean(candidate))
+	return ok
+}
+
+func remoteRelative(root, candidate string) (string, bool) {
+	root = path.Clean(root)
+	candidate = path.Clean(candidate)
+	if candidate == root {
+		return ".", true
+	}
+	if root == "/" && strings.HasPrefix(candidate, "/") {
+		return strings.TrimPrefix(candidate, "/"), true
+	}
+	prefix := root + "/"
+	if strings.HasPrefix(candidate, prefix) {
+		return strings.TrimPrefix(candidate, prefix), true
+	}
+	return "", false
+}
+
+func filepathToSlash(value string) string {
+	return strings.ReplaceAll(value, "\\", "/")
 }

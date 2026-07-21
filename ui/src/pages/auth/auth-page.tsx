@@ -11,7 +11,7 @@ import {
     TextField,
     Typography
 } from '@mui/material';
-import {LockOutlined, LoginOutlined, PersonOutline, PublicRounded} from '@mui/icons-material';
+import {LockOutlined, LoginOutlined, PersonOutlined, PublicRounded} from '@mui/icons-material';
 import {useNavigate} from "react-router-dom";
 import {callRPC, useAuthClient} from "../../lib/api.ts";
 import {AuthService, type Config} from '../../gen/auth/v1/auth_pb.ts';
@@ -45,7 +45,7 @@ export function AuthPage() {
         }
 
         getConfig().then()
-    }, []);
+    }, [authClient, showError]);
 
     const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -84,7 +84,12 @@ export function AuthPage() {
                     }}
                 >
                     {/* Branded Header */}
-                    <Stack spacing={2} alignItems="center" sx={{mb: 4}}>
+                    <Stack
+                        spacing={2}
+                        sx={{
+                            alignItems: "center",
+                            mb: 4
+                        }}>
                         <Box
                             sx={{
                                 mb: 3,
@@ -99,7 +104,9 @@ export function AuthPage() {
                             <Typography variant="h5" sx={{fontWeight: 800, letterSpacing: '-0.5px'}}>
                                 Dockman
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" sx={{
+                                color: "text.secondary"
+                            }}>
                                 Login
                             </Typography>
                         </Box>
@@ -117,7 +124,7 @@ export function AuthPage() {
                                     input: {
                                         startAdornment: (
                                             <InputAdornment position="start">
-                                                <PersonOutline fontSize="small" color="action"/>
+                                                <PersonOutlined fontSize="small" color="action"/>
                                             </InputAdornment>
                                         ),
                                     }

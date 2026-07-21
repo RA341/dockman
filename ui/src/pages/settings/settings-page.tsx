@@ -2,6 +2,7 @@ import React from 'react';
 import {Box, Tab, Tabs} from "@mui/material";
 import {useSearchParams} from 'react-router-dom';
 import TabDockerHosts from "./tab-host.tsx";
+import TabDockman from "./tab-dockman.tsx";
 
 interface TabConfig {
     label: string;
@@ -12,6 +13,10 @@ const tabConfigurations: TabConfig[] = [
     {
         label: "Docker Hosts",
         component: <TabDockerHosts/>
+    },
+    {
+        label: "Dockman",
+        component: <TabDockman/>
     },
 ];
 

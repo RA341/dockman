@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import {
     ArrowUpward as UpIcon,
-    CheckCircleOutline as SelectIcon,
+    CheckCircleOutlined as SelectIcon,
     ChevronRight,
     Close as CloseIcon,
     Folder as FolderIcon,
@@ -119,8 +119,15 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
             }}
         >
             <DialogTitle sx={{p: 2, borderBottom: '1px solid', borderColor: 'divider'}}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                <Stack
+                    direction="row"
+                    sx={{
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                    }}>
+                    <Stack direction="row" spacing={1.5} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{
                             p: 1,
                             bgcolor: 'primary.lighter',
@@ -134,7 +141,9 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
                             <Typography variant="subtitle1" sx={{fontWeight: 800, lineHeight: 1.2}}>
                                 Remote Browser
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" sx={{
+                                color: "text.secondary"
+                            }}>
                                 Node: <b>{hostname}</b>
                             </Typography>
                         </Box>
@@ -144,7 +153,6 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
                     </IconButton>
                 </Stack>
             </DialogTitle>
-
             {/* Navigation Bar */}
             <Box sx={{
                 px: 2,
@@ -188,10 +196,14 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
                     ))}
                 </Breadcrumbs>
             </Box>
-
             <DialogContent sx={{p: 0, flexGrow: 1, overflow: 'auto', ...scrollbarStyles}}>
                 {loading ? (
-                    <Stack alignItems="center" justifyContent="center" sx={{height: '100%'}}>
+                    <Stack
+                        sx={{
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: '100%'
+                        }}>
                         <CircularProgress size={32} thickness={5}/>
                     </Stack>
                 ) : err ? (
@@ -204,7 +216,12 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
                     <List disablePadding>
                         {entries.length === 0 ? (
                             <Box sx={{py: 10, textAlign: 'center'}}>
-                                <Typography variant="body2" color="text.disabled" sx={{fontStyle: 'italic'}}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: "text.disabled",
+                                        fontStyle: 'italic'
+                                    }}>
                                     This directory is empty
                                 </Typography>
                             </Box>
@@ -242,14 +259,14 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
                     </List>
                 )}
             </DialogContent>
-
             <Divider/>
-
             <Box sx={{p: 2}}>
                 <Stack spacing={1.5}>
                     <Typography variant="overline" sx={{fontWeight: 800, color: 'text.secondary', lineHeight: 1}}>Selected
                         Path</Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                    }}>
                         <TextField
                             fullWidth
                             size="small"
@@ -272,8 +289,7 @@ function FolderPickerDialog({open, onClose, onSelect, hostname, initialPath = "/
                 </Stack>
             </Box>
         </Dialog>
-    )
-        ;
+    );
 }
 
 export default FolderPickerDialog;
