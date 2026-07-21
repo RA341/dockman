@@ -21,7 +21,6 @@ import {
     FolderOpen as FolderIcon,
     InfoOutlined as InspectIcon
 } from '@mui/icons-material';
-import {useNavigate} from "react-router-dom";
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import type {Volume} from "../../gen/docker/v1/docker_pb.ts";
 import {formatBytes} from "../../lib/editor.ts";
@@ -36,16 +35,17 @@ interface VolumeTableProps {
     volumes: Volume[];
     selectedVolumes?: string[];
     onSelectionChange?: (selectedIds: string[]) => void;
+    onInspect: (volumeName: string) => void;
 }
 
 export const VolumeTable = ({
                                 volumes,
                                 selectedVolumes = [],
-                                onSelectionChange
+                                onSelectionChange,
+                                onInspect,
                             }: VolumeTableProps) => {
     const {handleCopy, copiedId} = useCopyButton();
     const {dockYaml} = useConfig();
-    const nav = useNavigate();
 
     const handleRowSelection = (volumeName: string) => {
         if (!onSelectionChange) return;
@@ -159,7 +159,7 @@ export const VolumeTable = ({
                             color="primary"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                nav(`inspect/${encodeURIComponent(volume.name)}`);
+                                onInspect(volume.name);
                             }}
                             sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0.5}}
                         >

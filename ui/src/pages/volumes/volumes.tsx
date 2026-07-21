@@ -11,10 +11,12 @@ import useSearch from "../../hooks/search.ts";
 import ActionButtons from "../../components/action-buttons.tsx";
 import SearchBar from "../../components/search-bar.tsx";
 import {useDockerVolumes} from "./docker-volumes.ts";
+import VolumesInspect from "./volumes-inspect.tsx";
 
 const VolumesPage = () => {
     const {loadVolumes, volumes, loading, deleteAnonynomous, deleteSelected, deleteUnunsed} = useDockerVolumes();
     const [selectedVolumes, setSelectedVolumes] = useState<string[]>([]);
+    const [inspectedVolume, setInspectedVolume] = useState<string | null>(null);
 
     const {search, setSearch, searchInputRef} = useSearch();
     const host = useHostStore(state => state.host);
@@ -132,12 +134,18 @@ const VolumesPage = () => {
                                     volumes={filteredVolumes}
                                     selectedVolumes={selectedVolumes}
                                     onSelectionChange={setSelectedVolumes}
+                                    onInspect={setInspectedVolume}
                                 />
                             }
                         </Box>
                     </Fade>
                 )}
             </Box>
+            <VolumesInspect
+                open={inspectedVolume !== null}
+                volumeName={inspectedVolume ?? ''}
+                onClose={() => setInspectedVolume(null)}
+            />
         </Box>
     );
 };

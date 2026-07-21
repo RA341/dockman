@@ -1,299 +1,163 @@
-import {callRPC, useHostClient} from "../../lib/api.ts";
-import {DockerService, type VolumeInspectInfo} from "../../gen/docker/v1/docker_pb.ts";
-import {useParams} from "react-router-dom";
-import {type ReactNode, useCallback, useEffect, useState} from "react";
+import {callRPC, useHostClient} from '../../lib/api.ts';
+import {DockerService, type VolumeInspectInfo} from '../../gen/docker/v1/docker_pb.ts';
+import {useNavigate, useParams} from 'react-router-dom';
+import {type ReactNode, useCallback, useEffect, useState} from 'react';
 import {
-    Alert,
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    Divider,
-    IconButton,
-    Paper,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Tab,
-    Tabs,
-    Typography
-} from "@mui/material";
-import {ArrowBack, ContentCopy, FolderOpenOutlined, InfoOutlined} from "@mui/icons-material";
-import StorageIcon from "@mui/icons-material/Storage";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
-import {formatBytes} from "../../lib/editor.ts";
-import {formatDate} from "../../lib/api.ts";
-import ContainerFileBrowser from "../../components/container-file-browser.tsx";
+    Alert, Box, Button, Chip, CircularProgress, Dialog, Divider, IconButton, Paper, Stack, Tab, Table,
+    TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tooltip, Typography,
+} from '@mui/material';
+import {Close, ContentCopy, FolderOpenOutlined, InfoOutlined, Refresh, Storage as StorageIcon} from '@mui/icons-material';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
+import {formatBytes} from '../../lib/editor.ts';
+import {formatDate} from '../../lib/api.ts';
+import ContainerFileBrowser from '../../components/container-file-browser.tsx';
+import scrollbarStyles from '../../components/scrollbar-style.tsx';
+import {statsTheme as t} from '../compose/components/stats-theme.ts';
 
-const VolumesInspect = () => {
-    const dockerService = useHostClient(DockerService)
-    const {id} = useParams()
-    const volumeName = id ?? ""
+interface Props {
+    open?: boolean;
+    volumeName?: string;
+    onClose?: () => void;
+}
 
-    const [inspect, setInspect] = useState<VolumeInspectInfo | null>(null)
-    const [err, setErr] = useState("")
-    const [loading, setLoading] = useState(false)
-    const [tab, setTab] = useState<'overview' | 'files'>('overview')
+type VolumeTab = 'overview' | 'files';
+
+const tabs = [
+    {id: 'overview' as const, label: 'Overview', icon: <InfoOutlined/>},
+    {id: 'files' as const, label: 'Files', icon: <FolderOpenOutlined/>},
+];
+
+const Detail = ({label, children}: {label: string; children: ReactNode}) => <Box sx={{minWidth: 0}}>
+    <Typography sx={{color: t.textDim, fontSize: '0.69rem', mb: 0.25}}>{label}</Typography>
+    {children}
+</Box>;
+
+const Value = ({children}: {children: ReactNode}) => <Typography sx={{fontFamily: t.mono, fontSize: '0.76rem', overflowWrap: 'anywhere', userSelect: 'text'}}>
+    {children}
+</Typography>;
+
+const Section = ({title, children}: {title: string; children: ReactNode}) => <Paper variant="outlined" sx={{p: 1.35, bgcolor: t.panel, borderColor: t.border, borderRadius: 1.5}}>
+    <Typography sx={{fontWeight: 800, fontSize: '0.8rem', mb: 1}}>{title}</Typography>
+    {children}
+</Paper>;
+
+export default function VolumesInspect({open: controlledOpen, volumeName: controlledName, onClose}: Props) {
+    const dockerService = useHostClient(DockerService);
+    const params = useParams();
+    const navigate = useNavigate();
+    const volumeName = controlledName ?? params.id ?? '';
+    const open = controlledOpen ?? Boolean(params.id);
+    const close = onClose ?? (() => navigate(`/${params.host ?? ''}/volumes`, {replace: true}));
+    const [inspect, setInspect] = useState<VolumeInspectInfo | null>(null);
+    const [err, setErr] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [tab, setTab] = useState<VolumeTab>('overview');
 
     const fetchData = useCallback(async () => {
-        setLoading(true)
-        setErr("")
-
-        const {val, err} = await callRPC(() => dockerService.volumeInspect({volumeName}))
-        if (err) {
-            setErr(err)
+        if (!open || !volumeName) return;
+        setLoading(true);
+        setErr('');
+        const result = await callRPC(() => dockerService.volumeInspect({volumeName}));
+        if (result.err) {
+            setErr(result.err);
+            setInspect(null);
         } else {
-            setInspect(val?.inspect ?? null)
+            setInspect(result.val?.inspect ?? null);
         }
-
-        setLoading(false)
-    }, [dockerService, volumeName]);
+        setLoading(false);
+    }, [dockerService, open, volumeName]);
 
     useEffect(() => {
-        fetchData().then()
-    }, [fetchData]);
+        if (!open) return;
+        setTab('overview');
+        setInspect(null);
+        void fetchData();
+    }, [open, volumeName, fetchData]);
 
-    const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text).then();
-    };
+    const copy = (value: string) => void navigator.clipboard.writeText(value);
+    const containers = inspect?.containers ?? [];
+    const volume = inspect?.vol;
 
-    const containers = inspect?.containers ?? []
-
-    return (
-        <Paper
-            elevation={0}
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                width: '100%',
-                borderRadius: 0,
-                overflow: 'hidden'
-            }}
-        >
-            {/* --- Header Section --- */}
-            <Box sx={{
-                p: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: 1,
-                borderColor: 'divider',
-                bgcolor: 'background.default'
-            }}>
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-                    <IconButton onClick={() => history.back()} title="Back to Volumes">
-                        <ArrowBack/>
-                    </IconButton>
-                    <StorageIcon color="primary"/>
-                    <Typography variant="h6" component="h2">
-                        Inspect Volume
+    return <Dialog open={open} onClose={close} maxWidth={false} fullWidth
+        slotProps={{
+            backdrop: {sx: {bgcolor: 'rgba(0,0,0,0.68)', backdropFilter: 'blur(4px)'}},
+            paper: {sx: {
+                width: 'min(86vw, 1220px)', height: 'min(82vh, 790px)', maxWidth: 'none', maxHeight: 'none', m: 2,
+                bgcolor: '#17191c', border: `1px solid ${t.border}`, borderRadius: 2.5, overflow: 'hidden',
+                boxShadow: '0 28px 90px rgba(0,0,0,0.65)', userSelect: 'text', WebkitUserSelect: 'text',
+            }},
+        }}>
+        <Box sx={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0}}>
+            <Stack direction="row" sx={{px: 1.75, py: 1, alignItems: 'center', gap: 1.25, bgcolor: t.header, borderBottom: `1px solid ${t.border}`}}>
+                <StorageIcon color="primary"/>
+                <Box sx={{minWidth: 0, flex: 1}}>
+                    <Typography variant="h6" noWrap sx={{fontWeight: 900}}>{volume?.name || volumeName || 'Volume'}</Typography>
+                    <Typography noWrap sx={{fontFamily: t.mono, color: t.textDim, fontSize: '0.68rem', userSelect: 'text'}}>
+                        {volume?.mountPoint || 'Docker managed volume'}
                     </Typography>
                 </Box>
-                <IconButton onClick={fetchData} disabled={loading} title="Refresh Data">
-                    <RefreshIcon/>
-                </IconButton>
-            </Box>
-            <Tabs value={tab} onChange={(_, value: 'overview' | 'files') => setTab(value)} sx={{px: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0}}>
-                <Tab value="overview" icon={<InfoOutlined/>} iconPosition="start" label="Overview" sx={{textTransform: 'none', minHeight: 46}}/>
-                <Tab value="files" icon={<FolderOpenOutlined/>} iconPosition="start" label="Files" sx={{textTransform: 'none', minHeight: 46}}/>
-            </Tabs>
-            <Box hidden={tab !== 'files'} sx={{p: 1.5, flexGrow: 1, minHeight: 0, overflow: 'hidden'}}>
-                <ContainerFileBrowser kind="volume" target={volumeName} active={tab === 'files'}/>
-            </Box>
-            <Box hidden={tab !== 'overview'} sx={{p: 3, flexGrow: 1, overflow: 'auto', position: 'relative'}}>
-                {loading && (
-                    <Box sx={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        justifyContent: 'center', height: '100%', gap: 2
-                    }}>
-                        <CircularProgress size={40} thickness={4}/>
-                        <Typography variant="h6" sx={{
-                            color: "text.secondary"
-                        }}>Loading...</Typography>
+                <Tooltip title="Refresh details"><span><IconButton disabled={loading} onClick={() => void fetchData()}>
+                    {loading ? <CircularProgress size={18}/> : <Refresh/>}
+                </IconButton></span></Tooltip>
+                <Divider orientation="vertical" flexItem/>
+                <Tooltip title="Close"><IconButton onClick={close}><Close/></IconButton></Tooltip>
+            </Stack>
+
+            <Box sx={{display: 'flex', flex: 1, minHeight: 0}}>
+                <Box component="nav" aria-label="Volume details" sx={{width: 168, flexShrink: 0, overflowY: 'auto', borderRight: `1px solid ${t.border}`, bgcolor: '#1b1d20', ...scrollbarStyles}}>
+                    <Tabs orientation="vertical" value={tab} onChange={(_, value: VolumeTab) => setTab(value)}
+                        sx={{py: 0.8, minHeight: '100%', '& .MuiTabs-indicator': {left: 0, right: 'auto', width: 3}}}>
+                        {tabs.map(item => <Tab key={item.id} value={item.id} label={item.label} icon={item.icon} iconPosition="start"
+                            sx={{minHeight: 42, justifyContent: 'flex-start', alignItems: 'center', textTransform: 'none', fontWeight: 650,
+                                fontSize: '0.78rem', px: 1.5, gap: 1, '& svg': {fontSize: 18}}}/>) }
+                    </Tabs>
+                </Box>
+
+                <Box sx={{flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+                    {err && <Alert severity="error" sx={{m: 1, mb: 0, flexShrink: 0}}
+                        action={<Button color="inherit" size="small" onClick={() => void fetchData()}>Retry</Button>}>{err}</Alert>}
+                    <Box hidden={tab !== 'files'} sx={{height: '100%', minHeight: 0, overflow: 'hidden'}}>
+                        <ContainerFileBrowser kind="volume" target={volumeName} active={open && tab === 'files'}/>
                     </Box>
-                )}
-
-                {!loading && err && (
-                    <Box sx={{display: 'flex', justifyContent: 'center', pt: 4}}>
-                        <Alert
-                            severity="error"
-                            variant="outlined"
-                            sx={{fontSize: '1rem'}}
-                            action={<Button color="inherit" size="large" onClick={fetchData}>Retry</Button>}
-                        >
-                            Error: {err}
-                        </Alert>
+                    <Box hidden={tab !== 'overview'} sx={{flex: 1, minHeight: 0, overflow: 'auto', p: 1.4, ...scrollbarStyles}}>
+                        {loading && !inspect && <Box sx={{display: 'grid', placeItems: 'center', height: '100%'}}><CircularProgress/></Box>}
+                        {!loading && !err && !volume && <Box sx={{display: 'grid', placeItems: 'center', height: '100%', color: t.textDim}}>
+                            <Stack sx={{alignItems: 'center'}}><ErrorOutlineIcon sx={{fontSize: 42}}/><Typography>No volume information found</Typography></Stack>
+                        </Box>}
+                        {volume && <Stack spacing={1.25}>
+                            <Section title="Volume overview">
+                                <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 1.25}}>
+                                    <Detail label="Name"><Value>{volume.name || '—'}</Value></Detail>
+                                    <Detail label="Size"><Value>{formatBytes(volume.size)}</Value></Detail>
+                                    <Detail label="Status"><Chip label={containers.length ? 'In use' : 'Unused'} size="small" color={containers.length ? 'success' : 'default'} variant="outlined"/></Detail>
+                                    <Detail label="Created"><Value>{volume.createdAt ? formatDate(volume.createdAt) : '—'}</Value></Detail>
+                                    <Detail label="Compose project"><Value>{volume.composeProjectName || '—'}</Value></Detail>
+                                    <Detail label="Labels"><Value>{volume.labels || '—'}</Value></Detail>
+                                </Box>
+                            </Section>
+                            <Section title="Mount point">
+                                <Stack direction="row" spacing={0.5} sx={{alignItems: 'center'}}>
+                                    <Value>{volume.mountPoint || '—'}</Value>
+                                    {volume.mountPoint && <Tooltip title="Copy mount point"><IconButton size="small" onClick={() => copy(volume.mountPoint)}><ContentCopy sx={{fontSize: 16}}/></IconButton></Tooltip>}
+                                </Stack>
+                            </Section>
+                            <Section title={`Used by (${containers.length})`}>
+                                {containers.length ? <TableContainer sx={{maxHeight: 330, ...scrollbarStyles}}><Table size="small" stickyHeader sx={{'& .MuiTableCell-root': {py: 0.6, px: 1, borderColor: t.border, fontSize: '0.73rem'}}}>
+                                    <TableHead><TableRow><TableCell>Container</TableCell><TableCell>Mount path</TableCell><TableCell>Access</TableCell><TableCell>Project</TableCell><TableCell>ID</TableCell></TableRow></TableHead>
+                                    <TableBody>{containers.map(container => <TableRow key={`${container.id}:${container.destination}`} hover>
+                                        <TableCell sx={{fontWeight: 700}}>{container.name || '—'}</TableCell>
+                                        <TableCell sx={{fontFamily: t.mono, userSelect: 'text'}}>{container.destination || '—'}</TableCell>
+                                        <TableCell><Chip label={container.rw ? 'Read / Write' : 'Read-only'} size="small" color={container.rw ? 'primary' : 'default'} variant="outlined"/></TableCell>
+                                        <TableCell>{container.composeProject || '—'}</TableCell>
+                                        <TableCell><Stack direction="row" spacing={0.25} sx={{alignItems: 'center'}}><Typography sx={{fontFamily: t.mono, fontSize: '0.72rem'}}>{container.id ? container.id.slice(0, 12) : '—'}</Typography>
+                                            {container.id && <IconButton size="small" onClick={() => copy(container.id)}><ContentCopy sx={{fontSize: 14}}/></IconButton>}</Stack></TableCell>
+                                    </TableRow>)}</TableBody>
+                                </Table></TableContainer> : <Typography sx={{color: t.textDim, fontSize: '0.76rem'}}>No containers are using this volume.</Typography>}
+                            </Section>
+                        </Stack>}
                     </Box>
-                )}
-
-                {!loading && !err && !inspect?.vol && (
-                    <Box sx={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        justifyContent: 'center', height: '100%', opacity: 0.5
-                    }}>
-                        <ErrorOutlineIcon sx={{fontSize: 60, mb: 2}}/>
-                        <Typography variant="h5">No volume info found</Typography>
-                    </Box>
-                )}
-
-                {!loading && !err && inspect?.vol && (
-                    <Stack spacing={3}>
-                        {/* Summary Header */}
-                        <Box>
-                            <Typography variant="h5" gutterBottom sx={{
-                                fontWeight: "bold"
-                            }}>
-                                {inspect.vol.name || "Unnamed Volume"}
-                            </Typography>
-                            <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                <Typography
-                                    variant="body1"
-                                    sx={{
-                                        color: "text.secondary",
-                                        fontFamily: 'monospace'
-                                    }}>
-                                    {inspect.vol.mountPoint || 'N/A'}
-                                </Typography>
-                                {inspect.vol.mountPoint && (
-                                    <IconButton size="small" onClick={() => handleCopy(inspect.vol!.mountPoint)}
-                                                title="Copy Mount Point">
-                                        <ContentCopy fontSize="small"/>
-                                    </IconButton>
-                                )}
-                            </Box>
-                        </Box>
-
-                        <Divider/>
-
-                        {/* Volume Details */}
-                        <Box>
-                            <Typography variant="h6" gutterBottom sx={{fontSize: '1.1rem', mb: 2}}>
-                                Volume Details
-                            </Typography>
-                            <Box sx={{display: 'flex', flexDirection: {xs: 'column', md: 'row'}, gap: 2}}>
-                                <Box sx={{flex: 1}}>
-                                    <Stack spacing={2}>
-                                        <Detail label="Size">
-                                            <Typography variant="body1" sx={{fontFamily: 'monospace', fontSize: '0.95rem'}}>
-                                                {formatBytes(inspect.vol.size)}
-                                            </Typography>
-                                        </Detail>
-                                        <Detail label="Status">
-                                            <Chip
-                                                label={containers.length > 0 ? "In Use" : "Unused"}
-                                                size="small"
-                                                color={containers.length > 0 ? "success" : "default"}
-                                                variant="outlined"
-                                            />
-                                        </Detail>
-                                    </Stack>
-                                </Box>
-                                <Box sx={{flex: 1}}>
-                                    <Stack spacing={2}>
-                                        <Detail label="Compose Project">
-                                            <Typography variant="body1" sx={{fontSize: '0.95rem'}}>
-                                                {inspect.vol.composeProjectName || inspect.vol.labels || '—'}
-                                            </Typography>
-                                        </Detail>
-                                        <Detail label="Created">
-                                            <Typography variant="body1" sx={{fontSize: '0.95rem'}}>
-                                                {inspect.vol.createdAt ? formatDate(inspect.vol.createdAt) : 'N/A'}
-                                            </Typography>
-                                        </Detail>
-                                    </Stack>
-                                </Box>
-                            </Box>
-                        </Box>
-
-                        <Divider/>
-
-                        {/* Containers using this volume */}
-                        <Box>
-                            <Typography variant="h6" gutterBottom sx={{fontSize: '1.1rem'}}>
-                                Used By ({containers.length})
-                            </Typography>
-                            {containers.length > 0 ? (
-                                <TableContainer>
-                                    <Table size="small">
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell sx={{fontSize: '0.95rem'}}><strong>Container</strong></TableCell>
-                                                <TableCell sx={{fontSize: '0.95rem'}}><strong>Mount Path</strong></TableCell>
-                                                <TableCell sx={{fontSize: '0.95rem'}}><strong>Access</strong></TableCell>
-                                                <TableCell sx={{fontSize: '0.95rem'}}><strong>Project</strong></TableCell>
-                                                <TableCell sx={{fontSize: '0.95rem'}}><strong>ID</strong></TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {containers.map((c, idx) => (
-                                                <TableRow key={idx} hover>
-                                                    <TableCell sx={{fontSize: '0.9rem'}}>{c.name || 'N/A'}</TableCell>
-                                                    <TableCell sx={{fontFamily: 'monospace', fontSize: '0.9rem'}}>
-                                                        {c.destination || 'N/A'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Chip
-                                                            label={c.rw ? "Read/Write" : "Read-Only"}
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color={c.rw ? "primary" : "default"}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell sx={{fontSize: '0.9rem'}}>{c.composeProject || '—'}</TableCell>
-                                                    <TableCell>
-                                                        <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
-                                                            <Typography sx={{fontFamily: 'monospace', fontSize: '0.9rem'}}>
-                                                                {c.id ? c.id.substring(0, 12) : 'N/A'}
-                                                            </Typography>
-                                                            {c.id && (
-                                                                <IconButton size="small" onClick={() => handleCopy(c.id)}
-                                                                            title="Copy Container ID">
-                                                                    <ContentCopy fontSize="small"/>
-                                                                </IconButton>
-                                                            )}
-                                                        </Box>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            ) : (
-                                <Box sx={{p: 3, textAlign: 'center', bgcolor: 'background.default', borderRadius: 1}}>
-                                    <Typography variant="body1" sx={{
-                                        color: "text.secondary"
-                                    }}>
-                                        No containers are using this volume
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Box>
-                    </Stack>
-                )}
+                </Box>
             </Box>
-        </Paper>
-    );
-};
-
-const Detail = ({label, children}: { label: string; children: ReactNode }) => (
-    <Box>
-        <Typography
-            variant="body2"
-            sx={{
-                color: "text.secondary",
-                fontSize: '0.9rem',
-                mb: 0.5
-            }}>
-            {label}
-        </Typography>
-        {children}
-    </Box>
-);
-
-export default VolumesInspect;
+        </Box>
+    </Dialog>;
+}

@@ -1,5 +1,6 @@
-import {Box, Button, Chip, Divider, Fade, Paper, Tooltip} from '@mui/material';
+import {Box, Button, Chip, Divider, Fade, Paper, ToggleButton, ToggleButtonGroup, Tooltip} from '@mui/material';
 import {
+    AccountTreeOutlined,
     ArrowDownward,
     ArrowUpward,
     Delete,
@@ -9,9 +10,11 @@ import {
     RestartAlt,
     SpaceDashboardOutlined,
     Stop,
+    ShowChart,
     UnfoldLess,
     UnfoldMore,
     Update,
+    ViewList,
 } from '@mui/icons-material';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
@@ -53,6 +56,24 @@ type ContainerActionRpc = 'containerStart' | 'containerStop' | 'containerRestart
 // navigating away and back (module-level on purpose — state resets with the
 // component, this must not)
 const monitorViewMemory = new Map<string, { expanded: Record<string, boolean>, scroll: number }>();
+
+type MonitorLayout = 'stacks' | 'containers';
+
+function readMonitorPreference(key: string): string | null {
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+function writeMonitorPreference(key: string, value: string) {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        // Private/locked-down browser storage must not make Monitor unusable.
+    }
+}
 
 function viewMemoryFor(host: string) {
     const entry = monitorViewMemory.get(host) ?? {expanded: {}, scroll: 0};
@@ -169,6 +190,10 @@ function MonitorPage() {
     const [sortField, setSortField] = useState<MonitorSortField | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [stateFilters, setStateFilters] = useState<ContainerStateFilter[]>([]);
+    const [layout, setLayout] = useState<MonitorLayout>(() =>
+        readMonitorPreference('dockman.monitor.layout') === 'containers' ? 'containers' : 'stacks');
+    const [showContainerGraphs, setShowContainerGraphs] = useState(() =>
+        readMonitorPreference('dockman.monitor.containerGraphs') !== 'hide');
     const [now, setNow] = useState(() => Date.now());
     // container id → lifecycle action in flight: the row's buttons lock and
     // the clicked one spins until the RPC and the list refetch settle
@@ -188,6 +213,15 @@ function MonitorPage() {
     useEffect(() => {
         viewMemoryFor(host).expanded = expanded;
     }, [expanded, host]);
+
+    useEffect(() => writeMonitorPreference('dockman.monitor.layout', layout), [layout]);
+    useEffect(() => writeMonitorPreference(
+        'dockman.monitor.containerGraphs', showContainerGraphs ? 'show' : 'hide'), [showContainerGraphs]);
+
+    // A flat container view cannot expose stack selection or stack actions.
+    useEffect(() => {
+        if (layout === 'containers') setSelectedStacks([]);
+    }, [layout]);
 
     // uptime column tick; freshness of the values themselves comes from the
     // stats stream
@@ -288,6 +322,18 @@ function MonitorPage() {
                 return a.stack.localeCompare(b.stack);
             });
     }, [containers, statsByName, history, search, stateFilters, sortField, sortOrder, staleRows]);
+
+    const flatRows = useMemo(() => {
+        const rows = groups.flatMap(group => group.rows);
+        const direction = sortOrder === 'asc' ? 1 : -1;
+        return rows.sort((a, b) => {
+            if (!sortField || sortField === 'name') {
+                return a.info.name.localeCompare(b.info.name) * (sortField === 'name' ? direction : 1);
+            }
+            const metric = (rowSortValue(a, sortField) - rowSortValue(b, sortField)) * direction;
+            return metric || a.info.name.localeCompare(b.info.name);
+        });
+    }, [groups, sortField, sortOrder]);
 
     // Resolve the dialog row from the unfiltered container list so an open
     // details view is not accidentally closed by changing the monitor search.
@@ -765,6 +811,35 @@ function MonitorPage() {
                     <Box sx={{px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1}}>
                         <ActionButtons iconOnly actions={stacksMode ? stackBulkActions : containerBulkActions}/>
 
+                        <Divider orientation="vertical" flexItem sx={{mx: 0.25, borderColor: t.border}}/>
+                        <ToggleButtonGroup
+                            exclusive
+                            size="small"
+                            value={layout}
+                            onChange={(_event, value: MonitorLayout | null) => value && setLayout(value)}
+                            aria-label="Monitor layout"
+                            sx={{height: 30, '& .MuiToggleButton-root': {px: 0.8, color: t.textDim, borderColor: t.border}}}
+                        >
+                            <ToggleButton value="stacks" aria-label="Stack list">
+                                <Tooltip title="Group containers by stack" arrow><AccountTreeOutlined sx={{fontSize: 17}}/></Tooltip>
+                            </ToggleButton>
+                            <ToggleButton value="containers" aria-label="Container list">
+                                <Tooltip title="Flat container list" arrow><ViewList sx={{fontSize: 18}}/></Tooltip>
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                        <Tooltip title={showContainerGraphs ? 'Hide container graphs' : 'Show container graphs'} arrow>
+                            <ToggleButton
+                                value="graphs"
+                                selected={showContainerGraphs}
+                                onChange={() => setShowContainerGraphs(value => !value)}
+                                aria-label={showContainerGraphs ? 'Hide container graphs' : 'Show container graphs'}
+                                size="small"
+                                sx={{height: 30, minWidth: 34, px: 0.75, color: t.textDim, borderColor: t.border}}
+                            >
+                                <ShowChart sx={{fontSize: 18}}/>
+                            </ToggleButton>
+                        </Tooltip>
+
                         {stateFilters.map(filter => <Chip
                             key={filter}
                             size="small"
@@ -775,7 +850,7 @@ function MonitorPage() {
                         />)}
 
                         <RefreshButton iconOnly onClick={handleRefresh} loading={refreshing}/>
-                        <Tooltip title={allExpanded ? 'Collapse all' : 'Expand all'}>
+                        {layout === 'stacks' && <Tooltip title={allExpanded ? 'Collapse all' : 'Expand all'}>
                             <Button
                                 variant="outlined"
                                 size="small"
@@ -793,7 +868,7 @@ function MonitorPage() {
                             >
                                 {allExpanded ? <UnfoldLess/> : <UnfoldMore/>}
                             </Button>
-                        </Tooltip>
+                        </Tooltip>}
                         {(stacksMode || selectedContainers.length > 0) && (
                             <>
                                 <Divider orientation="vertical" flexItem sx={{mx: 0.5, borderColor: t.border}}/>
@@ -831,12 +906,16 @@ function MonitorPage() {
                             <Box sx={{height: '100%', overflow: 'hidden'}}>
                                 <MonitorTable
                                     groups={groups}
+                                    flatRows={flatRows}
+                                    containerListMode={layout === 'containers'}
+                                    containerRowsCharts={showContainerGraphs}
                                     history={history}
                                     selectedContainers={selectedContainers}
                                     selectedStacks={selectedStacks}
                                     onToggleContainers={toggleContainers}
                                     onToggleStack={toggleStack}
                                     onToggleAllStacks={toggleAllStacks}
+                                    onToggleAllContainers={(ids, on) => toggleContainers(ids, on)}
                                     expanded={effectiveExpanded}
                                     onToggleExpand={(stack) => setExpanded(prev =>
                                         ({...prev, [stack]: !(prev[stack] ?? false)}))}

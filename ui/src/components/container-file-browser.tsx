@@ -6,7 +6,7 @@ import {
 import {
     ArchiveOutlined, ArrowBack, ArrowDownward, ArrowUpward, CreateNewFolderOutlined, DeleteOutlined, DownloadOutlined,
     DriveFileRenameOutline, FileUploadOutlined, FolderOutlined, HomeOutlined, InsertDriveFileOutlined,
-    NoteAddOutlined, Refresh, SecurityOutlined, Visibility, VisibilityOff,
+    ManageAccountsOutlined, NoteAddOutlined, Refresh, SecurityOutlined, Visibility, VisibilityOff,
 } from '@mui/icons-material';
 import {type MouseEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useHostUrl} from '../lib/api.ts';
@@ -23,23 +23,27 @@ interface FileEntry {
     mode: string;
     permissions: string;
     modified: string;
-    uid: number;
-    gid: number;
+    uid: number | null;
+    gid: number | null;
     linkTarget?: string;
 }
 
-interface ListResponse { path: string; entries: FileEntry[] }
+interface ListResponse { path: string; entries: FileEntry[]; readOnly?: boolean; rootReadOnly?: boolean }
 type SortKey = 'name' | 'size' | 'mode' | 'modified';
 type EditDialog = null | {kind: 'new-file' | 'new-folder' | 'rename'; entry?: FileEntry};
 
 const joinPath = (directory: string, name: string) => `${directory === '/' ? '' : directory}/${name}`;
 const parentPath = (value: string) => value === '/' ? '/' : value.slice(0, value.lastIndexOf('/')) || '/';
 const formatSize = (value: number, directory: boolean) => {
-    if (directory) return '—';
+    if (directory || value < 0) return '—';
     if (value < 1024) return `${value} B`;
     const units = ['KB', 'MB', 'GB', 'TB']; let size = value / 1024; let unit = 0;
     while (size >= 1024 && unit < units.length - 1) {size /= 1024; unit += 1;}
     return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[unit]}`;
+};
+const formatModified = (value: string) => {
+    const timestamp = Date.parse(value);
+    return Number.isNaN(timestamp) ? '—' : new Date(timestamp).toLocaleString();
 };
 
 async function responseError(response: Response): Promise<string> {
@@ -82,29 +86,71 @@ function PermissionsDialog({entry, open, onClose, onApply}: {
     </Dialog>;
 }
 
+function OwnershipDialog({entry, open, onClose, onApply}: {
+    entry: FileEntry | null; open: boolean; onClose: () => void;
+    onApply: (uid: number, gid: number, recursive: boolean) => void;
+}) {
+    const [uid, setUID] = useState('0'); const [gid, setGID] = useState('0'); const [recursive, setRecursive] = useState(false);
+    useEffect(() => {if (entry) {setUID(entry.uid == null ? '' : String(entry.uid)); setGID(entry.gid == null ? '' : String(entry.gid)); setRecursive(false);}}, [entry]);
+    const validID = (value: string) => /^\d+$/.test(value) && Number(value) <= 4294967294;
+    const valid = validID(uid) && validID(gid);
+    return <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth slotProps={{paper: {sx: {bgcolor: t.panel, border: `1px solid ${t.border}`}}}}>
+        <DialogTitle sx={{fontWeight: 800}}>Change ownership</DialogTitle>
+        <DialogContent>
+            <Typography sx={{color: t.textDim, mb: 1.5, fontFamily: t.mono}}>{entry?.name}</Typography>
+            <Stack direction="row" spacing={1.5}>
+                <TextField fullWidth size="small" label="Owner UID" value={uid} onChange={event => setUID(event.target.value.trim())}
+                    error={!validID(uid)} slotProps={{htmlInput: {inputMode: 'numeric'}}}/>
+                <TextField fullWidth size="small" label="Group GID" value={gid} onChange={event => setGID(event.target.value.trim())}
+                    error={!validID(gid)} slotProps={{htmlInput: {inputMode: 'numeric'}}}/>
+            </Stack>
+            {entry?.type === 'directory' && <FormControlLabel control={<Checkbox checked={recursive} onChange={(_, value) => setRecursive(value)}/>} label="Apply recursively"/>}
+        </DialogContent>
+        <DialogActions><Button onClick={onClose}>Cancel</Button><Button variant="contained" disabled={!valid}
+            onClick={() => onApply(Number(uid), Number(gid), recursive)}>Apply</Button></DialogActions>
+    </Dialog>;
+}
+
 export default function ContainerFileBrowser({kind, target, active = true}: {kind: FileBrowserKind; target: string; active?: boolean}) {
     const hostUrl = useHostUrl(); const {showError, showSuccess} = useSnackbar(); const uploadRef = useRef<HTMLInputElement>(null);
+    const requestRef = useRef(0); const cacheRef = useRef(new Map<string, ListResponse>());
     const [directory, setDirectory] = useState('/'); const [entries, setEntries] = useState<FileEntry[]>([]);
     const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [hidden, setHidden] = useState(false);
+    const [readOnly, setReadOnly] = useState(false); const [rootReadOnly, setRootReadOnly] = useState(false);
     const [sort, setSort] = useState<SortKey>('name'); const [ascending, setAscending] = useState(true);
     const [edit, setEdit] = useState<EditDialog>(null); const [editValue, setEditValue] = useState('');
-    const [permissions, setPermissions] = useState<FileEntry | null>(null); const [deleting, setDeleting] = useState<FileEntry | null>(null);
+    const [permissions, setPermissions] = useState<FileEntry | null>(null); const [ownership, setOwnership] = useState<FileEntry | null>(null);
+    const [deleting, setDeleting] = useState<FileEntry | null>(null);
     const [archiveMenu, setArchiveMenu] = useState<{anchor: HTMLElement; path: string} | null>(null);
+    const [actionSuppressed, setActionSuppressed] = useState<string | null>(null);
     const base = useMemo(() => `/docker/files/${kind}/${encodeURIComponent(target)}`, [kind, target]);
     const endpoint = useCallback((action: string, params?: Record<string, string>) => {
         const query = new URLSearchParams(params); return hostUrl(`${base}/${action}${query.size ? `?${query}` : ''}`);
     }, [base, hostUrl]);
     const load = useCallback(async () => {
         if (!active || !target) return;
+        const request = ++requestRef.current;
         setLoading(true); setError('');
         try {
             const response = await fetch(endpoint('list', {path: directory}));
             if (!response.ok) throw new Error(await responseError(response));
-            const data = await response.json() as ListResponse; setEntries(data.entries ?? []);
-        } catch (reason) {setError(reason instanceof Error ? reason.message : String(reason));} finally {setLoading(false);}
+            const data = await response.json() as ListResponse;
+            if (request !== requestRef.current || data.path !== directory) return;
+            cacheRef.current.set(directory, data); setEntries(data.entries ?? []); setReadOnly(Boolean(data.readOnly)); setRootReadOnly(Boolean(data.rootReadOnly));
+        } catch (reason) {if (request === requestRef.current) {setError(reason instanceof Error ? reason.message : String(reason)); setReadOnly(true);}}
+        finally {if (request === requestRef.current) setLoading(false);}
     }, [active, directory, endpoint, target]);
+    useEffect(() => {requestRef.current += 1; cacheRef.current.clear(); setDirectory('/'); setEntries([]); setReadOnly(false); setRootReadOnly(false);}, [kind, target]);
     useEffect(() => {void load();}, [load]);
-    useEffect(() => {setDirectory('/'); setEntries([]);}, [kind, target]);
+
+    const navigate = (next: string) => {
+        requestRef.current += 1;
+        setLoading(true);
+        const cached = cacheRef.current.get(next);
+        if (cached) {setEntries(cached.entries ?? []); setReadOnly(Boolean(cached.readOnly)); setRootReadOnly(Boolean(cached.rootReadOnly)); setError('');}
+        else {setEntries([]); setError('');}
+        setDirectory(next);
+    };
 
     const shown = useMemo(() => entries.filter(entry => hidden || !entry.name.startsWith('.')).sort((a, b) => {
         if (a.type === 'directory' && b.type !== 'directory') return -1;
@@ -114,6 +160,9 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
         return direction * String(a[sort]).localeCompare(String(b[sort]), undefined, {numeric: true, sensitivity: 'base'});
     }), [ascending, entries, hidden, sort]);
     const onSort = (column: SortKey) => {if (sort === column) setAscending(value => !value); else {setSort(column); setAscending(true);}};
+    const writeBlocked = readOnly || loading;
+    const writeTooltip = (label: string) => loading ? 'Loading directory'
+        : readOnly ? `${kind === 'volume' ? 'Volume' : 'Container filesystem'} is read-only` : label;
     const action = async (body: Record<string, unknown>, success: string) => {
         try {
             const response = await fetch(endpoint('action'), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
@@ -140,18 +189,31 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
         }
         if (uploadRef.current) uploadRef.current.value = ''; await load();
     };
+    const download = (filePath: string, format?: 'tar' | 'zip') => {
+        const anchor = document.createElement('a');
+        anchor.href = endpoint('download', {path: filePath, ...(format ? {format} : {})});
+        anchor.download = '';
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        anchor.click();
+        window.setTimeout(() => anchor.remove(), 1000);
+    };
     const breadcrumbs = directory.split('/').filter(Boolean);
     return <Paper variant="outlined" sx={{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', bgcolor: t.panel, borderColor: t.border}}>
         <Stack direction="row" sx={{alignItems: 'center', gap: 0.4, px: 1, py: 0.75, flexShrink: 0, borderBottom: `1px solid ${t.border}`}}>
-            <Tooltip title="Parent folder"><span><IconButton size="small" disabled={directory === '/'} onClick={() => setDirectory(parentPath(directory))}><ArrowBack/></IconButton></span></Tooltip>
-            <IconButton size="small" onClick={() => setDirectory('/')}><HomeOutlined/></IconButton>
+            <Tooltip title="Parent folder"><span><IconButton size="small" disabled={directory === '/'} onClick={() => navigate(parentPath(directory))}><ArrowBack/></IconButton></span></Tooltip>
+            <IconButton size="small" onClick={() => navigate('/')}><HomeOutlined/></IconButton>
             <Typography component="span" sx={{color: t.textDim}}>/</Typography>
-            {breadcrumbs.map((part, index) => <Button key={`${part}-${index}`} size="small" color="inherit" onClick={() => setDirectory('/' + breadcrumbs.slice(0, index + 1).join('/'))}
+            {breadcrumbs.map((part, index) => <Button key={`${part}-${index}`} size="small" color="inherit" onClick={() => navigate('/' + breadcrumbs.slice(0, index + 1).join('/'))}
                 sx={{textTransform: 'none', minWidth: 0, px: 0.4, fontFamily: t.mono}}>{part}{index < breadcrumbs.length - 1 ? ' /' : ''}</Button>)}
             <Box sx={{flex: 1}}/>
-            <Tooltip title="New file"><IconButton size="small" onClick={() => openEdit({kind: 'new-file'})}><NoteAddOutlined/></IconButton></Tooltip>
-            <Tooltip title="New folder"><IconButton size="small" onClick={() => openEdit({kind: 'new-folder'})}><CreateNewFolderOutlined/></IconButton></Tooltip>
-            <Tooltip title="Upload files"><IconButton size="small" onClick={() => uploadRef.current?.click()}><FileUploadOutlined/></IconButton></Tooltip>
+            {!loading && readOnly && <Typography sx={{px: 0.8, color: '#ffb74d', fontSize: '0.7rem', fontWeight: 800}}>READ-ONLY</Typography>}
+            {!loading && !readOnly && rootReadOnly && <Tooltip title="The container root filesystem is read-only, but this mounted path is writable" arrow>
+                <Typography sx={{px: 0.8, color: '#66bb6a', fontSize: '0.7rem', fontWeight: 800}}>RW MOUNT</Typography>
+            </Tooltip>}
+            <Tooltip title={writeTooltip('New file')}><span><IconButton size="small" disabled={writeBlocked} onClick={() => openEdit({kind: 'new-file'})}><NoteAddOutlined/></IconButton></span></Tooltip>
+            <Tooltip title={writeTooltip('New folder')}><span><IconButton size="small" disabled={writeBlocked} onClick={() => openEdit({kind: 'new-folder'})}><CreateNewFolderOutlined/></IconButton></span></Tooltip>
+            <Tooltip title={writeTooltip('Upload files')}><span><IconButton size="small" disabled={writeBlocked} onClick={() => uploadRef.current?.click()}><FileUploadOutlined/></IconButton></span></Tooltip>
             <input ref={uploadRef} hidden multiple type="file" onChange={event => void upload(event.target.files)}/>
             <Tooltip title={hidden ? 'Hide hidden files' : 'Show hidden files'}><IconButton size="small" color={hidden ? 'primary' : 'default'} onClick={() => setHidden(value => !value)}>{hidden ? <Visibility/> : <VisibilityOff/>}</IconButton></Tooltip>
             <Tooltip title="Refresh"><IconButton size="small" disabled={loading} onClick={() => void load()}>{loading ? <CircularProgress size={18}/> : <Refresh/>}</IconButton></Tooltip>
@@ -163,23 +225,30 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
                     <TableCell sx={{width: 110}}><SortLabel label="Size" column="size" sort={sort} ascending={ascending} onSort={onSort}/></TableCell>
                     <TableCell sx={{width: 150}}><SortLabel label="Permissions" column="mode" sort={sort} ascending={ascending} onSort={onSort}/></TableCell>
                     <TableCell sx={{width: 180}}><SortLabel label="Modified" column="modified" sort={sort} ascending={ascending} onSort={onSort}/></TableCell>
-                    <TableCell align="right" sx={{width: 150, fontWeight: 800, fontSize: '0.72rem'}}>Actions</TableCell></TableRow></TableHead>
-                <TableBody>{shown.map(entry => {const fullPath = joinPath(directory, entry.name); return <TableRow key={entry.name} hover sx={{'& .file-actions': {opacity: 0}, '&:hover .file-actions, &:focus-within .file-actions': {opacity: 1}}}>
-                    <TableCell><Button color="inherit" disabled={entry.type !== 'directory'} onClick={() => entry.type === 'directory' && setDirectory(fullPath)}
-                        startIcon={entry.type === 'directory' ? <FolderOutlined color="primary"/> : <InsertDriveFileOutlined sx={{color: '#90caf9'}}/>}
-                        sx={{textTransform: 'none', justifyContent: 'flex-start', maxWidth: '100%', minWidth: 0, fontWeight: 650, '& .MuiButton-startIcon': {flexShrink: 0}}}>
-                        <Typography noWrap sx={{fontSize: '0.78rem'}} title={entry.linkTarget ? `${entry.name} → ${entry.linkTarget}` : entry.name}>{entry.name}</Typography></Button></TableCell>
+                    <TableCell align="right" sx={{width: 180, fontWeight: 800, fontSize: '0.72rem'}}>Actions</TableCell></TableRow></TableHead>
+                <TableBody>{shown.map(entry => {const fullPath = joinPath(directory, entry.name); const folder = entry.type === 'directory'; return <TableRow key={entry.name} hover
+                    onMouseLeave={() => setActionSuppressed(current => current === entry.name ? null : current)}
+                    sx={{'& .file-actions': {opacity: 0}, '&:hover .file-actions': {opacity: actionSuppressed === entry.name ? 0 : 1}}}>
+                    <TableCell onClick={() => folder && navigate(fullPath)} sx={{cursor: folder ? 'pointer' : 'default', userSelect: 'text'}}>
+                        <Stack direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0, width: '100%'}}>
+                            {folder ? <FolderOutlined color="primary"/> : <InsertDriveFileOutlined sx={{color: '#90caf9'}}/>}
+                            <Typography noWrap sx={{fontSize: '0.79rem', fontWeight: folder ? 700 : 500, color: t.text, minWidth: 0}}
+                                title={entry.linkTarget ? `${entry.name} → ${entry.linkTarget}` : entry.name}>{entry.name}</Typography>
+                        </Stack>
+                    </TableCell>
                     <TableCell sx={{fontFamily: t.mono, color: t.textDim, fontSize: '0.72rem'}}>{formatSize(entry.size, entry.type === 'directory')}</TableCell>
-                    <TableCell sx={{fontFamily: t.mono, fontSize: '0.72rem'}}>{entry.mode} <Typography component="span" sx={{color: t.textDim, fontFamily: t.mono, fontSize: '0.67rem'}}>{entry.permissions}</Typography></TableCell>
-                    <TableCell sx={{fontFamily: t.mono, color: t.textDim, fontSize: '0.7rem'}}>{new Date(entry.modified).toLocaleString()}</TableCell>
+                    <TableCell sx={{fontFamily: t.mono, fontSize: '0.72rem'}}>{entry.mode} <Typography component="span" sx={{color: t.textDim, fontFamily: t.mono, fontSize: '0.67rem'}}>{entry.permissions}</Typography>
+                        <Typography component="div" sx={{color: t.textDim, fontFamily: t.mono, fontSize: '0.64rem'}}>UID:GID {entry.uid == null || entry.gid == null ? '—' : `${entry.uid}:${entry.gid}`}</Typography>
+                    </TableCell>
+                    <TableCell sx={{fontFamily: t.mono, color: t.textDim, fontSize: '0.7rem'}}>{formatModified(entry.modified)}</TableCell>
                     <TableCell align="right"><Stack className="file-actions" direction="row" spacing={0} sx={{justifyContent: 'flex-end', transition: 'opacity .15s'}}>
-                        <Tooltip title="Rename"><IconButton size="small" onClick={() => openEdit({kind: 'rename', entry})}><DriveFileRenameOutline fontSize="small"/></IconButton></Tooltip>
-                        <Tooltip title="Change permissions"><IconButton size="small" onClick={() => setPermissions(entry)}><SecurityOutlined fontSize="small"/></IconButton></Tooltip>
+                        <Tooltip title={writeTooltip('Rename')}><span><IconButton size="small" disabled={writeBlocked} onClick={event => {event.currentTarget.blur(); setActionSuppressed(entry.name); openEdit({kind: 'rename', entry});}}><DriveFileRenameOutline fontSize="small"/></IconButton></span></Tooltip>
+                        <Tooltip title={writeTooltip('Change permissions')}><span><IconButton size="small" disabled={writeBlocked} onClick={event => {event.currentTarget.blur(); setActionSuppressed(entry.name); setPermissions(entry);}}><SecurityOutlined fontSize="small"/></IconButton></span></Tooltip>
+                        <Tooltip title={writeTooltip('Change ownership')}><span><IconButton size="small" disabled={writeBlocked} onClick={event => {event.currentTarget.blur(); setActionSuppressed(entry.name); setOwnership(entry);}}><ManageAccountsOutlined fontSize="small"/></IconButton></span></Tooltip>
                         <Tooltip title={entry.type === 'directory' ? 'Download folder' : 'Download'}><IconButton size="small"
-                            component={entry.type === 'directory' ? 'button' : 'a'} href={entry.type === 'directory' ? undefined : endpoint('download', {path: fullPath})}
-                            onClick={entry.type === 'directory' ? (event: MouseEvent<HTMLButtonElement>) => setArchiveMenu({anchor: event.currentTarget, path: fullPath}) : undefined}>
+                            onClick={(event: MouseEvent<HTMLButtonElement>) => {event.currentTarget.blur(); setActionSuppressed(entry.name); if (folder) setArchiveMenu({anchor: event.currentTarget, path: fullPath}); else download(fullPath);}}>
                             {entry.type === 'directory' ? <ArchiveOutlined fontSize="small"/> : <DownloadOutlined fontSize="small"/>}</IconButton></Tooltip>
-                        <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => setDeleting(entry)}><DeleteOutlined fontSize="small"/></IconButton></Tooltip>
+                        <Tooltip title={writeTooltip('Delete')}><span><IconButton size="small" color="error" disabled={writeBlocked} onClick={event => {event.currentTarget.blur(); setActionSuppressed(entry.name); setDeleting(entry);}}><DeleteOutlined fontSize="small"/></IconButton></span></Tooltip>
                     </Stack></TableCell>
                 </TableRow>;})}</TableBody>
             </Table>
@@ -187,8 +256,8 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
         </TableContainer>
         <Menu open={archiveMenu !== null} anchorEl={archiveMenu?.anchor} onClose={() => setArchiveMenu(null)}
             slotProps={{paper: {sx: {bgcolor: t.panel, border: `1px solid ${t.border}`, minWidth: 150}}}}>
-            <MenuItem component="a" href={archiveMenu ? endpoint('download', {path: archiveMenu.path, format: 'tar'}) : undefined} onClick={() => setArchiveMenu(null)}>Download TAR</MenuItem>
-            <MenuItem component="a" href={archiveMenu ? endpoint('download', {path: archiveMenu.path, format: 'zip'}) : undefined} onClick={() => setArchiveMenu(null)}>Download ZIP</MenuItem>
+            <MenuItem onClick={() => {if (archiveMenu) download(archiveMenu.path, 'tar'); setArchiveMenu(null);}}>Download TAR</MenuItem>
+            <MenuItem onClick={() => {if (archiveMenu) download(archiveMenu.path, 'zip'); setArchiveMenu(null);}}>Download ZIP</MenuItem>
         </Menu>
         <Dialog open={edit !== null} onClose={() => setEdit(null)} maxWidth="xs" fullWidth slotProps={{paper: {sx: {bgcolor: t.panel, border: `1px solid ${t.border}`}}}}>
             <DialogTitle>{edit?.kind === 'rename' ? 'Rename' : edit?.kind === 'new-file' ? 'New file' : 'New folder'}</DialogTitle>
@@ -197,6 +266,9 @@ export default function ContainerFileBrowser({kind, target, active = true}: {kin
         </Dialog>
         <PermissionsDialog entry={permissions} open={permissions !== null} onClose={() => setPermissions(null)} onApply={(mode, recursive) => {
             if (!permissions) return; void action({action: 'chmod', path: joinPath(directory, permissions.name), mode, recursive}, 'Permissions updated').then(ok => {if (ok) setPermissions(null);});
+        }}/>
+        <OwnershipDialog entry={ownership} open={ownership !== null} onClose={() => setOwnership(null)} onApply={(uid, gid, recursive) => {
+            if (!ownership) return; void action({action: 'chown', path: joinPath(directory, ownership.name), uid, gid, recursive}, 'Ownership updated').then(ok => {if (ok) setOwnership(null);});
         }}/>
         <Dialog open={deleting !== null} onClose={() => setDeleting(null)} maxWidth="xs" fullWidth slotProps={{paper: {sx: {bgcolor: t.panel, border: `1px solid ${t.border}`}}}}>
             <DialogTitle>Delete {deleting?.type === 'directory' ? 'folder' : 'file'}?</DialogTitle>

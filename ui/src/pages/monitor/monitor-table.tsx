@@ -95,6 +95,9 @@ export interface RedeployOptions {
 
 interface MonitorTableProps {
     groups: StackGroup[];
+    flatRows: MonitorRow[];
+    containerListMode: boolean;
+    containerRowsCharts: boolean;
     history: Map<string, { cpu: number[]; mem: number[] }>;
     // stack and container selections are mutually exclusive: picking one
     // kind clears the other, and the toolbar actions adapt to the kind
@@ -103,6 +106,7 @@ interface MonitorTableProps {
     onToggleContainers: (ids: string[], on: boolean) => void;
     onToggleStack: (stack: string, on: boolean) => void;
     onToggleAllStacks: (stacks: string[], on: boolean) => void;
+    onToggleAllContainers: (ids: string[], on: boolean) => void;
     expanded: Record<string, boolean>;
     onToggleExpand: (stack: string) => void;
     sortField: MonitorSortField | null;
@@ -168,6 +172,33 @@ const stateVisual: Record<string, { icon: ReactNode, color: string }> = {
     removing: {icon: <Delete/>, color: '#ef5350'},
 };
 
+function containerStatusColor(row: MonitorRow): string {
+    const {state, health} = row.info;
+    if ((state === 'running' && health === 'unhealthy') || state === 'dead' || state === 'removing') {
+        return '#ef5350';
+    }
+    if (state === 'running' && health === 'starting') return '#4db6ac';
+    return stateVisual[state]?.color ?? '#9e9e9e';
+}
+
+// A stack has no daemon state of its own, so derive a useful operational
+// state from all members. Failures win, followed by transitions, degraded
+// partial operation, healthy operation and finally fully stopped.
+function stackStatusColor(rows: MonitorRow[]): string {
+    if (rows.some(row => containerStatusColor(row) === '#ef5350')) return '#ef5350';
+    if (rows.some(row => row.info.state === 'restarting'
+        || (row.info.state === 'running' && row.info.health === 'starting'))) return '#4db6ac';
+    const running = rows.filter(row => row.info.state === 'running').length;
+    const paused = rows.filter(row => row.info.state === 'paused').length;
+    if (running === rows.length && rows.length > 0) return '#66bb6a';
+    if (running > 0 || paused > 0) return '#ffb74d';
+    return '#9e9e9e';
+}
+
+function subduedColor(color: string): string {
+    return /^#[0-9a-f]{6}$/i.test(color) ? `${color}66` : color;
+}
+
 export function MonitorTable(props: MonitorTableProps) {
     const {
         groups, selectedStacks, selectedContainers, onToggleAllStacks,
@@ -197,6 +228,10 @@ export function MonitorTable(props: MonitorTableProps) {
     const selectableStacks = groups.filter(g => g.stack && g.servicePath).map(g => g.stack);
     const allStacksSelected = selectableStacks.length > 0 && selectableStacks.every(s => selectedStacks.includes(s));
     const someStacksSelected = selectableStacks.some(s => selectedStacks.includes(s));
+    const visibleContainerIDs = props.flatRows.map(row => row.info.id);
+    const allContainersSelected = visibleContainerIDs.length > 0
+        && visibleContainerIDs.every(id => selectedContainers.includes(id));
+    const someContainersSelected = visibleContainerIDs.some(id => selectedContainers.includes(id));
 
     return (
         <TableContainer
@@ -208,14 +243,18 @@ export function MonitorTable(props: MonitorTableProps) {
                 <TableHead>
                     <TableRow>
                         <TableCell padding="checkbox" sx={{...headCell, width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
-                            <Tooltip title="Select all stacks" arrow>
+                            <Tooltip title={props.containerListMode ? 'Select all visible containers' : 'Select all stacks'} arrow>
                                 <span>
                                     <Checkbox
                                         size="small"
-                                        checked={allStacksSelected}
-                                        indeterminate={someStacksSelected && !allStacksSelected}
-                                        disabled={selectedContainers.length > 0}
-                                        onChange={e => onToggleAllStacks(selectableStacks, e.target.checked)}
+                                        checked={props.containerListMode ? allContainersSelected : allStacksSelected}
+                                        indeterminate={props.containerListMode
+                                            ? someContainersSelected && !allContainersSelected
+                                            : someStacksSelected && !allStacksSelected}
+                                        disabled={!props.containerListMode && selectedContainers.length > 0}
+                                        onChange={e => props.containerListMode
+                                            ? props.onToggleAllContainers(visibleContainerIDs, e.target.checked)
+                                            : onToggleAllStacks(selectableStacks, e.target.checked)}
                                         sx={{color: t.textDim, p: 0.5}}
                                     />
                                 </span>
@@ -258,29 +297,38 @@ export function MonitorTable(props: MonitorTableProps) {
                         </TableCell>
                         <TableCell sx={headCell}>STATE</TableCell>
                         <TableCell sx={headCell}>{sortableHead('uptime', 'UPTIME')}</TableCell>
-                        <TableCell sx={{...headCell, minWidth: 130}}>{sortableHead('cpu', 'CPU')}</TableCell>
-                        <TableCell sx={{...headCell, minWidth: 150}}>{sortableHead('mem', 'MEMORY')}</TableCell>
+                        <TableCell sx={{...headCell, minWidth: props.containerRowsCharts ? 130 : 80}}>{sortableHead('cpu', 'CPU')}</TableCell>
+                        <TableCell sx={{...headCell, minWidth: props.containerRowsCharts ? 150 : 110}}>{sortableHead('mem', 'MEMORY')}</TableCell>
                         <TableCell sx={headCell}>{sortableHead('net', 'NET I/O')}</TableCell>
                         <TableCell sx={headCell}>PORTS</TableCell>
                         <TableCell sx={{...headCell, width: 210}} align="right">ACTIONS</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {groups.map(group => (
-                        <Fragment key={group.stack || '(standalone)'}>
-                            <StackRow {...props} group={group}/>
-                            {(props.expanded[group.stack] ?? false) && group.rows.map(row => (
-                                <ContainerRow {...props} key={row.info.id} row={row}/>
-                            ))}
-                        </Fragment>
-                    ))}
+                    {props.containerListMode
+                        ? props.flatRows.map(row => (
+                            <ContainerRow {...props} key={row.info.id} row={row}
+                                          boundaryColor={containerStatusColor(row)}/>
+                        ))
+                        : groups.map(group => {
+                            const boundaryColor = stackStatusColor(group.rows);
+                            return (
+                                <Fragment key={group.stack || '(standalone)'}>
+                                    <StackRow {...props} group={group} boundaryColor={boundaryColor}/>
+                                    {(props.expanded[group.stack] ?? false) && group.rows.map(row => (
+                                        <ContainerRow {...props} key={row.info.id} row={row}
+                                                      boundaryColor={subduedColor(boundaryColor)}/>
+                                    ))}
+                                </Fragment>
+                            );
+                        })}
                 </TableBody>
             </Table>
         </TableContainer>
     );
 }
 
-function StackRow(props: MonitorTableProps & { group: StackGroup }) {
+function StackRow(props: MonitorTableProps & { group: StackGroup, boundaryColor: string }) {
     const {
         group, expanded, onToggleExpand, selectedStacks, selectedContainers,
         onToggleStack, onToggleContainers, runningStacks, stackRuns,
@@ -318,7 +366,7 @@ function StackRow(props: MonitorTableProps & { group: StackGroup }) {
         <TableRow onClick={() => onToggleExpand(group.stack)}
                   sx={{bgcolor: t.header, cursor: 'pointer'}}>
             <TableCell padding="checkbox" onClick={e => e.stopPropagation()}
-                       sx={{...bodyCell, borderLeft: '3px solid #4db6ac', cursor: 'default', width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
+                       sx={{...bodyCell, borderLeft: `3px solid ${props.boundaryColor}`, cursor: 'default', width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
                 <Tooltip title={isStack && hasFile ? "Select stack" : "Select containers"} arrow>
                     <span>
                         <Checkbox
@@ -483,7 +531,7 @@ function RedeployMenuButton({disabled, onPick}: {
     );
 }
 
-function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
+function ContainerRow(props: MonitorTableProps & { row: MonitorRow, boundaryColor: string }) {
     const {
         row, history, selectedContainers, selectedStacks, onToggleContainers,
         now, onRowAction, rowBusy, onRowLogs, onRowExec, onRowDetails, updateRuns, onUpdateOutput,
@@ -519,7 +567,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
 
     return (
         <TableRow hover sx={{'&:hover': {bgcolor: t.rowHover}}}>
-            <TableCell padding="checkbox" sx={{...bodyCell, borderLeft: '3px solid rgba(77,182,172,0.25)', width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
+            <TableCell padding="checkbox" sx={{...bodyCell, borderLeft: `3px solid ${props.boundaryColor}`, width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
                 <Checkbox
                     size="small"
                     checked={isChecked}
@@ -543,6 +591,11 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                     <Typography noWrap sx={{fontWeight: 600, fontSize: '0.82rem'}}>
                         {c.name}
                     </Typography>
+                    {props.containerListMode && c.stackName && (
+                        <Typography noWrap sx={{color: t.textDim, fontSize: '0.65rem', fontFamily: t.mono}}>
+                            {c.stackName}
+                        </Typography>
+                    )}
                     {c.updateAvailable && (
                         <Tooltip title={`Update available: ${c.updateAvailable}`} arrow>
                             <Upgrade sx={{fontSize: 14, color: '#4db6ac'}}/>
@@ -562,6 +615,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                 textColor={s ? getUsageColor(s.cpuUsage) : t.textDim}
                 data={hist?.cpu}
                 lineColor={t.cpuLine}
+                chart={props.containerRowsCharts}
             />
             <MetricCell
                 text={s ? formatBytes(Number(s.memoryUsage)) : '…'}
@@ -569,6 +623,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                 textColor={s ? getUsageColor(memPercent) : t.textDim}
                 data={hist?.mem}
                 lineColor={t.memLine}
+                chart={props.containerRowsCharts}
             />
             <TableCell sx={{...bodyCell, whiteSpace: 'nowrap', fontFamily: t.mono, fontSize: '0.72rem', color: t.textDim}}>
                 {s ? <>↓ {formatBytes(Number(s.networkRx))}<br/>↑ {formatBytes(Number(s.networkTx))}</> : '–'}
@@ -779,7 +834,7 @@ function MetricCell({text, subText, textColor, data, lineColor, chart = true}: {
 }) {
     return (
         <TableCell sx={bodyCell}>
-            <Box sx={{width: 150}}>
+            <Box sx={{width: chart ? 150 : 'auto', minWidth: chart ? 150 : 0}}>
                 <Typography variant="caption" component="div"
                             sx={{fontFamily: t.mono, whiteSpace: 'nowrap', lineHeight: 1.4, mb: chart ? 0.4 : 0}}>
                     <Box component="span" sx={{fontWeight: 700, color: textColor}}>{text}</Box>
