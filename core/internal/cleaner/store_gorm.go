@@ -2,6 +2,7 @@ package cleaner
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GormStore struct {
@@ -24,7 +25,19 @@ func (g *GormStore) GetConfig(host string) (PruneConfig, error) {
 }
 
 func (g *GormStore) UpdateConfig(config *PruneConfig) error {
-	return g.db.Updates(config).Error
+	// Upsert keyed on the unique host column. Updates() alone fails with
+	// "WHERE conditions required" because the incoming config carries no primary
+	// key, and on the first save no row exists for the host yet. ON CONFLICT(host)
+	// DO UPDATE inserts the first time and updates thereafter, and (via
+	// AssignmentColumns) correctly persists toggles set back to false.
+	return g.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "host"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"enabled", "interval",
+			"volumes", "networks", "images", "containers", "build_cache",
+			"updated_at",
+		}),
+	}).Create(config).Error
 }
 
 const maxPruneResults = 10

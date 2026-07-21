@@ -1,0 +1,84 @@
+name: Fork Proto Gen
+
+# Fork-only helper: regenerate the protobuf/Connect stubs for a contribution
+# branch and commit them back, since buf + the codegen toolchain are not run
+# locally. Plugin versions are pinned to what produced the committed stubs so
+# the diff stays limited to the messages that actually changed.
+
+on:
+  # A push that only touches this file registers the workflow with the Actions
+  # API (so it becomes dispatchable) without doing any work — the job is gated
+  # to workflow_dispatch below.
+  push:
+    branches:
+      - integration
+    paths:
+      - ".github/workflows/fork-proto-gen.yml"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch to regenerate stubs on (checked out and pushed back)"
+        required: true
+        type: string
+      pkg:
+        description: "Proto package dir to commit (e.g. files, dockyaml)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  gen:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install buf + pinned plugins
+        run: |
+          set -euxo pipefail
+          go install github.com/bufbuild/buf/cmd/buf@latest
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.19.1
+          npm install -g @bufbuild/protoc-gen-es@2.11.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Generate stubs
+        run: |
+          set -euxo pipefail
+          cd spec
+          buf generate
+          # mirror spec/Taskfile.yml copy targets
+          rm -rf ../core/generated/* ../ui/src/gen/*
+          mkdir -p ../core/generated ../ui/src/gen
+          cp -r generated/go/* ../core/generated/
+          cp -r generated/web/* ../ui/src/gen/
+
+      - name: Commit regenerated stubs
+        run: |
+          set -euxo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          PKG="${{ inputs.pkg }}"
+          # Only commit the requested package's stubs so any incidental version
+          # drift in unrelated generated files (left unstaged) is discarded,
+          # keeping the contribution branch's diff minimal.
+          git add "core/generated/${PKG}" "ui/src/gen/${PKG}"
+          if git diff --cached --quiet; then
+            echo "No ${PKG} stub changes to commit."
+            exit 0
+          fi
+          git status --short "core/generated/${PKG}" "ui/src/gen/${PKG}"
+          git commit -m "chore(gen): regenerate ${PKG} stubs [skip ci]"
+          git push origin HEAD:${{ inputs.ref }}

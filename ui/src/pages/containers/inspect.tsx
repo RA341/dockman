@@ -88,7 +88,9 @@ const ContainerInspect = () => {
                 }}
             >
                 <Stack spacing={2}>
-                    <Stack direction="row" alignItems="center" spacing={1}>
+                    <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                    }}>
                         <IconButton
                             onClick={() => navigate(`/${host}/containers`)}
                             size="small"
@@ -103,7 +105,12 @@ const ContainerInspect = () => {
                                          onClick={() => navigate(`/${host}/containers`)}>
                                     Containers
                                 </MuiLink>
-                                <Typography color="text.primary" sx={{fontSize: '0.8rem', fontWeight: 700}}>
+                                <Typography
+                                    sx={{
+                                        color: "text.primary",
+                                        fontSize: '0.8rem',
+                                        fontWeight: 700
+                                    }}>
                                     Inspect
                                 </Typography>
                             </Breadcrumbs>
@@ -144,7 +151,6 @@ const ContainerInspect = () => {
                     </Tabs>
                 </Stack>
             </Paper>
-
             <Box sx={{
                 flexGrow: 1,
                 overflowY: 'auto',

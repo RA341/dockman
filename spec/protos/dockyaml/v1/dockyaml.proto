@@ -39,6 +39,30 @@ message DockmanYaml {
   NetworkConfig networkPage = 3;
   ImageConfig imagePage = 4;
   ContainerConfig containerPage = 5;
+  StatsConfig statsPage = 10;
+  ComposeConfig composePage = 11;
+  EditorConfig editorPage = 12;
+  MonitorConfig monitorPage = 13;
+  // view opened when landing on a host: files (default), monitor, stats,
+  // containers, images, volumes, networks or cleaner
+  string defaultView = 14;
+}
+
+message MonitorConfig {
+  // stack row density in the monitor view: "full" (default) shows CPU/RAM
+  // values with their charts, "compact" shows the values only
+  string stackRows = 1;
+}
+
+message ComposeConfig {
+  // tab shown when opening a compose stack: editor (default), deploy or stats
+  string defaultTab = 1;
+}
+
+message EditorConfig {
+  // allow scrolling half a viewport past the last line (it stops at
+  // mid-view), for files taller than the viewport
+  bool scrollPastEnd = 1;
 }
 
 message VolumesConfig {
@@ -54,6 +78,10 @@ message ImageConfig {
 }
 
 message ContainerConfig {
+  Sort sort = 1;
+}
+
+message StatsConfig {
   Sort sort = 1;
 }
 

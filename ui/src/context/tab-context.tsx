@@ -1,6 +1,7 @@
 import {createContext, type ReactNode, useCallback, useContext, useEffect} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom';
-import {useEditorUrl} from "../lib/editor.ts";
+import {stackDefaultTab, useEditorUrl} from "../lib/editor.ts";
+import {useConfig} from "../hooks/config.ts";
 import {create} from "zustand";
 import {immer} from "zustand/middleware/immer";
 import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
@@ -21,11 +22,14 @@ interface EditorState {
     lastOpened: Record<number, string>;
 
     update: (filename: string, details: Partial<TabDetails>) => void;
-    create: (filename: string, track?: number, tabIndex?: number) => void;
+    create: (filename: string, track?: number, tabIndex?: number, limit?: number) => void;
     close: (filename: string, track?: number) => { next: string, wasActive: boolean };
     rename: (oldFilename: string, newFilename: string) => string;
     active: (filename: string, track?: number) => void;
     load: (filename: string) => TabDetails | undefined;
+    reorder: (filename: string, targetIndex: number, track?: number) => void;
+    clear: (track?: number) => void;
+    reset: () => void;
 }
 
 export const getContextKey = () => {
@@ -45,7 +49,7 @@ export const useTabsStore = create<EditorState>()(
             return get().allTabs[filename];
         },
 
-        create: (filename, track = 0, tabIndex = 0) => {
+        create: (filename, track = 0, tabIndex = 0, limit = 0) => {
             const key = getContextKey();
             set((state) => {
                 if (!state.allTabs[filename]) {
@@ -66,7 +70,31 @@ export const useTabsStore = create<EditorState>()(
                     state.contextTabs[key] = {0: new Set(), 1: new Set()};
                 }
 
-                state.contextTabs[key][track].add(filename);
+                const tabs = state.contextTabs[key][track];
+
+                // Enforce tab limit: evict the oldest tabs to make room
+                if (limit > 0 && !tabs.has(filename)) {
+                    const order = Array.from(tabs);
+                    while (order.length >= limit) {
+                        const oldest = order.shift();
+                        if (oldest === undefined) break;
+                        tabs.delete(oldest);
+
+                        // Cleanup allTabs if no longer used anywhere
+                        let stillInUse = false;
+                        for (const k of Object.keys(state.contextTabs)) {
+                            if (state.contextTabs[k][0]?.has(oldest) || state.contextTabs[k][1]?.has(oldest)) {
+                                stillInUse = true;
+                                break;
+                            }
+                        }
+                        if (!stillInUse) {
+                            delete state.allTabs[oldest];
+                        }
+                    }
+                }
+
+                tabs.add(filename);
             });
         },
 
@@ -148,6 +176,63 @@ export const useTabsStore = create<EditorState>()(
                 state.lastOpened[track] = filename;
             });
         },
+
+        // closes every tab of the current context's track, dropping saved
+        // details unless another context or track still shows the file
+        clear: (track = 0) => {
+            const key = getContextKey();
+            set((state) => {
+                const tabs = state.contextTabs[key]?.[track];
+                if (!tabs || tabs.size === 0) return;
+
+                for (const filename of tabs) {
+                    let stillInUse = false;
+                    for (const k of Object.keys(state.contextTabs)) {
+                        for (const tr of [0, 1]) {
+                            if (k === key && tr === track) continue;
+                            if (state.contextTabs[k][tr]?.has(filename)) {
+                                stillInUse = true;
+                                break;
+                            }
+                        }
+                        if (stillInUse) break;
+                    }
+                    if (!stillInUse) {
+                        delete state.allTabs[filename];
+                    }
+                }
+
+                state.contextTabs[key][track] = new Set();
+                state.lastOpened[track] = '';
+            });
+        },
+
+        reset: () => {
+            set((state) => {
+                state.allTabs = {};
+                state.contextTabs = {};
+                state.lastOpened = {0: '', 1: ''};
+            });
+        },
+
+        // moves a tab to targetIndex within its track; tab order is the
+        // Set's insertion order, so the Set is rebuilt in the new order
+        reorder: (filename, targetIndex, track = 0) => {
+            const key = getContextKey();
+            set((state) => {
+                const tabs = state.contextTabs[key]?.[track];
+                if (!tabs || !tabs.has(filename)) return;
+
+                const order = Array.from(tabs);
+                const from = order.indexOf(filename);
+                const to = Math.max(0, Math.min(targetIndex, order.length - 1));
+                if (from === to) return;
+
+                order.splice(from, 1);
+                order.splice(to, 0, filename);
+                state.contextTabs[key][track] = new Set(order);
+            });
+        },
     }))
 );
 
@@ -159,6 +244,7 @@ export interface TabsContextType {
     closeTab: (filename: string, track?: number) => void;
     renameTab: (oldFilename: string, newFilename: string) => void;
     onTabClick: (filename: string, track?: number) => void;
+    closeAllTabs: (track?: number) => void;
 }
 
 export const TabsContext = createContext<TabsContextType | undefined>(undefined);
@@ -172,27 +258,28 @@ export const useTabs = (): TabsContextType => {
 };
 
 export function TabsProvider({children}: { children: ReactNode }) {
-    // const {dockYaml} = useConfig()
-    // const tabLimit = dockYaml?.tabLimit ?? 5
+    const {dockYaml} = useConfig()
+    const tabLimit = dockYaml?.tabLimit ?? 5
 
     const location = useLocation();
     const navigate = useNavigate();
     const editorUrl = useEditorUrl()
     const {filename, splitFilename} = useFileComponents()
 
-    const {active, load, rename, update, create, close} = useTabsStore()
+    const {active, load, rename, update, create, close, clear} = useTabsStore()
 
     const handleTabClick = useCallback((filename: string, track: number = 0) => {
-        const tabDetail = load(filename)
+        // files opened for the first time start on the dockman.yml default tab
+        const tabDetail = load(filename) ?? stackDefaultTab(dockYaml, filename)
         const url = editorUrl(filename, tabDetail, track);
         navigate(url);
-    }, [editorUrl, navigate, load]);
+    }, [editorUrl, navigate, load, dockYaml]);
 
     const handleOpenTab = useCallback((filename: string, track: number = 0) => {
         const params = new URLSearchParams(location.search);
-        create(filename, track, Number(params.get("tab") ?? "0"))
+        create(filename, track, Number(params.get("tab") ?? stackDefaultTab(dockYaml, filename)), tabLimit)
         active(filename, track)
-    }, [location.search, create, active]);
+    }, [location.search, create, active, dockYaml, tabLimit]);
 
     const handleCloseTab = useCallback((filename: string, track: number = 0) => {
         const {next, wasActive} = close(filename, track)
@@ -209,6 +296,17 @@ export function TabsProvider({children}: { children: ReactNode }) {
             }
         }
     }, [close, editorUrl, navigate])
+
+    const handleCloseAllTabs = useCallback((track: number = 0) => {
+        clear(track)
+        if (track === 1) {
+            navigate(editorUrl(undefined, undefined, 1))
+        } else {
+            const h = useHostStore.getState().host;
+            const a = useAliasStore.getState().alias;
+            navigate(`/${h}/files/${a}`);
+        }
+    }, [clear, editorUrl, navigate])
 
     const handleTabRename = useCallback((oldFilename: string, newFilename: string) => {
         rename(oldFilename, newFilename)
@@ -241,6 +339,7 @@ export function TabsProvider({children}: { children: ReactNode }) {
 
     const value = {
         openTab: handleOpenTab,
+        closeAllTabs: handleCloseAllTabs,
         closeTab: handleCloseTab,
         renameTab: handleTabRename,
         onTabClick: handleTabClick,

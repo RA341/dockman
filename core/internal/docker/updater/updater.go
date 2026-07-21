@@ -2,7 +2,9 @@ package updater
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -12,6 +14,7 @@ import (
 	"github.com/RA341/dockman/pkg/fileutil"
 
 	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
@@ -79,6 +82,79 @@ func (u *Service) ContainersUpdateByContainerID(ctx context.Context, containerID
 	}
 
 	return u.containersUpdateLoop(ctx, list)
+}
+
+// ImagePuller pulls an image tag; injected so the caller decides HOW to
+// pull (the compose CLI runner carries the host's registry credentials,
+// unlike the bare daemon API).
+type ImagePuller func(ctx context.Context, imageTag string) error
+
+// ContainersForceUpdate pulls each container's image tag and recreates the
+// container when the pull brought down a different image. Unlike the
+// metadata-driven update loop it needs no registry digest lookup, and it
+// reports failures instead of skipping silently — this backs the explicit
+// per-container Update action in the UI. Progress lines go to out.
+func (u *Service) ContainersForceUpdate(ctx context.Context, pull ImagePuller, out io.Writer, containerID ...string) error {
+	list, err := u.srv.ContainerListByIDs(ctx, containerID...)
+	if err != nil {
+		return err
+	}
+	if len(list) == 0 {
+		return fmt.Errorf("no containers found for the given ids")
+	}
+
+	report := func(format string, args ...any) {
+		_, _ = fmt.Fprintf(out, format+"\r\n", args...)
+	}
+
+	var errs []error
+	for _, cur := range list {
+		name := strings.TrimPrefix(cur.Names[0], "/")
+		imgTag := cur.Image
+
+		// a reference without a repository tag (image removed/retagged, or
+		// only ever built locally) cannot be pulled
+		if imgTag == "" || strings.HasPrefix(imgTag, "sha256:") {
+			report("%s: image %q has no pullable tag (locally built?), skipping", name, imgTag)
+			errs = append(errs, fmt.Errorf("%s: image %q has no pullable tag", name, imgTag))
+			continue
+		}
+
+		report("Pulling %s for %s...", imgTag, name)
+		if err := pull(ctx, imgTag); err != nil {
+			report("%s: pull failed: %v", name, err)
+			errs = append(errs, fmt.Errorf("%s: pull %s: %w", name, imgTag, err))
+			continue
+		}
+
+		localImages, err := u.cli().ImageList(ctx, client.ImageListOptions{
+			Filters: client.Filters{}.Add("reference", imgTag),
+		})
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: inspect %s: %w", name, imgTag, err))
+			continue
+		}
+
+		newID := ""
+		if len(localImages.Items) > 0 {
+			newID = localImages.Items[0].ID
+		}
+		if newID == "" || newID == cur.ImageID {
+			report("%s: image already up to date, container kept as is", name)
+			log.Info().Str("container", name).Str("img", imgTag).
+				Msg("image unchanged after pull, container kept as is")
+			continue
+		}
+
+		report("Recreating %s on the new image...", name)
+		if err := u.ContainerRecreate(ctx, imgTag, cur); err != nil {
+			report("%s: recreate failed: %v", name, err)
+			errs = append(errs, fmt.Errorf("%s: recreate: %w", name, err))
+			continue
+		}
+		report("%s updated successfully", name)
+	}
+	return errors.Join(errs...)
 }
 
 // ContainersUpdateByImage finds all containers using the specified image,
@@ -299,78 +375,69 @@ func UpdateDockman(containerID, updaterUrl string) error {
 	return nil
 }
 
+// ContainerRecreate swaps a container onto a (freshly pulled) image while
+// keeping its whole configuration. A running container is replaced through a
+// create-start-healthcheck-swap sequence with rollback to the old container
+// on any failure; a stopped one is swapped in place and left stopped.
 func (u *Service) ContainerRecreate(ctx context.Context, imageTag string, oldContainer container.Summary) error {
-	//containerName := "Untagged"
-	//if len(oldContainer.Names) > 0 {
-	//	containerName = strings.TrimPrefix(oldContainer.Names[0], "/")
-	//}
-	//
-	//log.Debug().Msgf("Processing container: %s (ID: %s)", containerName, oldContainer.ID[:12])
-	//
-	//inspectedData, err := s.Daemon.ContainerInspect(ctx, oldContainer.ID, client.ContainerInspectOptions{})
-	//if err != nil {
-	//	return fmt.Errorf("failed to inspect container %s: %w", oldContainer.ID, err)
-	//}
-	//
-	//log.Debug().Msgf("Stopping old container %s...", containerName)
-	//if err := s.Daemon.ContainerStop(ctx, oldContainer.ID, container.StopOptions{}); err != nil {
-	//	return fmt.Errorf("failed to stop container %s: %w", oldContainer.ID, err)
-	//}
-	//
-	//// if container was not running before create but do not start
-	//if !inspectedData.State.Running {
-	//	if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{}); err != nil {
-	//		return fmt.Errorf("failed to remove old container %s: %w", oldContainer.ID, err)
-	//	}
-	//
-	//	_, err := s.containerCreate(ctx, imageTag, containerName, inspectedData)
-	//	if err != nil {
-	//		return fmt.Errorf("failed to create container %s: %w", containerName, err)
-	//	}
-	//
-	//	return nil
-	//}
-	//
-	//newContainer, err := s.containerCreate(ctx, imageTag, containerName+"_updated", inspectedData)
-	//if err != nil {
-	//	return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
-	//}
-	//
-	//log.Debug().Msgf("Starting new container %s...", newContainer.ID[:12])
-	//if err = s.Daemon.ContainerStart(ctx, newContainer.ID, container.StartOptions{}); err != nil {
-	//
-	//	err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
-	//}
-	//
-	//if err = s.ContainerHealthCheck(newContainer.ID, &inspectedData); err != nil {
-	//
-	//	err = s.Daemon.ContainerRemove(ctx, newContainer.ID, container.RemoveOptions{Force: true})
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	return s.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
-	//}
-	//
-	//// Health check passed - now we can safely remove old container and rename new one
-	//log.Debug().Msgf("Health check passed, finalizing update...")
-	//
-	//if err := s.Daemon.ContainerRemove(ctx, oldContainer.ID, container.RemoveOptions{Force: true}); err != nil {
-	//	log.Warn().Msgf("Failed to remove old container: %v", err)
-	//}
-	//
-	//// Rename new container to original name
-	//if err := s.Daemon.ContainerRename(ctx, newContainer.ID, containerName); err != nil {
-	//	log.Warn().Msgf("Failed to rename container to original name: %v", err)
-	//}
-	//
-	//log.Info().Msgf("Successfully updated container %s", containerName)
-	return fmt.Errorf("unimplemented dumbass")
+	containerName := "untagged"
+	if len(oldContainer.Names) > 0 {
+		containerName = strings.TrimPrefix(oldContainer.Names[0], "/")
+	}
+	log.Debug().Msgf("Recreating container %s (%s) on image %s", containerName, oldContainer.ID[:12], imageTag)
+
+	inspected, err := u.cli().ContainerInspect(ctx, oldContainer.ID, client.ContainerInspectOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to inspect container %s: %w", containerName, err)
+	}
+	inspectedData := inspected.Container
+
+	wasRunning := inspectedData.State != nil && inspectedData.State.Running
+
+	// container at rest: swap in place, leave it stopped
+	if !wasRunning {
+		if _, err := u.cli().ContainerRemove(ctx, oldContainer.ID, client.ContainerRemoveOptions{}); err != nil {
+			return fmt.Errorf("failed to remove old container %s: %w", containerName, err)
+		}
+		if _, err := u.containerCreate(ctx, imageTag, containerName, inspectedData); err != nil {
+			return fmt.Errorf("failed to create container %s: %w", containerName, err)
+		}
+		return nil
+	}
+
+	if _, err := u.cli().ContainerStop(ctx, oldContainer.ID, client.ContainerStopOptions{}); err != nil {
+		return fmt.Errorf("failed to stop container %s: %w", containerName, err)
+	}
+
+	newContainer, err := u.containerCreate(ctx, imageTag, containerName+"_updated", inspectedData)
+	if err != nil {
+		return u.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
+	}
+
+	if _, err = u.cli().ContainerStart(ctx, newContainer.ID, client.ContainerStartOptions{}); err != nil {
+		if _, rmErr := u.cli().ContainerRemove(ctx, newContainer.ID, client.ContainerRemoveOptions{Force: true}); rmErr != nil {
+			log.Warn().Err(rmErr).Msg("failed to clean up the replacement container")
+		}
+		return u.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
+	}
+
+	if err = u.ContainerHealthCheck(newContainer.ID, &inspectedData); err != nil {
+		if _, rmErr := u.cli().ContainerRemove(ctx, newContainer.ID, client.ContainerRemoveOptions{Force: true}); rmErr != nil {
+			log.Warn().Err(rmErr).Msg("failed to clean up the replacement container")
+		}
+		return u.containerRollbackToOldContainer(ctx, oldContainer.ID, containerName, err)
+	}
+
+	// healthy: drop the old container and take over its name
+	if _, err := u.cli().ContainerRemove(ctx, oldContainer.ID, client.ContainerRemoveOptions{Force: true}); err != nil {
+		log.Warn().Err(err).Msgf("failed to remove old container %s", containerName)
+	}
+	if _, err := u.cli().ContainerRename(ctx, newContainer.ID, client.ContainerRenameOptions{NewName: containerName}); err != nil {
+		log.Warn().Err(err).Msgf("failed to rename the new container to %s", containerName)
+	}
+
+	log.Info().Msgf("Successfully updated container %s", containerName)
+	return nil
 }
 
 func (u *Service) containerRollbackToOldContainer(ctx context.Context, oldContainerID, containerName string, originalErr error) error {
@@ -385,29 +452,38 @@ func (u *Service) containerRollbackToOldContainer(ctx context.Context, oldContai
 	return fmt.Errorf("update failed, rolled back to previous version: %w", originalErr)
 }
 
+// containerCreate creates a new container carrying the old one's whole
+// configuration (config, host config, network endpoints) on a new image.
 func (u *Service) containerCreate(
 	ctx context.Context,
 	imageTag, containerName string,
 	inspectedData container.InspectResponse,
-) (container.CreateResponse, error) {
-	//// Create a new container with the same configuration but the new image
-	//// The inspected config has the old image name, so we update it.
-	//log.Debug().Msgf("Creating new container %s with updated image...", containerName)
-	//inspectedData.Config.Image = imageTag
-	//newContainer, err := s.Daemon.ContainerCreate(ctx,
-	//	inspectedData.Config,
-	//	inspectedData.HostConfig,
-	//	&network.NetworkingConfig{
-	//		EndpointsConfig: inspectedData.NetworkSettings.Networks,
-	//	},
-	//	nil,
-	//	containerName,
-	//)
-	//if err != nil {
-	//	return container.CreateResponse{}, fmt.Errorf("failed to create new container for %s: %w", containerName, err)
-	//}
-	//return newContainer, nil
-	return container.CreateResponse{}, fmt.Errorf("unimplemented container create")
+) (client.ContainerCreateResult, error) {
+	cfg := inspectedData.Config
+	if cfg == nil {
+		cfg = &container.Config{}
+	}
+	// the inspected config still names the old image
+	newCfg := *cfg
+	newCfg.Image = imageTag
+
+	var netConfig *network.NetworkingConfig
+	if inspectedData.NetworkSettings != nil {
+		netConfig = &network.NetworkingConfig{
+			EndpointsConfig: inspectedData.NetworkSettings.Networks,
+		}
+	}
+
+	created, err := u.cli().ContainerCreate(ctx, client.ContainerCreateOptions{
+		Name:             containerName,
+		Config:           &newCfg,
+		HostConfig:       inspectedData.HostConfig,
+		NetworkingConfig: netConfig,
+	})
+	if err != nil {
+		return client.ContainerCreateResult{}, fmt.Errorf("failed to create new container for %s: %w", containerName, err)
+	}
+	return created, nil
 }
 
 func (u *Service) ContainerHealthCheck(containerID string, c *container.InspectResponse) error {

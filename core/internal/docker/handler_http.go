@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	contSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/debug"
 	hostMid "github.com/RA341/dockman/internal/host/middleware"
 	fu "github.com/RA341/dockman/pkg/fileutil"
@@ -34,8 +35,42 @@ func (h *HandlerHttp) register() http.Handler {
 	subMux := http.NewServeMux()
 	subMux.HandleFunc("GET /exec/{contId}", h.containerExec)
 	subMux.HandleFunc("GET /logs/{contId}", h.containerLogs)
+	subMux.HandleFunc("GET /shell", h.hostShell)
+	subMux.HandleFunc("POST /update/dockman", h.updateDockman)
 
 	return subMux
+}
+
+// updateDockman triggers a manual self-update of the Dockman container on the
+// local host. It launches a detached helper that recreates Dockman with the
+// latest image; see SelfUpdate.
+func (h *HandlerHttp) updateDockman(w http.ResponseWriter, r *http.Request) {
+	host, err := hostMid.GetHost(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if host != contSrv.LocalClient {
+		http.Error(w, "self-update is only supported on the local host", http.StatusBadRequest)
+		return
+	}
+
+	dkSrv, err := h.srv(host)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error getting docker service: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Detached context: the update must finish even if the client disconnects
+	// (Dockman is about to restart anyway).
+	if err = SelfUpdate(context.Background(), dkSrv); err != nil {
+		log.Error().Err(err).Msg("dockman self-update failed")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = w.Write([]byte("Dockman update started; it will restart shortly."))
 }
 
 func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
@@ -85,13 +120,16 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		log.Debug().Msg("Attached to exec process")
 	}
 	defer func(resp *client.HijackedResponse) {
-		// IMPORTANT: use CloseWrite since it stops the internal process
-		// instead of Close which keeps it open
+		// CloseWrite sends EOF to the process stdin so a well-behaved program
+		// exits on its own. Close then tears down the hijacked connection so the
+		// reader goroutine below always unblocks: a process that ignores stdin
+		// EOF would otherwise leave resp.Reader.Read blocked forever, leaking the
+		// goroutine and the hijacked connection.
 		log.Debug().Err(err).Msg("closing con")
-		err = resp.CloseWrite()
-		if err != nil {
-			log.Warn().Err(err).Msg("error occurred while closing connection")
+		if cerr := resp.CloseWrite(); cerr != nil {
+			log.Warn().Err(cerr).Msg("error occurred while closing connection")
 		}
+		resp.Close()
 	}(&resp)
 
 	wsu.WInf(ws, "Connected to Container")
@@ -169,14 +207,20 @@ func (h *HandlerHttp) containerLogs(w http.ResponseWriter, r *http.Request) {
 
 	writer := wsu.NewWsWriter(ws)
 	go func() {
+		var copyErr error
 		if tty {
 			// tty streams dont need docker demultiplexing
-			_, err = io.Copy(writer, logsReader)
+			_, copyErr = io.Copy(writer, logsReader)
 		} else {
 			// docker multiplexed stream
-			_, err = stdcopy.StdCopy(writer, writer, logsReader)
+			_, copyErr = stdcopy.StdCopy(writer, writer, logsReader)
 		}
-		log.Debug().Err(err).Str("cont", contId).Msg("closing logs writer")
+		log.Debug().Err(copyErr).Str("cont", contId).Msg("closing logs writer")
+		// The log stream can end before the client disconnects (e.g. the
+		// container stops). Close the socket so the ws.ReadMessage loop below
+		// unblocks; otherwise this handler goroutine leaks, pinning the socket
+		// buffers and the moby follow connection until the browser tab closes.
+		_ = ws.Close()
 	}()
 
 	for {

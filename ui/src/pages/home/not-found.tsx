@@ -16,7 +16,9 @@ const NotFoundPage = () => {
                     Page Not Found
                 </Typography>
 
-                <Typography variant="h6" color="text.secondary">
+                <Typography variant="h6" sx={{
+                    color: "text.secondary"
+                }}>
                     Page not in the sudoers file. This incident will be reported.
                 </Typography>
 
@@ -29,7 +31,7 @@ const NotFoundPage = () => {
                 </Button>
             </Stack>
         </Box>
-    )
+    );
 }
 
 export default NotFoundPage

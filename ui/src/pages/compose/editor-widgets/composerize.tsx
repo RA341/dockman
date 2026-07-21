@@ -47,10 +47,17 @@ const ComposerizeWidget = () => {
             {/* Header Section */}
             <Box sx={{mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
                 <Box>
-                    <Typography variant="h4" fontWeight="800" sx={{letterSpacing: '-0.5px'}}>
+                    <Typography
+                        variant="h4"
+                        sx={{
+                            fontWeight: "800",
+                            letterSpacing: '-0.5px'
+                        }}>
                         Composerize
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                    }}>
                         Turn <code style={{color: '#d32f2f'}}>docker run</code> commands into YAML configuration
                     </Typography>
                 </Box>
@@ -73,7 +80,6 @@ const ComposerizeWidget = () => {
                     Powered by Composerize
                 </Link>
             </Box>
-
             <Stack spacing={3}>
                 {/* Input Section */}
                 <Box sx={{position: 'relative'}}>
@@ -86,8 +92,10 @@ const ComposerizeWidget = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         error={!!error}
-                        InputProps={{
-                            sx: {fontFamily: 'monospace', fontSize: '0.9rem'}
+                        slotProps={{
+                            input: {
+                                sx: {fontFamily: 'monospace', fontSize: '0.9rem'}
+                            }
                         }}
                     />
                     {input && (
@@ -108,8 +116,15 @@ const ComposerizeWidget = () => {
                 {/* Output Section */}
                 <Box>
                     <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1}}>
-                        <Typography variant="subtitle2" fontWeight="bold"
-                                    sx={{color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1}}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                                fontWeight: "bold",
+                                color: 'text.secondary',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1
+                            }}>
                             Docker Compose YAML
                         </Typography>
 
@@ -151,7 +166,12 @@ const ComposerizeWidget = () => {
 
                 <Divider sx={{mt: 2}}/>
 
-                <Typography variant="caption" textAlign="center" color="text.disabled">
+                <Typography
+                    variant="caption"
+                    sx={{
+                        textAlign: "center",
+                        color: "text.disabled"
+                    }}>
                     Standard conversion for Docker Compose v3 syntax.
                 </Typography>
             </Stack>

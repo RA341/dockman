@@ -152,7 +152,12 @@ const CleanerHistory = () => {
                         {history.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} sx={{py: 8, textAlign: 'center'}}>
-                                    <Typography variant="body2" color="text.disabled" sx={{fontStyle: 'italic'}}>
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color: "text.disabled",
+                                            fontStyle: 'italic'
+                                        }}>
                                         No maintenance logs found
                                     </Typography>
                                 </TableCell>
@@ -182,7 +187,9 @@ const HeaderCell = ({label, icon}: { label: string, icon: React.ReactNode }) => 
         py: 1.5,
         zIndex: 2
     }}>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{
+            alignItems: "center"
+        }}>
             <Box sx={{color: 'text.disabled', display: 'flex'}}>
                 {React.cloneElement(icon as React.ReactElement)}
             </Box>

@@ -14,7 +14,7 @@ import {
 import {
     ChevronRight,
     Close,
-    DeleteOutline,
+    DeleteOutlined,
     Done,
     EditOutlined,
     Folder as FolderIcon,
@@ -48,7 +48,7 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
         if (err) showError(err);
         else setAliases(val?.aliases || []);
         setLoading(false);
-    }, [hostname]);
+    }, [hostManager, hostname, showError]);
 
     useEffect(() => {
         fetchAliases().then();
@@ -102,7 +102,6 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
     return (
         <Stack spacing={2} sx={{mt: 1}}>
             <SectionHeader icon={<FolderSpecialOutlined/>} title="Manage Path Aliases"/>
-
             <Paper variant="outlined" sx={{p: 2, borderStyle: 'dashed'}}>
                 <Typography variant="caption" sx={{fontWeight: 700, mb: 1, display: 'block', color: 'text.secondary'}}>
                     ADD NEW ALIAS
@@ -153,16 +152,20 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
                     </Button>
                 </Stack>
             </Paper>
-
             <Divider sx={{my: 1}}/>
-
             {/* LIST */}
             <Stack spacing={1}>
                 {loading &&
                     <Box sx={{display: 'flex', justifyContent: 'center', py: 2}}><CircularProgress size={24}/></Box>}
                 {!loading && aliases.length === 0 && (
-                    <Typography variant="body2" color="text.disabled"
-                                sx={{textAlign: 'center', py: 4, fontStyle: 'italic'}}>
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: "text.disabled",
+                            textAlign: 'center',
+                            py: 4,
+                            fontStyle: 'italic'
+                        }}>
                         No aliases configured for this node.
                     </Typography>
                 )}
@@ -176,7 +179,9 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
                             borderColor: isEditing ? 'primary.main' : 'divider'
                         }}>
                             {isEditing ? (
-                                <Stack direction="row" spacing={1} alignItems="center">
+                                <Stack direction="row" spacing={1} sx={{
+                                    alignItems: "center"
+                                }}>
                                     <TextField
                                         size="small" value={editData.alias}
                                         onChange={e => setEditData({...editData, alias: e.target.value})}
@@ -208,7 +213,9 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
                                     <IconButton onClick={() => setEditingId(null)} size="small"><Close/></IconButton>
                                 </Stack>
                             ) : (
-                                <Stack direction="row" spacing={1} alignItems="center">
+                                <Stack direction="row" spacing={1} sx={{
+                                    alignItems: "center"
+                                }}>
                                     <Typography variant="subtitle2" sx={{
                                         fontWeight: 700,
                                         minWidth: 80,
@@ -230,14 +237,13 @@ function HostAliasManager({hostname, hostId}: { hostname: string, hostId: number
                                         setEditData({alias: a.alias, path: a.fullpath});
                                     }}><EditOutlined fontSize="small"/></IconButton>
                                     <IconButton size="small" color="error"
-                                                onClick={() => handleDelete(a.alias)}><DeleteOutline fontSize="small"/></IconButton>
+                                                onClick={() => handleDelete(a.alias)}><DeleteOutlined fontSize="small"/></IconButton>
                                 </Stack>
                             )}
                         </Paper>
                     );
                 })}
             </Stack>
-
             {/* SHARED FOLDER PICKER */}
             <FolderPickerDialog
                 open={pickerTarget !== null}

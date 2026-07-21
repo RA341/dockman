@@ -55,7 +55,12 @@ export const InvalidAlias = () => {
                             {isEmpty ? "No Aliases found" : "Invalid Directory Alias"}
                         </Typography>
 
-                        <Typography variant="body1" color="text.secondary" sx={{mb: 3}}>
+                        <Typography
+                            variant="body1"
+                            sx={{
+                                color: "text.secondary",
+                                mb: 3
+                            }}>
                             {isEmpty ? (
                                 "There are no aliases registered on this host. Dockman requires an alias to manage files."
                             ) : (
@@ -101,7 +106,9 @@ export const InvalidAlias = () => {
                                 >
                                     {aliases.map((f) => (
                                         <MenuItem key={f.alias} value={f.alias}>
-                                            <Stack direction="row" spacing={1} alignItems="center">
+                                            <Stack direction="row" spacing={1} sx={{
+                                                alignItems: "center"
+                                            }}>
                                                 <FolderIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
                                                 <Typography variant="body2" sx={{fontWeight: 600}}>
                                                     {f.alias}
@@ -115,10 +122,9 @@ export const InvalidAlias = () => {
                     </Paper>
                 </Container>
             </Box>
-
             <AliasDialog host={host}/>
         </>
-    )
+    );
 }
 
 function CoreComposeEmpty() {
@@ -157,12 +163,21 @@ function CoreComposeEmpty() {
                 height: '100%',
             }}
         >
-            <Stack spacing={2} alignItems="center" sx={{textAlign: 'center'}}>
+            <Stack
+                spacing={2}
+                sx={{
+                    alignItems: "center",
+                    textAlign: 'center'
+                }}>
                 <DescriptionOutlined sx={{fontSize: '5rem', color: 'grey.400'}}/>
-                <Typography variant="h5" component="h1" color="text.secondary">
+                <Typography variant="h5" component="h1" sx={{
+                    color: "text.secondary"
+                }}>
                     {selected.title}
                 </Typography>
-                <Typography variant="body1" color="text.disabled">
+                <Typography variant="body1" sx={{
+                    color: "text.disabled"
+                }}>
                     {selected.subtitle}
                 </Typography>
             </Stack>

@@ -1,35 +1,25 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# The production Dockerfile only needs the application sources and entrypoint.
+# Start by excluding everything so local metadata, secrets and generated files
+# can never leak into the remote BuildKit context.
+**
 
-/**/node_modules
-/**/dist
-/**/dist-ssr
-*.local
+!.dockerignore
+!pkg/
+!pkg/docker/
+!pkg/docker/Dockerfile
+!pkg/docker/docker-entrypoint.sh
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+!core/
+!core/**
 
-/**/.idea
-/**/bin
-/**/.dockman.yaml
-compose/*
-/**/test-compose
-/dock/
-dock/*
-/backend/**/*compose.yml
-install/stacks/
-/backend/**/gitTest
+!ui/
+!ui/**
+
+# Never reuse host-generated dependency or build output trees.
+core/**/.build/
+core/**/bin/
+ui/node_modules/
+ui/dist/
+ui/release/
+**/*.log
+**/.DS_Store

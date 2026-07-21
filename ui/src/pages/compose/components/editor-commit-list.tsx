@@ -46,7 +46,7 @@ export function EditorCommitList({selectedFile, selectedCommit, chooseCommit}: C
             setCommits(val?.commits ?? [])
         }
         setLoading(false)
-    }, [gitClient, selectedFile])
+    }, [gitClient, selectedFile, showError])
 
     useEffect(() => {
         fetchCommitCallback().then()
@@ -104,9 +104,11 @@ export function EditorCommitList({selectedFile, selectedCommit, chooseCommit}: C
     if (Object.keys(groupedCommits).length === 0) {
         return (
             <Box sx={{p: 2, textAlign: 'center'}}>
-                <Typography color="text.secondary">No commit history found for this file.</Typography>
+                <Typography sx={{
+                    color: "text.secondary"
+                }}>No commit history found for this file.</Typography>
             </Box>
-        )
+        );
     }
 
     return (

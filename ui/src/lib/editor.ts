@@ -2,11 +2,28 @@ import type {TabDetails} from "../context/tab-context.tsx";
 import {useCallback} from "react";
 import {useLocation} from "react-router-dom";
 import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
+import type {DockmanYaml} from "../gen/dockyaml/v1/dockyaml_pb.ts";
 
 export const COMPOSE_EXTENSIONS = ['compose.yaml', 'compose.yml']
 
 export function isComposeFile(filename: string): boolean {
     return COMPOSE_EXTENSIONS.some(ext => filename.endsWith(ext))
+}
+
+// Stack tab indexes by the names accepted in dockman.yml compose.defaultTab.
+const STACK_TAB_INDEXES: Record<string, number> = {
+    editor: 0,
+    deploy: 1,
+    stats: 2,
+}
+
+// Resolves the tab a file should open on when none is selected yet, per the
+// compose.defaultTab setting in dockman.yml. Non-compose files only have an
+// editor tab; unknown values fall back to the editor.
+export function stackDefaultTab(dockYaml: DockmanYaml | null | undefined, filename?: string): number {
+    if (!filename || !isComposeFile(filename)) return 0
+    const name = dockYaml?.composePage?.defaultTab?.trim().toLowerCase() ?? ''
+    return STACK_TAB_INDEXES[name] ?? 0
 }
 
 export const formatBytes = (bytes: number | bigint, decimals = 2) => {
@@ -48,6 +65,12 @@ export const useEditorUrl = () => {
         if (track === 0) {
             if (filename) {
                 path = `/${host}/files/${filename}`;
+                if (tabDetail === undefined) {
+                    // Opening a file without an explicit tab: drop the tab
+                    // inherited from the previous file so the view falls back
+                    // to the dockman.yml compose.defaultTab setting.
+                    query.delete(tabKey);
+                }
             } else if (!pathname.includes("/files/")) {
                 path = `/${host}/files/${prevAlias || "compose"}`;
             }

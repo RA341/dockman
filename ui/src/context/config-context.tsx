@@ -25,7 +25,7 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
         } else {
             setDockyaml(val?.dock ?? null)
         }
-    }, [dockyamlClient])
+    }, [dockyamlClient, showWarning])
 
     const fetchConfig = useCallback(async () => {
         // console.log("Fetching user config...")
@@ -41,7 +41,7 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
         await fetchDockYaml()
 
         setIsLoading(false)
-    }, [client, fetchDockYaml])
+    }, [client, fetchDockYaml, showError])
 
     const updateSettings = useCallback(
         async (conf: Config, updaterConfig: UpdateSettingsOption = {}) => {
@@ -53,7 +53,7 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
             }
 
             await fetchConfig()
-        }, [client, fetchConfig]
+        }, [client, fetchConfig, showError, showSuccess]
     )
 
     useEffect(() => {

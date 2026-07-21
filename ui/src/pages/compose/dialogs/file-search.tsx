@@ -67,6 +67,7 @@ function FileSearch() {
     const [activeIndex, setActiveIndex] = useState<number>(-1)
 
     const debouncedSearchQuery = useDebounce(searchQuery, 200)
+    const debouncedSearchQueryRef = useRef(debouncedSearchQuery)
     const ws = useRef<WebSocket | null>(null)
     const listRef = useRef<HTMLUListElement>(null)
 
@@ -79,7 +80,7 @@ function FileSearch() {
             socket = new WebSocket(getWSUrl(`${base}/file/search/${activeAlias}`))
             socket.onopen = () => {
                 setError(null)
-                if (debouncedSearchQuery) socket?.send(debouncedSearchQuery)
+                if (debouncedSearchQueryRef.current) socket?.send(debouncedSearchQueryRef.current)
             }
             socket.onmessage = (ev) => {
                 const data = JSON.parse(ev.data)
@@ -98,6 +99,7 @@ function FileSearch() {
     }, [isOpen, activeAlias, host])
 
     useEffect(() => {
+        debouncedSearchQueryRef.current = debouncedSearchQuery
         if (ws.current?.readyState === WebSocket.OPEN) {
             ws.current.send(debouncedSearchQuery)
         }
@@ -182,7 +184,6 @@ function FileSearch() {
                     }}
                 />
             </Box>
-
             {/* Results List */}
             <DialogContent sx={{p: 0, ...scrollbarStyles}}>
                 <List disablePadding ref={listRef}>
@@ -209,7 +210,13 @@ function FileSearch() {
                                     '&:hover': {bgcolor: 'action.hover'},
                                 }}
                             >
-                                <Stack direction="row" spacing={2} alignItems="center" sx={{width: '100%'}}>
+                                <Stack
+                                    direction="row"
+                                    spacing={2}
+                                    sx={{
+                                        alignItems: "center",
+                                        width: '100%'
+                                    }}>
                                     <InsertDriveFileOutlined sx={{fontSize: 18, color: 'text.disabled'}}/>
                                     <Box sx={{flexGrow: 1, minWidth: 0}}>
                                         <HighlightedText text={result.Value} indices={result.Indexes}/>
@@ -223,14 +230,15 @@ function FileSearch() {
                         ))
                     ) : (
                         <Box sx={{p: 6, textAlign: 'center'}}>
-                            <Typography variant="body2" color="text.disabled">
+                            <Typography variant="body2" sx={{
+                                color: "text.disabled"
+                            }}>
                                 {searchQuery ? "No matching files found" : "Start typing to find files..."}
                             </Typography>
                         </Box>
                     )}
                 </List>
             </DialogContent>
-
             {/* Footer / Shortcuts */}
             <Box sx={{
                 p: 1.5,
@@ -244,13 +252,17 @@ function FileSearch() {
                 <ShortcutHint label="Close" keys={["esc"]}/>
             </Box>
         </Dialog>
-    )
+    );
 }
 
 function ShortcutHint({label, keys}: { label: string, keys: string[] }) {
     return (
-        <Stack direction="row" spacing={0.5} alignItems="center">
-            <Typography variant="caption" color="text.disabled">{label}</Typography>
+        <Stack direction="row" spacing={0.5} sx={{
+            alignItems: "center"
+        }}>
+            <Typography variant="caption" sx={{
+                color: "text.disabled"
+            }}>{label}</Typography>
             {keys.map(k => (
                 <Typography key={k} variant="caption" sx={{
                     bgcolor: 'background.paper',
@@ -265,7 +277,7 @@ function ShortcutHint({label, keys}: { label: string, keys: string[] }) {
                 </Typography>
             ))}
         </Stack>
-    )
+    );
 }
 
 function useDebounce<T>(value: T, delay: number): T {

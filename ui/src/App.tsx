@@ -14,9 +14,11 @@ import {
     Typography
 } from '@mui/material';
 import {SnackbarProvider} from "./context/snackbar-context.tsx";
+import {UploadProgressToast} from "./components/upload-progress-toast.tsx";
 import {BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams} from "react-router-dom";
 import {AuthProvider} from "./context/auth-context.tsx";
-import React from 'react';
+import React, {useEffect, useState} from 'react';
+import {useConfig} from './hooks/config.ts';
 import {useAuth} from "./hooks/auth.ts";
 import {AuthPage} from './pages/auth/auth-page.tsx';
 import {SettingsPage} from "./pages/settings/settings-page.tsx";
@@ -29,6 +31,7 @@ import ContainersPage from "./pages/containers/containers.tsx";
 import ImagesPage from "./pages/images/images.tsx";
 import ImageInspectPage from "./pages/images/inspect.tsx";
 import VolumesPage from "./pages/volumes/volumes.tsx";
+import VolumesInspect from "./pages/volumes/volumes-inspect.tsx";
 import NetworksPage from "./pages/networks/networks.tsx";
 import NetworksInspect from "./pages/networks/networks-inspect.tsx";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
@@ -36,6 +39,7 @@ import FileIndexRedirect, {ComposePage, FilesLayout} from "./pages/compose/compo
 import ContainerInspectPage from "./pages/containers/inspect.tsx";
 import scrollbarStyles from "./components/scrollbar-style.tsx";
 import StatsPage from "./pages/stats/stats-page.tsx";
+import MonitorPage from "./pages/monitor/monitor-page.tsx";
 import {useHostStore} from "./pages/compose/state/files.ts";
 import {enableMapSet} from "immer";
 import {SettingsOutlined as SettingsIcon} from '@mui/icons-material';
@@ -48,6 +52,7 @@ export function App() {
         <ThemeProvider theme={darkTheme}>
             <CssBaseline/>
             <SnackbarProvider>
+                <UploadProgressToast/>
                 <AuthProvider>
                     <BrowserRouter>
                         <Routes>
@@ -58,13 +63,17 @@ export function App() {
                                     <Route index element={<HomeIndexRedirect/>}/>
 
                                     <Route path=":host">
-                                        <Route index element={<Navigate to="files" replace/>}/>
+                                        <Route index element={<HostDefaultViewRedirect/>}/>
 
                                         <Route path="test" element={<TestPage/>}/>
 
                                         <Route path="files" element={<FilesLayout/>}>
                                             <Route index element={<FileIndexRedirect/>}/>
                                             <Route path="*" element={<ComposePage/>}/>
+                                        </Route>
+
+                                        <Route path="monitor">
+                                            <Route index element={<MonitorPage/>}/>
                                         </Route>
 
                                         <Route path="stats">
@@ -83,6 +92,7 @@ export function App() {
 
                                         <Route path="volumes">
                                             <Route index element={<VolumesPage/>}/>
+                                            <Route path="inspect/:id" element={<VolumesInspect/>}/>
                                         </Route>
 
                                         <Route path="networks">
@@ -113,6 +123,27 @@ function HomeIndexRedirect() {
     const {availableHosts} = useHostManager()
     const at = availableHosts.at(0) ?? "";
     return <Navigate to={`/${at}`} replace/>;
+}
+
+const VALID_DEFAULT_VIEWS = ['files', 'monitor', 'stats', 'containers', 'images', 'volumes', 'networks', 'cleaner'];
+
+// landing view for a host, per dockman.yml defaultView; waits briefly for
+// the config so the preference applies on a cold load, then falls back to
+// files if it never arrives
+function HostDefaultViewRedirect() {
+    const {dockYaml} = useConfig();
+    const [waited, setWaited] = useState(false);
+
+    useEffect(() => {
+        const id = setTimeout(() => setWaited(true), 1500);
+        return () => clearTimeout(id);
+    }, []);
+
+    if (!dockYaml && !waited) return null;
+
+    const view = (dockYaml?.defaultView ?? '').trim().toLowerCase();
+    const target = VALID_DEFAULT_VIEWS.includes(view) ? view : 'files';
+    return <Navigate to={target} replace/>;
 }
 
 
@@ -163,11 +194,17 @@ function HostGuard() {
                 height: '100vh',
             }}>
                 <CircularProgress size={40} thickness={5}/>
-                <Typography variant="body2" sx={{mt: 2, fontWeight: 700}} color="text.secondary">
+                <Typography
+                    variant="body2"
+                    sx={{
+                        color: "text.secondary",
+                        mt: 2,
+                        fontWeight: 700
+                    }}>
                     Loading hosts...
                 </Typography>
             </Box>
-        )
+        );
     }
 
     const emptyHostList = !availableHosts || availableHosts.length === 0;
@@ -234,7 +271,12 @@ const EmptyHost = ({hostname}: {
 
                     {isInvalid ? (
                         <Box sx={{mb: 3}}>
-                            <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    color: "text.secondary",
+                                    mb: 2
+                                }}>
                                 The hostname provided does not match any configured hosts.
                             </Typography>
                             <Typography
@@ -254,7 +296,13 @@ const EmptyHost = ({hostname}: {
                             </Typography>
                         </Box>
                     ) : (
-                        <Typography variant="body2" color="text.secondary" sx={{mb: 4, maxWidth: 350}}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: "text.secondary",
+                                mb: 4,
+                                maxWidth: 350
+                            }}>
                             It looks like you haven't added any Docker Hosts yet.
                             Configure your first node to start managing containers.
                         </Typography>
@@ -301,7 +349,9 @@ const EmptyHost = ({hostname}: {
                         >
                             {availableHosts.map((f) => (
                                 <MenuItem key={f} value={f}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
+                                    <Stack direction="row" spacing={1} sx={{
+                                        alignItems: "center"
+                                    }}>
                                         <FolderIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
                                         <Typography variant="body2" sx={{fontWeight: 600}}>
                                             {f}
@@ -315,9 +365,12 @@ const EmptyHost = ({hostname}: {
                     {/* Footer Link */}
                     <Typography
                         variant="caption"
-                        color="text.disabled"
-                        sx={{mt: 4, display: 'block', textAlign: 'center'}}
-                    >
+                        sx={{
+                            color: "text.disabled",
+                            mt: 4,
+                            display: 'block',
+                            textAlign: 'center'
+                        }}>
                         Need help? Check the <MuiLink href="https://dockman.radn.dev/" target="_blank"
                                                       color="inherit"
                                                       sx={{fontWeight: 700}}>Documentation</MuiLink>
@@ -362,7 +415,17 @@ const darkTheme = createTheme({
                 body: {
                     height: '100%',
                     overflow: 'hidden',
+                    // Disable selecting UI chrome text (labels, buttons, table cells…);
+                    // it reads as a native app and avoids accidental highlights.
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
                     ...scrollbarStyles,
+                },
+                // …but keep selection where content actually matters: form fields,
+                // the code editor (Monaco), the terminal/logs (xterm) and code blocks.
+                'input, textarea, [contenteditable="true"], pre, code, .monaco-editor, .monaco-editor *, .xterm, .xterm *': {
+                    userSelect: 'text',
+                    WebkitUserSelect: 'text',
                 },
                 '*': scrollbarStyles,
             },

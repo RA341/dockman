@@ -11,7 +11,7 @@ import {
     MenuItem, Tooltip
 } from "@mui/material";
 import {useLocation, useNavigate} from 'react-router-dom'
-import React, {type MouseEvent, useEffect, useState} from 'react'
+import React, {type MouseEvent, useCallback, useEffect, useRef, useState} from 'react'
 import {ExpandLess, ExpandMore, Folder} from '@mui/icons-material'
 import {Link as RouterLink} from "react-router";
 import FileIcon, {DockerFolderIcon} from "./file-icon.tsx";
@@ -24,7 +24,7 @@ import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useFileDelete} from "../dialogs/file-delete.tsx";
 import {useFileRename} from "../dialogs/file-rename.tsx";
-import {useAliasStore, useHostStore, useOpenFiles} from "../state/files.ts";
+import {useAliasStore, useCompactMode, useFileDrag, useHostStore, useOpenFiles} from "../state/files.ts";
 import {useConfig} from "../../../hooks/config.ts";
 import {useComposeFileState} from "../state/status.ts";
 import {getContextKey} from "../../../context/tab-context.tsx";
@@ -35,10 +35,34 @@ import {stripQueryParams} from "../../../lib/strings.ts";
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
     const {renameFile, uploadFilesFromPC} = useFiles();
+    const setDragging = useFileDrag(state => state.setDragging);
 
     const handleDragStart = (e: React.DragEvent) => {
         e.dataTransfer.setData("sourcePath", entry.filename);
         e.dataTransfer.effectAllowed = "move";
+
+        // Use a small, controlled drag image rather than the browser's snapshot
+        // of the row. In compact mode the row is very short, which made the
+        // native ghost render as a too-wide / overflowing block.
+        const label = entry.filename.split('/').pop() || entry.filename;
+        const ghost = document.createElement('div');
+        ghost.textContent = label;
+        ghost.style.cssText =
+            'position:fixed;top:-1000px;left:-1000px;padding:4px 10px;' +
+            'background:#2b2b2b;color:#fff;border:1px solid rgba(255,255,255,0.15);' +
+            'border-radius:4px;font:13px sans-serif;white-space:nowrap;pointer-events:none;';
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 12, 12);
+        // Remove once the browser has captured the drag image.
+        setTimeout(() => ghost.remove(), 0);
+
+        // Signal a drag is in progress so the transient "drop to root" banner appears.
+        setDragging(true);
+    };
+
+    const handleDragEnd = () => {
+        // Always clear the flag when the drag ends (dropped or cancelled).
+        setDragging(false);
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -89,6 +113,7 @@ export const useFileDnD = (entry: FsEntry) => {
         dndProps: {
             draggable: true,
             onDragStart: handleDragStart,
+            onDragEnd: handleDragEnd,
             onDragOver: handleDragOver,
             onDragLeave: handleDragLeave,
             onDrop: handleDrop,
@@ -103,21 +128,24 @@ export const FileItem = ({entry, index}: { entry: FsEntry; index: number }) => {
                 <FolderItemDisplay
                     entry={entry}
                     depthIndex={[index]}
+                    depth={0}
                 /> :
-                <FileItemDisplay entry={entry}/>
+                <FileItemDisplay entry={entry} depth={0}/>
             }
         </>
     )
 };
 
-const FolderItemDisplay = ({entry, depthIndex}: {
+const FolderItemDisplay = ({entry, depthIndex, depth}: {
     entry: FsEntry,
     depthIndex: number[],
+    depth: number,
 }) => {
     const openFiles = useOpenFiles(state => state.openFiles)
     const toggle = useOpenFiles(state => state.toggle)
     const {listFiles} = useFiles()
     const {dockYaml} = useConfig()
+    const compact = useCompactMode(state => state.enabled)
     const editorUrl = useEditorUrl() // Hook to get editor route helper
 
     const useComposeFolder = (dockYaml?.useComposeFolders ?? false)
@@ -139,32 +167,43 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const closeComposeStatus = useComposeFileState(state => state.delete)
 
-    const handleToggle = (_e: React.MouseEvent) => {
+    const handleToggle = () => {
         // If it's a link, we want the navigation to happen,
         // but we ALSO want to toggle the folder visibility.
         toggle(entry.filename);
     }
 
     useEffect(() => {
-        if (!folderOpen && !isComposeFolder) {
-            closeComposeStatus(entry.filename)
+        if (!folderOpen) {
+            // Stop polling files nested inside the collapsed folder, but keep the
+            // folder's own stack status so its dot stays visible while collapsed.
+            closeComposeStatus(entry.filename, entry.isComposeFolder)
         }
-    }, [folderOpen]);
+    }, [closeComposeStatus, entry.filename, entry.isComposeFolder, folderOpen]);
 
     const [isFetchingMore, setIsFetchingMore] = useState(false)
+    const fetchingMore = useRef(false)
+    const depthPath = depthIndex.join(',')
 
-    const fetchMore = async () => {
+    const fetchMore = useCallback(async () => {
+        if (entry.isFetched || fetchingMore.current) return
+
+        fetchingMore.current = true
         setIsFetchingMore(true)
-        if (entry.isFetched) return
-        await listFiles(name, depthIndex)
-        setIsFetchingMore(false)
-    }
+        try {
+            const currentDepthIndex = depthPath.split(',').map(Number)
+            await listFiles(name, currentDepthIndex)
+        } finally {
+            fetchingMore.current = false
+            setIsFetchingMore(false)
+        }
+    }, [depthPath, entry.isFetched, listFiles, name])
 
     useEffect(() => {
-        if (folderOpen && !entry.isFetched && !isFetchingMore) {
-            fetchMore().then()
+        if (folderOpen && !entry.isFetched) {
+            void fetchMore()
         }
-    }, [folderOpen, entry.isFetched])
+    }, [entry.isFetched, fetchMore, folderOpen])
 
     const {contextMenu, closeCtxMenu, contextActions, handleContextMenu} = useFileMenuCtx(entry)
 
@@ -174,10 +213,13 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const fileStatus = useComposeFileState(state => state.openFiles[getContextKey()]?.[entry.isComposeFolder])
     useEffect(() => {
-        if (isComposeFolder) {
+        // Track the stack status for any folder that contains a compose file,
+        // regardless of the useComposeFolders display mode, so the status dot is
+        // shown even while the folder is collapsed.
+        if (entry.isComposeFolder) {
             trackComposeStatus(entry.isComposeFolder);
         }
-    }, [isComposeFolder, entry.isComposeFolder]);
+    }, [entry.isComposeFolder, trackComposeStatus]);
 
     const navigate = useNavigate()
     const createFileUrl = useEditorUrl()
@@ -214,7 +256,11 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                 onClick={handleToggle}
 
                 sx={{
-                    py: 1.25,
+                    py: compact ? 0.25 : 1.25,
+                    pl: 2 + depth * 4,
+                    minWidth: '100%',
+                    width: 'max-content',
+                    whiteSpace: 'nowrap',
                     backgroundColor: isDragOver ? 'action.hover' : 'transparent',
                     outline: isDragOver ? '1px dashed primary.main' : 'none',
                     outlineOffset: '-2px',
@@ -230,13 +276,15 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                 </ListItemIcon>
 
                 <ListItemText
+                    sx={{flexGrow: 1, flexShrink: 0, minWidth: 'max-content'}}
                     primary={displayName}
                     secondary={isComposeFolder ? getEntryDisplayName(entry.isComposeFolder) : ""}
                     slotProps={{
                         primary: {
                             sx: {
                                 fontSize: '0.85rem',
-                                fontWeight: 400
+                                fontWeight: 400,
+                                whiteSpace: 'nowrap',
                             }
                         }
                     }}
@@ -261,9 +309,9 @@ const FolderItemDisplay = ({entry, depthIndex}: {
             </ListItemButton>
 
             <Collapse in={folderOpen} timeout={125} unmountOnExit>
-                <List disablePadding sx={{pl: 4}}>
+                <List disablePadding>
                     {!entry.isFetched && isFetchingMore ? (
-                        <Box sx={{pl: 2, py: 1}}>
+                        <Box sx={{pl: 2 + (depth + 1) * 4, py: 1}}>
                             <CircularProgress size={16}/>
                         </Box>
                     ) : (
@@ -274,8 +322,9 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                                     <FolderItemDisplay
                                         key={child.filename}
                                         entry={child}
-                                        depthIndex={[...depthIndex, index]}/> :
-                                    <FileItemDisplay key={child.filename} entry={child}/>
+                                        depthIndex={[...depthIndex, index]}
+                                        depth={depth + 1}/> :
+                                    <FileItemDisplay key={child.filename} entry={child} depth={depth + 1}/>
                             ))
                     )}
                 </List>
@@ -297,10 +346,11 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     )
 }
 
-const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
+const FileItemDisplay = ({entry, depth}: { entry: FsEntry, depth: number }) => {
     const filename = entry.filename
 
     const {isDragOver, dndProps} = useFileDnD(entry);
+    const compact = useCompactMode(state => state.enabled)
 
     const editorUrl = useEditorUrl()
     const filePath = editorUrl(filename)
@@ -311,7 +361,7 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
         if (isComposeFile(filename)) {
             trackComposeStatus(filename);
         }
-    }, [filename]);
+    }, [filename, trackComposeStatus]);
 
     const navigate = useNavigate()
     const createFileUrl = useEditorUrl()
@@ -338,6 +388,11 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
             <ListItemButton
                 {...dndProps}
                 sx={{
+                    py: compact ? 0.25 : undefined,
+                    pl: 2 + depth * 4,
+                    minWidth: '100%',
+                    width: 'max-content',
+                    whiteSpace: 'nowrap',
                     backgroundColor: isDragOver ? 'action.hover' : 'transparent',
                     borderLeft: isDragOver ? '3px solid primary.main' : '3px solid transparent',
                 }}
@@ -352,9 +407,10 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
                 </ListItemIcon>
 
                 <ListItemText
+                    sx={{flexGrow: 1, flexShrink: 0, minWidth: 'max-content'}}
                     primary={displayName}
                     slotProps={{
-                        primary: {sx: {fontSize: '0.85rem'}}
+                        primary: {sx: {fontSize: '0.85rem', whiteSpace: 'nowrap'}}
                     }}
                 />
 
@@ -502,16 +558,21 @@ const StatusIndicator = ({fileStatus}: { fileStatus: Status }) => {
 
     return ((fileStatus) &&
         <Tooltip
-            title={`${fileStatus.servicesUp} Up, ${fileStatus.servicesDown} Down, ${fileStatus.servicesHealthy} Healthy`}
+            title={`${fileStatus.servicesUp} running · ${fileStatus.servicesDown} failed · ${fileStatus.servicesHealthy} healthy`}
             arrow placement="right">
             <Box
                 sx={{
                     width: 8,
                     height: 8,
                     borderRadius: '50%',
-                    bgcolor: stackStatus.label ? stackStatus.color : 'transparent',
-                    border: stackStatus.label ? 'none' : `2px solid ${stackStatus.color}`,
-                    boxShadow: `0 0 0 2px ${stackStatus.color}22`,
+                    flexShrink: 0,
+                    boxSizing: 'border-box',
+                    // filled dot for active states, hollow ring for a stopped
+                    // stack so it reads clearly differently from a green dot.
+                    // borderColor (not the `border` shorthand) resolves the token.
+                    ...(stackStatus.filled
+                        ? {bgcolor: stackStatus.color}
+                        : {border: '2px solid', borderColor: stackStatus.color}),
                     ml: 1
                 }}
             />
@@ -522,14 +583,14 @@ const StatusIndicator = ({fileStatus}: { fileStatus: Status }) => {
 export default StatusIndicator;
 
 const getStatusTheme = (status: Status | undefined) => {
+    // Precedence: error > unhealthy > running > stopped. servicesDown carries the
+    // "in error" count (crashed / dead / restarting / exited non-zero).
     if (!status) {
-        return {color: 'text.disabled', label: ''};
+        return {color: 'grey.500', label: 'Stopped', filled: false};
     }
-
-    if (status.servicesUnHealthy > 0) return {color: 'error.main', label: 'Unhealthy'};
-    if (status.servicesDown > 0 && status.servicesUp > 0) return {color: 'warning.main', label: 'Partially Up'};
-    if (status.servicesDown > 0 && status.servicesUp === 0) return {color: 'error.light', label: 'Down'};
-    if (status.servicesHealthy > 0) return {color: 'success.main', label: 'Healthy'};
-    if (status.servicesUp > 0) return {color: 'success.light', label: 'Running'};
-    return {color: 'text.disabled', label: ''};
+    if (status.servicesDown > 0) return {color: 'error.main', label: 'Error', filled: true};
+    if (status.servicesUnHealthy > 0) return {color: 'warning.main', label: 'Unhealthy', filled: true};
+    if (status.servicesUp > 0) return {color: 'success.main', label: 'Running', filled: true};
+    // no running/failed/unhealthy container -> stack is stopped
+    return {color: 'grey.500', label: 'Stopped', filled: false};
 };
