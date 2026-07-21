@@ -90,6 +90,7 @@ func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]
 			Filename:  entry.fullpath,
 			IsDir:     entry.isDir,
 			IsFetched: true,
+			Pinned:    h.srv.IsPinned(hostname, entry.fullpath),
 			SubFiles: ToMap(entry.children, func(childEntry Entry) *v1.FsEntry {
 				hasComposeExt := strings.HasSuffix(childEntry.fullpath, "compose.yaml") ||
 					strings.HasSuffix(childEntry.fullpath, "compose.yml")
@@ -103,6 +104,7 @@ func (h *Handler) List(ctx context.Context, req *connect.Request[v1.ListRequest]
 					IsDir:    childEntry.isDir,
 					// max depth is 2 so indicate that it is unfetched
 					IsFetched: false,
+					Pinned:    h.srv.IsPinned(hostname, childEntry.fullpath),
 					SubFiles:  []*v1.FsEntry{},
 				}
 			}),

@@ -15,13 +15,17 @@ const EnvPrefix = "DOCKMAN"
 
 // AppConfig tags are parsed by processStruct
 type AppConfig struct {
-	Port           int    `config:"flag=port,env=PORT,default=8866,usage=Port to run the server on"`
-	AllowedOrigins string `config:"flag=origins,env=ORIGINS,default=*,usage=Allowed origins for the API (in CSV)"`
-	UIPath         string `config:"flag=ui,env=UI_PATH,default=dist,usage=Path to frontend files"`
-	LocalAddr      string `config:"flag=ma,env=MACHINE_ADDR,default=0.0.0.0,usage=Local machine IP address"`
-	ComposeRoot    string `config:"flag=cr,env=COMPOSE_ROOT,default=./compose,usage=Root directory for compose files"`
-	ConfigDir      string `config:"flag=conf,env=CONFIG,default=./config,usage=Directory to store dockman config"`
-	DockYaml       string `config:"flag=dyp,env=YAML_PATH,default=./config/dockyaml,usage=custom path for dockman.yml files"`
+	Port                  int    `config:"flag=port,env=PORT,default=8866,usage=Port to run the server on"`
+	AllowedOrigins        string `config:"flag=origins,env=ORIGINS,default=,usage=Extra allowed browser origins in CSV; same-origin is always allowed"`
+	HTTPMaxBodyMB         int    `config:"flag=httpMaxBodyMB,env=HTTP_MAX_BODY_MB,default=16,usage=Maximum request body size in MiB (0 disables the limit)"`
+	HTTPMaxUploadMB       int    `config:"flag=httpMaxUploadMB,env=HTTP_MAX_UPLOAD_MB,default=1024,usage=Maximum file upload size in MiB (0 disables the limit)"`
+	HTTPReadHeaderSeconds int    `config:"flag=httpReadHeaderTimeout,env=HTTP_READ_HEADER_TIMEOUT,default=10,usage=HTTP header read timeout in seconds"`
+	HTTPIdleSeconds       int    `config:"flag=httpIdleTimeout,env=HTTP_IDLE_TIMEOUT,default=120,usage=HTTP keep-alive idle timeout in seconds"`
+	UIPath                string `config:"flag=ui,env=UI_PATH,default=dist,usage=Path to frontend files"`
+	LocalAddr             string `config:"flag=ma,env=MACHINE_ADDR,default=0.0.0.0,usage=Local machine IP address"`
+	ComposeRoot           string `config:"flag=cr,env=COMPOSE_ROOT,default=./compose,usage=Root directory for compose files"`
+	ConfigDir             string `config:"flag=conf,env=CONFIG,default=./config,usage=Directory to store dockman config"`
+	DockYaml              string `config:"flag=dyp,env=YAML_PATH,default=./config/dockyaml,usage=custom path for dockman.yml files"`
 
 	Auth   auth.Config     `config:""` // empty tag to indicate to parse struct
 	Log    Logger          `config:""`
@@ -34,11 +38,13 @@ type AppConfig struct {
 }
 
 func (c *AppConfig) GetAllowedOrigins() []string {
-	elems := strings.Split(c.AllowedOrigins, ",")
-	for i := range elems {
-		elems[i] = strings.TrimSpace(elems[i])
+	var origins []string
+	for _, elem := range strings.Split(c.AllowedOrigins, ",") {
+		if origin := strings.TrimSpace(elem); origin != "" {
+			origins = append(origins, strings.TrimSuffix(origin, "/"))
+		}
 	}
-	return elems
+	return origins
 }
 
 func (c *AppConfig) GetDockmanWithMachineUrl() string {

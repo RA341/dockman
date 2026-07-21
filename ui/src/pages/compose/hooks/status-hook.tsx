@@ -15,19 +15,27 @@ interface UseSaveStatusReturn {
 export const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> = {
     typing: {
         color: "primary.main",
-        component: <Typography variant="button" color="primary.main">Typing</Typography>
+        component: <Typography variant="button" sx={{
+            color: "primary.main"
+        }}>Typing</Typography>
     },
     saving: {
         color: "info.main",
-        component: <Typography variant="button" color="info.main">Saving</Typography>
+        component: <Typography variant="button" sx={{
+            color: "info.main"
+        }}>Saving</Typography>
     },
     success: {
         color: "success.main",
-        component: <Typography variant="button" color="success.main">Saved</Typography>
+        component: <Typography variant="button" sx={{
+            color: "success.main"
+        }}>Saved</Typography>
     },
     error: {
         color: "error.main",
-        component: <Typography variant="button" color="error.main">Save Failed</Typography>
+        component: <Typography variant="button" sx={{
+            color: "error.main"
+        }}>Save Failed</Typography>
     },
     idle: {
         color: "primary.secondary",
@@ -37,10 +45,22 @@ export const indicatorMap: Record<SaveState, { color: string, component: ReactNo
 
 export function useSaveStatus(debounceMs: number = 500, filename: string): UseSaveStatusReturn {
     const [status, setStatus] = useState<SaveState>('idle');
-    const debounceTimeout = useRef<null | number>(null);
+    const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setStatus('idle');
+
+        if (debounceTimeout.current) {
+            clearTimeout(debounceTimeout.current);
+            debounceTimeout.current = null;
+        }
+
+        return () => {
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+                debounceTimeout.current = null;
+            }
+        };
     }, [filename]);
 
     const handleContentChange = useCallback<SaveCallback>((value, onSave) => {
@@ -50,7 +70,6 @@ export function useSaveStatus(debounceMs: number = 500, filename: string): UseSa
             clearTimeout(debounceTimeout.current);
         }
 
-        // @ts-ignore TODO why is this err
         debounceTimeout.current = setTimeout(async () => {
             setStatus('saving');
             const state = await onSave(value)

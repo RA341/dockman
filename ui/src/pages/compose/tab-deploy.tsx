@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useMemo, useState} from 'react';
 import {
     Autocomplete,
     Box,
@@ -8,13 +8,15 @@ import {
     DialogContent,
     DialogTitle,
     Link,
+    Stack,
     TextField,
     Typography
 } from '@mui/material';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import {ContainerTable} from './components/container-info-table';
-import {useContainerExecWsUrl, useContainerLogsWsUrl} from "../../lib/api.ts";
+import {useContainerExecWsUrl} from "../../lib/api.ts";
 import {useDockerCompose} from '../../hooks/docker-compose.ts';
-import {useContainerExec} from "./state/terminal.tsx";
+import {useContainerExec, useFileComponents, useLogsPanel} from "./state/terminal.tsx";
 import {ComposeActionHeaders} from "./components/compose-action-buttons.tsx";
 
 interface DeployPageProps {
@@ -36,12 +38,32 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
     const closeErrorDialog = () => setComposeErrorDialog(p => ({...p, dialog: false}));
     // const showErrorDialog = (message: string) => setComposeErrorDialog({dialog: true, message});
 
-    const getLogUrl = useContainerLogsWsUrl()
+    // logs open in the bottom panel, next to terminals; tabs display a short
+    // stack/container name but are keyed on the full host/alias/file path so
+    // same-named stacks in different folders never collide
+    const openLogs = useLogsPanel(state => state.openLogs)
+    const {host, alias} = useFileComponents()
+
+    const stackName = useMemo(() => {
+        const parts = selectedPage.split('/');
+        return parts.length > 1 ? parts[parts.length - 2] : selectedPage;
+    }, [selectedPage]);
+
+    const tabKey = (kind: string, target: string) =>
+        `${kind}:${host}/${alias}/${selectedPage}#${target}`;
 
     const handleContainerLogs = (containerId: string, containerName: string) => {
-        const url = getLogUrl(containerId)
-        execContainer(`${selectedPage}: logs-${containerName}`, url, false)
+        openLogs(
+            tabKey('logs', containerName),
+            `${stackName}/${containerName}`,
+            [{id: containerId, name: containerName}],
+        )
     };
+
+    const stackTargets = useMemo(
+        () => containers.map(c => ({id: c.id, name: c.serviceName || c.name})),
+        [containers],
+    );
 
     const execContainer = useContainerExec(state => state.execParams)
 
@@ -69,14 +91,16 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
 
     const handleConnect = (containerId: string, containerName: string, cmd: string) => {
         const url = createExecUrl(containerId, cmd, debuggerImage)
-        execContainer(`${selectedPage}: exec-${containerName}`, url, true)
+        execContainer(tabKey('exec', containerId), `${stackName}/${containerName} (exec)`, url, true)
         closeExecDialog()
     }
 
     if (!selectedPage) {
         return (
             <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>
-                <Typography variant="h5" color="text.secondary">Select a deployment</Typography>
+                <Typography variant="h5" sx={{
+                    color: "text.secondary"
+                }}>Select a deployment</Typography>
             </Box>
         );
     }
@@ -95,20 +119,46 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                 flexDirection: 'column',
                 overflow: 'hidden'
             }}>
-                <ComposeActionHeaders
-                    selectedServices={selectedServices}
-                    fetchContainers={fetchContainers}
-                />
+                <Stack
+                    direction="row"
+                    spacing={2}
+                    sx={{
+                        alignItems: "center",
+                        mb: 1
+                    }}>
+                    <ComposeActionHeaders
+                        selectedServices={selectedServices}
+                        fetchContainers={fetchContainers}
+                    />
+                    <Box sx={{flexGrow: 1}}/>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<ReceiptLongIcon sx={{fontSize: 17}}/>}
+                        disabled={stackTargets.length === 0}
+                        onClick={() => openLogs(tabKey('logs', '__stack__'), `${stackName}: stack logs`, stackTargets)}
+                        sx={{
+                            flexShrink: 0,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            borderColor: 'divider',
+                            color: 'text.secondary',
+                            '&:hover': {borderColor: 'primary.main', color: 'primary.main', bgcolor: 'action.hover'},
+                        }}
+                    >
+                        Stack logs
+                    </Button>
+                </Stack>
                 <Box sx={{
                     height: '100%',
                     display: 'flex',
                     flexGrow: 1,
                     overflow: 'hidden',
-                    border: '2px ridge',
-                    borderColor: 'rgba(255, 255, 255, 0.23)',
-                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
                     flexDirection: 'column',
-                    backgroundColor: 'rgb(41,41,41)'
+                    backgroundColor: 'background.paper'
                 }}>
                     <ContainerTable
                         containers={containers}
@@ -120,7 +170,6 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                     />
                 </Box>
             </Box>
-
             <Dialog open={composeErrorDialog.dialog} onClose={closeErrorDialog}>
                 <DialogTitle>Error</DialogTitle>
                 <DialogContent>
@@ -130,7 +179,6 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                     <Button onClick={closeErrorDialog} color="primary">Close</Button>
                 </DialogActions>
             </Dialog>
-
             <Dialog open={showExecDialog} onClose={closeExecDialog}>
                 <DialogTitle>Choose exec entrypoint</DialogTitle>
                 <DialogContent sx={{overflow: 'visible'}}>
@@ -147,9 +195,13 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                                 variant="outlined"
                                 size="small"
                                 slotProps={{
-                                    inputLabel: {style: {color: '#aaa'}},
+                                    ...params.slotProps,
+                                    inputLabel: {
+                                        ...params.slotProps.inputLabel,
+                                        style: {color: '#aaa'}
+                                    },
                                     input: {
-                                        ...params.InputProps,
+                                        ...params.slotProps.input,
                                         style: {color: '#fff', backgroundColor: '#333'}
                                     }
                                 }}
@@ -174,9 +226,13 @@ export function TabDeploy({selectedPage}: DeployPageProps) {
                                     variant="outlined"
                                     size="small"
                                     slotProps={{
-                                        inputLabel: {style: {color: '#aaa'}},
+                                        ...params.slotProps,
+                                        inputLabel: {
+                                            ...params.slotProps.inputLabel,
+                                            style: {color: '#aaa'}
+                                        },
                                         input: {
-                                            ...params.InputProps,
+                                            ...params.slotProps.input,
                                             style: {color: '#fff', backgroundColor: '#333'}
                                         }
                                     }}

@@ -84,7 +84,9 @@ function FileRename() {
             }}
         >
             <DialogTitle sx={{p: 3, pb: 2}}>
-                <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Stack direction="row" spacing={1.5} sx={{
+                    alignItems: "center"
+                }}>
                     <Box sx={{
                         p: 1,
                         borderRadius: 1.5,
@@ -98,13 +100,14 @@ function FileRename() {
                         <Typography variant="h6" sx={{fontWeight: 800, lineHeight: 1.2}}>
                             Rename Item
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                        }}>
                             Original: <code style={{color: grey[700]}}>{filename}</code>
                         </Typography>
                     </Box>
                 </Stack>
             </DialogTitle>
-
             <DialogContent sx={{p: 3, pt: 1}}>
                 <Stack spacing={3} sx={{mt: 1}}>
                     <Box>
@@ -166,9 +169,7 @@ function FileRename() {
                     )}
                 </Stack>
             </DialogContent>
-
             <Divider/>
-
             <DialogActions sx={{p: 2.5}}>
                 <Button
                     variant="outlined"
@@ -200,7 +201,7 @@ function FileRename() {
                 </Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }
 
 export default FileRename

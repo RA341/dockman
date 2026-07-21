@@ -6,6 +6,7 @@ import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {useTabs, useTabsStore} from "../../../context/tab-context.tsx";
 import {FileService} from "../../../gen/files/v1/files_pb.ts";
+import {useConfig} from "../../../hooks/config.ts";
 
 interface MonacoEditorProps {
     selectedFile: string;
@@ -26,11 +27,49 @@ export function MonacoEditor(
     const saveLineNum = useSaveLineNum()
 
     const [mounted, setMounted] = useState(false);
+    // bumped on every editor instance creation: the component remounts per
+    // file (key={selectedFile}) while `mounted` stays true, so effects that
+    // must re-attach to the new instance depend on this counter instead
+    const [editorGen, setEditorGen] = useState(0);
     const {setTabDetails} = useTabs()
+
+    const {dockYaml} = useConfig()
+    const scrollPastEnd = dockYaml?.editorPage?.scrollPastEnd ?? false
+
+    // dockman.yml editor.scrollPastEnd lets long files scroll half a viewport
+    // past their end (the last line stops at mid-view, not at the top), via a
+    // bottom padding applied only while the file is taller than the viewport:
+    // short files never scroll past their end
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        if (!scrollPastEnd) {
+            editor.updateOptions({padding: {bottom: 0}});
+            return;
+        }
+
+        const apply = () => {
+            const lineHeight = editor.getOption(monacoEditor.editor.EditorOption.lineHeight);
+            const lineCount = editor.getModel()?.getLineCount() ?? 0;
+            const height = editor.getLayoutInfo().height;
+            const overflows = lineCount * lineHeight > height;
+            editor.updateOptions({padding: {bottom: overflows ? Math.round(height / 2) : 0}});
+        };
+
+        apply();
+        const contentSub = editor.onDidChangeModelContent(apply);
+        const layoutSub = editor.onDidLayoutChange(apply);
+        return () => {
+            contentSub.dispose();
+            layoutSub.dispose();
+        };
+    }, [scrollPastEnd, editorGen]);
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;
         setMounted(true);
+        setEditorGen(gen => gen + 1);
         editor.focus();
 
         editor.addCommand(
@@ -84,30 +123,33 @@ export function MonacoEditor(
         model.pushStackElement();
         model.setValue(fileContent);
 
-        model.onDidChangeContent(() => {
+        const contentSubscription = model.onDidChangeContent(() => {
             handleEditorChange(model.getValue());
         });
 
         const tab = useTabsStore.getState().allTabs[selectedFile];
-        if (!tab) return;
-        const {row, col} = tab;
+        if (tab) {
+            const {row, col} = tab;
 
-        // Clamp row/column to model size
-        const lineNumber = Math.min(row, model.getLineCount());
-        const column = Math.min(col, model.getLineMaxColumn(lineNumber));
+            // Clamp row/column to model size
+            const lineNumber = Math.min(row, model.getLineCount());
+            const column = Math.min(col, model.getLineMaxColumn(lineNumber));
 
-        editorRef.current.setPosition({lineNumber, column});
-        const padding = 5;
-        editorRef.current.revealRangeInCenter({
-            startLineNumber: Math.max(1, lineNumber - padding),
-            startColumn: 1,
-            endLineNumber: lineNumber + padding,
-            endColumn: 1,
-        });
+            editorRef.current.setPosition({lineNumber, column});
+            const padding = 5;
+            editorRef.current.revealRangeInCenter({
+                startLineNumber: Math.max(1, lineNumber - padding),
+                startColumn: 1,
+                endLineNumber: lineNumber + padding,
+                endColumn: 1,
+            });
+        }
+
+        return () => contentSubscription.dispose();
         // do not add tabs as dependencies
         // it will mess with the editor typing
         // resetting cursor position when the tab
-    }, [fileContent, selectedFile, mounted]);
+    }, [editorGen, fileContent, handleEditorChange, mounted, selectedFile]);
 
     return (
         <Editor
@@ -121,6 +163,14 @@ export function MonacoEditor(
                 selectOnLineNumbers: true,
                 minimap: {enabled: false},
                 automaticLayout: true,
+                // stop the view from scrolling past the last line: short files
+                // no longer show a useless scrollbar and long files stop with
+                // the last line at the bottom, like classic editors
+                // (dockman.yml editor.scrollPastEnd re-enables it dynamically)
+                scrollBeyondLastLine: false,
+                // hover/suggest widgets render position:fixed so the overflow
+                // clip on the editor container cannot cut them off
+                fixedOverflowWidgets: true,
             }}
         />
     );

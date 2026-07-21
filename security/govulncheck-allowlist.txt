@@ -1,0 +1,8 @@
+# Moby server-side advisories currently reported through package init traces.
+# Dockman imports the Docker client through Compose/Dive but does not embed or
+# run a Docker daemon. No fixed github.com/docker/docker module exists yet.
+GO-2026-4883
+GO-2026-4887
+GO-2026-5617
+GO-2026-5668
+GO-2026-5746

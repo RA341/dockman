@@ -1,5 +1,5 @@
 import {useHostClient, useRPCRunner} from "../../lib/api.ts";
-import {type ReactElement, type ReactNode, useEffect} from "react";
+import {type ElementType, type ReactElement, type ReactNode, useEffect} from "react";
 
 import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
 import {
@@ -62,10 +62,12 @@ function ContainerProcessList({containerId}: { containerId: string }) {
         >
             <Stack
                 direction="row"
-                alignItems="center"
                 spacing={1}
-                sx={{mb: 2, width: '100%'}}
-            >
+                sx={{
+                    alignItems: "center",
+                    mb: 2,
+                    width: '100%'
+                }}>
                 <SectionHeader title="Processes" icon={<TerminalIcon/>}/>
                 <Chip
                     label={`${val?.top?.proc.length ?? 0} Active`}
@@ -74,10 +76,7 @@ function ContainerProcessList({containerId}: { containerId: string }) {
                     sx={{fontWeight: 700, fontSize: '0.65rem'}}
                 />
             </Stack>
-
             <Divider sx={{mb: 2, borderStyle: 'dashed'}}/>
-
-
             <Box sx={{flexGrow: 1, overflow: 'auto', minHeight: 0}}>
                 {loading && !val ? (
                     <Box sx={{
@@ -89,7 +88,9 @@ function ContainerProcessList({containerId}: { containerId: string }) {
                         gap: 2
                     }}>
                         <CircularProgress size={28} thickness={5}/>
-                        <Typography variant="caption" color="text.secondary">Interrogating container...</Typography>
+                        <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                        }}>Interrogating container...</Typography>
                     </Box>
                 ) : err ? (
                     <Alert severity="error" variant="outlined" sx={{borderRadius: 2}}>
@@ -131,7 +132,12 @@ function ContainerProcessList({containerId}: { containerId: string }) {
                     </TableContainer>
                 ) : (
                     <Box sx={{py: 4, textAlign: 'center'}}>
-                        <Typography variant="body2" color="text.disabled" sx={{fontStyle: 'italic'}}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: "text.disabled",
+                                fontStyle: 'italic'
+                            }}>
                             No process data available
                         </Typography>
                     </Box>
@@ -179,8 +185,15 @@ function InspectTabInfo({containerId}: { containerId: string }) {
         <Box sx={{width: '100%', p: 3, minHeight: '100%'}}>
             {/* 1. Header Section */}
             <Paper variant="outlined" sx={{p: 2.5, mb: 3, borderRadius: 3, bgcolor: 'background.paper'}}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Stack direction="row" alignItems="center" spacing={2}>
+                <Stack
+                    direction="row"
+                    sx={{
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                    }}>
+                    <Stack direction="row" spacing={2} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{
                             p: 1.5,
                             bgcolor: 'primary.lighter',
@@ -212,7 +225,6 @@ function InspectTabInfo({containerId}: { containerId: string }) {
                     </Button>
                 </Stack>
             </Paper>
-
             <Stack spacing={3}>
                 {/* Metadata & Config Grid */}
                 <Grid container spacing={3}>
@@ -253,8 +265,8 @@ function InspectTabInfo({containerId}: { containerId: string }) {
                                 <Box>
                                     <Typography
                                         variant="caption"
-                                        color="text.disabled"
                                         sx={{
+                                            color: "text.disabled",
                                             fontWeight: 700,
                                             textTransform: 'uppercase',
                                             fontSize: '0.65rem'
@@ -501,7 +513,12 @@ const EmptyState = ({message}: { message: string }) => (
         flexGrow: 1,
         minHeight: '120px'
     }}>
-        <Typography variant="body2" color="text.disabled" sx={{fontStyle: 'italic'}}>
+        <Typography
+            variant="body2"
+            sx={{
+                color: "text.disabled",
+                fontStyle: 'italic'
+            }}>
             {message}
         </Typography>
     </Box>
@@ -516,7 +533,13 @@ const tableHeaderStyle = {
 };
 
 const SectionHeader = ({icon, title}: { icon: ReactNode, title: string }) => (
-    <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 1}}>
+    <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+            alignItems: "center",
+            mb: 1
+        }}>
         {icon}
         <Typography variant="subtitle2" sx={{fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em'}}>
             {title}
@@ -525,13 +548,13 @@ const SectionHeader = ({icon, title}: { icon: ReactNode, title: string }) => (
 );
 
 const DetailRow = ({icon: Icon, label, value, mono}: {
-    icon?: any, label: string, value?: string | ReactElement, mono?: boolean
+    icon?: ElementType, label: string, value?: string | ReactElement, mono?: boolean
 }) => (
     <Box>
         <Typography
             variant="caption"
-            color="text.disabled"
             sx={{
+                color: "text.disabled",
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 fontSize: '0.65rem',
@@ -539,7 +562,13 @@ const DetailRow = ({icon: Icon, label, value, mono}: {
             }}>
             {label}
         </Typography>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{mt: 0.2}}>
+        <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+                alignItems: "center",
+                mt: 0.2
+            }}>
             {Icon && <Icon sx={{fontSize: 14, color: 'text.disabled'}}/>}
             {typeof value === 'string' ?
                 <Typography

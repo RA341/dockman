@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {
     Box,
     Button,
@@ -13,7 +13,7 @@ import {
     Tooltip,
     Typography
 } from "@mui/material";
-import {Add, DeleteOutline, DnsOutlined, EditOutlined, FolderSpecialOutlined, Refresh} from '@mui/icons-material';
+import {Add, DeleteOutlined, DnsOutlined, EditOutlined, FolderSpecialOutlined, Refresh} from '@mui/icons-material';
 import {callRPC, useClient} from "../../lib/api.ts";
 import {ClientType, type Host, HostManagerService} from "../../gen/host/v1/host_pb.ts";
 import EmptyHostDisplay from "./tab-host-empty.tsx";
@@ -34,7 +34,7 @@ function TabDockerHosts() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedHost, setSelectedHost] = useState<Host | null>(null);
 
-    const loadHosts = async () => {
+    const loadHosts = useCallback(async () => {
         setLoading(true);
         setErr("");
 
@@ -46,11 +46,11 @@ function TabDockerHosts() {
         }
 
         setLoading(false);
-    };
+    }, [hostClient]);
 
     useEffect(() => {
         loadHosts().then();
-    }, []);
+    }, [loadHosts]);
 
     const handleToggle = async (host: Host, val: boolean) => {
         const {err} = await callRPC(() => hostClient.toggleClient({name: host.name, enable: val}))
@@ -76,10 +76,18 @@ function TabDockerHosts() {
 
     return (
         <Box sx={{p: 3}}>
-            <Stack direction="row" justifyContent="" alignItems="center" sx={{mb: 4}}>
+            <Stack
+                direction="row"
+                sx={{
+                    justifyContent: "",
+                    alignItems: "center",
+                    mb: 4
+                }}>
                 <Box sx={{pr: 3}}>
                     <Typography variant="h5" sx={{fontWeight: 800}}>Hosts</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                    }}>
                         Manage local and remote Docker engines
                     </Typography>
                 </Box>
@@ -107,9 +115,7 @@ function TabDockerHosts() {
                     </Button>
                 </Stack>
             </Stack>
-
             {err && <Chip label={err} color="error" variant="outlined" sx={{mb: 2}}/>}
-
             {loading && hosts.length === 0 ? (
                 <Box sx={{display: 'flex', justifyContent: 'center', py: 8}}><CircularProgress/></Box>
             ) : hosts.length > 0 ? (
@@ -138,7 +144,6 @@ function TabDockerHosts() {
             ) : (
                 <EmptyHostDisplay onAdd={() => setDialogOpen(true)}/>
             )}
-
             <HostWizardDialog
                 open={dialogOpen}
                 onClose={onClose}
@@ -169,8 +174,15 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                    '&:hover': {borderColor: 'primary.main', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}
                }}>
             <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                <Stack
+                    direction="row"
+                    sx={{
+                        justifyContent: "space-between",
+                        alignItems: "flex-start"
+                    }}>
+                    <Stack direction="row" spacing={1.5} sx={{
+                        alignItems: "center"
+                    }}>
                         <Box sx={{
                             p: 1,
                             bgcolor: host.enable ? 'primary.lighter' : 'primary.darker',
@@ -181,7 +193,13 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                             <DnsOutlined/>
                         </Box>
                         <Box>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{mb: 0.5}}>
+                            <Stack
+                                direction="row"
+                                spacing={1}
+                                sx={{
+                                    alignItems: "center",
+                                    mb: 0.5
+                                }}>
                                 <Typography variant="subtitle1" sx={{fontWeight: 800, lineHeight: 1}}>
                                     {host.name}
                                 </Typography>
@@ -231,7 +249,9 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                     )}
                 </Stack>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Stack direction="row" spacing={1} useFlexGap sx={{
+                    flexWrap: "wrap"
+                }}>
                     <Chip
                         size="small"
                         icon={<FolderSpecialOutlined sx={{fontSize: '14px !important'}}/>}
@@ -242,7 +262,12 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
 
                 <Divider/>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                    direction="row"
+                    sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                    }}>
                     <Box>
                         <Tooltip title="Edit Host">
                             <IconButton size="small" onClick={onEdit}>
@@ -254,7 +279,7 @@ function HostCard({host, onEdit, onDelete, onToggle}: {
                                 event.stopPropagation()
                                 onDelete()
                             }}>
-                                <DeleteOutline fontSize="small"/>
+                                <DeleteOutlined fontSize="small"/>
                             </IconButton>
                         </Tooltip>
                     </Box>
