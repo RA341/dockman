@@ -150,7 +150,7 @@ function sumSeries(series: number[][]): number[] {
 function MonitorPage() {
     const dockerService = useHostClient(DockerService);
     const {containers, loading, fetchContainers} = useDockerContainers();
-    const {history, containers: statContainers, aggregates} = useDockerStats("");
+    const {history, containers: statContainers, aggregates, resetContainerStats} = useDockerStats("");
     const hostStats = useHostStats(true);
     const {showSuccess, showError} = useSnackbar();
     const {search, setSearch, searchInputRef} = useSearch();
@@ -168,6 +168,16 @@ function MonitorPage() {
     const [sortField, setSortField] = useState<MonitorSortField | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [now, setNow] = useState(() => Date.now());
+    // container id → lifecycle action in flight: the row's buttons lock and
+    // the clicked one spins until the RPC and the list refetch settle
+    const [rowBusy, setRowBusy] = useState<Record<string, RowAction>>({});
+    // container name → pre-action snapshot: the stats stream keeps serving
+    // the pre-action sample for a cycle or two, so these rows render pending
+    // metrics ('–') until fresh evidence arrives (see the pruning effect)
+    const [staleRows, setStaleRows] = useState<Record<string, {
+        action: RowAction,
+        before: string,
+    }>>({});
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const scrollRestored = useRef(false);
 
@@ -189,6 +199,8 @@ function MonitorPage() {
         clearTabs();
         setSelectedContainers([]);
         setSelectedStacks([]);
+        setRowBusy({});
+        setStaleRows({});
         setExpanded(viewMemoryFor(host).expanded);
         scrollRestored.current = false;
     }, [clearTabs, host]);
@@ -221,7 +233,13 @@ function MonitorPage() {
             const key = c.stackName;
             const group = byStack.get(key) ?? {stack: key, servicePath: '', rows: [], stats: null};
             if (c.servicePath) group.servicePath = c.servicePath;
-            group.rows = [...group.rows, {info: c, stats: statsByName.get(c.name)}];
+            // a row frozen by a lifecycle action renders pending metrics
+            // instead of the stream's stale pre-action sample
+            const exposesMetrics = ['running', 'restarting', 'paused'].includes(c.state);
+            group.rows = [...group.rows, {
+                info: c,
+                stats: staleRows[c.name] || !exposesMetrics ? undefined : statsByName.get(c.name),
+            }];
             byStack.set(key, group);
         }
 
@@ -250,7 +268,7 @@ function MonitorPage() {
                 }
                 return a.stack.localeCompare(b.stack);
             });
-    }, [containers, statsByName, history, search, sortField, sortOrder]);
+    }, [containers, statsByName, history, search, sortField, sortOrder, staleRows]);
 
     // a live search opens every matching stack so the hits are visible;
     // the user's own expand/collapse choices come back once it clears
@@ -352,12 +370,80 @@ function MonitorPage() {
 
     // ---- container actions -------------------------------------------------
 
-    async function containerAction(name: string, rpcName: ContainerActionRpc, message: string, ids: string[]) {
-        const {err} = await callRPC(() => dockerService[rpcName]({containerIds: ids}));
-        if (err) showError(`Failed to ${name} containers: ${err}`);
-        else showSuccess(`Successfully ${message} ${ids.length > 1 ? `${ids.length} containers` : 'container'}`);
-        setSelectedContainers(prev => prev.filter(id => !ids.includes(id)));
-        await fetchContainers();
+    // drop a frozen row as soon as the UI has fresh evidence of the new
+    // state: a moved startedAt for start/restart, the resting state for
+    // stop/pause/unpause, or the row vanishing. There is intentionally no
+    // timeout: an old uptime must never reappear merely because a refresh is
+    // slow; the row stays pending until fresh daemon evidence arrives.
+    useEffect(() => {
+        const names = Object.keys(staleRows);
+        if (names.length === 0) return;
+        const byName = new Map((containers?.list ?? []).map(c => [c.name, c]));
+        const next = {...staleRows};
+        let changed = false;
+        for (const name of names) {
+            const m = staleRows[name];
+            const listed = byName.get(name);
+            const sample = statsByName.get(name);
+            const settled =
+                m.action === 'start' || m.action === 'restart'
+                    ? listed?.state === 'running' && sample !== undefined && (sample.startedAt ?? '') !== m.before
+                    : m.action === 'stop'
+                        ? listed !== undefined && listed.state !== 'running'
+                        : m.action === 'pause'
+                            ? listed?.state === 'paused'
+                            : listed?.state === 'running'; // unpause: startedAt never moves
+            if (settled || listed === undefined) {
+                delete next[name];
+                changed = true;
+            }
+        }
+        if (changed) setStaleRows(next);
+    }, [staleRows, containers, statsByName]);
+
+    async function containerAction(action: Exclude<RowAction, 'update'>, rpcName: ContainerActionRpc, message: string, ids: string[]) {
+        const named = (containers?.list ?? []).filter(c => ids.includes(c.id));
+        setRowBusy(prev => {
+            const next = {...prev};
+            for (const id of ids) next[id] = action;
+            return next;
+        });
+        // snapshot the pre-action samples so the rows freeze to pending
+        // metrics until the stream visibly moves past them
+        if (action !== 'remove') {
+            setStaleRows(prev => {
+                const next = {...prev};
+                for (const c of named) {
+                    next[c.name] = {action, before: statsByName.get(c.name)?.startedAt ?? ''};
+                }
+                return next;
+            });
+        }
+        if (action === 'start' || action === 'stop' || action === 'restart') {
+            resetContainerStats(named.map(c => c.name));
+        }
+        try {
+            const {err} = await callRPC(() => dockerService[rpcName]({containerIds: ids}));
+            if (err) {
+                showError(`Failed to ${action} containers: ${err}`);
+                // nothing changed on the daemon: unfreeze right away
+                setStaleRows(prev => {
+                    const next = {...prev};
+                    for (const c of named) delete next[c.name];
+                    return next;
+                });
+            } else {
+                showSuccess(`Successfully ${message} ${ids.length > 1 ? `${ids.length} containers` : 'container'}`);
+            }
+            setSelectedContainers(prev => prev.filter(id => !ids.includes(id)));
+            await fetchContainers();
+        } finally {
+            setRowBusy(prev => {
+                const next = {...prev};
+                for (const id of ids) delete next[id];
+                return next;
+            });
+        }
     }
 
     const rowRpc: Record<Exclude<RowAction, 'update'>, { rpc: ContainerActionRpc, message: string }> = {
@@ -537,6 +623,7 @@ function MonitorPage() {
             disabled: selectedContainers.length === 0,
             handler: () => containerAction('remove', 'containerRemove', 'removed', selectedContainers),
             tooltip: '',
+            confirm: `Remove ${selectedContainers.length} selected container${selectedContainers.length > 1 ? 's' : ''}?`,
         },
     ];
 
@@ -698,6 +785,7 @@ function MonitorPage() {
                                     updateRuns={updateRuns}
                                     onUpdateOutput={(row) => openOutput(`update:${row.info.name}`)}
                                     onRowAction={handleRowAction}
+                                    rowBusy={rowBusy}
                                     onRowLogs={handleRowLogs}
                                     onRowExec={handleRowExec}
                                     onStackAction={handleStackAction}

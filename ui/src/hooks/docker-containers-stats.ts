@@ -439,6 +439,18 @@ export function useDockerStats(selectedPage?: string) {
         setSortOrder(newOrderBy)
     }, []);
 
+    const resetContainerStats = useCallback((names: string[]) => {
+        if (names.length === 0) return;
+        const reset = new Set(names);
+        for (const name of reset) statHistories.delete(name);
+        // Remove the old samples immediately. The streaming loop will seed a
+        // pending identity row, then replace it only with a fresh daemon read.
+        applyRows(rowsRef.current.filter(row => !reset.has(row.name)));
+        // The aggregate snapshot was computed from the same old samples. Do not
+        // display it as current while the next complete cycle is still pending.
+        setAggregates(null);
+    }, [applyRows]);
+
     return {
         containers: rawContainers,
         // fresh Map identity on every render: the module-level map mutates in
@@ -451,6 +463,7 @@ export function useDockerStats(selectedPage?: string) {
         sortField,
         sortOrder,
         handleSortChange,
+        resetContainerStats,
         setRefreshInterval,
         refreshInterval,
     };

@@ -49,6 +49,7 @@ func (h *HandlerHttp) hostShell(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fu.Close(ws)
+	wsu.LimitClientMessages(ws)
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()

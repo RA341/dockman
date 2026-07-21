@@ -10,6 +10,7 @@ import (
 
 	"github.com/RA341/dockman/internal/host/middleware"
 	fu "github.com/RA341/dockman/pkg/fileutil"
+	wsu "github.com/RA341/dockman/pkg/ws"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -100,7 +101,7 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 	reader, err := r.MultipartReader()
 	if err != nil {
 		log.Error().Err(err).Msg("Error reading multipart body")
-		http.Error(w, "Could not read multipart body", http.StatusBadRequest)
+		writeUploadError(w, err, "Could not read multipart body", http.StatusBadRequest)
 		return
 	}
 
@@ -111,7 +112,7 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("Error reading multipart part")
-			http.Error(w, "Error reading upload", http.StatusBadRequest)
+			writeUploadError(w, err, "Error reading upload", http.StatusBadRequest)
 			return
 		}
 		if part.FormName() != fileContentsFormKey {
@@ -138,6 +139,8 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "permission denied while saving file", http.StatusForbidden)
 			case errors.Is(err, fs.ErrNotExist):
 				http.Error(w, "file path not found", http.StatusNotFound)
+			case isRequestTooLarge(err):
+				http.Error(w, "upload exceeds the configured size limit", http.StatusRequestEntityTooLarge)
 			default:
 				http.Error(w, "Error saving file", http.StatusInternalServerError)
 			}
@@ -148,6 +151,19 @@ func (h *FileHandler) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "no file provided in form", http.StatusBadRequest)
+}
+
+func isRequestTooLarge(err error) bool {
+	var maxBytesErr *http.MaxBytesError
+	return errors.As(err, &maxBytesErr)
+}
+
+func writeUploadError(w http.ResponseWriter, err error, message string, fallbackStatus int) {
+	if isRequestTooLarge(err) {
+		http.Error(w, "upload exceeds the configured size limit", http.StatusRequestEntityTooLarge)
+		return
+	}
+	http.Error(w, message, fallbackStatus)
 }
 
 func decodeUploadFilename(encoded string) ([]byte, error) {
@@ -188,6 +204,7 @@ func (h *FileHandler) searchFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fu.Close(ws)
+	wsu.LimitClientMessages(ws)
 
 	var response SearchResponse
 

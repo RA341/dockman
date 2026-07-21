@@ -88,6 +88,7 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fu.Close(ws)
+	wsu.LimitClientMessages(ws)
 
 	query := r.URL.Query()
 	execCmd := getExecCmd(query, ws)
@@ -204,6 +205,7 @@ func (h *HandlerHttp) containerLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer fu.Close(ws)
+	wsu.LimitClientMessages(ws)
 
 	writer := wsu.NewWsWriter(ws)
 	go func() {

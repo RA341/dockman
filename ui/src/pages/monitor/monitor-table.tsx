@@ -1,5 +1,6 @@
 import {
     Box,
+    Button,
     Checkbox,
     CircularProgress,
     IconButton,
@@ -8,6 +9,7 @@ import {
     ListItemText,
     Menu,
     MenuItem,
+    Popover,
     Stack,
     Table,
     TableBody,
@@ -117,6 +119,9 @@ interface MonitorTableProps {
     updateRuns: Record<string, 'running' | 'failed' | 'done'>;
     onUpdateOutput: (row: MonitorRow) => void;
     onRowAction: (row: MonitorRow, action: RowAction) => void;
+    // container id → lifecycle action in flight: locks the row's buttons
+    // and spins the one that launched the action
+    rowBusy: Record<string, RowAction>;
     onRowLogs: (row: MonitorRow) => void;
     onRowExec: (row: MonitorRow) => void;
     onStackAction: (group: StackGroup, action: StackAction) => void;
@@ -434,14 +439,18 @@ function RedeployMenuButton({disabled, onPick}: {
 function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
     const {
         row, history, selectedContainers, selectedStacks, onToggleContainers,
-        now, onRowAction, onRowLogs, onRowExec, updateRuns, onUpdateOutput,
+        now, onRowAction, rowBusy, onRowLogs, onRowExec, updateRuns, onUpdateOutput,
     } = props;
     const c = row.info;
     const s = row.stats;
-    const hist = history.get(c.name);
+    const hist = s ? history.get(c.name) : undefined;
     const isRunning = c.state === 'running';
     const isPaused = c.state === 'paused';
     const isActive = ['running', 'restarting', 'paused'].includes(c.state);
+    const busy = rowBusy[c.id];
+    // deleting is destructive: a small popover above the button asks first
+    const [confirmEl, setConfirmEl] = useState<HTMLElement | null>(null);
+    const spinner = <CircularProgress size={14} sx={{color: t.textDim}}/>;
     // a selected stack shows all its members checked; while stacks are
     // selected, individual container boxes are frozen (kinds never mix)
     const stackSelected = c.stackName !== '' && selectedStacks.includes(c.stackName);
@@ -550,24 +559,30 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
             </TableCell>
             <TableCell align="right" sx={{...bodyCell, whiteSpace: 'nowrap'}}>
                 <Tooltip title={isActive ? 'Stop' : 'Start'} arrow>
-                    <IconButton size="small"
-                                onClick={() => onRowAction(row, isActive ? 'stop' : 'start')}
-                                sx={{color: isActive ? '#ef5350' : '#66bb6a'}}>
-                        {isActive ? <Stop sx={{fontSize: 16}}/> : <PlayArrow sx={{fontSize: 16}}/>}
-                    </IconButton>
+                    <span>
+                        <IconButton size="small" disabled={!!busy}
+                                    onClick={() => onRowAction(row, isActive ? 'stop' : 'start')}
+                                    sx={{color: isActive ? '#ef5350' : '#66bb6a', '&.Mui-disabled': disabledIcon}}>
+                            {busy === 'start' || busy === 'stop' ? spinner
+                                : isActive ? <Stop sx={{fontSize: 16}}/> : <PlayArrow sx={{fontSize: 16}}/>}
+                        </IconButton>
+                    </span>
                 </Tooltip>
                 <Tooltip title="Restart" arrow>
-                    <IconButton size="small" onClick={() => onRowAction(row, 'restart')}
-                                sx={{color: '#4db6ac'}}>
-                        <RestartAlt sx={{fontSize: 16}}/>
-                    </IconButton>
+                    <span>
+                        <IconButton size="small" disabled={!!busy}
+                                    onClick={() => onRowAction(row, 'restart')}
+                                    sx={{color: '#4db6ac', '&.Mui-disabled': disabledIcon}}>
+                            {busy === 'restart' ? spinner : <RestartAlt sx={{fontSize: 16}}/>}
+                        </IconButton>
+                    </span>
                 </Tooltip>
                 <Tooltip title={isPaused ? 'Unpause' : 'Pause'} arrow>
                     <span>
-                        <IconButton size="small" disabled={!isRunning && !isPaused}
+                        <IconButton size="small" disabled={(!isRunning && !isPaused) || !!busy}
                                     onClick={() => onRowAction(row, isPaused ? 'unpause' : 'pause')}
                                     sx={{color: isPaused ? '#ffb74d' : t.textDim, '&:hover': {color: t.text}, '&.Mui-disabled': disabledIcon}}>
-                            <Pause sx={{fontSize: 16}}/>
+                            {busy === 'pause' || busy === 'unpause' ? spinner : <Pause sx={{fontSize: 16}}/>}
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -575,12 +590,10 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                     ? 'Update in progress…'
                     : c.updateAvailable ? `Update image (${c.updateAvailable} available)` : 'Update image'} arrow>
                     <span>
-                        <IconButton size="small" disabled={updRun === 'running'}
+                        <IconButton size="small" disabled={updRun === 'running' || !!busy}
                                     onClick={() => onRowAction(row, 'update')}
                                     sx={{color: c.updateAvailable ? '#4db6ac' : t.textDim, '&:hover': {color: t.text}, '&.Mui-disabled': disabledIcon}}>
-                            {updRun === 'running'
-                                ? <CircularProgress size={14} sx={{color: t.textDim}}/>
-                                : <Update sx={{fontSize: 16}}/>}
+                            {updRun === 'running' ? spinner : <Update sx={{fontSize: 16}}/>}
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -596,11 +609,50 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                     </Tooltip>
                 )}
                 <Tooltip title="Remove" arrow>
-                    <IconButton size="small" onClick={() => onRowAction(row, 'remove')}
-                                sx={{color: t.textDim, '&:hover': {color: '#ef5350'}}}>
-                        <Delete sx={{fontSize: 16}}/>
-                    </IconButton>
+                    <span>
+                        <IconButton size="small" disabled={!!busy}
+                                    onClick={e => setConfirmEl(e.currentTarget)}
+                                    sx={{color: t.textDim, '&:hover': {color: '#ef5350'}, '&.Mui-disabled': disabledIcon}}>
+                            {busy === 'remove' ? spinner : <Delete sx={{fontSize: 16}}/>}
+                        </IconButton>
+                    </span>
                 </Tooltip>
+                <Popover
+                    open={confirmEl !== null}
+                    anchorEl={confirmEl}
+                    onClose={() => setConfirmEl(null)}
+                    anchorOrigin={{vertical: 'top', horizontal: 'center'}}
+                    transformOrigin={{vertical: 'bottom', horizontal: 'center'}}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                bgcolor: t.header,
+                                border: `1px solid ${t.border}`,
+                                borderRadius: 1.5,
+                                px: 1.25, py: 1,
+                                maxWidth: 260,
+                            },
+                        },
+                    }}
+                >
+                    <Typography sx={{fontSize: '0.78rem', color: t.text, mb: 0.75}}>
+                        Remove <b>{c.name}</b>?
+                    </Typography>
+                    <Stack direction="row" spacing={0.75} sx={{justifyContent: 'flex-end'}}>
+                        <Button size="small" onClick={() => setConfirmEl(null)}
+                                sx={{textTransform: 'none', color: t.textDim, minWidth: 0}}>
+                            Cancel
+                        </Button>
+                        <Button size="small" variant="contained" color="error"
+                                onClick={() => {
+                                    setConfirmEl(null);
+                                    onRowAction(row, 'remove');
+                                }}
+                                sx={{textTransform: 'none', fontWeight: 700}}>
+                            Remove
+                        </Button>
+                    </Stack>
+                </Popover>
                 <Tooltip title="Logs" arrow>
                     <IconButton size="small" onClick={() => onRowLogs(row)}
                                 sx={{color: t.textDim, '&:hover': {color: t.text}}}>
