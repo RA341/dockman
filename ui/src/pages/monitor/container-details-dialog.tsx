@@ -6,7 +6,7 @@ import {
 import {
     Check, Close, Code, ContentCopy, Delete, DeleteSweep, Dns, FavoriteBorder, InfoOutlined, LabelOutlined, Lan,
     Memory, Pause, PlayArrow, Refresh, RestartAlt, Security as SecurityIcon, Stop, Storage,
-    Subject, Terminal, Tune, Update, Visibility, VisibilityOff, PlayCircleOutlined,
+    Subject, Terminal, Tune, Update, Visibility, VisibilityOff, PlayCircleOutlined, FolderOpenOutlined,
 } from '@mui/icons-material';
 import {type ReactElement, type ReactNode, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {FitAddon} from '@xterm/addon-fit';
@@ -24,10 +24,11 @@ import {statsTheme as t} from '../compose/components/stats-theme.ts';
 import AppTerminal from '../compose/components/logs-terminal.tsx';
 import {createTab} from '../compose/state/terminal.tsx';
 import type {MonitorRow, RowAction} from './monitor-table.tsx';
+import ContainerFileBrowser from '../../components/container-file-browser.tsx';
 
 type JsonObject = Record<string, unknown>;
 type TabID = 'overview' | 'logs' | 'exec' | 'processes' | 'networks' | 'mounts' | 'environment'
-    | 'labels' | 'security' | 'resources' | 'health' | 'inspect';
+    | 'labels' | 'security' | 'resources' | 'health' | 'files' | 'inspect';
 
 interface Props {
     open: boolean;
@@ -46,6 +47,7 @@ const tabs: {id: TabID, label: string, icon: ReactElement}[] = [
     {id: 'exec', label: 'Exec', icon: <Terminal/>},
     {id: 'processes', label: 'Processes', icon: <Terminal/>}, {id: 'networks', label: 'Networks', icon: <Lan/>},
     {id: 'mounts', label: 'Mounts', icon: <Storage/>}, {id: 'environment', label: 'Environment', icon: <Tune/>},
+    {id: 'files', label: 'Files', icon: <FolderOpenOutlined/>},
     {id: 'labels', label: 'Labels', icon: <LabelOutlined/>}, {id: 'security', label: 'Security', icon: <SecurityIcon/>},
     {id: 'resources', label: 'Resources', icon: <Memory/>}, {id: 'health', label: 'Health', icon: <FavoriteBorder/>},
     {id: 'inspect', label: 'Inspect JSON', icon: <Code/>},
@@ -578,7 +580,7 @@ export default function ContainerDetailsDialog({open, row, containers, history, 
     const state = row.info.state; const active = ['running', 'restarting', 'paused'].includes(state); const paused = state === 'paused';
     const processAvailable = state === 'running' || state === 'paused';
     const locked = !!busy || stackBusy;
-    const fixedContent = ['logs', 'exec', 'processes', 'mounts', 'environment', 'labels'].includes(tab);
+    const fixedContent = ['logs', 'exec', 'processes', 'mounts', 'environment', 'labels', 'files'].includes(tab);
     return <Dialog open={open} onClose={onClose} maxWidth={false} fullWidth
         slotProps={{
             backdrop: {sx: {bgcolor: 'rgba(0,0,0,0.68)', backdropFilter: 'blur(4px)'}},
@@ -622,7 +624,7 @@ export default function ContainerDetailsDialog({open, row, containers, history, 
             </Box>
             <Box sx={{flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
                 {error && <Alert severity="error" sx={{m: 1, mb: 0, flexShrink: 0}}>{error}</Alert>}
-                <Box sx={{flex: 1, minHeight: 0, overflow: fixedContent ? 'hidden' : 'auto', p: tab === 'logs' || tab === 'exec' ? 0 : 1.4,
+                <Box sx={{flex: 1, minHeight: 0, overflow: fixedContent ? 'hidden' : 'auto', p: tab === 'logs' || tab === 'exec' || tab === 'files' ? 0 : 1.4,
                     userSelect: 'text', cursor: tab === 'logs' || tab === 'exec' ? 'default' : 'text', ...scrollbarStyles}}>
                 {loading && !raw ? <Box sx={{display: 'grid', placeItems: 'center', height: '100%'}}><CircularProgress/></Box> : <>
                     <Box hidden={tab !== 'overview'}><Overview row={row} inspect={inspect} history={history} processCount={processCount} onUpdate={() => onAction(row, 'update')} updateRun={updateRun}/></Box>
@@ -635,6 +637,7 @@ export default function ContainerDetailsDialog({open, row, containers, history, 
                     <Box hidden={tab !== 'mounts'} sx={{height: '100%', minHeight: 0}}><Mounts inspect={inspect}/></Box>
                     <Box hidden={tab !== 'environment'} sx={{height: '100%', minHeight: 0}}><Section title="Environment variables" fill><KeyValueTable value={field(inspect.Config, 'Env')} maskSecrets scrollable/></Section></Box>
                     <Box hidden={tab !== 'labels'} sx={{height: '100%', minHeight: 0}}><Section title="Labels" fill><KeyValueTable value={field(inspect.Config, 'Labels')} scrollable/></Section></Box>
+                    <Box hidden={tab !== 'files'} sx={{height: '100%', minHeight: 0}}><ContainerFileBrowser kind="container" target={row.info.id} active={tab === 'files'}/></Box>
                     <Box hidden={tab !== 'security'}><Security inspect={inspect}/></Box>
                     <Box hidden={tab !== 'resources'}><Resources inspect={inspect}/></Box>
                     <Box hidden={tab !== 'health'}><Health inspect={inspect}/></Box>

@@ -47,7 +47,7 @@ func requestIsSameOrigin(r *http.Request, origin string) bool {
 func limitRequestBodies(conf *config.AppConfig, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		limitMB := conf.HTTPMaxBodyMB
-		if strings.HasSuffix(r.URL.Path, "/file/save") {
+		if strings.HasSuffix(r.URL.Path, "/file/save") || (strings.Contains(r.URL.Path, "/docker/files/") && strings.HasSuffix(r.URL.Path, "/upload")) {
 			limitMB = conf.HTTPMaxUploadMB
 		}
 		if limitMB <= 0 || r.Body == nil {

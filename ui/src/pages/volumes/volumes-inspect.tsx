@@ -18,14 +18,17 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    Tab,
+    Tabs,
     Typography
 } from "@mui/material";
-import {ArrowBack, ContentCopy} from "@mui/icons-material";
+import {ArrowBack, ContentCopy, FolderOpenOutlined, InfoOutlined} from "@mui/icons-material";
 import StorageIcon from "@mui/icons-material/Storage";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
 import {formatBytes} from "../../lib/editor.ts";
 import {formatDate} from "../../lib/api.ts";
+import ContainerFileBrowser from "../../components/container-file-browser.tsx";
 
 const VolumesInspect = () => {
     const dockerService = useHostClient(DockerService)
@@ -35,6 +38,7 @@ const VolumesInspect = () => {
     const [inspect, setInspect] = useState<VolumeInspectInfo | null>(null)
     const [err, setErr] = useState("")
     const [loading, setLoading] = useState(false)
+    const [tab, setTab] = useState<'overview' | 'files'>('overview')
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -95,7 +99,14 @@ const VolumesInspect = () => {
                     <RefreshIcon/>
                 </IconButton>
             </Box>
-            <Box sx={{p: 3, flexGrow: 1, overflow: 'auto', position: 'relative'}}>
+            <Tabs value={tab} onChange={(_, value: 'overview' | 'files') => setTab(value)} sx={{px: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0}}>
+                <Tab value="overview" icon={<InfoOutlined/>} iconPosition="start" label="Overview" sx={{textTransform: 'none', minHeight: 46}}/>
+                <Tab value="files" icon={<FolderOpenOutlined/>} iconPosition="start" label="Files" sx={{textTransform: 'none', minHeight: 46}}/>
+            </Tabs>
+            <Box hidden={tab !== 'files'} sx={{p: 1.5, flexGrow: 1, minHeight: 0, overflow: 'hidden'}}>
+                <ContainerFileBrowser kind="volume" target={volumeName} active={tab === 'files'}/>
+            </Box>
+            <Box hidden={tab !== 'overview'} sx={{p: 3, flexGrow: 1, overflow: 'auto', position: 'relative'}}>
                 {loading && (
                     <Box sx={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center',

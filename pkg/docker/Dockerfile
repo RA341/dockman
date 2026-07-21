@@ -60,7 +60,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
         -X github.com/RA341/dockman/internal/info.BuildDate=${BUILD_DATE} \
         -X github.com/RA341/dockman/internal/info.Branch=${BRANCH}" \
       -o /out/dockman \
-      ./cmd/docker
+      ./cmd/docker && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -ldflags "-s -w" \
+      -o /out/dockman-file-helper-amd64 ./cmd/filehelper && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildvcs=false -ldflags "-s -w" \
+      -o /out/dockman-file-helper-arm64 ./cmd/filehelper
 
 FROM golang:${GO_VERSION}-alpine3.24@${GO_IMAGE_DIGEST} AS compose_cli_builder
 
@@ -135,6 +139,7 @@ LABEL org.opencontainers.image.title="Dockman" \
 WORKDIR /app
 
 COPY --from=back /out/dockman dockman
+COPY --from=back /out/dockman-file-helper-* /usr/local/libexec/
 
 COPY --from=front /frontend/dist/ ./dist
 
