@@ -11,6 +11,7 @@ import LogsViewer from "../../../components/log-viewer/logs-viewer.tsx";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {FitAddon} from "@xterm/addon-fit";
 import {useFileComponents} from "../state/terminal.tsx";
+import ExecTerminalPanel from './exec-terminal-panel.tsx';
 
 export function LogsPanel() {
     const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('top')
@@ -344,6 +345,8 @@ export function LogsPanel() {
                                             containers={v.logsContainers}
                                             isActive={bodyVisible && key === activeTab}
                                         />
+                                    ) : v.execSession ? (
+                                        <ExecTerminalPanel tab={v} isActive={bodyVisible && key === activeTab}/>
                                     ) : (
                                         <AppTerminal
                                             key={v.id}

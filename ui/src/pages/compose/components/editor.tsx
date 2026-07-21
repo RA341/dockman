@@ -119,7 +119,6 @@ export function MonacoEditor(
         const model = editorRef.current.getModel();
         if (!model) return;
 
-        // console.log("clearing stack for initial load");
         model.pushStackElement();
         model.setValue(fileContent);
 
@@ -189,7 +188,6 @@ function useSaveLineNum(debounceMs: number = 200) {
 
             debounceTimeout.current = setTimeout(() => {
                 onSave(value);
-                // console.log("Saving cursor position: ", value)
             }, debounceMs);
         },
         [debounceMs]

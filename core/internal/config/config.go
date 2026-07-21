@@ -21,6 +21,7 @@ type AppConfig struct {
 	HTTPMaxUploadMB       int    `config:"flag=httpMaxUploadMB,env=HTTP_MAX_UPLOAD_MB,default=1024,usage=Maximum file upload size in MiB (0 disables the limit)"`
 	HTTPReadHeaderSeconds int    `config:"flag=httpReadHeaderTimeout,env=HTTP_READ_HEADER_TIMEOUT,default=10,usage=HTTP header read timeout in seconds"`
 	HTTPIdleSeconds       int    `config:"flag=httpIdleTimeout,env=HTTP_IDLE_TIMEOUT,default=120,usage=HTTP keep-alive idle timeout in seconds"`
+	AllowSelfExec         bool   `config:"flag=allowSelfExec,env=ALLOW_SELF_EXEC,default=false,usage=Allow exec sessions inside Dockman containers (unsafe; troubleshooting only)"`
 	UIPath                string `config:"flag=ui,env=UI_PATH,default=dist,usage=Path to frontend files"`
 	LocalAddr             string `config:"flag=ma,env=MACHINE_ADDR,default=0.0.0.0,usage=Local machine IP address"`
 	ComposeRoot           string `config:"flag=cr,env=COMPOSE_ROOT,default=./compose,usage=Root directory for compose files"`

@@ -17,7 +17,6 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import "@xterm/xterm/css/xterm.css";
 import PageHeader, {RefreshButton} from '../../components/page-header.tsx';
-import SearchBar from '../../components/search-bar.tsx';
 import useSearch from '../../hooks/search.ts';
 import ActionButtons from '../../components/action-buttons.tsx';
 import scrollbarStyles from '../../components/scrollbar-style.tsx';
@@ -28,7 +27,7 @@ import {callRPC, useContainerExecWsUrl, useHostClient} from '../../lib/api.ts';
 import {useSnackbar} from '../../hooks/snackbar.ts';
 import {useHostStore} from '../compose/state/files.ts';
 import {DockerService} from '../../gen/docker/v1/docker_pb.ts';
-import AggregateStats from '../compose/components/container-stat-chart.tsx';
+import AggregateStats, {type ContainerStateFilter} from '../compose/components/container-stat-chart.tsx';
 import {LogsPanel} from '../compose/components/logs-panel.tsx';
 import {useContainerExec, useLogsPanel, useTerminalTabs} from '../compose/state/terminal.tsx';
 import {useComposeAction} from '../compose/state/compose.tsx';
@@ -44,6 +43,8 @@ import {
     type StackStats,
 } from './monitor-table.tsx';
 import {statsTheme as t} from '../compose/components/stats-theme.ts';
+import ContainerDetailsDialog from './container-details-dialog.tsx';
+import ExecLaunchPopover, {type ExecLaunch} from './exec-launch-popover.tsx';
 
 type ContainerActionRpc = 'containerStart' | 'containerStop' | 'containerRestart' | 'containerPause'
     | 'containerUnpause' | 'containerRemove';
@@ -167,10 +168,12 @@ function MonitorPage() {
     const [expanded, setExpanded] = useState<Record<string, boolean>>(() => viewMemoryFor(host).expanded);
     const [sortField, setSortField] = useState<MonitorSortField | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [stateFilters, setStateFilters] = useState<ContainerStateFilter[]>([]);
     const [now, setNow] = useState(() => Date.now());
     // container id → lifecycle action in flight: the row's buttons lock and
     // the clicked one spins until the RPC and the list refetch settle
     const [rowBusy, setRowBusy] = useState<Record<string, RowAction>>({});
+    const [detailsContainerID, setDetailsContainerID] = useState('');
     // container name → pre-action snapshot: the stats stream keeps serving
     // the pre-action sample for a cycle or two, so these rows render pending
     // metrics ('–') until fresh evidence arrives (see the pruning effect)
@@ -200,7 +203,9 @@ function MonitorPage() {
         setSelectedContainers([]);
         setSelectedStacks([]);
         setRowBusy({});
+        setDetailsContainerID('');
         setStaleRows({});
+        setStateFilters([]);
         setExpanded(viewMemoryFor(host).expanded);
         scrollRestored.current = false;
     }, [clearTabs, host]);
@@ -224,9 +229,23 @@ function MonitorPage() {
 
     const groups: StackGroup[] = useMemo(() => {
         const query = search.trim().toLowerCase();
-        const list = (containers?.list ?? []).filter(c =>
-            !query || [c.name, c.imageName, c.stackName, c.serviceName].some(f => f.toLowerCase().includes(query))
-        );
+        const list = (containers?.list ?? []).filter(c => {
+            // This search lives in the NAME column, so only values displayed
+            // there participate (container/service and stack names).
+            const matchesSearch = !query || [c.name, c.stackName, c.serviceName]
+                .some(f => f.toLowerCase().includes(query));
+            if (!matchesSearch) return false;
+            if (stateFilters.length === 0) return true;
+            return stateFilters.some(filter => {
+                switch (filter) {
+                    case 'running': return c.state === 'running';
+                    case 'paused': return c.state === 'paused';
+                    case 'restarting': return c.state === 'restarting';
+                    case 'unhealthy': return c.state === 'running' && c.health === 'unhealthy';
+                    case 'stopped': return !['running', 'paused', 'restarting'].includes(c.state);
+                }
+            });
+        });
 
         const byStack = new Map<string, StackGroup>();
         for (const c of list) {
@@ -268,16 +287,26 @@ function MonitorPage() {
                 }
                 return a.stack.localeCompare(b.stack);
             });
-    }, [containers, statsByName, history, search, sortField, sortOrder, staleRows]);
+    }, [containers, statsByName, history, search, stateFilters, sortField, sortOrder, staleRows]);
+
+    // Resolve the dialog row from the unfiltered container list so an open
+    // details view is not accidentally closed by changing the monitor search.
+    const detailsRow: MonitorRow | null = useMemo(() => {
+        if (!detailsContainerID) return null;
+        const info = (containers?.list ?? []).find(c => c.id === detailsContainerID);
+        if (!info) return null;
+        const exposesMetrics = ['running', 'restarting', 'paused'].includes(info.state);
+        return {info, stats: staleRows[info.name] || !exposesMetrics ? undefined : statsByName.get(info.name)};
+    }, [detailsContainerID, containers, staleRows, statsByName]);
 
     // a live search opens every matching stack so the hits are visible;
     // the user's own expand/collapse choices come back once it clears
     const effectiveExpanded = useMemo(() => {
-        if (!search.trim()) return expanded;
+        if (!search.trim() && stateFilters.length === 0) return expanded;
         const all: Record<string, boolean> = {};
         for (const g of groups) all[g.stack] = true;
         return all;
-    }, [search, expanded, groups]);
+    }, [search, stateFilters, expanded, groups]);
 
     const total = containers?.list.length ?? 0;
 
@@ -308,6 +337,22 @@ function MonitorPage() {
         }
         return counts;
     }, [containers]);
+    useEffect(() => {
+        setStateFilters(current => current.filter(filter => stateCounts[filter] > 0));
+    }, [stateCounts]);
+    const changeStateFilter = (filter: ContainerStateFilter | null, additive = false) => {
+        setStateFilters(current => {
+            if (filter === null) return [];
+            if (!additive) return [filter];
+            return current.includes(filter)
+                ? current.filter(value => value !== filter)
+                : [...current, filter];
+        });
+        // Never leave hidden rows selected: bulk actions must only target
+        // containers the operator can currently see.
+        setSelectedContainers([]);
+        setSelectedStacks([]);
+    };
     // last (or current) action outcome per compose file, for the busy
     // spinner and the last-action output button on stack rows
     const stackRuns = useMemo(() => {
@@ -473,6 +518,10 @@ function MonitorPage() {
     };
 
     const handleRowAction = (row: MonitorRow, action: RowAction) => {
+        if (row.info.servicePath && runningStacks[row.info.servicePath]) {
+            showError(`Stack ${row.info.stackName}: wait for the current stack action to finish`);
+            return;
+        }
         if (action === 'update') {
             startContainerUpdate(row.info.id, row.info.name);
             return;
@@ -492,6 +541,13 @@ function MonitorPage() {
 
     const runStack = (stackName: string, servicePath: string, action: StackAction) => {
         const {rpc, message} = stackRpc[action];
+        // A stack operation owns all its member containers until it settles.
+        // Drop any pre-existing container selection so the bulk toolbar cannot
+        // issue a conflicting command while Compose is changing the stack.
+        const memberIDs = new Set((containers?.list ?? [])
+            .filter(c => c.servicePath === servicePath)
+            .map(c => c.id));
+        setSelectedContainers(prev => prev.filter(id => !memberIDs.has(id)));
         runAction(servicePath, dockerService[rpc], action, [], (error) => {
             if (error) showError(`Stack ${stackName}: ${action} failed — ${error}`);
             else showSuccess(`Stack ${stackName} ${message}`);
@@ -543,11 +599,16 @@ function MonitorPage() {
             `${group.stack || 'standalone'}: stack logs`,
             group.rows.map(r => ({id: r.info.id, name: r.info.name})));
 
-    const handleRowExec = (row: MonitorRow) =>
+    const [execLaunch, setExecLaunch] = useState<ExecLaunch | null>(null);
+    const handleRowExec = (row: MonitorRow, anchor: HTMLElement) => setExecLaunch({row, anchor});
+    const connectRowExec = (row: MonitorRow, shell: string, user: string) => {
         execContainer(`exec:${host}/monitor#${row.info.id}`,
             `${row.info.stackName ? `${row.info.stackName}/` : ''}${row.info.name} (exec)`,
-            createExecUrl(row.info.id, '/bin/sh'),
-            true);
+            createExecUrl(row.info.id, shell, undefined, user),
+            true,
+            {containerID: row.info.id, shell, user});
+        setExecLaunch(null);
+    };
 
     // ?tab=0 pins the EDITOR tab regardless of the compose.defaultTab setting
     const handleStackEdit = (group: StackGroup) =>
@@ -573,41 +634,43 @@ function MonitorPage() {
     };
 
     const stacksMode = selectedStacks.length > 0;
+    const selectedContainersBlocked = (containers?.list ?? []).some(c =>
+        selectedContainers.includes(c.id) && c.servicePath !== '' && runningStacks[c.servicePath]);
 
     const containerBulkActions = [
         {
             action: 'start', buttonText: 'Start', icon: <PlayArrow/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: () => containerAction('start', 'containerStart', 'started', selectedContainers),
             tooltip: '',
         },
         {
             action: 'stop', buttonText: 'Stop', icon: <Stop/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: () => containerAction('stop', 'containerStop', 'stopped', selectedContainers),
             tooltip: '',
         },
         {
             action: 'restart', buttonText: 'Restart', icon: <RestartAlt/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: () => containerAction('restart', 'containerRestart', 'restarted', selectedContainers),
             tooltip: '',
         },
         {
             action: 'pause', buttonText: 'Pause', icon: <Pause/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: () => containerAction('pause', 'containerPause', 'paused', selectedContainers),
             tooltip: '',
         },
         {
             action: 'unpause', buttonText: 'Unpause', icon: <PlayCircleOutlined/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: () => containerAction('unpause', 'containerUnpause', 'unpaused', selectedContainers),
             tooltip: '',
         },
         {
             action: 'update', buttonText: 'Update', icon: <Update/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: async () => {
                 const list = containers?.list ?? [];
                 for (const id of selectedContainers) {
@@ -620,7 +683,7 @@ function MonitorPage() {
         },
         {
             action: 'remove', buttonText: 'Remove', icon: <Delete/>,
-            disabled: selectedContainers.length === 0,
+            disabled: selectedContainers.length === 0 || selectedContainersBlocked,
             handler: () => containerAction('remove', 'containerRemove', 'removed', selectedContainers),
             tooltip: '',
             confirm: `Remove ${selectedContainers.length} selected container${selectedContainers.length > 1 ? 's' : ''}?`,
@@ -692,18 +755,25 @@ function MonitorPage() {
                     }}
                 >
                     <AggregateStats aggregates={aggregates} hostStats={hostStats}
-                                    states={containers ? stateCounts : null} bare/>
+                                    states={containers ? stateCounts : null}
+                                    stateFilters={stateFilters}
+                                    onStateFilterChange={changeStateFilter}
+                                    bare/>
 
                     <Divider sx={{borderColor: t.border}}/>
 
-                    <Box sx={{px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', gap: 1.5}}>
-                        <Box sx={{flex: 1, maxWidth: 270}}>
-                            <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
-                        </Box>
-
-                        <Divider orientation="vertical" flexItem sx={{mx: 0.5, borderColor: t.border}}/>
-
+                    <Box sx={{px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1}}>
                         <ActionButtons iconOnly actions={stacksMode ? stackBulkActions : containerBulkActions}/>
+
+                        {stateFilters.map(filter => <Chip
+                            key={filter}
+                            size="small"
+                            variant="outlined"
+                            label={`${filter[0].toUpperCase()}${filter.slice(1)} · ${stateCounts[filter]}`}
+                            onDelete={() => changeStateFilter(filter, true)}
+                            sx={{height: 27, color: t.text, borderColor: t.border, fontWeight: 700, textTransform: 'none'}}
+                        />)}
+
                         <RefreshButton iconOnly onClick={handleRefresh} loading={refreshing}/>
                         <Tooltip title={allExpanded ? 'Collapse all' : 'Expand all'}>
                             <Button
@@ -773,6 +843,9 @@ function MonitorPage() {
                                     sortField={sortField}
                                     sortOrder={sortOrder}
                                     onSortChange={handleSortChange}
+                                    nameSearch={search}
+                                    onNameSearchChange={setSearch}
+                                    nameSearchInputRef={searchInputRef}
                                     scrollRef={scrollRef}
                                     onScroll={(top) => {
                                         viewMemoryFor(host).scroll = top;
@@ -788,6 +861,7 @@ function MonitorPage() {
                                     rowBusy={rowBusy}
                                     onRowLogs={handleRowLogs}
                                     onRowExec={handleRowExec}
+                                    onRowDetails={(row) => setDetailsContainerID(row.info.id)}
                                     onStackAction={handleStackAction}
                                     onStackRedeploy={handleStackRedeploy}
                                     onStackLogs={handleStackLogs}
@@ -798,6 +872,24 @@ function MonitorPage() {
                     )}
                 </Paper>
             </Box>
+
+            <ContainerDetailsDialog
+                open={detailsContainerID !== ''}
+                row={detailsRow}
+                containers={containers?.list ?? []}
+                history={detailsRow ? history.get(detailsRow.info.name) : undefined}
+                busy={detailsRow ? rowBusy[detailsRow.info.id] : undefined}
+                stackBusy={!!(detailsRow?.info.servicePath && runningStacks[detailsRow.info.servicePath])}
+                updateRun={detailsRow ? updateRuns[detailsRow.info.name] : undefined}
+                onClose={() => setDetailsContainerID('')}
+                onAction={handleRowAction}
+            />
+
+            <ExecLaunchPopover
+                launch={execLaunch}
+                onClose={() => setExecLaunch(null)}
+                onConnect={connectRowExec}
+            />
 
             <LogsPanel/>
         </Box>

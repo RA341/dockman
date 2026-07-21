@@ -22,8 +22,7 @@ const ComposerizeWidget = () => {
             const result = composerize(input);
             setOutput(result);
             setError(null);
-        } catch (err) {
-            console.log(err)
+        } catch {
             setError('Invalid Docker command. Please check your syntax.');
             setOutput('');
         }

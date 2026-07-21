@@ -1,4 +1,4 @@
-import {Box, Divider, Paper, Stack, Tooltip, Typography} from "@mui/material";
+import {Box, ButtonBase, Divider, Paper, Stack, Tooltip, Typography} from "@mui/material";
 import {
     Dns as ContainerIcon,
     ImportExport as NetworkIcon,
@@ -27,6 +27,8 @@ export interface StateCounts {
     unhealthy: number;
 }
 
+export type ContainerStateFilter = 'running' | 'stopped' | 'paused' | 'restarting' | 'unhealthy';
+
 interface AggregateStatsProps {
     // computed once per completed refresh cycle — null until the first
     // cycle lands, so the header never renders half-updated totals
@@ -39,6 +41,8 @@ interface AggregateStatsProps {
     // when provided they replace the cycle-based aggregate counts, which
     // refresh more slowly
     states?: StateCounts | null;
+    stateFilters?: ContainerStateFilter[];
+    onStateFilterChange?: (filter: ContainerStateFilter | null, additive: boolean) => void;
     // render without the outer card (the caller embeds the band in its own
     // frame, e.g. merged with the toolbar)
     bare?: boolean;
@@ -48,7 +52,7 @@ interface AggregateStatsProps {
 const cpuValueColor = (cpu: number) =>
     cpu < 50 ? t.text : cpu < 85 ? '#ffb74d' : '#ef5350';
 
-function AggregateStats({aggregates, hostStats, states, bare = false}: AggregateStatsProps) {
+function AggregateStats({aggregates, hostStats, states, stateFilters = [], onStateFilterChange, bare = false}: AggregateStatsProps) {
     const memPercent = hostStats
         ? (hostStats.memTotal > 0 ? (hostStats.memUsed / hostStats.memTotal) * 100 : 0)
         : (aggregates && aggregates.memLimit > 0 ? (aggregates.memUsed / aggregates.memLimit) * 100 : 0);
@@ -79,7 +83,7 @@ function AggregateStats({aggregates, hostStats, states, bare = false}: Aggregate
                 sx={{width: '100%', alignItems: 'stretch'}}
             >
                 {/* per-state breakdown, wraps onto more lines when narrow */}
-                <StateTile counts={states ?? aggregates}/>
+                <StateTile counts={states ?? aggregates} active={stateFilters} onFilter={onStateFilterChange}/>
 
                 {/* charted tiles: value block + a chart that takes the room */}
                 <ChartTile
@@ -128,17 +132,21 @@ export default AggregateStats;
 // Dockhand-style status strip over two fixed rows: totals and the common
 // states first (total / running / stopped), the exceptional states below
 // (paused / restarting / unhealthy).
-function StateTile({counts}: { counts: StateCounts | null }) {
-    const rows: { icon: ReactNode, count: number, color: string, title: string }[][] = counts ? [
+function StateTile({counts, active, onFilter}: {
+    counts: StateCounts | null,
+    active: ContainerStateFilter[],
+    onFilter?: (filter: ContainerStateFilter | null, additive: boolean) => void,
+}) {
+    const rows: { icon: ReactNode, count: number, color: string, title: string, filter: ContainerStateFilter | null }[][] = counts ? [
         [
-            {icon: <ContainerIcon/>, count: counts.total, color: t.text, title: 'Total'},
-            {icon: <PlayArrowIcon/>, count: counts.running, color: '#66bb6a', title: 'Running'},
-            {icon: <StopIcon/>, count: counts.stopped, color: '#9e9e9e', title: 'Stopped'},
+            {icon: <ContainerIcon/>, count: counts.total, color: t.text, title: 'All containers', filter: null},
+            {icon: <PlayArrowIcon/>, count: counts.running, color: '#66bb6a', title: 'Running', filter: 'running'},
+            {icon: <StopIcon/>, count: counts.stopped, color: '#9e9e9e', title: 'Stopped', filter: 'stopped'},
         ],
         [
-            {icon: <PauseIcon/>, count: counts.paused, color: '#ffb74d', title: 'Paused'},
-            {icon: <RestartIcon/>, count: counts.restarting, color: '#4db6ac', title: 'Restarting'},
-            {icon: <WarningIcon/>, count: counts.unhealthy, color: '#ef5350', title: 'Unhealthy'},
+            {icon: <PauseIcon/>, count: counts.paused, color: '#ffb74d', title: 'Paused', filter: 'paused'},
+            {icon: <RestartIcon/>, count: counts.restarting, color: '#4db6ac', title: 'Restarting', filter: 'restarting'},
+            {icon: <WarningIcon/>, count: counts.unhealthy, color: '#ef5350', title: 'Unhealthy', filter: 'unhealthy'},
         ],
     ] : [];
 
@@ -152,18 +160,31 @@ function StateTile({counts}: { counts: StateCounts | null }) {
                         }}>
                             {row.map(e => (
                                 <Tooltip key={e.title} title={e.title} arrow placement="top">
-                                    <Stack
-                                        direction="row"
-                                        spacing={0.25}
+                                    <ButtonBase
+                                        aria-label={`${e.title}: ${e.count}`}
+                                        disabled={!onFilter || (e.filter !== null && e.count === 0)}
+                                        onClick={event => onFilter?.(e.filter, event.ctrlKey || event.metaKey)}
                                         sx={{
-                                            alignItems: "center",
-                                            color: e.color
+                                            display: 'flex',
+                                            gap: 0.25,
+                                            alignItems: 'center',
+                                            color: e.color,
+                                            px: 0.35,
+                                            py: 0.25,
+                                            mx: -0.35,
+                                            my: -0.25,
+                                            borderRadius: 0.75,
+                                            outline: e.filter !== null && active.includes(e.filter) ? `1px solid ${e.color}` : 'none',
+                                            bgcolor: e.filter !== null && active.includes(e.filter) ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                            cursor: onFilter && (e.filter === null || e.count > 0) ? 'pointer' : 'default',
+                                            '&:hover': onFilter ? {bgcolor: 'rgba(255,255,255,0.1)'} : {},
+                                            '&.Mui-disabled': {color: e.color, opacity: 0.38},
                                         }}>
                                         <Box sx={{display: 'flex', '& svg': {fontSize: 15}}}>{e.icon}</Box>
                                         <Typography sx={{fontFamily: t.mono, fontWeight: 700, fontSize: '0.85rem', lineHeight: 1}}>
                                             {e.count}
                                         </Typography>
-                                    </Stack>
+                                    </ButtonBase>
                                 </Tooltip>
                             ))}
                         </Stack>

@@ -8,6 +8,7 @@ import {useTabs} from "./tab-context.tsx";
 import {useEditorUrl} from "../lib/editor.ts";
 import {useOpenFiles} from "../pages/compose/state/files.ts";
 import {useFileComponents} from "../pages/compose/state/terminal.tsx";
+import {debugError} from "../lib/debug.ts";
 
 // btoa only accepts Latin1, so a path with accents, curly quotes or any other
 // non-Latin1 character throws. Encode the UTF-8 bytes instead; the backend
@@ -217,13 +218,13 @@ function FilesProvider({children}: { children: ReactNode }) {
                     }
                 };
                 xhr.onerror = () => {
-                    console.error("Upload failed");
+                    debugError("Upload failed");
                     resolve("Network error");
                 };
 
                 xhr.send(formData);
             } catch (error) {
-                console.error("Upload failed:", error);
+                debugError("Upload failed", error);
                 resolve("Network error");
             }
         });
@@ -309,7 +310,7 @@ function FilesProvider({children}: { children: ReactNode }) {
 
             return {file: bodyText, err: ""};
         } catch (error: unknown) {
-            console.error(`Error: ${(error as Error).toString()}`);
+            debugError("File download failed", error);
             return {file: "", err: (error as Error).toString()};
         }
     }, [getUrl])
@@ -348,7 +349,7 @@ function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[
     for (let i = 0; i < indices.length - 1; i++) {
         const index = indices[i];
         if (!current || !current[index] || !current[index].subFiles) {
-            console.error('Invalid path at index', i);
+            debugError('Invalid file-tree path at index', i);
             return;
         }
         current = current[index].subFiles;
@@ -357,7 +358,7 @@ function insertAtNestedIndex(list: FsEntry[], indices: number[], value: FsEntry[
     // Set the value at the final index
     const lastIndex = indices[indices.length - 1];
     if (!current || !current[lastIndex]) {
-        console.error('Invalid final index', lastIndex);
+        debugError('Invalid final file-tree index', lastIndex);
         return;
     }
 
@@ -376,7 +377,7 @@ export const getEntryDisplayName = (path: string) => {
     const split = path.split("/");
     const pop = split.pop();
     if (!pop) {
-        console.error("unable to get last element in path", "split: ", split, "last element: ", pop)
+        debugError("Unable to get the last path element", split)
         return "ERR_EMPTY_PATH"
     }
     return pop

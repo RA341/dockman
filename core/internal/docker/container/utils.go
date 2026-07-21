@@ -18,11 +18,17 @@ func formatDiskIO(statsJSON container.StatsResponse) (uint64, uint64) {
 }
 
 // formatCPU computes the CPU percentage exactly like `docker stats`: the
-// container delta over the system delta between the reading and the previous
-// sample the daemon includes in the response, scaled by online CPUs.
-func formatCPU(statsJSON container.StatsResponse) float64 {
-	cpuDelta := float64(statsJSON.CPUStats.CPUUsage.TotalUsage - statsJSON.PreCPUStats.CPUUsage.TotalUsage)
-	systemCpuDelta := float64(statsJSON.CPUStats.SystemUsage - statsJSON.PreCPUStats.SystemUsage)
+// container delta over the system delta between two readings, scaled by
+// online CPUs. Keeping the baseline ourselves lets the daemon return each
+// reading immediately instead of sampling for an extra second per request.
+func formatCPU(statsJSON container.StatsResponse, previousTotal, previousSystem uint64) float64 {
+	currentTotal := statsJSON.CPUStats.CPUUsage.TotalUsage
+	currentSystem := statsJSON.CPUStats.SystemUsage
+	if currentTotal < previousTotal || currentSystem <= previousSystem {
+		return 0
+	}
+	cpuDelta := float64(currentTotal - previousTotal)
+	systemCpuDelta := float64(currentSystem - previousSystem)
 	numberCPUs := float64(statsJSON.CPUStats.OnlineCPUs)
 	if numberCPUs == 0.0 {
 		numberCPUs = float64(len(statsJSON.CPUStats.CPUUsage.PercpuUsage))

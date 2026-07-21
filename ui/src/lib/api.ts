@@ -3,6 +3,7 @@ import {createConnectTransport} from "@connectrpc/connect-web";
 import type {DescService} from "@bufbuild/protobuf";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useParams} from "react-router-dom";
+import {debugLog, debugWarn} from "./debug.ts";
 
 const mode = import.meta.env.MODE;
 export const API_BASE_URL = mode === 'development' || mode === 'electron'
@@ -46,7 +47,7 @@ export function useContainerLogsWsUrl() {
 
 export function useContainerExecWsUrl() {
     const getBase = useHostUrl()
-    return useCallback((containerId: string, entrypoint: string, debuggerImage?: string) => {
+    return useCallback((containerId: string, entrypoint: string, debuggerImage?: string, user?: string) => {
         const params: Record<string, string> = {
             "cmd": entrypoint,
         }
@@ -54,10 +55,16 @@ export function useContainerExecWsUrl() {
             params["debug"] = "true"
             params["image"] = debuggerImage
         }
+        if (user) params["user"] = user
 
         const urlParam = new URLSearchParams(params)
         return getWSUrl(getBase(`/docker/exec/${containerId}?${urlParam.toString()}`))
     }, [getBase]);
+}
+
+export function useContainerExecOptionsUrl() {
+    const getBase = useHostUrl()
+    return useCallback((containerId: string) => getBase(`/docker/exec/${containerId}/options`), [getBase])
 }
 
 // interactive shell on the host itself (dockman container locally, ssh
@@ -95,7 +102,7 @@ export function useHostUrl() {
     }, [host]);
 }
 
-console.log(`API url: ${API_BASE_URL} `)
+debugLog("API URL", API_BASE_URL)
 
 export function useTransport(scope: ApiScope) {
     const {host} = useParams<{ host: string }>();
@@ -169,7 +176,6 @@ export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | nul
         return {val, err: ""}
     } catch (error: unknown) {
         if (error instanceof ConnectError) {
-            console.error(`Error: ${error.message}`);
             // todo maybe ?????
             // if (error.code == Code.Unauthenticated) {
             //     nav("/")
@@ -183,23 +189,21 @@ export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | nul
 
 export async function pingWithAuth() {
     try {
-        // console.log("Checking authentication status with server...");
         const response = await fetch(withProtectedAPI("/ping"), {
             redirect: 'follow'
         });
 
         if (response.status == 302) {
             const location = await response.text();
-            console.log(`oidc is enabled redirecting to oidc auth: ${location}`);
+            debugLog("OIDC redirect", location);
             window.location.assign(location)
 
             return false
         }
 
-        // console.log(`Server response isOK: ${response.ok}`);
         return response.ok
     } catch (error) {
-        console.error("Authentication check failed:", error);
+        debugWarn("Authentication check failed", error);
         return false
     }
 }

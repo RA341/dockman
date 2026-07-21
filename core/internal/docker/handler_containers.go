@@ -3,12 +3,12 @@ package docker
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
 	"net/netip"
 	"os"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -187,6 +187,15 @@ func (h *Handler) ContainerInspect(ctx context.Context, req *connect.Request[v1.
 		ExposedPorts: exposedPorts,
 	}
 
+	// Keep the typed legacy fields above for existing consumers, and expose
+	// the complete daemon response for the details view.  Marshaling the
+	// embedded API value (rather than hand-copying fields) also makes Dockman
+	// forward-compatible with inspect fields added by newer daemon APIs.
+	rawInspect, err := json.MarshalIndent(inspect, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("encode container inspect: %w", err)
+	}
+
 	return connect.NewResponse(&v1.ContainerInspectMessage{
 		ID:        inspect.ID,
 		Name:      inspect.Name,
@@ -196,6 +205,7 @@ func (h *Handler) ContainerInspect(ctx context.Context, req *connect.Request[v1.
 		Image:     inspect.Image,
 		HostsPath: inspect.HostsPath,
 		Mounts:    mounts,
+		RawJson:   string(rawInspect),
 	}), nil
 }
 
@@ -303,9 +313,9 @@ func (h *Handler) HostStats(ctx context.Context, _ *connect.Request[v1.Empty]) (
 	}), nil
 }
 
-// ContainerStatsStream emits each container's stats as soon as its read
-// completes (the daemon needs ~1s per container to build a sample), so the
-// client paints progressively instead of waiting for the slowest container.
+// ContainerStatsStream emits each container's stats as soon as its one-shot
+// read completes, so the client paints progressively instead of waiting for
+// the slowest container.
 // No server-side sort: order is arrival order, the client sorts.
 func (h *Handler) ContainerStatsStream(ctx context.Context, req *connect.Request[v1.StatsRequest], stream *connect.ServerStream[v1.ContainerStats]) error {
 	file := req.Msg.GetFile()
@@ -333,7 +343,7 @@ func (h *Handler) ContainerStatsStream(ctx context.Context, req *connect.Request
 
 	// paint-first: emit each container's identity immediately (metrics
 	// pending) so every view fills in the time of a container listing; the
-	// real stats replace the rows as each ~1s read completes
+	// real stats replace the rows as each one-shot read completes
 	for _, ct := range containers {
 		if err := stream.Send(ToRPCStat(contSrv.IdentityStats(ct))); err != nil {
 			return err
@@ -598,33 +608,5 @@ func extractIPAddr(stack container.Summary) (hosts []string) {
 }
 
 func extractTraefikLabel(labels map[string]string) (hosts []string) {
-	val, ok := labels["traefik.enable"]
-	if !(ok && val == "true") {
-		return hosts
-	}
-
-	// looks for the Host() or HostRegexp() functions
-	// It captures everything inside the parenthesis
-	hostRegex := regexp.MustCompile(`Host(?:Regexp)?\((.*?)\)`)
-	// This regex identifies the actual domain names inside the quotes/backticks
-	domainRegex := regexp.MustCompile(`[` + "`" + `"]([^` + "`" + `",\s]+)[` + "`" + `"]`)
-	for key, value := range labels {
-		if strings.HasPrefix(key, "traefik.http.routers.") && strings.HasSuffix(key, ".rule") {
-			// Find all Host(...) or HostRegexp(...) occurrences in the rule
-			matches := hostRegex.FindAllStringSubmatch(value, -1)
-			for _, match := range matches {
-				if len(match) > 1 {
-					// (Handles comma separated: Host(`a.com`, `b.com`))
-					domains := domainRegex.FindAllStringSubmatch(match[1], -1)
-					for _, d := range domains {
-						if len(d) > 1 {
-							hosts = append(hosts, d[1])
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return hosts
+	return contSrv.TraefikHosts(labels)
 }

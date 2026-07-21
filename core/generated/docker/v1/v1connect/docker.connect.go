@@ -147,6 +147,12 @@ const (
 	// DockerServiceNetworkInspectProcedure is the fully-qualified name of the DockerService's
 	// NetworkInspect RPC.
 	DockerServiceNetworkInspectProcedure = "/docker.v1.DockerService/NetworkInspect"
+	// DockerServiceNetworkConnectContainerProcedure is the fully-qualified name of the DockerService's
+	// NetworkConnectContainer RPC.
+	DockerServiceNetworkConnectContainerProcedure = "/docker.v1.DockerService/NetworkConnectContainer"
+	// DockerServiceNetworkDisconnectContainerProcedure is the fully-qualified name of the
+	// DockerService's NetworkDisconnectContainer RPC.
+	DockerServiceNetworkDisconnectContainerProcedure = "/docker.v1.DockerService/NetworkDisconnectContainer"
 )
 
 // DockerServiceClient is a client for the docker.v1.DockerService service.
@@ -211,6 +217,8 @@ type DockerServiceClient interface {
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
 	NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
 	NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error)
+	NetworkConnectContainer(context.Context, *connect.Request[v1.NetworkConnectContainerRequest]) (*connect.Response[v1.NetworkConnectContainerResponse], error)
+	NetworkDisconnectContainer(context.Context, *connect.Request[v1.NetworkDisconnectContainerRequest]) (*connect.Response[v1.NetworkDisconnectContainerResponse], error)
 }
 
 // NewDockerServiceClient constructs a client for the docker.v1.DockerService service. By default,
@@ -458,50 +466,64 @@ func NewDockerServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(dockerServiceMethods.ByName("NetworkInspect")),
 			connect.WithClientOptions(opts...),
 		),
+		networkConnectContainer: connect.NewClient[v1.NetworkConnectContainerRequest, v1.NetworkConnectContainerResponse](
+			httpClient,
+			baseURL+DockerServiceNetworkConnectContainerProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("NetworkConnectContainer")),
+			connect.WithClientOptions(opts...),
+		),
+		networkDisconnectContainer: connect.NewClient[v1.NetworkDisconnectContainerRequest, v1.NetworkDisconnectContainerResponse](
+			httpClient,
+			baseURL+DockerServiceNetworkDisconnectContainerProcedure,
+			connect.WithSchema(dockerServiceMethods.ByName("NetworkDisconnectContainer")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // dockerServiceClient implements DockerServiceClient.
 type dockerServiceClient struct {
-	containerStart       *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerStop        *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerRemove      *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerRestart     *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerPause       *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerUnpause     *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerUpdate      *connect.Client[v1.ContainerRequest, v1.LogsMessage]
-	containerTop         *connect.Client[v1.ContainerTopRequest, v1.ContainerTopResponse]
-	containerList        *connect.Client[v1.ContainerListRequest, v1.ListResponse]
-	containerStats       *connect.Client[v1.StatsRequest, v1.StatsResponse]
-	containerStatsStream *connect.Client[v1.StatsRequest, v1.ContainerStats]
-	hostStats            *connect.Client[v1.Empty, v1.HostStatsResponse]
-	containerLogs        *connect.Client[v1.ContainerLogsRequest, v1.LogsMessage]
-	containerEvents      *connect.Client[v1.EventsRequest, v1.ContainerEvent]
-	containerLogsStream  *connect.Client[v1.LogsStreamRequest, v1.LogLine]
-	containerInspect     *connect.Client[v1.ContainerLogsRequest, v1.ContainerInspectMessage]
-	composeUp            *connect.Client[v1.ComposeFile, v1.LogsMessage]
-	composeDown          *connect.Client[v1.ComposeFile, v1.LogsMessage]
-	composeStart         *connect.Client[v1.ComposeFile, v1.LogsMessage]
-	composeStop          *connect.Client[v1.ComposeFile, v1.LogsMessage]
-	composeRestart       *connect.Client[v1.ComposeFile, v1.LogsMessage]
-	composeUpdate        *connect.Client[v1.ComposeFile, v1.LogsMessage]
-	composeRedeploy      *connect.Client[v1.ComposeRedeployRequest, v1.LogsMessage]
-	composeList          *connect.Client[v1.ComposeFile, v1.ListResponse]
-	composeValidate      *connect.Client[v1.ComposeFile, v1.ComposeValidateResponse]
-	composeFileStatus    *connect.Client[v1.ComposeFileStatusRequest, v1.ComposeFileStatusResponse]
-	dockerCommand        *connect.Client[v1.DockerCommandRequest, v1.LogsMessage]
-	imageList            *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
-	imageRemove          *connect.Client[v1.RemoveImageRequest, v1.RemoveImageResponse]
-	imagePruneUnused     *connect.Client[v1.ImagePruneRequest, v1.ImagePruneResponse]
-	imageInspect         *connect.Client[v1.ImageInspectRequest, v1.ImageInspectResponse]
-	volumeList           *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
-	volumeCreate         *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
-	volumeDelete         *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
-	volumeInspect        *connect.Client[v1.VolumeInspectRequest, v1.VolumeInspectResponse]
-	networkList          *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
-	networkCreate        *connect.Client[v1.CreateNetworkRequest, v1.CreateNetworkResponse]
-	networkDelete        *connect.Client[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse]
-	networkInspect       *connect.Client[v1.NetworkInspectRequest, v1.NetworkInspectResponse]
+	containerStart             *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerStop              *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerRemove            *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerRestart           *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerPause             *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerUnpause           *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerUpdate            *connect.Client[v1.ContainerRequest, v1.LogsMessage]
+	containerTop               *connect.Client[v1.ContainerTopRequest, v1.ContainerTopResponse]
+	containerList              *connect.Client[v1.ContainerListRequest, v1.ListResponse]
+	containerStats             *connect.Client[v1.StatsRequest, v1.StatsResponse]
+	containerStatsStream       *connect.Client[v1.StatsRequest, v1.ContainerStats]
+	hostStats                  *connect.Client[v1.Empty, v1.HostStatsResponse]
+	containerLogs              *connect.Client[v1.ContainerLogsRequest, v1.LogsMessage]
+	containerEvents            *connect.Client[v1.EventsRequest, v1.ContainerEvent]
+	containerLogsStream        *connect.Client[v1.LogsStreamRequest, v1.LogLine]
+	containerInspect           *connect.Client[v1.ContainerLogsRequest, v1.ContainerInspectMessage]
+	composeUp                  *connect.Client[v1.ComposeFile, v1.LogsMessage]
+	composeDown                *connect.Client[v1.ComposeFile, v1.LogsMessage]
+	composeStart               *connect.Client[v1.ComposeFile, v1.LogsMessage]
+	composeStop                *connect.Client[v1.ComposeFile, v1.LogsMessage]
+	composeRestart             *connect.Client[v1.ComposeFile, v1.LogsMessage]
+	composeUpdate              *connect.Client[v1.ComposeFile, v1.LogsMessage]
+	composeRedeploy            *connect.Client[v1.ComposeRedeployRequest, v1.LogsMessage]
+	composeList                *connect.Client[v1.ComposeFile, v1.ListResponse]
+	composeValidate            *connect.Client[v1.ComposeFile, v1.ComposeValidateResponse]
+	composeFileStatus          *connect.Client[v1.ComposeFileStatusRequest, v1.ComposeFileStatusResponse]
+	dockerCommand              *connect.Client[v1.DockerCommandRequest, v1.LogsMessage]
+	imageList                  *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
+	imageRemove                *connect.Client[v1.RemoveImageRequest, v1.RemoveImageResponse]
+	imagePruneUnused           *connect.Client[v1.ImagePruneRequest, v1.ImagePruneResponse]
+	imageInspect               *connect.Client[v1.ImageInspectRequest, v1.ImageInspectResponse]
+	volumeList                 *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
+	volumeCreate               *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
+	volumeDelete               *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
+	volumeInspect              *connect.Client[v1.VolumeInspectRequest, v1.VolumeInspectResponse]
+	networkList                *connect.Client[v1.ListNetworksRequest, v1.ListNetworksResponse]
+	networkCreate              *connect.Client[v1.CreateNetworkRequest, v1.CreateNetworkResponse]
+	networkDelete              *connect.Client[v1.DeleteNetworkRequest, v1.DeleteNetworkResponse]
+	networkInspect             *connect.Client[v1.NetworkInspectRequest, v1.NetworkInspectResponse]
+	networkConnectContainer    *connect.Client[v1.NetworkConnectContainerRequest, v1.NetworkConnectContainerResponse]
+	networkDisconnectContainer *connect.Client[v1.NetworkDisconnectContainerRequest, v1.NetworkDisconnectContainerResponse]
 }
 
 // ContainerStart calls docker.v1.DockerService.ContainerStart.
@@ -699,6 +721,16 @@ func (c *dockerServiceClient) NetworkInspect(ctx context.Context, req *connect.R
 	return c.networkInspect.CallUnary(ctx, req)
 }
 
+// NetworkConnectContainer calls docker.v1.DockerService.NetworkConnectContainer.
+func (c *dockerServiceClient) NetworkConnectContainer(ctx context.Context, req *connect.Request[v1.NetworkConnectContainerRequest]) (*connect.Response[v1.NetworkConnectContainerResponse], error) {
+	return c.networkConnectContainer.CallUnary(ctx, req)
+}
+
+// NetworkDisconnectContainer calls docker.v1.DockerService.NetworkDisconnectContainer.
+func (c *dockerServiceClient) NetworkDisconnectContainer(ctx context.Context, req *connect.Request[v1.NetworkDisconnectContainerRequest]) (*connect.Response[v1.NetworkDisconnectContainerResponse], error) {
+	return c.networkDisconnectContainer.CallUnary(ctx, req)
+}
+
 // DockerServiceHandler is an implementation of the docker.v1.DockerService service.
 type DockerServiceHandler interface {
 	// container
@@ -761,6 +793,8 @@ type DockerServiceHandler interface {
 	NetworkCreate(context.Context, *connect.Request[v1.CreateNetworkRequest]) (*connect.Response[v1.CreateNetworkResponse], error)
 	NetworkDelete(context.Context, *connect.Request[v1.DeleteNetworkRequest]) (*connect.Response[v1.DeleteNetworkResponse], error)
 	NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error)
+	NetworkConnectContainer(context.Context, *connect.Request[v1.NetworkConnectContainerRequest]) (*connect.Response[v1.NetworkConnectContainerResponse], error)
+	NetworkDisconnectContainer(context.Context, *connect.Request[v1.NetworkDisconnectContainerRequest]) (*connect.Response[v1.NetworkDisconnectContainerResponse], error)
 }
 
 // NewDockerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1004,6 +1038,18 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(dockerServiceMethods.ByName("NetworkInspect")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dockerServiceNetworkConnectContainerHandler := connect.NewUnaryHandler(
+		DockerServiceNetworkConnectContainerProcedure,
+		svc.NetworkConnectContainer,
+		connect.WithSchema(dockerServiceMethods.ByName("NetworkConnectContainer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	dockerServiceNetworkDisconnectContainerHandler := connect.NewUnaryHandler(
+		DockerServiceNetworkDisconnectContainerProcedure,
+		svc.NetworkDisconnectContainer,
+		connect.WithSchema(dockerServiceMethods.ByName("NetworkDisconnectContainer")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/docker.v1.DockerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DockerServiceContainerStartProcedure:
@@ -1084,6 +1130,10 @@ func NewDockerServiceHandler(svc DockerServiceHandler, opts ...connect.HandlerOp
 			dockerServiceNetworkDeleteHandler.ServeHTTP(w, r)
 		case DockerServiceNetworkInspectProcedure:
 			dockerServiceNetworkInspectHandler.ServeHTTP(w, r)
+		case DockerServiceNetworkConnectContainerProcedure:
+			dockerServiceNetworkConnectContainerHandler.ServeHTTP(w, r)
+		case DockerServiceNetworkDisconnectContainerProcedure:
+			dockerServiceNetworkDisconnectContainerHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1247,4 +1297,12 @@ func (UnimplementedDockerServiceHandler) NetworkDelete(context.Context, *connect
 
 func (UnimplementedDockerServiceHandler) NetworkInspect(context.Context, *connect.Request[v1.NetworkInspectRequest]) (*connect.Response[v1.NetworkInspectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkInspect is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) NetworkConnectContainer(context.Context, *connect.Request[v1.NetworkConnectContainerRequest]) (*connect.Response[v1.NetworkConnectContainerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkConnectContainer is not implemented"))
+}
+
+func (UnimplementedDockerServiceHandler) NetworkDisconnectContainer(context.Context, *connect.Request[v1.NetworkDisconnectContainerRequest]) (*connect.Response[v1.NetworkDisconnectContainerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("docker.v1.DockerService.NetworkDisconnectContainer is not implemented"))
 }

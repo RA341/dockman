@@ -71,6 +71,8 @@ service DockerService {
   rpc NetworkCreate(CreateNetworkRequest) returns (CreateNetworkResponse) {}
   rpc NetworkDelete(DeleteNetworkRequest) returns (DeleteNetworkResponse) {}
   rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
+  rpc NetworkConnectContainer(NetworkConnectContainerRequest) returns (NetworkConnectContainerResponse) {}
+  rpc NetworkDisconnectContainer(NetworkDisconnectContainerRequest) returns (NetworkDisconnectContainerResponse) {}
 }
 
 
@@ -115,6 +117,9 @@ message ContainerInspectMessage {
   string HostsPath = 5;
   repeated ContainerMount mounts = 6;
   ContainerConfig config = 8;
+  // Complete daemon inspect response. This deliberately stays JSON so newer
+  // daemon fields remain visible without forcing a Dockman protocol release.
+  string raw_json = 9;
 }
 
 message ContainerConfig {
@@ -378,6 +383,22 @@ message DeleteNetworkRequest {
 }
 
 message DeleteNetworkResponse {
+}
+
+message NetworkConnectContainerRequest {
+  string network_id = 1;
+  string container_id = 2;
+}
+
+message NetworkConnectContainerResponse {
+}
+
+message NetworkDisconnectContainerRequest {
+  string network_id = 1;
+  string container_id = 2;
+}
+
+message NetworkDisconnectContainerResponse {
 }
 
 message EventsRequest {

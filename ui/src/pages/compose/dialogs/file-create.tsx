@@ -41,6 +41,7 @@ import {FileService, type Template} from "../../../gen/files/v1/files_pb.ts";
 
 import scrollbarStyles from "../../../components/scrollbar-style.tsx";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
+import {debugError} from "../../../lib/debug.ts";
 
 export type PresetType = 'file' | 'folder' | 'templates';
 export type CreationStep = 'preset-selection' | 'name-input' | 'template-create';
@@ -156,7 +157,7 @@ function FileCreate({initialName = ""}: { initialName?: string }) {
             }
             closeDialog();
         } catch (err) {
-            console.error("File operation failed", err);
+            debugError("File operation failed", err);
         }
     };
 

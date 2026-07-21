@@ -25,7 +25,10 @@ RUN --mount=type=cache,target=/root/.npm \
 
 COPY ui/ ./
 
-RUN npm run build
+# Browser diagnostics are compiled out by default. A dedicated diagnostic
+# image can opt in with --build-arg VITE_DEBUG=true.
+ARG VITE_DEBUG=false
+RUN VITE_DEBUG="${VITE_DEBUG}" npm run build
 
 FROM golang:${GO_VERSION}-alpine3.24@${GO_IMAGE_DIGEST} AS back
 

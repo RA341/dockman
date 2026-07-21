@@ -5,7 +5,6 @@ const ItToolsWidget = () => {
     const {dockYaml} = useConfig()
 
     const itToolsUrl = dockYaml?.customTools["ittools"] ?? "https://it-tools.tech/"
-    console.log("itToolsUrl", itToolsUrl)
 
     return (
         <Box sx={{

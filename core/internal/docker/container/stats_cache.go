@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"slices"
 	"sync"
 	"time"
@@ -17,11 +16,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// statsConcurrency bounds how many stats reads run at once. Each read makes
-// the daemon precollect a sample (~1s), so the bound must comfortably exceed
-// the typical container count for the whole batch to complete in one ~1s
-// wave — while still capping the fan-out against remote/SSH hosts.
-const statsConcurrency = 32
+// statsConcurrency bounds the instantaneous fan-out against the daemon.
+// Samples are one-shot and complete quickly; a modest bound smooths CPU and
+// socket-proxy load on large hosts without affecting the five-second cadence.
+const statsConcurrency = 8
 
 // inspectData caches the inspect-only fields served with stats. An entry is
 // valid while the summary's Status text ("Up 3 minutes", "Exited (0)...") is
@@ -41,6 +39,15 @@ type inspectData struct {
 type hostStatsCache struct {
 	mu       sync.Mutex
 	inspects map[string]inspectData
+	cpu      map[string]cpuSample
+}
+
+type cpuSample struct {
+	startedAt string
+	total     uint64
+	system    uint64
+	sampledAt time.Time
+	percent   float64
 }
 
 var hostCaches syncmap.Map[*client.Client, *hostStatsCache]
@@ -48,6 +55,7 @@ var hostCaches syncmap.Map[*client.Client, *hostStatsCache]
 func cacheFor(cli *client.Client) *hostStatsCache {
 	cache, _ := hostCaches.LoadOrStore(cli, &hostStatsCache{
 		inspects: make(map[string]inspectData),
+		cpu:      make(map[string]cpuSample),
 	})
 	return cache
 }
@@ -61,6 +69,11 @@ func (c *hostStatsCache) prune(live map[string]struct{}) {
 	for id := range c.inspects {
 		if _, ok := live[id]; !ok {
 			delete(c.inspects, id)
+		}
+	}
+	for id := range c.cpu {
+		if _, ok := live[id]; !ok {
+			delete(c.cpu, id)
 		}
 	}
 }
@@ -78,11 +91,18 @@ func (s *Service) StatsStream(ctx context.Context, containers []container.Summar
 	cache := cacheFor(s.Client)
 
 	ch := make(chan Stats)
+	sem := make(chan struct{}, statsConcurrency)
 	var wg sync.WaitGroup
 	for _, cont := range containers {
 		wg.Add(1)
 		go func(cont container.Summary) {
 			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
 
 			cctx, cancel := context.WithTimeout(ctx, statsReadTimeout)
 			defer cancel()
@@ -172,8 +192,10 @@ func (s *Service) statsFor(ctx context.Context, cache *hostStatsCache, info cont
 	// inspect-only fields, served from cache while the container's status text
 	// is unchanged; non-fatal so a race with a disappearing container can't
 	// take the whole table down
+	var startedAt string
 	if insp, err := s.inspectDataFor(ctx, cache, info); err == nil {
 		stat.StartedAt = insp.startedAt
+		startedAt = insp.startedAt
 		stat.RestartCount = insp.restartCount
 	} else if !errors.Is(err, context.Canceled) {
 		log.Debug().Err(err).Str("container", stat.ID).Msg("could not inspect container for stats")
@@ -181,6 +203,9 @@ func (s *Service) statsFor(ctx context.Context, cache *hostStatsCache, info cont
 
 	// a container that isn't running has no live metrics to read
 	if stat.State != "running" {
+		cache.mu.Lock()
+		delete(cache.cpu, info.ID)
+		cache.mu.Unlock()
 		return stat, nil
 	}
 
@@ -189,7 +214,7 @@ func (s *Service) statsFor(ctx context.Context, cache *hostStatsCache, info cont
 		return Stats{}, err
 	}
 
-	stat.CPUUsage = formatCPU(statsJSON)
+	stat.CPUUsage = cache.cpuPercent(info.ID, startedAt, statsJSON)
 	stat.MemoryUsage = formatMemory(statsJSON)
 	stat.MemoryLimit = statsJSON.MemoryStats.Limit
 	stat.NetworkRx, stat.NetworkTx = formatNetwork(statsJSON)
@@ -198,26 +223,49 @@ func (s *Service) statsFor(ctx context.Context, cache *hostStatsCache, info cont
 	return stat, nil
 }
 
+func (c *hostStatsCache) cpuPercent(id, startedAt string, current container.StatsResponse) float64 {
+	now := time.Now()
+	next := cpuSample{
+		startedAt: startedAt,
+		total:     current.CPUStats.CPUUsage.TotalUsage,
+		system:    current.CPUStats.SystemUsage,
+		sampledAt: now,
+	}
+	c.mu.Lock()
+	previous, ok := c.cpu[id]
+	if !ok || previous.startedAt != startedAt {
+		c.cpu[id] = next
+		c.mu.Unlock()
+		return 0
+	}
+	// Two open clients commonly poll on the same five-second boundary. Reuse
+	// the just-computed value instead of replacing the baseline with an almost
+	// identical sample (which creates noisy near-zero deltas for one client).
+	if now.Sub(previous.sampledAt) < time.Second {
+		c.mu.Unlock()
+		return previous.percent
+	}
+	next.percent = formatCPU(current, previous.total, previous.system)
+	c.cpu[id] = next
+	c.mu.Unlock()
+	return next.percent
+}
+
 func (s *Service) readStats(ctx context.Context, id string) (container.StatsResponse, error) {
-	// IncludePreviousSample makes the daemon return a reading that carries its
-	// own precpu sample, so the CPU percentage is computed exactly like
-	// `docker stats` from a single self-contained response. The daemon needs
-	// ~1s to build it, but every container is read concurrently so a poll
-	// costs ~1s wall time regardless of container count.
+	// A one-shot sample returns immediately. The previous counters are kept in
+	// hostStatsCache, so CPU is calculated over the normal refresh interval
+	// instead of asking the daemon to spend an extra second sampling every
+	// container during every cycle.
 	resp, err := s.Client.ContainerStats(ctx, id, client.ContainerStatsOptions{
-		IncludePreviousSample: true,
+		IncludePreviousSample: false,
 	})
 	if err != nil {
 		return container.StatsResponse{}, fmt.Errorf("failed to get stats for cont %s: %w", id[:12], err)
 	}
 	defer fileutil.Close(resp.Body)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return container.StatsResponse{}, fmt.Errorf("failed to read body for cont %s: %w", id[:12], err)
-	}
 	var statsJSON container.StatsResponse
-	if err := json.Unmarshal(body, &statsJSON); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&statsJSON); err != nil {
 		return container.StatsResponse{}, fmt.Errorf("failed to unmarshal body for cont %s: %w", id[:12], err)
 	}
 	return statsJSON, nil
@@ -260,7 +308,7 @@ func summaryHealth(info container.Summary) string {
 }
 
 func summaryIPs(info container.Summary) []string {
-	var ips []string
+	ips := TraefikHosts(info.Labels)
 	for _, netConf := range info.NetworkSettings.Networks {
 		ip := netConf.IPAddress.String()
 		if ip != "invalid IP" && ip != "" {
@@ -269,5 +317,5 @@ func summaryIPs(info container.Summary) []string {
 	}
 	// map iteration order is random; keep the column stable between polls
 	slices.Sort(ips)
-	return ips
+	return slices.Compact(ips)
 }

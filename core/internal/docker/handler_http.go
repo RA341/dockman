@@ -2,10 +2,14 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync"
+	"time"
 
 	contSrv "github.com/RA341/dockman/internal/docker/container"
 	"github.com/RA341/dockman/internal/docker/debug"
@@ -23,22 +27,105 @@ var upgrader = websocket.Upgrader{
 }
 
 type HandlerHttp struct {
-	srv ServiceProvider
+	srv           ServiceProvider
+	allowSelfExec bool
 }
 
-func NewHandlerHttp(srv ServiceProvider) http.Handler {
-	hand := &HandlerHttp{srv: srv}
+func NewHandlerHttp(srv ServiceProvider, allowSelfExec bool) http.Handler {
+	hand := &HandlerHttp{srv: srv, allowSelfExec: allowSelfExec}
 	return hand.register()
 }
 
 func (h *HandlerHttp) register() http.Handler {
 	subMux := http.NewServeMux()
+	subMux.HandleFunc("GET /exec/{contId}/options", h.containerExecOptions)
 	subMux.HandleFunc("GET /exec/{contId}", h.containerExec)
 	subMux.HandleFunc("GET /logs/{contId}", h.containerLogs)
 	subMux.HandleFunc("GET /shell", h.hostShell)
 	subMux.HandleFunc("POST /update/dockman", h.updateDockman)
+	subMux.HandleFunc("POST /restart/dockman", h.restartDockman)
 
 	return subMux
+}
+
+var execShellCandidates = []string{
+	"/bin/sh", "/bin/bash", "/bin/ash", "/bin/zsh", "/bin/fish",
+	"/usr/bin/bash", "/usr/bin/zsh", "/usr/bin/fish", "/usr/local/bin/bash",
+}
+
+func (h *HandlerHttp) containerExecOptions(w http.ResponseWriter, r *http.Request) {
+	dkSrv, contID, err := getContainerIdAndService(r, h)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = h.checkExecAllowed(r.Context(), dkSrv, contID); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	available := make([]bool, len(execShellCandidates))
+	var wg sync.WaitGroup
+	for index, shell := range execShellCandidates {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, statErr := dkSrv.Container.Cli().ContainerStatPath(r.Context(), contID, client.ContainerStatPathOptions{Path: shell})
+			available[index] = statErr == nil
+		}()
+	}
+	wg.Wait()
+	shells := make([]string, 0, len(execShellCandidates))
+	for index, shell := range execShellCandidates {
+		if available[index] {
+			shells = append(shells, shell)
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(struct {
+		Shells []string `json:"shells"`
+	}{Shells: shells}); err != nil {
+		log.Debug().Err(err).Msg("could not encode container exec options")
+	}
+}
+
+// restartDockman asks the local daemon to restart this container. The daemon
+// performs the full stop/start operation, so it keeps going after Dockman's
+// process exits. A short delay lets the accepted response reach the browser
+// before the connection is interrupted.
+func (h *HandlerHttp) restartDockman(w http.ResponseWriter, r *http.Request) {
+	host, err := hostMid.GetHost(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if host != contSrv.LocalClient {
+		http.Error(w, "restart is only supported on the local host", http.StatusBadRequest)
+		return
+	}
+
+	dkSrv, err := h.srv(host)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error getting docker service: %v", err), http.StatusBadRequest)
+		return
+	}
+	cli := dkSrv.Container.Cli()
+	self, err := findSelfContainer(r.Context(), cli)
+	if err != nil {
+		log.Error().Err(err).Msg("dockman self-restart failed to locate its container")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = w.Write([]byte("Dockman restart scheduled."))
+
+	go func(containerID string) {
+		time.Sleep(time.Second)
+		if _, restartErr := cli.ContainerRestart(context.Background(), containerID, client.ContainerRestartOptions{}); restartErr != nil {
+			log.Error().Err(restartErr).Str("container", containerID).Msg("dockman self-restart failed")
+		}
+	}(self.ID)
 }
 
 // updateDockman triggers a manual self-update of the Dockman container on the
@@ -79,6 +166,10 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if err = h.checkExecAllowed(r.Context(), dkSrv, contId); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
 
 	log.Debug().Str("id", contId).Msg("getting container logs")
 
@@ -92,6 +183,7 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	execCmd := getExecCmd(query, ws)
+	execUser := strings.TrimSpace(query.Get("user"))
 
 	ctx := r.Context()
 	var resp client.HijackedResponse
@@ -113,7 +205,7 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		}
 		defer cleanup()
 	} else {
-		resp, err = dkSrv.Container.ContainerExec(ctx, contId, execCmd)
+		resp, err = dkSrv.Container.ContainerExec(ctx, contId, execCmd, execUser)
 		if err != nil {
 			wsu.WErr(ws, err)
 			return
@@ -138,6 +230,9 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 		wsu.WInf(ws, fmt.Sprintf("Debug Image: %s", debuggerImage))
 	}
 	wsu.WInf(ws, fmt.Sprintf("Entrypoint: %s", execCmd))
+	if execUser != "" {
+		wsu.WInf(ws, fmt.Sprintf("User: %s", execUser))
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -179,6 +274,24 @@ func (h *HandlerHttp) containerExec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debug().Str("container", contId).Msg("exec done")
+}
+
+// checkExecAllowed enforces the policy before both shell discovery and the
+// WebSocket upgrade. Keeping the authoritative check here means hiding or
+// re-enabling a UI control can never bypass the server-side boundary.
+func (h *HandlerHttp) checkExecAllowed(ctx context.Context, dkSrv *Service, containerID string) error {
+	if h.allowSelfExec {
+		return nil
+	}
+
+	inspect, err := dkSrv.Container.Cli().ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to verify exec target: %w", err)
+	}
+	if inspect.Container.Config != nil && inspect.Container.Config.Labels[dockmanContainerLabel] == "true" {
+		return fmt.Errorf("exec into Dockman is disabled by policy; set DOCKMAN_ALLOW_SELF_EXEC=true and recreate Dockman to enable it temporarily")
+	}
+	return nil
 }
 
 func (h *HandlerHttp) containerLogs(w http.ResponseWriter, r *http.Request) {

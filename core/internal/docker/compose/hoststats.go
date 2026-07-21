@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -52,6 +53,23 @@ func (c *Service) HostStats(ctx context.Context) (HostStats, error) {
 }
 
 func (c *Service) readProc(ctx context.Context) (procSample, error) {
+	// On the local Docker host, reading procfs directly avoids starting two
+	// external `cat` processes on every refresh. Remote hosts still go through
+	// their SSH runner, where direct local file access would be incorrect.
+	if _, local := c.runner.(*LocalRunner); local {
+		if err := ctx.Err(); err != nil {
+			return procSample{}, err
+		}
+		stat, err := os.ReadFile("/proc/stat")
+		if err != nil {
+			return procSample{}, err
+		}
+		mem, err := os.ReadFile("/proc/meminfo")
+		if err != nil {
+			return procSample{}, err
+		}
+		return parseProcSample(string(stat) + "\n" + string(mem)), nil
+	}
 	out := new(bytes.Buffer)
 	errW := new(bytes.Buffer)
 	if err := c.runner.Run(ctx, []string{"cat", "/proc/stat", "/proc/meminfo"}, ".", out, errW); err != nil {

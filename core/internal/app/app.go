@@ -352,7 +352,7 @@ func (a *App) registerApiHostRoutes(hostMux *http.ServeMux) {
 	withSubRouter(
 		hostMux,
 		"/docker",
-		docker.NewHandlerHttp(a.HostManager.GetDockerService),
+		docker.NewHandlerHttp(a.HostManager.GetDockerService, a.Config.AllowSelfExec),
 	)
 	// cleaner
 	hostMux.Handle(cleaner.NewHandler(a.CleanerSrv))

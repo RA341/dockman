@@ -96,7 +96,7 @@ export function useDockerImages() {
     }, [fetchImages]);
 
     const pruneUnused = useCallback(async (all = false) => {
-        const {val, err} = await callRPC(() => dockerService.imagePruneUnused({
+        const {err} = await callRPC(() => dockerService.imagePruneUnused({
             pruneAll: all,
         }))
         if (err) {
@@ -104,7 +104,6 @@ export function useDockerImages() {
             return
         }
 
-        console.info(val)
         fetchImages().finally(() => {
             setLoading(false)
         })

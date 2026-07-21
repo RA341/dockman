@@ -7,14 +7,12 @@ import {useHostStore} from "../pages/compose/state/files.ts";
 import {useConfig} from "./config.ts";
 
 // cpuUsage sentinel marking a row seeded from the container list whose
-// metrics haven't arrived yet (each stats read takes ~1s of daemon
-// sampling; the list is immediate).
+// one-shot metrics response has not arrived yet; the list is immediate.
 export const METRICS_PENDING = -1;
 
 // Refresh cadence between two streaming cycles — 5s like Dockhand's stacks
-// cards. The wider spacing also decorrelates consecutive 1s-window samples,
-// which is precisely what gives the charts their pronounced peaks and dips:
-// closely spaced samples overlap the same load bursts and flatten out.
+// cards. CPU deltas are calculated server-side between these readings, so
+// this interval is also the chart's stable sampling window.
 const DEFAULT_REFRESH = 5000;
 
 // Rolling per-container metric history driving the sparklines: 20 points at
@@ -312,7 +310,7 @@ export function useDockerStats(selectedPage?: string) {
                 })) {
                     if (isCancelled) return;
 
-                    // identity-only row streamed ahead of its ~1s reading so
+                    // identity-only row streamed ahead of its metrics reading so
                     // the view paints fast: never overwrite a row that
                     // already has real values, never record it as history
                     if (stat.cpuUsage < 0) {

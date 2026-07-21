@@ -66,7 +66,6 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
             filename: filename,
         }))
         if (err) {
-            console.error("API error checking file existence:", err);
             setFileError(`An API error occurred: ${err}`);
         }
         setIsLoading(false);

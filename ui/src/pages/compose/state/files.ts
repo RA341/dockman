@@ -64,7 +64,6 @@ export const useAliasStore = create<{
         setAlias: (alias: string) => {
             set(state => {
                 if (alias && alias !== state.alias) {
-                    // console.log("Changing alias", alias)
                     return {
                         alias
                     }
@@ -84,7 +83,6 @@ export const useHostStore = create<{
         setHost: (host: string) => {
             set(state => {
                 if (host && host !== state.host) {
-                    // console.log("Changing host", host)
                     return {
                         host
                     }

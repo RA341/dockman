@@ -122,13 +122,14 @@ func (s *Service) ContainersRemove(ctx context.Context, containerId ...string) e
 	return nil
 }
 
-func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd string) (client.HijackedResponse, error) {
+func (s *Service) ContainerExec(ctx context.Context, containerID string, cmd string, user string) (client.HijackedResponse, error) {
 	execConfig := client.ExecCreateOptions{
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		TTY:          true,
 		Cmd:          []string{cmd},
+		User:         user,
 	}
 
 	execResp, err := s.Client.ExecCreate(ctx, containerID, execConfig)

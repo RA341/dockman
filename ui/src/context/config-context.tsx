@@ -18,7 +18,6 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
 
     const [dockYaml, setDockyaml] = useState<DockmanYaml | null>(null)
     const fetchDockYaml = useCallback(async () => {
-        // console.log("reloading dockman yaml")
         const {val, err} = await callRPC(() => dockyamlClient.getYaml({}))
         if (err) {
             showWarning(`Unable to get dockman yaml, ${err}`)
@@ -28,7 +27,6 @@ export function UserConfigProvider({children}: { children: ReactNode }) {
     }, [dockyamlClient, showWarning])
 
     const fetchConfig = useCallback(async () => {
-        // console.log("Fetching user config...")
         setIsLoading(true)
 
         const {val, err} = await callRPC(() => client.getUserConfig({}))

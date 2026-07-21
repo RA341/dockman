@@ -36,8 +36,6 @@ function DockyamlViewer({filename}: { filename: string }) {
     }
 
     const getFile = async (): Promise<{ contents: string; err: string }> => {
-        console.log("Testing ")
-
         const {val, err} = await callRPC(() => dockYamlClient.get({}))
         return {
             contents: bytesToString(val?.contents),

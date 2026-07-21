@@ -235,7 +235,7 @@ function ToolbarSelect<T extends string | number>({value, onChange, options}: {
 const toolbarRowSx = {
     px: 1, py: 0.5,
     borderBottom: '1px solid', borderColor: 'divider',
-    flexShrink: 0, bgcolor: '#1E1E1E',
+    flexShrink: 0, bgcolor: '#1E1E1E', position: 'relative', zIndex: 1,
 };
 
 export function LogsViewer({containers, isActive = true}: LogsViewerProps) {
@@ -437,7 +437,7 @@ export function LogsViewer({containers, isActive = true}: LogsViewerProps) {
     });
 
     return (
-        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, bgcolor: theme.bg}}>
+        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', bgcolor: theme.bg}}>
             {/* toolbar */}
             <Stack
                 direction="row"

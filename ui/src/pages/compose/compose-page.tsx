@@ -46,13 +46,9 @@ function FileIndexRedirect() {
             ? `/${host}/files/${aliases[0].alias}`
             : '';
 
-    console.log("last path", path, aliases.at(0)?.alias)
-
     if (!path) {
         return <InvalidAlias/>
     }
-
-    console.log(`Nav to ${path}`)
 
     return <Navigate to={path} replace/>;
 }

@@ -2,6 +2,7 @@ import React, {type ReactNode, useCallback, useEffect, useMemo, useState} from '
 import {AuthContext} from '../hooks/auth.ts';
 import {callRPC, pingWithAuth, useAuthClient} from "../lib/api.ts";
 import {AuthService} from "../gen/auth/v1/auth_pb.ts";
+import {debugWarn} from "../lib/debug.ts";
 
 export interface AuthProviderProps {
     children: ReactNode;
@@ -23,7 +24,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         const checkAuthStatus = async () => {
             pingWithAuth().then(value => {
                 setIsAuthenticated(value);
-                // console.log(`isAuthenticated is now: ${value}`)
             }).finally(() => {
                 setIsLoading(false);
             });
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     const logout = useCallback(async () => {
         const {err} = await callRPC(() => userClient.logout({}))
         if (err) {
-            console.warn(err)
+            debugWarn("Logout failed", err)
         }
 
         refreshAuthStatus();

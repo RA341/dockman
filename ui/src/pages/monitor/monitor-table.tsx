@@ -9,6 +9,7 @@ import {
     ListItemText,
     Menu,
     MenuItem,
+    InputBase,
     Popover,
     Stack,
     Table,
@@ -30,11 +31,14 @@ import {
     EditNote,
     ExpandLess,
     ExpandMore,
+    InfoOutlined,
     Pause,
     PlayArrow,
+    PlayCircleOutlined,
     ReceiptLong,
     RestartAlt,
     RocketLaunch,
+    Search,
     Stop,
     Subject,
     Terminal,
@@ -104,6 +108,9 @@ interface MonitorTableProps {
     sortField: MonitorSortField | null;
     sortOrder: 'asc' | 'desc';
     onSortChange: (field: MonitorSortField) => void;
+    nameSearch: string;
+    onNameSearchChange: (value: string) => void;
+    nameSearchInputRef: Ref<HTMLInputElement>;
     // scroll position persistence across navigations
     scrollRef: Ref<HTMLDivElement>;
     onScroll: (top: number) => void;
@@ -123,7 +130,8 @@ interface MonitorTableProps {
     // and spins the one that launched the action
     rowBusy: Record<string, RowAction>;
     onRowLogs: (row: MonitorRow) => void;
-    onRowExec: (row: MonitorRow) => void;
+    onRowExec: (row: MonitorRow, anchor: HTMLElement) => void;
+    onRowDetails: (row: MonitorRow) => void;
     onStackAction: (group: StackGroup, action: StackAction) => void;
     onStackRedeploy: (group: StackGroup, opts: RedeployOptions) => void;
     onStackLogs: (group: StackGroup) => void;
@@ -161,7 +169,11 @@ const stateVisual: Record<string, { icon: ReactNode, color: string }> = {
 };
 
 export function MonitorTable(props: MonitorTableProps) {
-    const {groups, selectedStacks, selectedContainers, onToggleAllStacks, sortField, sortOrder, onSortChange, scrollRef, onScroll} = props;
+    const {
+        groups, selectedStacks, selectedContainers, onToggleAllStacks,
+        sortField, sortOrder, onSortChange, nameSearch,
+        onNameSearchChange, nameSearchInputRef, scrollRef, onScroll,
+    } = props;
 
     const sortLabelSx = {
         color: `${t.textDim} !important`,
@@ -195,7 +207,7 @@ export function MonitorTable(props: MonitorTableProps) {
             <Table size="small" stickyHeader>
                 <TableHead>
                     <TableRow>
-                        <TableCell padding="checkbox" sx={headCell}>
+                        <TableCell padding="checkbox" sx={{...headCell, width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
                             <Tooltip title="Select all stacks" arrow>
                                 <span>
                                     <Checkbox
@@ -209,7 +221,41 @@ export function MonitorTable(props: MonitorTableProps) {
                                 </span>
                             </Tooltip>
                         </TableCell>
-                        <TableCell sx={headCell}>{sortableHead('name', 'NAME')}</TableCell>
+                        <TableCell aria-label="Container details" sx={{...headCell, width: 32, minWidth: 32, maxWidth: 32, p: 0}}/>
+                        <TableCell sx={{...headCell, minWidth: 245}}>
+                            <Stack direction="row" spacing={1} sx={{alignItems: 'center'}}>
+                                {sortableHead('name', 'NAME')}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    width: 132,
+                                    height: 25,
+                                    px: 0.65,
+                                    border: `1px solid ${nameSearch ? t.cpuLine : t.border}`,
+                                    borderRadius: 1,
+                                    bgcolor: 'rgba(255,255,255,0.035)',
+                                    transition: 'border-color 120ms ease',
+                                    '&:focus-within': {borderColor: t.cpuLine},
+                                }}>
+                                    <Search sx={{fontSize: 15, mr: 0.5, color: nameSearch ? t.cpuLine : t.textDim}}/>
+                                    <InputBase
+                                        inputRef={nameSearchInputRef}
+                                        value={nameSearch}
+                                        onChange={event => onNameSearchChange(event.target.value)}
+                                        placeholder="Filter name"
+                                        inputProps={{'aria-label': 'Filter by container or stack name'}}
+                                        sx={{
+                                            minWidth: 0,
+                                            flex: 1,
+                                            color: t.text,
+                                            fontSize: '0.72rem',
+                                            '& input': {p: 0},
+                                            '& input::placeholder': {color: t.textDim, opacity: 0.8},
+                                        }}
+                                    />
+                                </Box>
+                            </Stack>
+                        </TableCell>
                         <TableCell sx={headCell}>STATE</TableCell>
                         <TableCell sx={headCell}>{sortableHead('uptime', 'UPTIME')}</TableCell>
                         <TableCell sx={{...headCell, minWidth: 130}}>{sortableHead('cpu', 'CPU')}</TableCell>
@@ -272,7 +318,7 @@ function StackRow(props: MonitorTableProps & { group: StackGroup }) {
         <TableRow onClick={() => onToggleExpand(group.stack)}
                   sx={{bgcolor: t.header, cursor: 'pointer'}}>
             <TableCell padding="checkbox" onClick={e => e.stopPropagation()}
-                       sx={{...bodyCell, borderLeft: '3px solid #4db6ac', cursor: 'default'}}>
+                       sx={{...bodyCell, borderLeft: '3px solid #4db6ac', cursor: 'default', width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
                 <Tooltip title={isStack && hasFile ? "Select stack" : "Select containers"} arrow>
                     <span>
                         <Checkbox
@@ -288,6 +334,7 @@ function StackRow(props: MonitorTableProps & { group: StackGroup }) {
                     </span>
                 </Tooltip>
             </TableCell>
+            <TableCell sx={{...bodyCell, width: 32, minWidth: 32, maxWidth: 32, p: 0}}/>
             <TableCell colSpan={3} sx={{...bodyCell, py: 0.25}}>
                 <Stack
                     direction="row"
@@ -439,7 +486,7 @@ function RedeployMenuButton({disabled, onPick}: {
 function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
     const {
         row, history, selectedContainers, selectedStacks, onToggleContainers,
-        now, onRowAction, rowBusy, onRowLogs, onRowExec, updateRuns, onUpdateOutput,
+        now, onRowAction, rowBusy, onRowLogs, onRowExec, onRowDetails, updateRuns, onUpdateOutput,
     } = props;
     const c = row.info;
     const s = row.stats;
@@ -448,6 +495,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
     const isPaused = c.state === 'paused';
     const isActive = ['running', 'restarting', 'paused'].includes(c.state);
     const busy = rowBusy[c.id];
+    const stackBusy = c.servicePath !== '' && (props.runningStacks[c.servicePath] ?? false);
     // deleting is destructive: a small popover above the button asks first
     const [confirmEl, setConfirmEl] = useState<HTMLElement | null>(null);
     const spinner = <CircularProgress size={14} sx={{color: t.textDim}}/>;
@@ -471,16 +519,24 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
 
     return (
         <TableRow hover sx={{'&:hover': {bgcolor: t.rowHover}}}>
-            <TableCell padding="checkbox" sx={{...bodyCell, borderLeft: '3px solid rgba(77,182,172,0.25)'}}>
+            <TableCell padding="checkbox" sx={{...bodyCell, borderLeft: '3px solid rgba(77,182,172,0.25)', width: 40, minWidth: 40, maxWidth: 40, px: 0.5}}>
                 <Checkbox
                     size="small"
                     checked={isChecked}
-                    disabled={selectedStacks.length > 0}
+                    disabled={selectedStacks.length > 0 || stackBusy}
                     onChange={e => onToggleContainers([c.id], e.target.checked)}
                     sx={{color: t.textDim, p: 0.5}}
                 />
             </TableCell>
-            <TableCell sx={{...bodyCell, maxWidth: 240, pl: 2.5}}>
+            <TableCell sx={{...bodyCell, width: 32, minWidth: 32, maxWidth: 32, p: 0}}>
+                <Tooltip title="Details" arrow>
+                    <IconButton size="small" onClick={() => onRowDetails(row)}
+                                sx={{color: '#64b5f6', '&:hover': {color: '#90caf9'}}}>
+                        <InfoOutlined sx={{fontSize: 17}}/>
+                    </IconButton>
+                </Tooltip>
+            </TableCell>
+            <TableCell sx={{...bodyCell, maxWidth: 240, pl: 0.75}}>
                 <Stack direction="row" spacing={0.5} sx={{
                     alignItems: "center"
                 }}>
@@ -560,7 +616,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
             <TableCell align="right" sx={{...bodyCell, whiteSpace: 'nowrap'}}>
                 <Tooltip title={isActive ? 'Stop' : 'Start'} arrow>
                     <span>
-                        <IconButton size="small" disabled={!!busy}
+                        <IconButton size="small" disabled={!!busy || stackBusy}
                                     onClick={() => onRowAction(row, isActive ? 'stop' : 'start')}
                                     sx={{color: isActive ? '#ef5350' : '#66bb6a', '&.Mui-disabled': disabledIcon}}>
                             {busy === 'start' || busy === 'stop' ? spinner
@@ -570,7 +626,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                 </Tooltip>
                 <Tooltip title="Restart" arrow>
                     <span>
-                        <IconButton size="small" disabled={!!busy}
+                        <IconButton size="small" disabled={!!busy || stackBusy}
                                     onClick={() => onRowAction(row, 'restart')}
                                     sx={{color: '#4db6ac', '&.Mui-disabled': disabledIcon}}>
                             {busy === 'restart' ? spinner : <RestartAlt sx={{fontSize: 16}}/>}
@@ -579,10 +635,11 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                 </Tooltip>
                 <Tooltip title={isPaused ? 'Unpause' : 'Pause'} arrow>
                     <span>
-                        <IconButton size="small" disabled={(!isRunning && !isPaused) || !!busy}
+                        <IconButton size="small" disabled={(!isRunning && !isPaused) || !!busy || stackBusy}
                                     onClick={() => onRowAction(row, isPaused ? 'unpause' : 'pause')}
-                                    sx={{color: isPaused ? '#ffb74d' : t.textDim, '&:hover': {color: t.text}, '&.Mui-disabled': disabledIcon}}>
-                            {busy === 'pause' || busy === 'unpause' ? spinner : <Pause sx={{fontSize: 16}}/>}
+                                    sx={{color: isPaused ? '#66bb6a' : '#ffb74d', '&:hover': {color: t.text}, '&.Mui-disabled': disabledIcon}}>
+                            {busy === 'pause' || busy === 'unpause' ? spinner
+                                : isPaused ? <PlayCircleOutlined sx={{fontSize: 17}}/> : <Pause sx={{fontSize: 16}}/>}
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -590,7 +647,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                     ? 'Update in progress…'
                     : c.updateAvailable ? `Update image (${c.updateAvailable} available)` : 'Update image'} arrow>
                     <span>
-                        <IconButton size="small" disabled={updRun === 'running' || !!busy}
+                        <IconButton size="small" disabled={updRun === 'running' || !!busy || stackBusy}
                                     onClick={() => onRowAction(row, 'update')}
                                     sx={{color: c.updateAvailable ? '#4db6ac' : t.textDim, '&:hover': {color: t.text}, '&.Mui-disabled': disabledIcon}}>
                             {updRun === 'running' ? spinner : <Update sx={{fontSize: 16}}/>}
@@ -610,7 +667,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                 )}
                 <Tooltip title="Remove" arrow>
                     <span>
-                        <IconButton size="small" disabled={!!busy}
+                        <IconButton size="small" disabled={!!busy || stackBusy}
                                     onClick={e => setConfirmEl(e.currentTarget)}
                                     sx={{color: t.textDim, '&:hover': {color: '#ef5350'}, '&.Mui-disabled': disabledIcon}}>
                             {busy === 'remove' ? spinner : <Delete sx={{fontSize: 16}}/>}
@@ -644,6 +701,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                             Cancel
                         </Button>
                         <Button size="small" variant="contained" color="error"
+                                disabled={stackBusy}
                                 onClick={() => {
                                     setConfirmEl(null);
                                     onRowAction(row, 'remove');
@@ -662,7 +720,7 @@ function ContainerRow(props: MonitorTableProps & { row: MonitorRow }) {
                 <Tooltip title="Exec" arrow>
                     <span>
                         <IconButton size="small" disabled={!isRunning}
-                                    onClick={() => onRowExec(row)}
+                                    onClick={event => onRowExec(row, event.currentTarget)}
                                     sx={{color: t.textDim, '&:hover': {color: t.text}, '&.Mui-disabled': disabledIcon}}>
                             <Terminal sx={{fontSize: 16}}/>
                         </IconButton>
