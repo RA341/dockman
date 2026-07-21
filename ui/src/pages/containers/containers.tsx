@@ -1,16 +1,12 @@
 import {
     Box,
     Chip,
-    CircularProgress,
     Divider,
     Fade,
-    IconButton,
     Paper,
-    Stack,
-    Tooltip,
-    Typography,
 } from '@mui/material';
-import {Delete, DnsOutlined, PlayArrow, Refresh, RestartAlt, Stop,} from '@mui/icons-material';
+import {Delete, DnsOutlined, PlayArrow, RestartAlt, Stop,} from '@mui/icons-material';
+import PageHeader, {RefreshButton} from "../../components/page-header.tsx";
 import {ContainerTable} from '../compose/components/container-info-table';
 import {useMemo, useState} from "react";
 import {useDockerContainers} from "../../hooks/docker-containers.ts";
@@ -24,6 +20,8 @@ import {ContainersLoading} from "./containers-loading.tsx";
 import {useNavigate} from "react-router-dom";
 import {useHostStore} from "../compose/state/files.ts";
 import {DockerService} from "../../gen/docker/v1/docker_pb.ts";
+
+type ContainerActionRpc = 'containerStart' | 'containerStop' | 'containerRestart' | 'containerRemove';
 
 function ContainersPage() {
     const dockerService = useHostClient(DockerService);
@@ -83,8 +81,7 @@ function ContainersPage() {
         },
     ];
 
-    async function handleContainerAction(name: string, rpcName: keyof typeof dockerService, message: string) {
-        // @ts-ignore
+    async function handleContainerAction(name: string, rpcName: ContainerActionRpc, message: string) {
         const {err} = await callRPC(() => dockerService[rpcName]({containerIds: selectedContainers}));
         if (err) showError(`Failed to ${name} Containers: ${err}`);
         else showSuccess(`Successfully ${message} containers`);
@@ -110,46 +107,23 @@ function ContainersPage() {
             ...scrollbarStyles
         }}>
             {/* Header Section */}
-            <Box sx={{mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end'}}>
-                <Box>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <DnsOutlined color="primary"/>
-                        <Typography variant="h5" sx={{fontWeight: 800, letterSpacing: -0.5}}>
-                            Containers
-                        </Typography>
-                        <Chip
-                            label={containers?.list.length}
-                            size="medium"
-                            sx={{fontWeight: 700, color: 'primary.main'}}
-                        />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                        Manage and monitor containers on <code style={{fontWeight: 'bold'}}>{host}</code>
-                    </Typography>
-                </Box>
-
-                <Stack direction="row" spacing={1}>
-                    <Tooltip title="Refresh List">
-                        <IconButton
-                            onClick={refreshContainers}
-                            disabled={loading}
-                            sx={{border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper'}}
-                        >
-                            {loading ? <CircularProgress size={20}/> : <Refresh fontSize="small"/>}
-                        </IconButton>
-                    </Tooltip>
-                </Stack>
-            </Box>
+            <PageHeader
+                icon={<DnsOutlined/>}
+                title="Containers"
+                count={containers?.list.length}
+                host={host}
+            />
 
             {/* Toolbar Card */}
             <Paper
                 variant="outlined"
                 sx={{
-                    p: 1.5,
-                    mb: 2,
+                    px: 1.5,
+                    py: 1,
+                    mb: 1.5,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 2,
+                    gap: 1.5,
                     borderRadius: 2,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}
@@ -158,22 +132,20 @@ function ContainersPage() {
                     <SearchBar search={search} setSearch={setSearch} inputRef={searchInputRef}/>
                 </Box>
 
-                <Divider orientation="vertical" flexItem sx={{mx: 1}}/>
+                <Divider orientation="vertical" flexItem sx={{mx: 0.5}}/>
 
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, flex: 1}}>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 2, width: '100%'}}>
-                        <ActionButtons actions={actions}/>
-                        {selectedContainers.length > 0 && <Typography
-                            variant="caption"
-                            sx={{
-                                fontWeight: 700,
-                                color: 'primary.main',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {selectedContainers.length} SELECTED
-                        </Typography>}
-                    </Box>
+                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, flex: 1}}>
+                    <ActionButtons actions={actions}/>
+                    <RefreshButton onClick={refreshContainers} loading={loading}/>
+                    {selectedContainers.length > 0 && (
+                        <Chip
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            label={`${selectedContainers.length} selected`}
+                            sx={{fontWeight: 700}}
+                        />
+                    )}
                 </Box>
             </Paper>
 

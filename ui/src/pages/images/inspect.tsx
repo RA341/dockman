@@ -25,7 +25,7 @@ import {
 import scrollbarStyles from "../../components/scrollbar-style.tsx";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
-import {ArrowBack, HistoryOutlined} from "@mui/icons-material";
+import {ArrowBack, HistoryOutlined, Inventory2Outlined} from "@mui/icons-material";
 
 const ImageInspectPage = () => {
     const dockerService = useHostClient(DockerService);
@@ -66,18 +66,26 @@ const ImageInspectPage = () => {
                     py: 2, px: 3, flexShrink: 0
                 }}
             >
-                <Stack direction="row" alignItems="center">
+                <Stack direction="row" sx={{
+                    alignItems: "center"
+                }}>
                     <Box>
                         <Breadcrumbs aria-label="breadcrumb" sx={{mb: 0.5}}>
                             <MuiLink underline="hover" color="inherit" sx={{cursor: 'pointer', fontSize: '0.75rem'}}
                                      onClick={() => navigate(-1)}>
                                 Images
                             </MuiLink>
-                            <Typography color="text.primary"
-                                        sx={{fontSize: '0.75rem', fontWeight: 700}}>Inspect</Typography>
+                            <Typography
+                                sx={{
+                                    color: "text.primary",
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700
+                                }}>Inspect</Typography>
                         </Breadcrumbs>
 
-                        <Stack direction="row" spacing={2} alignItems="center">
+                        <Stack direction="row" spacing={2} sx={{
+                            alignItems: "center"
+                        }}>
                             <IconButton onClick={() => navigate(-1)} size="small"
                                         sx={{border: '1px solid', borderColor: 'divider'}}>
                                 <ArrowBack fontSize="small"/>
@@ -95,7 +103,12 @@ const ImageInspectPage = () => {
                                 <Typography variant="h6" sx={{fontWeight: 800, lineHeight: 1.2}}>
                                     {inspect?.name?.split(':')[0] || 'Image Manifest'}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{fontFamily: 'monospace'}}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: "text.secondary",
+                                        fontFamily: 'monospace'
+                                    }}>
                                     {id?.substring(0, 12)}
                                 </Typography>
                             </Box>
@@ -110,8 +123,13 @@ const ImageInspectPage = () => {
                     </Tooltip>
                 </Stack>
             </Paper>
-
-            <Box sx={{p: 3, flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 3}}>
+            <Box sx={{
+                p: 3,
+                flexGrow: 1,
+                overflowY: 'auto',
+                position: 'relative',
+                ...scrollbarStyles
+            }}>
                 {loading ? (
                     <Box sx={{
                         display: 'flex',
@@ -122,13 +140,18 @@ const ImageInspectPage = () => {
                         gap: 2
                     }}>
                         <CircularProgress size={32} thickness={5}/>
-                        <Typography variant="body2" color="text.secondary" sx={{fontWeight: 600}}>Analyzing image
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: "text.secondary",
+                                fontWeight: 600
+                            }}>Analyzing image
                             layers...</Typography>
                     </Box>
                 ) : err ? (
                     <Alert severity="error" variant="outlined" sx={{borderRadius: 2}}>{err}</Alert>
                 ) : inspect && (
-                    <>
+                    <Stack spacing={3}>
                         {/* Summary Info Cards */}
                         {/* Unified Image Summary Card */}
                         <Paper
@@ -169,13 +192,18 @@ const ImageInspectPage = () => {
                                     }}>
                                         Specifications
                                     </Typography>
-                                    <Stack direction="row" spacing={6} alignItems="center">
+                                    <Stack direction="row" spacing={6} sx={{
+                                        alignItems: "center"
+                                    }}>
                                         <Box>
-                                            <Typography variant="caption" color="text.disabled" sx={{
-                                                fontWeight: 700,
-                                                display: 'block',
-                                                mb: 0.5
-                                            }}>SIZE</Typography>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: "text.disabled",
+                                                    fontWeight: 700,
+                                                    display: 'block',
+                                                    mb: 0.5
+                                                }}>SIZE</Typography>
                                             <Typography variant="body2" sx={{
                                                 fontWeight: 800,
                                                 fontFamily: 'monospace',
@@ -186,11 +214,14 @@ const ImageInspectPage = () => {
                                         </Box>
 
                                         <Box>
-                                            <Typography variant="caption" color="text.disabled" sx={{
-                                                fontWeight: 700,
-                                                display: 'block',
-                                                mb: 0.5
-                                            }}>ARCHITECTURE</Typography>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: "text.disabled",
+                                                    fontWeight: 700,
+                                                    display: 'block',
+                                                    mb: 0.5
+                                                }}>ARCHITECTURE</Typography>
                                             <Chip
                                                 label={inspect.arch}
                                                 size="small"
@@ -200,8 +231,14 @@ const ImageInspectPage = () => {
                                         </Box>
 
                                         <Box>
-                                            <Typography variant="caption" color="text.disabled"
-                                                        sx={{fontWeight: 700, display: 'block', mb: 0.5}}>CREATED
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: "text.disabled",
+                                                    fontWeight: 700,
+                                                    display: 'block',
+                                                    mb: 0.5
+                                                }}>CREATED
                                                 ON</Typography>
                                             <Typography variant="body2" sx={{fontWeight: 600}}>
                                                 {inspect.createdIso ? new Date(inspect.createdIso).toLocaleDateString(undefined, {dateStyle: 'medium'}) : 'N/A'}
@@ -210,6 +247,104 @@ const ImageInspectPage = () => {
                                     </Stack>
                                 </Box>
                             </Stack>
+                        </Paper>
+
+                        {/* Containers using this image */}
+                        <Paper variant="outlined"
+                               sx={{
+                                   borderRadius: 3,
+                                   overflow: 'hidden',
+                                   display: 'flex',
+                                   flexDirection: 'column'
+                               }}>
+                            <Box sx={{
+                                p: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                bgcolor: 'background.paper'
+                            }}>
+                                <Stack direction="row" spacing={1} sx={{
+                                    alignItems: "center"
+                                }}>
+                                    <Inventory2Outlined sx={{fontSize: 18, color: 'text.disabled'}}/>
+                                    <Typography variant="subtitle2" sx={{fontWeight: 800}}>Used By</Typography>
+                                    <Chip
+                                        label={`${inspect.containers?.length || 0} containers`}
+                                        size="small"
+                                        color={inspect.containers?.length ? "success" : "default"}
+                                        sx={{height: 20, fontSize: '0.65rem', fontWeight: 700}}
+                                    />
+                                </Stack>
+                            </Box>
+
+                            {inspect.containers && inspect.containers.length > 0 ? (
+                                <TableContainer sx={{...scrollbarStyles}}>
+                                    <Table size="small" stickyHeader sx={{tableLayout: 'fixed'}}>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell sx={{...headerStyles}}>Container</TableCell>
+                                                <TableCell sx={{...headerStyles, width: 120}}>State</TableCell>
+                                                <TableCell sx={{...headerStyles, width: 180}}>Project</TableCell>
+                                                <TableCell sx={{...headerStyles, width: 130}}>ID</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {inspect.containers.map((c) => (
+                                                <TableRow key={c.id} hover>
+                                                    <TableCell sx={{
+                                                        fontWeight: 600,
+                                                        fontSize: '0.8rem',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {c.name || '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            label={c.state || 'unknown'}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color={stateColor(c.state)}
+                                                            sx={{
+                                                                height: 18,
+                                                                fontSize: '0.65rem',
+                                                                fontWeight: 700,
+                                                                textTransform: 'capitalize'
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell sx={{
+                                                        color: 'text.secondary',
+                                                        fontSize: '0.75rem',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {c.composeProject || '—'}
+                                                    </TableCell>
+                                                    <TableCell sx={{
+                                                        color: 'text.disabled',
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '0.7rem'
+                                                    }}>
+                                                        {c.id.substring(0, 12)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            ) : (
+                                <Box sx={{p: 3, textAlign: 'center'}}>
+                                    <Typography variant="body2" sx={{
+                                        color: "text.secondary"
+                                    }}>
+                                        No containers are using this image.
+                                    </Typography>
+                                </Box>
+                            )}
                         </Paper>
 
                         {/* Layers Table */}
@@ -228,7 +363,9 @@ const ImageInspectPage = () => {
                                 justifyContent: 'space-between',
                                 bgcolor: 'background.paper'
                             }}>
-                                <Stack direction="row" spacing={1} alignItems="center">
+                                <Stack direction="row" spacing={1} sx={{
+                                    alignItems: "center"
+                                }}>
                                     <HistoryOutlined sx={{fontSize: 18, color: 'text.disabled'}}/>
                                     <Typography variant="subtitle2" sx={{fontWeight: 800}}>History Layers</Typography>
                                     <Chip
@@ -281,7 +418,8 @@ const ImageInspectPage = () => {
                                 </Table>
                             </TableContainer>
                         </Paper>
-                    </>
+
+                    </Stack>
                 )}
             </Box>
         </Box>
@@ -296,6 +434,13 @@ const headerStyles = {
     py: 1.5
 };
 
+const stateColor = (state: string): 'success' | 'error' | 'default' => {
+    const s = (state || '').toLowerCase();
+    if (s === 'running') return 'success';
+    if (s === 'exited' || s === 'dead') return 'error';
+    return 'default';
+};
+
 const DetailRow = ({label, value, mono}: { label: string, value: string, mono?: boolean }) => (
     <Box>
         <Typography variant="caption" sx={{
@@ -304,7 +449,9 @@ const DetailRow = ({label, value, mono}: { label: string, value: string, mono?: 
             fontSize: '0.6rem',
             textTransform: 'uppercase'
         }}>{label}</Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{
+            alignItems: "center"
+        }}>
             <Typography variant="body2" sx={{
                 fontWeight: 600,
                 fontFamily: mono ? 'monospace' : 'inherit',

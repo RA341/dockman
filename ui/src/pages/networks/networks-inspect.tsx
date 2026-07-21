@@ -23,7 +23,7 @@ import {
 import {ArrowBack, ContentCopy} from "@mui/icons-material";
 import HubIcon from "@mui/icons-material/Hub";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutlined";
 
 const NetworksInspect = () => {
     const dockerService = useHostClient(DockerService)
@@ -99,7 +99,6 @@ const NetworksInspect = () => {
                     <RefreshIcon/>
                 </IconButton>
             </Box>
-
             <Box sx={{
                 p: 3,
                 flexGrow: 1,
@@ -117,7 +116,9 @@ const NetworksInspect = () => {
                         gap: 2
                     }}>
                         <CircularProgress size={40} thickness={4}/>
-                        <Typography variant="h6" color="text.secondary">
+                        <Typography variant="h6" sx={{
+                            color: "text.secondary"
+                        }}>
                             Loading...
                         </Typography>
                     </Box>
@@ -161,11 +162,18 @@ const NetworksInspect = () => {
                     <Stack spacing={3}>
                         {/* Summary Header */}
                         <Box>
-                            <Typography variant="h5" fontWeight="bold" gutterBottom>
+                            <Typography variant="h5" gutterBottom sx={{
+                                fontWeight: "bold"
+                            }}>
                                 {inspect.net.name || "Unnamed Network"}
                             </Typography>
                             <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                                <Typography variant="body1" color="text.secondary" sx={{fontFamily: 'monospace'}}>
+                                <Typography
+                                    variant="body1"
+                                    sx={{
+                                        color: "text.secondary",
+                                        fontFamily: 'monospace'
+                                    }}>
                                     {inspect.net.id}
                                 </Typography>
                                 <IconButton
@@ -193,13 +201,25 @@ const NetworksInspect = () => {
                                     </Typography>
                                     <Stack spacing={2}>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 Driver
                                             </Typography>
                                             <Chip label={inspect.net.driver} size="medium" color="primary" variant="outlined"/>
                                         </Box>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 Scope
                                             </Typography>
                                             <Typography variant="body1" sx={{fontSize: '0.95rem'}}>
@@ -208,7 +228,13 @@ const NetworksInspect = () => {
                                         </Box>
                                         {inspect.net.composeProject && (
                                             <Box>
-                                                <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: "text.secondary",
+                                                        fontSize: '0.9rem',
+                                                        mb: 0.5
+                                                    }}>
                                                     Compose Project
                                                 </Typography>
                                                 <Typography variant="body1" sx={{fontSize: '0.95rem'}}>
@@ -217,7 +243,13 @@ const NetworksInspect = () => {
                                             </Box>
                                         )}
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 Created
                                             </Typography>
                                             <Typography variant="body1" sx={{fontSize: '0.95rem'}}>
@@ -234,7 +266,13 @@ const NetworksInspect = () => {
                                     </Typography>
                                     <Stack spacing={2}>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 Subnet
                                             </Typography>
                                             <Typography variant="body1" sx={{fontFamily: 'monospace', fontSize: '0.95rem'}}>
@@ -242,7 +280,13 @@ const NetworksInspect = () => {
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 IPv4 Enabled
                                             </Typography>
                                             <Chip
@@ -252,7 +296,13 @@ const NetworksInspect = () => {
                                             />
                                         </Box>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 IPv6 Enabled
                                             </Typography>
                                             <Chip
@@ -271,7 +321,13 @@ const NetworksInspect = () => {
                                     </Typography>
                                     <Stack spacing={2}>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 Internal
                                             </Typography>
                                             <Chip
@@ -281,7 +337,13 @@ const NetworksInspect = () => {
                                             />
                                         </Box>
                                         <Box>
-                                            <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.9rem', mb: 0.5}}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    color: "text.secondary",
+                                                    fontSize: '0.9rem',
+                                                    mb: 0.5
+                                                }}>
                                                 Attachable
                                             </Typography>
                                             <Chip
@@ -357,7 +419,9 @@ const NetworksInspect = () => {
                                     bgcolor: 'background.default',
                                     borderRadius: 1
                                 }}>
-                                    <Typography variant="body1" color="text.secondary">
+                                    <Typography variant="body1" sx={{
+                                        color: "text.secondary"
+                                    }}>
                                         No containers connected to this network
                                     </Typography>
                                 </Box>

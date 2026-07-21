@@ -105,7 +105,13 @@ function HostWizardDialog({open, onClose, host, onSuccess}: {
             }}
         >
             <DialogTitle sx={{p: 3, pb: 0}}>
-                <Stack direction="row" alignItems="center" spacing={1.5} sx={{mb: 2}}>
+                <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                        alignItems: "center",
+                        mb: 2
+                    }}>
                     <Box sx={{
                         p: 1,
                         borderRadius: 1.5,
@@ -119,7 +125,9 @@ function HostWizardDialog({open, onClose, host, onSuccess}: {
                         <Typography variant="h6" sx={{fontWeight: 800}}>
                             {isEditMode ? 'Host Settings' : 'Add New Node'}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                        }}>
                             {isEditMode ? `Name: ${host?.name}` : 'Configure a new Docker environment'}
                         </Typography>
                     </Box>
@@ -135,7 +143,6 @@ function HostWizardDialog({open, onClose, host, onSuccess}: {
                     />
                 </Tabs>
             </DialogTitle>
-
             <DialogContent sx={{p: 3, minHeight: 450, ...scrollbarStyles}}>
                 {tabValue === 0 ? (
                     <Stack spacing={3} sx={{mt: 1}}>
@@ -209,8 +216,13 @@ function HostWizardDialog({open, onClose, host, onSuccess}: {
                                             <InfoOutlined sx={{fontSize: 16, color: 'primary.main', mt: 0.2}}/>
                                             <Box>
                                                 {(form.sshOptions.usePublicKeyAuth ? publicKeyHelperText : passwordHelperText).map((t, i) => (
-                                                    <Typography key={i} variant="caption" display="block"
-                                                                color="text.secondary">• {t}</Typography>
+                                                    <Typography
+                                                        key={i}
+                                                        variant="caption"
+                                                        sx={{
+                                                            display: "block",
+                                                            color: "text.secondary"
+                                                        }}>• {t}</Typography>
                                                 ))}
                                             </Box>
                                         </Stack>
@@ -223,9 +235,7 @@ function HostWizardDialog({open, onClose, host, onSuccess}: {
                     <HostAliasManager hostname={host?.name ?? ""} hostId={host?.id ?? 0}/>
                 )}
             </DialogContent>
-
             <Divider/>
-
             <DialogActions sx={{p: 2.5}}>
                 <Button variant="outlined" color="inherit" onClick={onClose}
                         sx={{borderRadius: 2, fontWeight: 700}}>Close</Button>
@@ -246,8 +256,14 @@ function HostWizardDialog({open, onClose, host, onSuccess}: {
     );
 }
 
-export const SectionHeader = ({icon, title}: { icon: any, title: string }) => (
-    <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 1}}>
+export const SectionHeader = ({icon, title}: { icon: React.ReactElement<{ sx?: object }>, title: string }) => (
+    <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+            alignItems: "center",
+            mb: 1
+        }}>
         {React.cloneElement(icon, {sx: {fontSize: 16, color: 'primary.main'}})}
         <Typography variant="overline" sx={{fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em'}}>
             {title}

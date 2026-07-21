@@ -4,10 +4,21 @@ import {KeyChar} from "../../../components/keychar.tsx";
 
 export const ShortcutFormatter = ({title, keyCombo}: { title: string, keyCombo: string[] }) => {
     return (
-        <Box display="flex" alignItems="center" gap={0.5}>
+        <Box
+            sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5
+            }}>
             {title !== "" && <Typography variant="body2">{title}</Typography>}
             {
-                keyCombo.length > 0 && <Box display="flex" alignItems="center" gap={0.3} ml={1}>{
+                keyCombo.length > 0 && <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.3,
+                        ml: 1
+                    }}>{
                     keyCombo.map((key, index) => (
                         <React.Fragment key={key}>
                             <KeyChar>{key}</KeyChar>

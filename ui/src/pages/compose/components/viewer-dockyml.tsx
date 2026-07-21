@@ -16,15 +16,12 @@ function stringToArrayBuffer(str: string): Uint8Array<ArrayBuffer> {
     return encoder.encode(str);
 }
 
-function arrayBufferLikeToString(bufferLike?: ArrayBufferLike): string {
-    if (!bufferLike) {
+function bytesToString(bytes?: Uint8Array): string {
+    if (!bytes) {
         return "";
     }
 
-    // Ensure the input is an ArrayBuffer (or compatible TypedArray)
-    const uint8Array = new Uint8Array(bufferLike);
-    const decoder = new TextDecoder('utf-8'); // Specify encoding if needed, UTF-8 is default
-    return decoder.decode(uint8Array);
+    return new TextDecoder('utf-8').decode(bytes);
 }
 
 function DockyamlViewer({filename}: { filename: string }) {
@@ -43,7 +40,7 @@ function DockyamlViewer({filename}: { filename: string }) {
 
         const {val, err} = await callRPC(() => dockYamlClient.get({}))
         return {
-            contents: arrayBufferLikeToString(val?.contents),
+            contents: bytesToString(val?.contents),
             err: err
         }
     };

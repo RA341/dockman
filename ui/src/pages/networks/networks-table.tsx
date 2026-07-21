@@ -57,7 +57,7 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
     };
 
     const {sortField, sortOrder, handleSort} = useSort(
-        dockYaml?.networkPage?.sort?.sortField ?? 'Name',
+        dockYaml?.networkPage?.sort?.sortField ?? 'Network Name',
         (dockYaml?.networkPage?.sort?.sortOrder as SortOrder) ?? 'asc'
     );
 
@@ -79,22 +79,29 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
                 </TableCell>
             )
         },
-        Name: {
+        // Key must match the dockman.yml field name ("Network Name", the backend
+        // default) so a configured sort lights up the header arrow; the label is
+        // hardcoded to keep the column header short, like the columns below.
+        "Network Name": {
             getValue: (n) => n.name,
             header: (label) => (
                 <TableCell sx={headerStyles}>
                     <TableSortLabel active={sortField === label} direction={sortOrder}
                                     onClick={() => handleSort(label)}>
-                        {label}
+                        Name
                     </TableSortLabel>
                 </TableCell>
             ),
             cell: (n) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Stack direction="row" spacing={1.5} sx={{
+                        alignItems: "center"
+                    }}>
                         <NetworkIcon sx={{fontSize: 18, color: 'text.disabled'}}/>
                         <Box sx={{minWidth: 0}}>
-                            <Stack direction="row" spacing={1} alignItems="center">
+                            <Stack direction="row" spacing={1} sx={{
+                                alignItems: "center"
+                            }}>
                                 <Typography variant="body2"
                                             sx={{fontWeight: 400, lineHeight: 1.2}}>{n.name}</Typography>
                                 {(n.name === "host" || n.name === "bridge" || n.name === "none") && (
@@ -107,7 +114,9 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
                                     }}/>
                                 )}
                             </Stack>
-                            <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Stack direction="row" spacing={0.5} sx={{
+                                alignItems: "center"
+                            }}>
                                 <Typography variant="caption"
                                             sx={{fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.7rem'}}>
                                     {n.id.substring(0, 12)}
@@ -236,7 +245,13 @@ export const NetworkTable = ({networks, selectedNetworks = [], onSelectionChange
             ),
             cell: (n) => (
                 <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{color: 'text.secondary'}}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                            alignItems: "center",
+                            color: 'text.secondary'
+                        }}>
                         <CalendarIcon sx={{fontSize: 14}}/>
                         <Typography variant="body2" sx={{whiteSpace: 'nowrap'}}>{formatDate(n.createdAt)}</Typography>
                     </Stack>

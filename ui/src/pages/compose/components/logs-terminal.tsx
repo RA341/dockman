@@ -94,17 +94,17 @@ const AppTerminal = ({fit, interactive, onTerminal, isActive, onClose}: AppTermi
 
         onTerminal(xtermRef.current)
 
-        setTimeout(() => {
+        const fitTimer = setTimeout(() => {
             fit?.current.fit();
         }, 50);
 
         return () => {
+            clearTimeout(fitTimer);
             xtermRef.current?.dispose();
             xtermRef.current = null;
             onClose()
         };
-        // eslint-disable-next-line
-    }, []);
+    }, [fit, interactive, onClose, onTerminal]);
 
 
     return (

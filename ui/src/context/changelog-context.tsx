@@ -37,7 +37,7 @@ export function ChangelogProvider({children}: ChangelogProviderProps) {
         }
 
         setIsLoading(false)
-    }, [infoClient])
+    }, [infoClient, showError])
 
     const dismissChangelog = useCallback(async () => {
         // Mark changelog as read on the backend
@@ -52,7 +52,7 @@ export function ChangelogProvider({children}: ChangelogProviderProps) {
         setChangelog("")
         setReleaseUrl("")
         setVersion("")
-    }, [infoClient, version])
+    }, [infoClient, showError, version])
 
     // Check for changelog on mount
     useEffect(() => {

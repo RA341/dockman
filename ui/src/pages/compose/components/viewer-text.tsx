@@ -1,33 +1,33 @@
-import React, {type ReactElement, useEffect, useMemo, useState} from 'react';
+import React, {type ReactElement, useCallback, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip} from '@mui/material';
-import {useFileComponents} from "../state/terminal.tsx";
 import {callRPC, useHostClient} from "../../../lib/api.ts";
-import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
+import {isComposeFile, stackDefaultTab, useEditorUrl} from "../../../lib/editor.ts";
+import {useConfig} from "../../../hooks/config.ts";
 import TabEditor from "../tab-editor.tsx";
 import {ShortcutFormatter} from "./shortcut-formatter.tsx";
 import {TabDeploy} from "../tab-deploy.tsx";
 import {TabStat} from "../tab-stats.tsx";
 import CenteredMessage from "../../../components/centered-message.tsx";
-import {ErrorOutline} from "@mui/icons-material";
-import {useOpenFiles} from "../state/files.ts";
+import {ErrorOutlined} from "@mui/icons-material";
+import {useCompactMode, useOpenFiles} from "../state/files.ts";
 import {FileService} from "../../../gen/files/v1/files_pb.ts";
 import {indicatorMap, type SaveState} from "../hooks/status-hook.tsx";
 
-export enum TabType {
+enum TabType {
     // noinspection JSUnusedGlobalSymbols
     EDITOR,
     DEPLOY,
     STATS,
 }
 
-export function parseTabType(input: string | null): TabType {
+function parseTabType(input: string | null): TabType {
     const tabValueInt = parseInt(input ?? '0', 10)
     const isValidTab = TabType[tabValueInt] !== undefined
     return isValidTab ? tabValueInt : TabType.EDITOR
 }
 
-export interface TabDetails {
+interface TabDetails {
     label: string;
     component: React.ReactElement;
     shortcut: React.ReactElement;
@@ -43,41 +43,46 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
     const fileService = useHostClient(FileService);
 
     const navigate = useNavigate();
+    const {dockYaml} = useConfig()
     const [searchParams] = useSearchParams();
     const tabKey = track === 0 ? 'tab' : 'splitTab';
-    const selectedTab = parseTabType(searchParams.get(tabKey))
+    // no tab selected in the url yet: open on the dockman.yml default tab
+    const selectedTab = parseTabType(
+        searchParams.get(tabKey) ?? String(stackDefaultTab(dockYaml, filename))
+    )
 
     const [isLoading, setIsLoading] = useState(true);
     const [fileError, setFileError] = useState("");
 
     const recursiveOpen = useOpenFiles(state => state.recursiveOpen)
-    const {alias: activeAlias} = useFileComponents()
+    const compact = useCompactMode(state => state.enabled)
+    const tabMinHeight = compact ? '34px' : '48px'
+
+    const checkExists = useCallback(async () => {
+        setIsLoading(true);
+        setFileError("");
+
+        const {err} = await callRPC(() => fileService.exists({
+            filename: filename,
+        }))
+        if (err) {
+            console.error("API error checking file existence:", err);
+            setFileError(`An API error occurred: ${err}`);
+        }
+        setIsLoading(false);
+        recursiveOpen(filename)
+    }, [fileService, filename, recursiveOpen]);
 
     useEffect(() => {
-        const checkExists = async () => {
-            setIsLoading(true);
-            setFileError("");
-
-            const {err} = await callRPC(() => fileService.exists({
-                filename: filename,
-            }))
-            if (err) {
-                console.error("API error checking file existence:", err);
-                setFileError(`An API error occurred: ${err}`);
-            }
-            setIsLoading(false);
-            recursiveOpen(filename)
-        }
-
         checkExists().then()
-    }, [filename, fileService, activeAlias]);
+    }, [checkExists]);
 
     const editorUrl = useEditorUrl()
 
-    const changeTab = (tabId: string) => {
+    const changeTab = useCallback((tabId: string) => {
         const url = editorUrl(filename, parseInt(tabId), track)
         navigate(url);
-    };
+    }, [editorUrl, filename, navigate, track]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -104,7 +109,7 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [filename, navigate]);
+    }, [changeTab, filename]);
 
     const [saveStatus, setSaveStatus] = useState<SaveState>('idle')
 
@@ -156,7 +161,6 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
         // }
 
         return map;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filename]);
 
     const currentTab = selectedTab ?? 'editor';
@@ -168,7 +172,7 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
     if (fileError) {
         return (
             <CenteredMessage
-                icon={<ErrorOutline color="error" sx={{fontSize: 60}}/>}
+                icon={<ErrorOutlined color="error" sx={{fontSize: 60}}/>}
                 title={`Unable to load file: ${filename}`}
                 message={fileError}
             />
@@ -187,7 +191,7 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
                 <Tabs
                     value={currentTab}
                     onChange={(_event, value) => changeTab(value)}
-                    sx={{minHeight: '48px'}}
+                    sx={{minHeight: tabMinHeight}}
                     variant="scrollable"
                     scrollButtons="auto"
                     slotProps={{
@@ -205,7 +209,7 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
                                 value={key}
                                 sx={{
                                     color: (key === 0) ? indicatorMap[saveStatus].color : "text.secondary",
-                                    minHeight: '48px'
+                                    minHeight: tabMinHeight
                                 }}
                                 label={
                                     key === 0 ? (

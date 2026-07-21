@@ -62,7 +62,7 @@ const AliasProvider = ({children}: { children: ReactNode }) => {
         }
 
         setIsLoading(false)
-    }, [host, hostmanager])
+    }, [host, hostmanager, showError])
 
     const addAlias = async (alias: string, host: number, fullpath: string) => {
         const {err} = await callRPC(() => hostmanager.addAlias({alias: {alias, fullpath, id: host}}))

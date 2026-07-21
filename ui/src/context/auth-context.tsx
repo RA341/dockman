@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         }
 
         refreshAuthStatus();
-    }, [refreshAuthStatus]);
+    }, [refreshAuthStatus, userClient]);
 
     const contextValue = useMemo(
         () => ({

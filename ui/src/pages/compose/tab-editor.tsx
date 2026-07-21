@@ -1,5 +1,5 @@
 import {Box, IconButton, Tooltip} from "@mui/material";
-import {type JSX, useMemo, useState} from "react";
+import {type JSX, useCallback, useMemo, useState} from "react";
 import {callRPC, useHostClient} from "../../lib/api";
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {type SaveState} from "./hooks/status-hook.tsx";
@@ -32,24 +32,14 @@ function TabEditor({selectedPage, setFileSaveStatus}: EditorProps) {
 
     const [errors, setErrors] = useState<string[]>([])
 
-    const getFile = async (filename: string) => {
+    const getFile = useCallback(async (filename: string) => {
         const {file, err} = await downloadFile(filename)
         return {contents: file, err: err}
-    };
-
-    const saveFile = async (filename: string, contents: string) => {
-        const err = await uploadFile(filename, contents);
-        if (err) {
-            return err
-        }
-
-        await validateFile();
-        return ""
-    }
+    }, [downloadFile]);
 
     const [activeAction, setActiveAction] = useState<string | null>(null);
 
-    async function validateFile() {
+    const validateFile = useCallback(async () => {
         if (isComposeFile(selectedPage)) {
             const {val: errs, err: err2} = await callRPC(() =>
                 dockerClient.composeValidate({
@@ -74,7 +64,17 @@ function TabEditor({selectedPage, setFileSaveStatus}: EditorProps) {
                 })
             }
         }
-    }
+    }, [dockerClient, selectedPage, showWarning])
+
+    const saveFile = useCallback(async (filename: string, contents: string) => {
+        const err = await uploadFile(filename, contents);
+        if (err) {
+            return err
+        }
+
+        await validateFile();
+        return ""
+    }, [uploadFile, validateFile])
 
     const actions: Record<string, ActionItem> = useMemo(() => {
         const baseActions: Record<string, ActionItem> = {
@@ -222,7 +222,7 @@ const SidebarContent = (
         activeAction: string | null;
         actions: Record<string, ActionItem>
     }) => {
-    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left', 450)
+    const {panelSize, panelRef, handleMouseDown, isResizing} = useResizeBar('left', 280)
 
     return (
         <Box ref={panelRef}

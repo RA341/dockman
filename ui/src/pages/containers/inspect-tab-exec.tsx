@@ -18,14 +18,13 @@ import "@xterm/xterm/css/xterm.css";
 import TerminalIcon from '@mui/icons-material/Terminal';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
 import {useSnackbar} from "../../hooks/snackbar.ts";
 import {FitAddon} from "@xterm/addon-fit";
 import {createTab} from "../compose/state/terminal.tsx";
 import {useContainerExecWsUrl} from "../../lib/api.ts";
 import AppTerminal from "../compose/components/logs-terminal.tsx";
-import {useHostStore} from "../compose/state/files.ts";
 import {Close} from "@mui/icons-material";
 
 const commandOptions = ["/bin/sh", "/bin/bash", "sh", "bash", "zsh"];
@@ -33,7 +32,6 @@ const debugImageOptions = ["nixery.dev/shell/fish", "nixery.dev/shell/bash", "ni
 
 const InspectTabExec = ({containerID}: { containerID: string; }) => {
     const {showError} = useSnackbar();
-    const selectedHost = useHostStore(state => state.host)
     const fitAddonRef = useRef<FitAddon>(new FitAddon());
 
     const [selectedCmd, setSelectedCmd] = useState<string>('/bin/sh');
@@ -56,7 +54,7 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
     const setupExec = useCallback(() => {
         const url = createExecUrl(containerID, selectedCmd, debuggerImage)
         return createTab(url, `Exec: ${containerID}`, true)
-    }, [containerID, debuggerImage, selectedCmd, selectedHost]);
+    }, [containerID, createExecUrl, debuggerImage, selectedCmd]);
 
     const containerShortId = containerID.slice(0, 12);
 
@@ -80,7 +78,9 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
                         bgcolor: 'background.default'
                     }}
                 >
-                    <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack direction="row" spacing={2} sx={{
+                        alignItems: "center"
+                    }}>
                         <IconButton size="small" onClick={() => setIsConnected(false)}>
                             <Close fontSize="small"/>
                         </IconButton>
@@ -89,7 +89,6 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
                         </Typography>
                     </Stack>
                 </Paper>
-
                 <Box sx={{
                     flex: 1,
                     // bgcolor: '#000',
@@ -114,7 +113,9 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
                     <Typography variant="h6" sx={{fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1}}>
                         <TerminalIcon color="primary"/> Execute Command
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                    }}>
                         Open an interactive shell session within container <code
                         style={{color: '#d32f2f'}}>{containerShortId}</code>.
                     </Typography>
@@ -145,13 +146,25 @@ const InspectTabExec = ({containerID}: { containerID: string; }) => {
                             />
 
                             <Divider>
-                                <Typography variant="caption" color="text.disabled" sx={{px: 1, fontWeight: 700}}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: "text.disabled",
+                                        px: 1,
+                                        fontWeight: 700
+                                    }}>
                                     OR
                                 </Typography>
                             </Divider>
 
                             <Box>
-                                <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 1}}>
+                                <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{
+                                        alignItems: "center",
+                                        mb: 1
+                                    }}>
                                     <BugReportIcon sx={{fontSize: 18, color: 'warning.main'}}/>
                                     <Typography variant="subtitle2">Dockman Debug</Typography>
                                     <Tooltip title="Launch a sidecar container with debugging tools">

@@ -47,7 +47,7 @@ export function useContainerLogsWsUrl() {
 export function useContainerExecWsUrl() {
     const getBase = useHostUrl()
     return useCallback((containerId: string, entrypoint: string, debuggerImage?: string) => {
-        let params: Record<string, string> = {
+        const params: Record<string, string> = {
             "cmd": entrypoint,
         }
         if (debuggerImage) {
@@ -57,6 +57,21 @@ export function useContainerExecWsUrl() {
 
         const urlParam = new URLSearchParams(params)
         return getWSUrl(getBase(`/docker/exec/${containerId}?${urlParam.toString()}`))
+    }, [getBase]);
+}
+
+// interactive shell on the host itself (dockman container locally, ssh
+// session for remote hosts); pass a compose filename to start the shell in
+// that file's directory
+export function useHostShellWsUrl() {
+    const getBase = useHostUrl()
+    return useCallback((file?: string) => {
+        const params = new URLSearchParams()
+        if (file) {
+            params.set("file", file)
+        }
+        const qs = params.toString()
+        return getWSUrl(getBase(`/docker/shell${qs ? `?${qs}` : ''}`))
     }, [getBase]);
 }
 
@@ -202,4 +217,3 @@ export function formatDate(timestamp: bigint | number | string) {
         minute: '2-digit'
     });
 }
-

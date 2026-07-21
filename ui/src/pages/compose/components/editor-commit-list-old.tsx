@@ -61,7 +61,9 @@ export function GitCommitListOld({selectedFile, selectedCommit, chooseCommit}: C
     if (commits.length === 0) {
         return (
             <Box sx={{p: 2, textAlign: 'center'}}>
-                <Typography color="text.secondary" variant="body2">No commit history.</Typography>
+                <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                }}>No commit history.</Typography>
             </Box>
         );
     }

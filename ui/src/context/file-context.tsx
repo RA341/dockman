@@ -2,11 +2,25 @@ import {createContext, type ReactNode, useCallback, useContext, useEffect, useSt
 import {useNavigate} from 'react-router-dom'
 import {callRPC, useHostClient, useHostUrl,} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
+import {useUploadProgress} from "../hooks/upload-progress.ts";
 import {FileService, type FsEntry} from '../gen/files/v1/files_pb.ts';
 import {useTabs} from "./tab-context.tsx";
 import {useEditorUrl} from "../lib/editor.ts";
-import {useHostStore, useOpenFiles} from "../pages/compose/state/files.ts";
+import {useOpenFiles} from "../pages/compose/state/files.ts";
 import {useFileComponents} from "../pages/compose/state/terminal.tsx";
+
+// btoa only accepts Latin1, so a path with accents, curly quotes or any other
+// non-Latin1 character throws. Encode the UTF-8 bytes instead; the backend
+// base64-decodes this straight back to the raw UTF-8 path bytes.
+function encodePathForMultipart(path: string): string {
+    const bytes = new TextEncoder().encode(path);
+    let binary = '';
+    bytes.forEach((b) => (binary += String.fromCharCode(b)));
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
 
 export interface FilesContextType {
     files: FsEntry[]
@@ -45,7 +59,6 @@ function FilesProvider({children}: { children: ReactNode }) {
     const [files, setFiles] = useState<FsEntry[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    const host = useHostStore(state => state.host)
     // don't use alias store since its dependent on the React lifecycle
     // const alias = useAliasStore(state => state.alias)
     const {alias} = useFileComponents()
@@ -81,7 +94,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         }
 
         setIsLoading(false)
-    }, [alias, host, client]);
+    }, [alias, client, showError]);
 
     const closeFolder = useOpenFiles(state => state.delete)
     const fileUrl = useEditorUrl()
@@ -102,7 +115,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         }
 
         await fetchFiles()
-    }, [client, fetchFiles, host, navigate])
+    }, [client, fetchFiles, fileUrl, navigate, showError, showSuccess])
 
     const copyFile = useCallback(async (srcFilename: string, destFilename: string, isDir: boolean) => {
         const {err} = await callRPC(() => client.copy({
@@ -126,7 +139,7 @@ function FilesProvider({children}: { children: ReactNode }) {
         }
 
         await fetchFiles()
-    }, [])
+    }, [client, fetchFiles, fileUrl, navigate, showError, showSuccess])
 
 
     const deleteFile = async (
@@ -164,43 +177,88 @@ function FilesProvider({children}: { children: ReactNode }) {
 
     const getUrl = useHostUrl()
 
-    async function uploadFile(fullPath: string, content: File | string, isNew: boolean = false): Promise<string> {
+    const uploadFile = useCallback(function (
+        fullPath: string,
+        content: File | string,
+        isNew: boolean = false,
+        onProgress?: (loaded: number, total: number) => void,
+    ): Promise<string> {
         const url = getUrl(`/file/save${isNew ? '?create=true' : ''}`)
 
-        try {
-            const formData = new FormData();
+        const fileBlob = typeof content === 'string'
+            // If it's a string (from editor), wrap it.
+            ? new File([content], getEntryDisplayName(fullPath))
+            // If it's already a File (from DnD), use it.
+            : content;
 
-            const fileBlob = typeof content === 'string'
-                // If it's a string (from editor), wrap it.
-                ? new File([content], getEntryDisplayName(fullPath))
-                // If it's already a File (from DnD), use it.
-                : content;
+        // XMLHttpRequest (not fetch) so we can observe upload progress via
+        // xhr.upload.onprogress — fetch with a FormData body reports nothing.
+        return new Promise<string>((resolve) => {
+            try {
+                const formData = new FormData();
+                // A multipart filename is normalized as a filesystem name by
+                // Go. URL-safe Base64 avoids '/' being treated as a separator.
+                formData.append('contents', fileBlob, encodePathForMultipart(fullPath));
 
-            formData.append('contents', fileBlob, btoa(fullPath));
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url, true);
 
-            const response = await fetch(url, {
-                method: 'POST',
-                body: formData,
-            });
+                if (onProgress) {
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) onProgress(e.loaded, e.total);
+                    };
+                }
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                return `Error: ${response.status} - ${errorText}`;
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve("");
+                    } else {
+                        resolve(`Error: ${xhr.status} - ${xhr.responseText}`);
+                    }
+                };
+                xhr.onerror = () => {
+                    console.error("Upload failed");
+                    resolve("Network error");
+                };
+
+                xhr.send(formData);
+            } catch (error) {
+                console.error("Upload failed:", error);
+                resolve("Network error");
             }
-
-            return "";
-        } catch (error) {
-            console.error("Upload failed:", error);
-            return "Network error";
-        }
-    }
+        });
+    }, [getUrl])
 
     const uploadFilesFromPC = async (targetDir: string, files: File[]) => {
-        const results = await Promise.all(files.map(file => {
-            const cleanDir = targetDir.endsWith('/') ? targetDir.slice(0, -1) : targetDir;
+        const cleanDir = targetDir.endsWith('/') ? targetDir.slice(0, -1) : targetDir;
+
+        // Aggregate per-file byte counts into one batch progress figure. Uploads
+        // run in parallel, so each file writes into its slot and we sum.
+        const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+        const loaded = new Array(files.length).fill(0);
+        let doneCount = 0;
+
+        const pushProgress = () => {
+            const loadedBytes = loaded.reduce((a, b) => a + b, 0);
+            useUploadProgress.getState().update(loadedBytes, doneCount);
+        };
+
+        useUploadProgress.getState().start(files.length, totalBytes);
+
+        const results = await Promise.all(files.map((file, i) => {
             const fullPath = `${cleanDir}/${file.name}`;
-            return uploadFile(fullPath, file, true);
+            return uploadFile(fullPath, file, true, (l) => {
+                loaded[i] = l;
+                pushProgress();
+            }).then((res) => {
+                doneCount++;
+                loaded[i] = file.size; // a finished file counts as fully sent
+                pushProgress();
+                return res;
+            });
         }));
+
+        useUploadProgress.getState().finish();
 
         const errors = results.filter(res => res !== "");
         if (errors.length > 0) {
@@ -213,7 +271,7 @@ function FilesProvider({children}: { children: ReactNode }) {
     };
 
 
-    async function downloadFile(
+    const downloadFile = useCallback(async function (
         filename: string,
         shouldDownload: boolean = false
     ): Promise<{ file: string; err: string }> {
@@ -254,7 +312,7 @@ function FilesProvider({children}: { children: ReactNode }) {
             console.error(`Error: ${(error as Error).toString()}`);
             return {file: "", err: (error as Error).toString()};
         }
-    }
+    }, [getUrl])
 
     useEffect(() => {
         fetchFiles().then()

@@ -521,8 +521,10 @@ type FsEntry struct {
 	// flag for lazy loading
 	IsFetched       bool   `protobuf:"varint,5,opt,name=isFetched,proto3" json:"isFetched,omitempty"`
 	IsComposeFolder string `protobuf:"bytes,6,opt,name=isComposeFolder,proto3" json:"isComposeFolder,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// set when the entry's name is pinned in dockman.yml (pinnedFiles)
+	Pinned        bool `protobuf:"varint,7,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FsEntry) Reset() {
@@ -588,6 +590,13 @@ func (x *FsEntry) GetIsComposeFolder() string {
 		return x.IsComposeFolder
 	}
 	return ""
+}
+
+func (x *FsEntry) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
 }
 
 type RenameFile struct {
@@ -760,13 +769,14 @@ const file_files_v1_files_proto_rawDesc = "" +
 	"\rFormatRequest\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\",\n" +
 	"\x0eFormatResponse\x12\x1a\n" +
-	"\bcontents\x18\x01 \x01(\tR\bcontents\"\xb2\x01\n" +
+	"\bcontents\x18\x01 \x01(\tR\bcontents\"\xca\x01\n" +
 	"\aFsEntry\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x14\n" +
 	"\x05isDir\x18\x03 \x01(\bR\x05isDir\x12-\n" +
 	"\bsubFiles\x18\x04 \x03(\v2\x11.files.v1.FsEntryR\bsubFiles\x12\x1c\n" +
 	"\tisFetched\x18\x05 \x01(\bR\tisFetched\x12(\n" +
-	"\x0fisComposeFolder\x18\x06 \x01(\tR\x0fisComposeFolder\"P\n" +
+	"\x0fisComposeFolder\x18\x06 \x01(\tR\x0fisComposeFolder\x12\x16\n" +
+	"\x06pinned\x18\a \x01(\bR\x06pinned\"P\n" +
 	"\n" +
 	"RenameFile\x12 \n" +
 	"\voldFilePath\x18\x01 \x01(\tR\voldFilePath\x12 \n" +
