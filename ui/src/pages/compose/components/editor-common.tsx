@@ -1,5 +1,5 @@
 import {MonacoEditor} from "./editor.tsx";
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {Alert, AlertTitle, Box, Button, CircularProgress, Link, Typography} from '@mui/material';
 import {ErrorOutline, WarningAmber} from '@mui/icons-material';
@@ -23,9 +23,20 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
 
-    const {status, handleContentChange, saveNow} = useSaveStatus(500, filename);
     const registerSaver = useEditorSave(state => state.registerSaver);
     const unregisterSaver = useEditorSave(state => state.unregisterSaver);
+
+    const saveContents = useCallback(async (newContent: string): Promise<SaveState> => {
+        const err = await saveFile(filename, newContent);
+        if (err) {
+            showError(`Could not save contents: ${err}`);
+            return 'error'
+        } else {
+            return 'success'
+        }
+    }, [filename, saveFile, showError]);
+
+    const {status, handleContentChange, saveNow} = useSaveStatus(500, filename, saveContents);
 
     const refreshFile = async () => {
         await getFile(filename)
@@ -36,23 +47,19 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         setLoading(true)
 
         const {contents, err} = await getFile(filename)
-        if (err) {
+
+        // prefer an in-memory draft (unsaved edits from before a tab switch)
+        // over the persisted content coming from the backend
+        const draft = useEditorSave.getState().drafts[filename];
+        if (draft !== undefined) {
+            setContents(draft)
+        } else if (err) {
             setErr(err)
         } else {
             setContents(contents)
         }
 
         setLoading(false);
-    };
-
-    const saveContents = async (newContent: string): Promise<SaveState> => {
-        const err = await saveFile(filename, newContent);
-        if (err) {
-            showError(`Could not save contents: ${err}`);
-            return 'error'
-        } else {
-            return 'success'
-        }
     };
 
     useEffect(() => {
@@ -96,8 +103,8 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     }, [filename]);
 
     const onContentChange = (value: string | undefined) => {
-        if (!value) return;
-        handleContentChange(value, saveContents)
+        if (value === undefined) return;
+        handleContentChange(value)
     }
 
     if (loading) {

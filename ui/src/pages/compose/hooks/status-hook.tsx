@@ -6,7 +6,7 @@ export type SaveState = 'idle' | 'typing' | 'unsaved' | 'saving' | 'success' | '
 
 
 export type OnSave = (value: string) => Promise<SaveState>
-export type SaveCallback = (value: string, onSave: OnSave) => void
+export type SaveCallback = (value: string) => void
 
 interface UseSaveStatusReturn {
     status: SaveState;
@@ -41,21 +41,35 @@ export const indicatorMap: Record<SaveState, { color: string, component: ReactNo
     }
 };
 
-export function useSaveStatus(debounceMs: number = 500, filename: string): UseSaveStatusReturn {
+export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSave): UseSaveStatusReturn {
     const [status, setStatus] = useState<SaveState>('idle');
     const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // latest content that has not been persisted yet
     const pendingValue = useRef<string | null>(null);
-    const pendingOnSave = useRef<OnSave | null>(null);
+    // keep the save callback in a ref so saveNow() is stable and can flush
+    // a restored draft even before the user types anything
+    const onSaveRef = useRef(onSave);
+    useEffect(() => {
+        onSaveRef.current = onSave;
+    }, [onSave]);
 
     const autoSave = useEditorSave(state => state.autoSave);
     const setDirty = useEditorSave(state => state.setDirty);
+    const setDraft = useEditorSave(state => state.setDraft);
+    const clearDraft = useEditorSave(state => state.clearDraft);
 
+    // when switching to a file, restore any in-memory draft so unsaved edits
+    // survive tab switches; otherwise start clean
     useEffect(() => {
-        pendingValue.current = null;
-        pendingOnSave.current = null;
-        setStatus('idle');
+        const draft = useEditorSave.getState().drafts[filename];
+        if (draft !== undefined) {
+            pendingValue.current = draft;
+            setStatus('unsaved');
+        } else {
+            pendingValue.current = null;
+            setStatus('idle');
+        }
     }, [filename]);
 
     const saveNow = useCallback(async () => {
@@ -65,22 +79,22 @@ export function useSaveStatus(debounceMs: number = 500, filename: string): UseSa
         }
 
         const value = pendingValue.current;
-        const onSave = pendingOnSave.current;
-        if (value === null || !onSave) return;
+        if (value === null) return;
 
         setStatus('saving');
-        const state = await onSave(value);
+        const state = await onSaveRef.current(value);
         if (state === 'success') {
             pendingValue.current = null;
             setDirty(filename, false);
+            clearDraft(filename);
         }
         setStatus(state);
-    }, [filename, setDirty]);
+    }, [filename, setDirty, clearDraft]);
 
-    const handleContentChange = useCallback<SaveCallback>((value, onSave) => {
+    const handleContentChange = useCallback<SaveCallback>((value) => {
         pendingValue.current = value;
-        pendingOnSave.current = onSave;
         setDirty(filename, true);
+        setDraft(filename, value);
 
         if (debounceTimeout.current) {
             clearTimeout(debounceTimeout.current);
@@ -97,7 +111,7 @@ export function useSaveStatus(debounceMs: number = 500, filename: string): UseSa
         debounceTimeout.current = setTimeout(() => {
             saveNow().then();
         }, debounceMs);
-    }, [debounceMs, autoSave, filename, saveNow, setDirty]);
+    }, [debounceMs, autoSave, filename, saveNow, setDirty, setDraft]);
 
     useEffect(() => {
         if (status === 'success' || status === 'error') {
