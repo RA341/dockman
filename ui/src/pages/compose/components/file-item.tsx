@@ -10,10 +10,9 @@ import {
     Menu,
     MenuItem, Tooltip
 } from "@mui/material";
-import {useLocation, useNavigate} from 'react-router-dom'
+import {Link as RouterLink, useLocation, useNavigate} from 'react-router-dom'
 import React, {type MouseEvent, useEffect, useState} from 'react'
 import {ExpandLess, ExpandMore, Folder} from '@mui/icons-material'
-import {Link as RouterLink} from "react-router";
 import FileIcon, {DockerFolderIcon} from "./file-icon.tsx";
 import {amber} from "@mui/material/colors";
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
@@ -139,6 +138,7 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const closeComposeStatus = useComposeFileState(state => state.delete)
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleToggle = (_e: React.MouseEvent) => {
         // If it's a link, we want the navigation to happen,
         // but we ALSO want to toggle the folder visibility.

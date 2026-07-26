@@ -1,14 +1,16 @@
 FROM node:24-alpine AS front
 
+RUN npm install -g pnpm@latest
+
 WORKDIR /frontend
 
-COPY ui/package.json ui/package-lock.json ./
+COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml  ./
 
-RUN npm i
+RUN pnpm ci
 
 COPY ui .
 
-RUN npm run build
+RUN pnpm run build
 
 FROM golang:1.26-alpine AS back
 
