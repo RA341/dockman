@@ -4,6 +4,7 @@ import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {Alert, AlertTitle, Box, Button, CircularProgress, Link, Typography} from '@mui/material';
 import {ErrorOutline, WarningAmber} from '@mui/icons-material';
 import {type SaveState, useSaveStatus} from "../hooks/status-hook.tsx";
+import {useEditorSave} from "../state/save.ts";
 import {ErrFileNotSupported} from "../../../context/file-context.tsx";
 
 interface TextEditorProps {
@@ -22,7 +23,9 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
 
-    const {status, handleContentChange} = useSaveStatus(500, filename);
+    const {status, handleContentChange, saveNow} = useSaveStatus(500, filename);
+    const registerSaver = useEditorSave(state => state.registerSaver);
+    const unregisterSaver = useEditorSave(state => state.unregisterSaver);
 
     const refreshFile = async () => {
         await getFile(filename)
@@ -59,6 +62,38 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     useEffect(() => {
         loadFile().then();
     }, []);
+
+    // expose the manual save so toolbar buttons (diskette) can trigger it
+    useEffect(() => {
+        registerSaver(filename, saveNow);
+        return () => unregisterSaver(filename);
+    }, [filename, saveNow, registerSaver, unregisterSaver]);
+
+    // CTRL+S / CMD+S saves pending changes, even when auto-save is enabled
+    // (flushes the debounce immediately)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                if (!e.repeat) {
+                    saveNow().then();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [saveNow]);
+
+    // warn before closing the browser tab with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (useEditorSave.getState().dirtyFiles[filename]) {
+                e.preventDefault();
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [filename]);
 
     const onContentChange = (value: string | undefined) => {
         if (!value) return;

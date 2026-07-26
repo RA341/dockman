@@ -84,12 +84,13 @@ export function MonacoEditor(
         model.pushStackElement();
         model.setValue(fileContent);
 
-        model.onDidChangeContent(() => {
+        const contentListener = model.onDidChangeContent(() => {
             handleEditorChange(model.getValue());
         });
+        const disposeListener = () => contentListener.dispose();
 
         const tab = useTabsStore.getState().allTabs[selectedFile];
-        if (!tab) return;
+        if (!tab) return disposeListener;
         const {row, col} = tab;
 
         // Clamp row/column to model size
@@ -107,6 +108,7 @@ export function MonacoEditor(
         // do not add tabs as dependencies
         // it will mess with the editor typing
         // resetting cursor position when the tab
+        return disposeListener;
     }, [fileContent, selectedFile, mounted]);
 
     return (
