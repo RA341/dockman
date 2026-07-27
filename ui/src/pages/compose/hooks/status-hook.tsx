@@ -12,6 +12,7 @@ interface UseSaveStatusReturn {
     status: SaveState;
     handleContentChange: SaveCallback;
     saveNow: () => Promise<void>;
+    setBaseline: (content: string) => void;
 }
 
 export const indicatorMap: Record<SaveState, { color: string, component: ReactNode }> = {
@@ -45,8 +46,11 @@ export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSa
     const [status, setStatus] = useState<SaveState>('idle');
     const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // latest content that has not been persisted yet
+    // latest content that has not been persisted yet (null = nothing to save)
     const pendingValue = useRef<string | null>(null);
+    // the content currently on disk; a file is only "dirty" when the editor
+    // content differs from this. null means the baseline is not known yet.
+    const savedValue = useRef<string | null>(null);
     // keep the save callback in a ref so saveNow() is stable and can flush
     // a restored draft even before the user types anything
     const onSaveRef = useRef(onSave);
@@ -60,8 +64,10 @@ export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSa
     const clearDraft = useEditorSave(state => state.clearDraft);
 
     // when switching to a file, restore any in-memory draft so unsaved edits
-    // survive tab switches; otherwise start clean
+    // survive tab switches; otherwise start clean. The baseline is unknown
+    // until the file finishes loading (see setBaseline).
     useEffect(() => {
+        savedValue.current = null;
         const draft = useEditorSave.getState().drafts[filename];
         if (draft !== undefined) {
             pendingValue.current = draft;
@@ -84,6 +90,7 @@ export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSa
         setStatus('saving');
         const state = await onSaveRef.current(value);
         if (state === 'success') {
+            savedValue.current = value;
             pendingValue.current = null;
             setDirty(filename, false);
             clearDraft(filename);
@@ -91,14 +98,30 @@ export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSa
         setStatus(state);
     }, [filename, setDirty, clearDraft]);
 
-    const handleContentChange = useCallback<SaveCallback>((value) => {
+    // compare the given content against the on-disk baseline and update the
+    // dirty flag / draft / status accordingly. Reverting all edits (e.g. via
+    // CTRL+Z) brings the content back to the baseline and clears "unsaved".
+    const reconcile = useCallback((value: string) => {
         pendingValue.current = value;
-        setDirty(filename, true);
-        setDraft(filename, value);
 
         if (debounceTimeout.current) {
             clearTimeout(debounceTimeout.current);
+            debounceTimeout.current = null;
         }
+
+        // if we don't know the baseline yet, treat any content as dirty
+        const dirty = savedValue.current === null || value !== savedValue.current;
+
+        if (!dirty) {
+            pendingValue.current = null;
+            setDirty(filename, false);
+            clearDraft(filename);
+            setStatus('idle');
+            return;
+        }
+
+        setDirty(filename, true);
+        setDraft(filename, value);
 
         if (!autoSave) {
             // manual mode: only mark the file as dirty,
@@ -111,7 +134,20 @@ export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSa
         debounceTimeout.current = setTimeout(() => {
             saveNow().then();
         }, debounceMs);
-    }, [debounceMs, autoSave, filename, saveNow, setDirty, setDraft]);
+    }, [debounceMs, autoSave, filename, saveNow, setDirty, setDraft, clearDraft]);
+
+    const handleContentChange = useCallback<SaveCallback>((value) => {
+        reconcile(value);
+    }, [reconcile]);
+
+    // called by the editor once the on-disk content is loaded, so dirty state
+    // can be evaluated against it (also reconciles a restored draft)
+    const setBaseline = useCallback((content: string) => {
+        savedValue.current = content;
+        if (pendingValue.current !== null) {
+            reconcile(pendingValue.current);
+        }
+    }, [reconcile]);
 
     useEffect(() => {
         if (status === 'success' || status === 'error') {
@@ -128,5 +164,6 @@ export function useSaveStatus(debounceMs: number, filename: string, onSave: OnSa
         status,
         handleContentChange,
         saveNow,
+        setBaseline,
     };
 }

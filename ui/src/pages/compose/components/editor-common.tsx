@@ -36,7 +36,7 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         }
     }, [filename, saveFile, showError]);
 
-    const {status, handleContentChange, saveNow} = useSaveStatus(500, filename, saveContents);
+    const {status, handleContentChange, saveNow, setBaseline} = useSaveStatus(500, filename, saveContents);
 
     const refreshFile = async () => {
         await getFile(filename)
@@ -47,6 +47,12 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         setLoading(true)
 
         const {contents, err} = await getFile(filename)
+
+        if (!err) {
+            // the on-disk content is the baseline used to decide whether the
+            // file has unsaved changes (reverting edits clears "unsaved")
+            setBaseline(contents)
+        }
 
         // prefer an in-memory draft (unsaved edits from before a tab switch)
         // over the persisted content coming from the backend
