@@ -1,10 +1,10 @@
 import {Editor, type Monaco} from "@monaco-editor/react";
 import {getLanguageFromExtension} from "../../../lib/editor";
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useRef} from "react";
 import * as monacoEditor from "monaco-editor";
 import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
-import {useTabs, useTabsStore} from "../../../context/tab-context.tsx";
+import {getContextKey, useTabs, useTabsStore} from "../../../context/tab-context.tsx";
 import {FileService} from "../../../gen/files/v1/files_pb.ts";
 
 interface MonacoEditorProps {
@@ -24,19 +24,48 @@ export function MonacoEditor(
 
     const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor | null>(null);
     const saveLineNum = useSaveLineNum()
-
-    const [mounted, setMounted] = useState(false);
     const {setTabDetails} = useTabs()
+
+    // keep the active filename in a ref: listeners are attached once on mount
+    // and mount does NOT re-run when the editor swaps to another file's model
+    const selectedFileRef = useRef(selectedFile);
+    selectedFileRef.current = selectedFile;
+
+    // Each file gets its own monaco model, unique per host/alias context.
+    // Combined with keepCurrentModel this makes undo/redo history and unsaved
+    // content survive switching between tabs (until a full page reload).
+    const modelPath = `${getContextKey()}/${selectedFile}`;
+
+    const restoreCaret = useCallback((editor: monacoEditor.editor.IStandaloneCodeEditor) => {
+        const model = editor.getModel();
+        if (!model) return;
+
+        const tab = useTabsStore.getState().allTabs[selectedFileRef.current];
+        if (!tab) return;
+        const {row, col} = tab;
+
+        // Clamp row/column to model size
+        const lineNumber = Math.min(row, model.getLineCount());
+        const column = Math.min(col, model.getLineMaxColumn(lineNumber));
+
+        editor.setPosition({lineNumber, column});
+        const padding = 5;
+        editor.revealRangeInCenter({
+            startLineNumber: Math.max(1, lineNumber - padding),
+            startColumn: 1,
+            endLineNumber: lineNumber + padding,
+            endColumn: 1,
+        });
+    }, []);
 
     const handleEditorDidMount = (editor: monacoEditor.editor.IStandaloneCodeEditor, monaco: Monaco) => {
         editorRef.current = editor;
-        setMounted(true);
         editor.focus();
 
         editor.addCommand(
             monaco.KeyMod.Alt | monaco.KeyCode.KeyL,
             async () => {
-                const {val, err} = await callRPC(() => file.format({filename: selectedFile}))
+                const {val, err} = await callRPC(() => file.format({filename: selectedFileRef.current}))
                 if (err) {
                     showError(err)
                 } else {
@@ -64,59 +93,31 @@ export function MonacoEditor(
             }
         );
 
-        editorRef.current?.getValue();
-
         editor.onDidChangeCursorPosition((e) => {
             const {lineNumber, column} = e.position;
-            saveLineNum({filename: selectedFile, col: column, row: lineNumber}, (value) => {
+            saveLineNum({filename: selectedFileRef.current, col: column, row: lineNumber}, (value) => {
                 setTabDetails(value.filename, {row: value.row, col: value.col});
             });
         });
+
+        restoreCaret(editor);
     };
 
+    // when the active file changes the editor swaps to that file's kept model;
+    // restore the caret for the newly-activated file
     useEffect(() => {
-        if (!mounted || !editorRef.current) return;
-
-        const model = editorRef.current.getModel();
-        if (!model) return;
-
-        // console.log("clearing stack for initial load");
-        model.pushStackElement();
-        model.setValue(fileContent);
-
-        const contentListener = model.onDidChangeContent(() => {
-            handleEditorChange(model.getValue());
-        });
-        const disposeListener = () => contentListener.dispose();
-
-        const tab = useTabsStore.getState().allTabs[selectedFile];
-        if (!tab) return disposeListener;
-        const {row, col} = tab;
-
-        // Clamp row/column to model size
-        const lineNumber = Math.min(row, model.getLineCount());
-        const column = Math.min(col, model.getLineMaxColumn(lineNumber));
-
-        editorRef.current.setPosition({lineNumber, column});
-        const padding = 5;
-        editorRef.current.revealRangeInCenter({
-            startLineNumber: Math.max(1, lineNumber - padding),
-            startColumn: 1,
-            endLineNumber: lineNumber + padding,
-            endColumn: 1,
-        });
-        // do not add tabs as dependencies
-        // it will mess with the editor typing
-        // resetting cursor position when the tab
-        return disposeListener;
-    }, [fileContent, selectedFile, mounted]);
+        const editor = editorRef.current;
+        if (editor) restoreCaret(editor);
+    }, [selectedFile, restoreCaret]);
 
     return (
         <Editor
-            key={selectedFile}
-            language={getLanguageFromExtension(selectedFile)}
-            defaultValue={""}
+            path={modelPath}
+            keepCurrentModel
+            defaultLanguage={getLanguageFromExtension(selectedFile)}
+            defaultValue={fileContent}
             onMount={handleEditorDidMount}
+            onChange={handleEditorChange}
             theme="vs-dark"
             options={{
                 tabSize: 2,

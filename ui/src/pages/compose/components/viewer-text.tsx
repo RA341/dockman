@@ -267,9 +267,17 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
                             </span>
                         </Tooltip>
 
-                        <Tooltip title={autoSave ?
-                            "Auto-save is on: changes are saved as you type" :
-                            "Auto-save is off: save manually with the save button or CTRL + S"
+                        <Tooltip title={
+                            <Box sx={{maxWidth: 240}}>
+                                <Typography variant="caption" display="block">
+                                    {autoSave
+                                        ? "Auto-save is on: changes are saved as you type."
+                                        : "Auto-save is off: save manually with the save button or CTRL + S."}
+                                </Typography>
+                                <Typography variant="caption" display="block" sx={{mt: 0.5, opacity: 0.8}}>
+                                    Unsaved changes are kept when switching tabs, but are lost if you fully reload the page.
+                                </Typography>
+                            </Box>
                         }>
                             <FormControlLabel
                                 control={

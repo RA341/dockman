@@ -68,7 +68,9 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
 
     useEffect(() => {
         loadFile().then();
-    }, []);
+        // reload content when switching to a different file
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filename]);
 
     // expose the manual save so toolbar buttons (diskette) can trigger it
     useEffect(() => {
