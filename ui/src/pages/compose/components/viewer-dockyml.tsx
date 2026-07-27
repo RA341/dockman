@@ -1,6 +1,9 @@
 import {callRPC, useHostClient} from "../../../lib/api.ts";import {DockyamlService} from "../../../gen/dockyaml/v1/dockyaml_pb.ts";
 import {Box, Button, capitalize, Tooltip, Typography} from '@mui/material';
+import {SaveOutlined} from "@mui/icons-material";
 import {indicatorMap, type SaveState} from "../hooks/status-hook.tsx";
+import {useEditorSave} from "../state/save.ts";
+import {ShortcutFormatter} from "./shortcut-formatter.tsx";
 import {useConfig} from "../../../hooks/config.ts";
 import {useState} from "react";
 import EditorCommon from "./editor-common.tsx";
@@ -33,6 +36,9 @@ function DockyamlViewer({filename}: { filename: string }) {
     const {fetchDockmanYaml} = useConfig()
 
     const [saveStatus, setSaveStatus] = useState<SaveState>('idle')
+
+    const isDirty = useEditorSave(state => state.dirtyFiles[filename] ?? false)
+    const saveNow = useEditorSave(state => state.savers[filename])
 
     const refreshFile = async () => {
         await getFile()
@@ -99,6 +105,22 @@ function DockyamlViewer({filename}: { filename: string }) {
                         >
                             Apply
                         </Button>
+                    </Tooltip>
+
+                    <Tooltip title={<ShortcutFormatter title={"Save file"} keyCombo={["CTRL", "S"]}/>}>
+                        <span>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="success"
+                                disabled={!isDirty}
+                                onClick={() => saveNow?.()}
+                                startIcon={<SaveOutlined sx={{fontSize: 16}}/>}
+                                sx={{fontSize: '0.75rem', textTransform: 'none'}}
+                            >
+                                Save
+                            </Button>
+                        </span>
                     </Tooltip>
 
                     <Typography variant="caption" sx={{
