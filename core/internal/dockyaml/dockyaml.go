@@ -33,6 +33,9 @@ type DockmanYaml struct {
 	// define a custom sort to pin certain files when displaying
 	PinnedFiles map[string]int `yaml:"pinnedFiles"`
 
+	// files and folders that should be hidden when displaying
+	IgnoredFiles []string `yaml:"ignoredFiles"`
+
 	// use compose folders https://dockman.radn.dev/docs/file-layout/customize#compose-folders
 	UseComposeFolders bool `yaml:"useComposeFolders"`
 

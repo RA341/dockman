@@ -64,6 +64,10 @@ func (s *Service) List(path string, hostname string) ([]Entry, error) {
 		fullRelpath := filepath.Join(relpath, entry.Name())
 		displayPath := filepath.Join(path, entry.Name())
 
+		if s.isIgnored(displayPath, hostname) {
+			continue
+		}
+
 		isDir := entry.IsDir()
 
 		ele := Entry{
@@ -103,6 +107,11 @@ func (s *Service) listFiles(
 	filesInSubDir := make([]Entry, 0, len(subEntries))
 	for _, subEntry := range subEntries {
 		join := filepath.Join(displayPath, subEntry.Name())
+
+		if s.isIgnored(join, hostname) {
+			continue
+		}
+
 		filesInSubDir = append(filesInSubDir,
 			Entry{
 				fullpath: join,
@@ -653,4 +662,28 @@ func (s *Service) getFileSortRank(filename string) int {
 	}
 	// Priority 2: everything else
 	return 2
+}
+
+func (s *Service) isIgnored(entryPath string, host string) bool {
+	conf := s.dockYml(host)
+
+	// if no config or no ignoredFiles defined
+	if conf == nil || len(conf.IgnoredFiles) == 0 {
+		return false
+	}
+
+	base := filepath.Base(entryPath)
+
+	for _, ignore := range conf.IgnoredFiles {
+		// simple basename match
+		if base == ignore {
+			return true
+		}
+		// optional: ignore by full path (normalized)
+		if entryPath == ignore {
+			return true
+		}
+	}
+
+	return false
 }
