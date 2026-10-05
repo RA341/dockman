@@ -1,4 +1,6 @@
 <div align="center">
+
+[![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/RA341/dockman)
   <img src="website/static/img/dockman.svg" alt="Logo" width="200" height="200">
   <h1>Dockman</h1>
   <p>
