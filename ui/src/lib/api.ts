@@ -168,7 +168,7 @@ export async function callRPC<T>(exec: () => Promise<T>): Promise<{ val: T | nul
 
 export async function pingWithAuth() {
     try {
-        console.log("Checking authentication status with server...");
+        // console.log("Checking authentication status with server...");
         const response = await fetch(withProtectedAPI("/ping"), {
             redirect: 'follow'
         });
@@ -181,7 +181,7 @@ export async function pingWithAuth() {
             return false
         }
 
-        console.log(`Server response isOK: ${response.ok}`);
+        // console.log(`Server response isOK: ${response.ok}`);
         return response.ok
     } catch (error) {
         console.error("Authentication check failed:", error);

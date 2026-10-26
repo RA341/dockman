@@ -1,4 +1,4 @@
-import {useCallback, useEffect} from 'react'
+import {useCallback, useEffect, useRef} from 'react'
 import {Box, CircularProgress, Divider, IconButton, List, Toolbar, Tooltip, Typography} from '@mui/material'
 import {Add as AddIcon, Cached, Search as SearchIcon} from '@mui/icons-material'
 import {ShortcutFormatter} from "./shortcut-formatter.tsx"
@@ -13,6 +13,9 @@ import {YamlIcon} from "./file-icon.tsx";
 import {useNavigate} from "react-router-dom";
 import {useEditorUrl} from "../../../lib/editor.ts";
 import {formatDockyaml} from "./viewer-dockyml.tsx";
+import {useComposeFileState} from "../state/status.ts";
+import {callRPC, useHostClient} from "../../../lib/api.ts";
+import {DockerService} from "../../../gen/docker/v1/docker_pb.ts";
 
 export function FileList() {
     const showSearch = useFileSearch(state => state.open)
@@ -168,6 +171,35 @@ export function FileList() {
 
 const FileListInner = () => {
     const {files, isLoading} = useFiles()
+    const {host, alias} = useFileComponents()
+
+    const openFiles = useComposeFileState(state => state.openFiles)
+    const setStatus = useComposeFileState(state => state.setStatus)
+    const dockerSrv = useHostClient(DockerService)
+
+
+    const openFilesRef = useRef(openFiles)
+    useEffect(() => {
+        openFilesRef.current = openFiles
+    }, [openFiles])
+
+    useEffect(() => {
+        const refresh = async () => {
+            const currentElement = openFilesRef.current[`${host}/${alias}`];
+            if (!currentElement) return;
+
+            const keys = Object.keys(currentElement)
+            const {val} = await callRPC(() => dockerSrv.composeFileStatus({ files: keys }))
+            if (val) {
+                setStatus(val.status)
+            }
+        }
+
+        refresh().then()
+        const interval = setInterval(refresh, 3000)
+        return () => clearInterval(interval)
+    }, [])
+
 
     return (
         <>

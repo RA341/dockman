@@ -343,12 +343,18 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
 	ipAddr := extractIPAddr(stack)
 
+	var he string
+	if stack.Health.Status != container.NoHealthcheck {
+		he = string(stack.Health.Status)
+	}
+
 	return &v1.ContainerList{
 		Name:            strings.TrimPrefix(stack.Names[0], "/"),
 		Id:              stack.ID,
 		ImageID:         stack.ImageID,
 		ImageName:       stack.Image,
 		State:           string(stack.State),
+		Health:          he,
 		Created:         time.Unix(stack.Created, 0).UTC().Format(time.RFC3339),
 		IPAddress:       ipAddr,
 		UpdateAvailable: update.UpdateRef,

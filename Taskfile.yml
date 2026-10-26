@@ -139,8 +139,21 @@ tasks:
     dir: '{{.BUILD_DIR}}/{{.CMD_NAME}}'
     cmds:
       - 'task go:b:{{.CMD_NAME}}'
-      - 'task '
       - './{{.CMD_NAME}}'
+
+  go:d:*:
+    vars:
+      CMD_NAME: "{{index .MATCH 0}}"
+    dir: '{{.BUILD_DIR}}/{{.CMD_NAME}}'
+    cmds:
+      - 'task go:b:{{.CMD_NAME}}'
+      - 'dlv exec {{.CMD_NAME}} --headless --listen :2345 --api-version 2'
+
+  go:w:*:
+    vars:
+      CMD_NAME: "{{index .MATCH 0}}"
+    cmds:
+     - wgo -file .go task go:d:{{.CMD_NAME}}
 
   go:b:*:
     dir: "{{.CORE_DIR}}"

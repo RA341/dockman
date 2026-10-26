@@ -4,10 +4,10 @@ import {ViewerService} from "../../../gen/viewer/v1/viewer_pb.ts";
 import {useEffect, useState} from "react";
 import {useFileComponents} from "../state/terminal.tsx";
 
-const ViewerSqlite = () => {
+const ViewerSqlite = ({filename}: { filename: string }) => {
     const viewerClient = useHostClient(ViewerService)
 
-    const {filename, alias: activeAlias} = useFileComponents()
+    const {alias: activeAlias} = useFileComponents()
 
     const [iframeUrl, setIframeUrl] = useState("")
     const [sessionErr, setSessionErr] = useState("")

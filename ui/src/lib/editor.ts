@@ -1,5 +1,6 @@
 import type {TabDetails} from "../context/tab-context.tsx";
 import {useCallback} from "react";
+import {useLocation} from "react-router-dom";
 import {useAliasStore, useHostStore} from "../pages/compose/state/files.ts";
 
 export const COMPOSE_EXTENSIONS = ['compose.yaml', 'compose.yml']
@@ -36,25 +37,37 @@ export const getUsageColor = (value: number): 'success.main' | 'warning.main' | 
 export const useEditorUrl = () => {
     const host = useHostStore(state => state.host)
     const prevAlias = useAliasStore(state => state.alias)
+    const {pathname, search} = useLocation()
 
-    return useCallback((filename?: string, tabDetail?: TabDetails | number) => {
-        let base = `/${host}/files`;
-        if (filename) {
-            base = `${base}/${filename}`;
-            if (tabDetail) {
-                let tabValue: number;
-                if (typeof tabDetail === 'number') {
-                    tabValue = tabDetail;
-                } else {
-                    tabValue = tabDetail.subTabIndex ?? 0;
-                }
-                base = `${base}?tab=${tabValue}`;
+    return useCallback((filename?: string, tabDetail?: TabDetails | number, track: number = 0) => {
+        const query = new URLSearchParams(search);
+        let path = pathname;
+
+        const tabKey = track === 0 ? "tab" : "splitTab";
+
+        if (track === 0) {
+            if (filename) {
+                path = `/${host}/files/${filename}`;
+            } else if (!pathname.includes("/files/")) {
+                path = `/${host}/files/${prevAlias || "compose"}`;
             }
         } else {
-            base = `${base}/${prevAlias || "compose"}`;
+            if (filename) {
+                query.set("split", filename);
+            } else {
+                query.delete("split");
+            }
         }
-        return base;
-    }, [host, prevAlias]);
+
+        if (tabDetail !== undefined) {
+            const tabValue = typeof tabDetail === 'number' ? tabDetail : (tabDetail.subTabIndex ?? 0);
+            query.set(tabKey, tabValue.toString());
+        }
+
+        const queryString = query.toString();
+        const res = queryString ? `${path}?${queryString}` : path;
+        return res.replace(/\/$/, "");
+    }, [host, prevAlias, pathname, search]);
 };
 
 export const getLanguageFromExtension = (filename?: string): string => {

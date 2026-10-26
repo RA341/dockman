@@ -32,7 +32,7 @@ import VolumesPage from "./pages/volumes/volumes.tsx";
 import NetworksPage from "./pages/networks/networks.tsx";
 import NetworksInspect from "./pages/networks/networks-inspect.tsx";
 import DockerCleanerPage from "./pages/cleaner/cleaner.tsx";
-import {ComposePage, FileIndexRedirect, FilesLayout} from "./pages/compose/compose-page.tsx";
+import FileIndexRedirect, {ComposePage, FilesLayout} from "./pages/compose/compose-page.tsx";
 import ContainerInspectPage from "./pages/containers/inspect.tsx";
 import scrollbarStyles from "./components/scrollbar-style.tsx";
 import StatsPage from "./pages/stats/stats-page.tsx";

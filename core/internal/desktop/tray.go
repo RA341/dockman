@@ -39,12 +39,7 @@ func NewDesktop(fsPath fs.FS, opts ...config.AppOpt) Desktop {
 
 func (t *Desktop) Start() {
 	t.startServices()
-	systray.Run(
-		func() {
-			t.onReady()
-		},
-		t.onExit,
-	)
+	systray.Run(t.onReady, t.onExit)
 }
 
 func (t *Desktop) startServices() {
@@ -128,7 +123,8 @@ func (t *Desktop) onReady() {
 	systray.SetIcon(all)
 	systray.SetTitle("Dockman")
 	systray.SetTooltip("Dockman")
-	
+	systray.SetOnTapped(t.Start)
+
 	mUI := systray.AddMenuItem("Open UI", "Start the UI")
 	mServer := systray.AddMenuItem("Restart", "Restart the app")
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")

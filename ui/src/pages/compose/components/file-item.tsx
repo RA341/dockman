@@ -8,25 +8,28 @@ import {
     ListItemIcon,
     ListItemText,
     Menu,
-    MenuItem
+    MenuItem, Tooltip
 } from "@mui/material";
-import {useLocation} from 'react-router-dom'
+import {Link as RouterLink, useLocation, useNavigate} from 'react-router-dom'
 import React, {type MouseEvent, useEffect, useState} from 'react'
 import {ExpandLess, ExpandMore, Folder} from '@mui/icons-material'
-import {Link as RouterLink} from "react-router";
 import FileIcon, {DockerFolderIcon} from "./file-icon.tsx";
 import {amber} from "@mui/material/colors";
-
 import type {FsEntry} from "../../../gen/files/v1/files_pb.ts";
 import {getDir, getEntryDisplayName, useFiles} from "../../../context/file-context.tsx";
 
-import {useEditorUrl} from "../../../lib/editor.ts";
+import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {useFileCreate} from "../dialogs/file-create.tsx";
 import {useFileDelete} from "../dialogs/file-delete.tsx";
 import {useFileRename} from "../dialogs/file-rename.tsx";
 import {useAliasStore, useHostStore, useOpenFiles} from "../state/files.ts";
 import {useConfig} from "../../../hooks/config.ts";
+import {useComposeFileState} from "../state/status.ts";
+import {getContextKey} from "../../../context/tab-context.tsx";
+import type {Status} from "../../../gen/docker/v1/docker_pb.ts";
+import {stripQueryParams} from "../../../lib/strings.ts";
+
 
 export const useFileDnD = (entry: FsEntry) => {
     const [isDragOver, setIsDragOver] = useState(false);
@@ -133,11 +136,20 @@ const FolderItemDisplay = ({entry, depthIndex}: {
     // Highlight if we are currently editing the compose file this folder points to
     const isSelected = useIsSelected(composeFilePath);
 
+    const closeComposeStatus = useComposeFileState(state => state.delete)
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleToggle = (_e: React.MouseEvent) => {
         // If it's a link, we want the navigation to happen,
         // but we ALSO want to toggle the folder visibility.
         toggle(entry.filename);
     }
+
+    useEffect(() => {
+        if (!folderOpen && !isComposeFolder) {
+            closeComposeStatus(entry.filename)
+        }
+    }, [folderOpen]);
 
     const [isFetchingMore, setIsFetchingMore] = useState(false)
 
@@ -158,19 +170,44 @@ const FolderItemDisplay = ({entry, depthIndex}: {
 
     const displayName = getEntryDisplayName(name);
 
+    const trackComposeStatus = useComposeFileState(state => state.trackComposeStatus)
+
+    const fileStatus = useComposeFileState(state => state.openFiles[getContextKey()]?.[entry.isComposeFolder])
+    useEffect(() => {
+        if (isComposeFolder) {
+            trackComposeStatus(entry.isComposeFolder);
+        }
+    }, [isComposeFolder, entry.isComposeFolder]);
+
+    const navigate = useNavigate()
+    const createFileUrl = useEditorUrl()
+
+    function openSplit(filename: string) {
+        navigate(createFileUrl(filename, undefined, 1))
+    }
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (isComposeFolder && e.button === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            openSplit(entry.isComposeFolder);
+        }
+    };
+
     return (
         <>
             <ListItemButton
                 key={entry.filename}
                 {...dndProps}
                 draggable
-
                 {...(isComposeFolder ? {
                     component: RouterLink,
                     to: composeFilePath
                 } : {
                     component: 'div'
                 })}
+
+                onAuxClick={handleMouseDown}
 
                 selected={isSelected}
                 onContextMenu={handleContextMenu}
@@ -204,6 +241,8 @@ const FolderItemDisplay = ({entry, depthIndex}: {
                         }
                     }}
                 />
+
+                <StatusIndicator fileStatus={fileStatus}/>
 
                 <IconButton
                     size="small"
@@ -266,6 +305,29 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
     const editorUrl = useEditorUrl()
     const filePath = editorUrl(filename)
 
+    const trackComposeStatus = useComposeFileState(state => state.trackComposeStatus)
+    const fileStatus = useComposeFileState(state => state.openFiles[getContextKey()]?.[filename])
+    useEffect(() => {
+        if (isComposeFile(filename)) {
+            trackComposeStatus(filename);
+        }
+    }, [filename]);
+
+    const navigate = useNavigate()
+    const createFileUrl = useEditorUrl()
+
+    function openSplit(filename: string) {
+        navigate(createFileUrl(filename, undefined, 1))
+    }
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            openSplit(filename);
+        }
+    };
+
     const isSelected = useIsSelected(filePath);
     const displayName = getEntryDisplayName(filename);
 
@@ -279,7 +341,7 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
                     backgroundColor: isDragOver ? 'action.hover' : 'transparent',
                     borderLeft: isDragOver ? '3px solid primary.main' : '3px solid transparent',
                 }}
-
+                onAuxClick={handleMouseDown}
                 selected={isSelected}
                 onContextMenu={handleContextMenu}
                 to={filePath}
@@ -295,6 +357,8 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
                         primary: {sx: {fontSize: '0.85rem'}}
                     }}
                 />
+
+                <StatusIndicator fileStatus={fileStatus}/>
             </ListItemButton>
             <Menu
                 open={contextMenu !== null}
@@ -314,7 +378,16 @@ const FileItemDisplay = ({entry}: { entry: FsEntry }) => {
 
 const useIsSelected = (targetPath: string) => {
     const location = useLocation();
-    return location.pathname === targetPath;
+    const strippedTarget = stripQueryParams(targetPath);
+    if (location.pathname === strippedTarget) {
+        return true
+    }
+
+    const split = (new URLSearchParams(location.search)).get("split");
+
+    // strippedTarget starts with /<host>/files/ split and remove the prefix
+    const cleanFilename = strippedTarget.split("/files/")[1];
+    return !!(split && strippedTarget && split === cleanFilename);
 };
 
 const useFileMenuCtx = (entry: FsEntry) => {
@@ -345,7 +418,26 @@ const useFileMenuCtx = (entry: FsEntry) => {
 
     const filename = entry.filename
 
+    const navigate = useNavigate()
+    const createFileUrl = useEditorUrl()
+
+    function openSplit(filename: string) {
+        navigate(createFileUrl(filename, undefined, 1))
+    }
+
     const contextActions = [
+        ...(
+            !entry.isDir ?
+                [
+                    <MenuItem onClick={() => {
+                        closeCtxMenu()
+                        openSplit(filename)
+                    }}>
+                        Open In Split
+                    </MenuItem>
+                ] :
+                []
+        ),
         (
             <MenuItem onClick={() => {
                 closeCtxMenu()
@@ -390,7 +482,7 @@ const useFileMenuCtx = (entry: FsEntry) => {
                 })
             }}>
                 Download
-            </MenuItem>
+            </MenuItem>,
         ] : []),
         (
             <MenuItem onClick={() => {
@@ -405,16 +497,39 @@ const useFileMenuCtx = (entry: FsEntry) => {
     return {closeCtxMenu, contextActions, contextMenu, handleContextMenu}
 }
 
-// const useRename = (filename: string) => {
-//     const [isEditing, setIsEditing] = useState(false);
-//     const [editedName, setEditedName] = useState(filename);
-//     const [isHovered, setIsHovered] = useState(false);
-//     const inputRef = useRef<HTMLInputElement>(null);
-//
-//     return {
-//         isEditing, setIsEditing,
-//         editedName, setEditedName,
-//         isHovered, setIsHovered,
-//         inputRef,
-//     }
-// }
+const StatusIndicator = ({fileStatus}: { fileStatus: Status }) => {
+    const stackStatus = getStatusTheme(fileStatus);
+
+    return ((fileStatus) &&
+        <Tooltip
+            title={`${fileStatus.servicesUp} Up, ${fileStatus.servicesDown} Down, ${fileStatus.servicesHealthy} Healthy`}
+            arrow placement="right">
+            <Box
+                sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: stackStatus.label ? stackStatus.color : 'transparent',
+                    border: stackStatus.label ? 'none' : `2px solid ${stackStatus.color}`,
+                    boxShadow: `0 0 0 2px ${stackStatus.color}22`,
+                    ml: 1
+                }}
+            />
+        </Tooltip>
+    )
+};
+
+export default StatusIndicator;
+
+const getStatusTheme = (status: Status | undefined) => {
+    if (!status) {
+        return {color: 'text.disabled', label: ''};
+    }
+
+    if (status.servicesUnHealthy > 0) return {color: 'error.main', label: 'Unhealthy'};
+    if (status.servicesDown > 0 && status.servicesUp > 0) return {color: 'warning.main', label: 'Partially Up'};
+    if (status.servicesDown > 0 && status.servicesUp === 0) return {color: 'error.light', label: 'Down'};
+    if (status.servicesHealthy > 0) return {color: 'success.main', label: 'Healthy'};
+    if (status.servicesUp > 0) return {color: 'success.light', label: 'Running'};
+    return {color: 'text.disabled', label: ''};
+};

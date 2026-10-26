@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         const checkAuthStatus = async () => {
             pingWithAuth().then(value => {
                 setIsAuthenticated(value);
-                console.log(`isAuthenticated is now: ${value}`)
+                // console.log(`isAuthenticated is now: ${value}`)
             }).finally(() => {
                 setIsLoading(false);
             });

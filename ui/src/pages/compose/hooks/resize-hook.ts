@@ -2,7 +2,12 @@ import React, {useEffect, useRef, useState} from "react";
 
 type ResizeDirection = 'top' | 'bottom' | 'left' | 'right';
 
-const useResizeBar = (direction: ResizeDirection, initialSize: number = 250) => {
+const useResizeBar = (
+    direction: ResizeDirection,
+    initialSize: number = 250,
+    min: number = 150,
+    max: number = 600
+) => {
     const [panelSize, setPanelSize] = useState(initialSize);
     const [isResizing, setIsResizing] = useState(false);
     const panelRef = useRef<HTMLDivElement | null>(null);
@@ -35,7 +40,7 @@ const useResizeBar = (direction: ResizeDirection, initialSize: number = 250) => 
                 return;
         }
 
-        setPanelSize(Math.max(150, Math.min(600, newSize)));
+        setPanelSize(Math.max(min, Math.min(max, newSize)));
     };
 
     const handleMouseUp = () => {

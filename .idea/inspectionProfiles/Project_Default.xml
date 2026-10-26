@@ -1,0 +1,48 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="DuplicatedCode" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <Languages>
+        <language minSize="46" name="Go" />
+      </Languages>
+    </inspection_tool>
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="GoDfaErrorMayBeNotNil" enabled="true" level="WARNING" enabled_by_default="true">
+      <methods>
+        <method importPath="github.com/moby/moby/client" receiver="*Client" name="ImageList" />
+        <method importPath="github.com/moby/moby/client" receiver="*Client" name="ImageRemove" />
+        <method importPath="github.com/moby/moby/client" receiver="*Client" name="ImagePrune" />
+        <method importPath="github.com/moby/moby/client" receiver="*Client" name="NetworkPrune" />
+        <method importPath="github.com/moby/moby/client" receiver="*Client" name="VolumeCreate" />
+      </methods>
+    </inspection_tool>
+    <inspection_tool class="GoResourceLeak" enabled="true" level="WARNING" enabled_by_default="true">
+      <functions>
+        <function importPath="github.com/RA341/dockman/internal/ssh" name="NewConnectedMachine" />
+        <function importPath="os" name="OpenFile" />
+        <function importPath="github.com/RA341/dockman/internal/docker_manager" name="newDockerSSHClient" />
+        <function importPath="github.com/docker/docker/client" name="NewClientWithOpts" />
+        <function importPath="github.com/RA341/dockman/internal/docker" name="streamManager" />
+        <function importPath="github.com/RA341/dockman/internal/host" name="NewDockerLocalClient" />
+        <function importPath="github.com/RA341/dockman/internal/host" name="newDockerSSHClient" />
+        <function importPath="github.com/RA341/dockman/internal/ssh" name="createSSHClient" />
+      </functions>
+    </inspection_tool>
+    <inspection_tool class="HtmlUnknownTag" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myValues">
+        <value>
+          <list size="7">
+            <item index="0" class="java.lang.String" itemvalue="nobr" />
+            <item index="1" class="java.lang.String" itemvalue="noembed" />
+            <item index="2" class="java.lang.String" itemvalue="comment" />
+            <item index="3" class="java.lang.String" itemvalue="noscript" />
+            <item index="4" class="java.lang.String" itemvalue="embed" />
+            <item index="5" class="java.lang.String" itemvalue="script" />
+            <item index="6" class="java.lang.String" itemvalue="DockerComposeGenerator" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
+  </profile>
+</component>

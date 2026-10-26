@@ -1,17 +1,21 @@
 import {create} from 'zustand'
 import type {Terminal} from "@xterm/xterm";
-import {useParams} from "react-router-dom";
+import {useLocation, useParams} from "react-router-dom";
 
-export const useFileComponents = (): { host: string; alias: string; filename: string; } => {
+export const useFileComponents = (): { host: string; alias: string; filename: string; splitFilename: string | null } => {
     const params = useParams()
+    const {search} = useLocation()
+    const query = new URLSearchParams(search)
+    const splitFilename = query.get("split")
+
     const param = params["*"];
     const host = params.host;
     if (!host) {
-        return {host: "", alias: "", filename: ""}
+        return {host: "", alias: "", filename: "", splitFilename}
     }
 
     if (host && !param) {
-        return {host: host, alias: "", filename: ""}
+        return {host: host, alias: "", filename: "", splitFilename}
     }
 
     const [alias, relpath] = param!.split("/", 2)
@@ -20,7 +24,8 @@ export const useFileComponents = (): { host: string; alias: string; filename: st
     return {
         host: host ?? "",
         alias: alias ?? "",
-        filename: relpath ? param! : ""
+        filename: relpath ? param! : "",
+        splitFilename
     }
 }
 

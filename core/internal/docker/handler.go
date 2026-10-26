@@ -17,6 +17,7 @@ import (
 	hm "github.com/RA341/dockman/internal/host/middleware"
 	"github.com/RA341/dockman/pkg/fileutil"
 	"github.com/RA341/dockman/pkg/listutils"
+	"github.com/RA341/dockman/pkg/syncmap"
 
 	"connectrpc.com/connect"
 	"github.com/moby/moby/api/types/container"
@@ -58,6 +59,45 @@ func (h *Handler) getHost(ctx context.Context) (string, *Service, error) {
 ////////////////////////////////////////////
 // 			Compose Actions 			  //
 ////////////////////////////////////////////
+
+func (h *Handler) ComposeFileStatus(ctx context.Context, c *connect.Request[v1.ComposeFileStatusRequest]) (*connect.Response[v1.ComposeFileStatusResponse], error) {
+	var results = syncmap.Map[string, *v1.Status]{}
+
+	wg := sync.WaitGroup{}
+
+	for _, file := range c.Msg.Files {
+		wg.Go(func() {
+			err := h.WithClient(ctx, func(dkSrv *Service) error {
+				stat, err := dkSrv.Compose.Status(ctx, file)
+				if err != nil {
+					return err
+				}
+
+				results.Store(file, &v1.Status{
+					ServicesUp:        int32(stat.UpCount),
+					ServicesDown:      int32(stat.DownCount),
+					ServicesHealthy:   int32(stat.HealthyCount),
+					ServicesUnHealthy: int32(stat.UnhealthyCount),
+				})
+
+				return nil
+			})
+			if err != nil {
+				log.Warn().Str("file", file).Err(err).Msg("Failed to get compose status")
+			}
+		})
+	}
+	wg.Wait()
+
+	finalResults := make(map[string]*v1.Status, len(c.Msg.Files))
+	results.Range(func(key string, value *v1.Status) bool {
+		finalResults[key] = value
+		return true
+	})
+	return connect.NewResponse(&v1.ComposeFileStatusResponse{
+		Status: finalResults,
+	}), nil
+}
 
 func (h *Handler) ComposeUp(ctx context.Context, req *connect.Request[v1.ComposeFile], responseStream *connect.ServerStream[v1.LogsMessage]) error {
 	return h.WithClientAndStream(ctx, responseStream, func(dkSrv *Service, writer io.Writer) error {

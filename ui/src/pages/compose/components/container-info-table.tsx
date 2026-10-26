@@ -139,8 +139,9 @@ export function ContainerTable(
                 </TableCell>
             ),
             cell: (c) => (
-                <TableCell sx={{width: 120 }}>
-                    <StatusChip status={c.state}/>
+                <TableCell sx={{width: 120}}>
+                    <StatusChip status={c.state} health={c.health}/>
+
                 </TableCell>
             )
         },
@@ -379,33 +380,40 @@ const ActionBtn = ({icon, title, onClick}: { icon: any, title: string, onClick: 
     </Tooltip>
 );
 
-const StatusChip = ({status}: { status: string }) => {
-    const s = status.toLowerCase();
-    let color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" = "default";
+const StatusChip = ({status, health}: { status: string; health: string }) => {
+    const displayStatus = health ? health : status;
+
+    const s = displayStatus.toLowerCase();
+    let color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning";
 
     switch (s) {
-        case "created":
-            color = "primary";
-            break
+        case "healthy":
         case "running":
             color = "success";
-            break
+            break;
+        case "created":
+        case "starting":
+            color = "info";
+            break;
         case "paused":
             color = "secondary";
-            break
+            break;
+        case "unhealthy":
         case "restarting":
             color = "warning";
-            break
+            break;
         case "dead":
         case "exited":
         case "removing":
             color = "error";
-            break
+            break;
+        default:
+            color = "default";
     }
 
     return (
         <Chip
-            label={status}
+            label={displayStatus}
             size="small"
             variant="outlined"
             color={color}

@@ -15,7 +15,6 @@ import {
     VolumeIcon
 } from "../compose/components/file-icon.tsx";
 import {useTabsStore} from "../../context/tab-context.tsx";
-import {useEditorUrl} from "../../lib/editor.ts";
 import {useHostStore} from "../compose/state/files.ts";
 
 const MAIN_SIDEBAR_WIDTH = 72;
@@ -29,7 +28,7 @@ export function RootLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const {logout} = useAuth();
-    const {lastOpened, allTabs} = useTabsStore();
+    const {lastOpened} = useTabsStore();
 
     const host = useHostFromUrl()
     const setHost = useHostStore(state => state.setHost)
@@ -42,25 +41,15 @@ export function RootLayout() {
         navigate('/');
     };
 
-    const editorUrl = useEditorUrl();
-
     const navigationItems = useMemo(() => [
-        {
-            title: 'Files',
-            path: editorUrl(),
-            icon: DockerFolderIcon,
-            onClick: () => {
-                const url = editorUrl(lastOpened, allTabs[lastOpened])
-                navigate(url)
-            },
-        },
+        {title: 'Files', path: `/${host}/files`, icon: DockerFolderIcon},
         {title: 'Stats', path: `/${host}/stats`, icon: StatsIcon},
         {title: 'Containers', path: `/${host}/containers`, icon: ContainerIcon},
         {title: 'Images', path: `/${host}/images`, icon: ImagesIcon},
         {title: 'Volumes', path: `/${host}/volumes`, icon: VolumeIcon},
         {title: 'Networks', path: `/${host}/networks`, icon: NetworkIcon},
         {title: 'Cleaner', path: `/${host}/cleaner`, icon: () => <FolderDelete sx={{color: 'greenyellow'}}/>},
-    ], [lastOpened, host, navigate, editorUrl, allTabs]);
+    ], [lastOpened, host, navigate]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -70,8 +59,8 @@ export function RootLayout() {
                     e.preventDefault();
                     const page = navigationItems[pageIndex];
                     if (page) {
-                        if (page.onClick) page.onClick();
-                        else navigate(page.path);
+                        // if (page.onClick) page.onClick();
+                        navigate(page.path);
                     }
                 }
             }
@@ -136,7 +125,7 @@ export function RootLayout() {
                                     title={<ShortcutFormatter title={item.title} keyCombo={["ALT", `${index + 1}`]}/>}
                                 >
                                     <ListItemButton
-                                        onClick={item.onClick ? item.onClick : () => navigate(item.path)}
+                                        onClick={() => navigate(item.path)}
                                         selected={isSelected}
                                         sx={{
                                             borderRadius: 2,

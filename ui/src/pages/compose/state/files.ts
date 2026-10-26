@@ -10,7 +10,7 @@ export const useAliasStore = create<{
         setAlias: (alias: string) => {
             set(state => {
                 if (alias && alias !== state.alias) {
-                    console.log("Changing alias", alias)
+                    // console.log("Changing alias", alias)
                     return {
                         alias
                     }
@@ -30,7 +30,7 @@ export const useHostStore = create<{
         setHost: (host: string) => {
             set(state => {
                 if (host && host !== state.host) {
-                    console.log("Changing host", host)
+                    // console.log("Changing host", host)
                     return {
                         host
                     }
@@ -108,3 +108,14 @@ export const useOpenFiles = create<OpenFilesState>()(
         },
     }))
 );
+
+
+export const useLastOpened = create<{
+    lastEditorUrl: string;
+    setUrl: (url: string) => void;
+}>()((set) => ({
+    lastEditorUrl: "",
+    setUrl: (url: string) => {
+        set({lastEditorUrl: url});
+    }
+}))

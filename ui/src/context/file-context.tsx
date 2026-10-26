@@ -1,5 +1,5 @@
 import {createContext, type ReactNode, useCallback, useContext, useEffect, useState} from 'react'
-import {useLocation, useNavigate} from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
 import {callRPC, useHostClient, useHostUrl,} from "../lib/api.ts";
 import {useSnackbar} from "../hooks/snackbar.ts";
 import {FileService, type FsEntry} from '../gen/files/v1/files_pb.ts';
@@ -39,9 +39,8 @@ function FilesProvider({children}: { children: ReactNode }) {
     const client = useHostClient(FileService)
     const {showError, showSuccess} = useSnackbar()
     const navigate = useNavigate()
-    const location = useLocation()
 
-    const {closeTab} = useTabs()
+    const {closeTab, renameTab} = useTabs()
 
     const [files, setFiles] = useState<FsEntry[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -157,11 +156,7 @@ function FilesProvider({children}: { children: ReactNode }) {
             showError(err)
         } else {
             showSuccess(`${oldFilename} renamed to ${newFileName}`)
-            closeTab(oldFilename)
-            const currentPath = location.pathname
-            if (currentPath === oldFilename) {
-                navigate(newFileName)
-            }
+            renameTab(oldFilename, newFileName)
         }
 
         await fetchFiles()

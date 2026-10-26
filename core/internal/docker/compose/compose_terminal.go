@@ -344,6 +344,69 @@ func (c *Service) listIds(ctx context.Context, filename string) ([]string, error
 	return lines, err
 }
 
+func (c *Service) Status(ctx context.Context, filename string) (*StackState, error) {
+	sb := new(bytes.Buffer)
+	err := c.withCmd(ctx, filename, sb,
+		func(cmdList []string) []string {
+			return append(
+				cmdList,
+				"ps", "-a", "--format", "{{.State}} {{.Health}}",
+			)
+		},
+		[]string{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	output := sb.String()
+	lines := strings.Split(output, "\n")
+
+	var stackState StackState
+
+	// first element is the command for some dumbass reason
+	// ["docker compose ps -a ...", "{status}", "", ...]
+	for _, line := range lines[1:] {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.Fields(line)
+		if len(parts) == 0 {
+			continue
+		}
+
+		// Index 0: State (running, exited, etc)
+		// Index 1: Health (healthy, unhealthy, starting) - might be missing
+		state := parts[0]
+
+		if state == "running" {
+			stackState.UpCount++
+		} else {
+			stackState.DownCount++
+		}
+
+		if len(parts) > 1 {
+			health := parts[1]
+			if health == "healthy" {
+				stackState.HealthyCount++
+			} else if health == "unhealthy" {
+				stackState.UnhealthyCount++
+			}
+		}
+	}
+
+	return &stackState, err
+}
+
+type StackState struct {
+	UpCount        uint
+	DownCount      uint
+	HealthyCount   uint
+	UnhealthyCount uint
+}
+
 func (c *Service) Validate(ctx context.Context, filename string) []error {
 	buf := new(bytes.Buffer)
 	err := c.withCmd(ctx, filename, buf,

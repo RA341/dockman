@@ -81,13 +81,13 @@ function FileSearch() {
                 setError(null)
                 if (debouncedSearchQuery) socket?.send(debouncedSearchQuery)
             }
-            socket.onmessage = (e) => {
-                const data = JSON.parse(e.data)
+            socket.onmessage = (ev) => {
+                const data = JSON.parse(ev.data)
                 setFilteredFiles(data.results || [])
             }
             socket.onerror = () => setError("Search service unavailable")
             ws.current = socket
-        } catch (e) {
+        } catch {
             setError("Connection failed")
         }
 
@@ -111,8 +111,9 @@ function FileSearch() {
     }, [activeIndex]);
 
     const editorUrl = useEditorUrl()
-    const handleOpen = (file: string) => {
-        navigate(editorUrl(`/${activeAlias}/${file}`))
+    const handleOpen = (file: string, split: boolean = false) => {
+        const filename = `${activeAlias}/${file}`.replace(/^\/+/, "")
+        navigate(editorUrl(filename, undefined, split ? 1 : 0))
         handleClose()
     }
 
@@ -131,7 +132,7 @@ function FileSearch() {
             setActiveIndex(p => (p > 0 ? p - 1 : 0))
         } else if (event.key === 'Enter' && activeIndex >= 0) {
             event.preventDefault()
-            handleOpen(filteredFiles[activeIndex].Value)
+            handleOpen(filteredFiles[activeIndex].Value, event.shiftKey)
         }
     }
 

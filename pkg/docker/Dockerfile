@@ -1,21 +1,20 @@
 FROM node:24-alpine AS front
 
+RUN npm install -g pnpm@latest
+
 WORKDIR /frontend
 
-COPY ui/package.json ui/package-lock.json ./
+COPY ui/package.json ui/pnpm-lock.yaml ui/pnpm-workspace.yaml  ./
 
-RUN npm i
+RUN pnpm ci
 
 COPY ui .
 
-RUN npm run build
+RUN pnpm run build
 
-FROM golang:1.26-alpine AS back
+FROM golang:1-alpine AS back
 
 WORKDIR /build
-
-# for sqlite
-ENV CGO_ENABLED=1
 
 RUN apk update && apk add --no-cache gcc musl-dev git curl
 
@@ -39,7 +38,7 @@ WORKDIR /download
 
 RUN apk --no-cache add curl ca-certificates
 
-ARG COMPOSE_VERSION=v5.0.1
+ARG COMPOSE_VERSION=v5.1.0
 
 # $(uname -m) to automatically detect x86_64 or aarch64 (ARM)
 RUN curl -SL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-$(uname -m)"  \

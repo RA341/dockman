@@ -27,6 +27,7 @@ service DockerService {
   rpc ComposeUpdate(ComposeFile) returns (stream LogsMessage) {}
   rpc ComposeList(ComposeFile) returns (ListResponse) {}
   rpc ComposeValidate(ComposeFile) returns (ComposeValidateResponse) {}
+  rpc ComposeFileStatus(ComposeFileStatusRequest) returns (ComposeFileStatusResponse) {}
 
   // images
   rpc ImageList(ListImagesRequest) returns (ListImagesResponse) {}
@@ -46,6 +47,21 @@ service DockerService {
   rpc NetworkInspect(NetworkInspectRequest) returns (NetworkInspectResponse) {}
 }
 
+
+message ComposeFileStatusRequest {
+  repeated string files = 1;
+}
+
+message Status {
+  int32 servicesUp = 1;
+  int32 servicesDown = 2;
+  int32 servicesHealthy = 3;
+  int32 servicesUnHealthy = 4;
+}
+
+message ComposeFileStatusResponse {
+  map<string, Status> status = 1;
+}
 
 message ContainerTopRequest {
   string containerId = 1;
@@ -359,6 +375,7 @@ message ContainerList {
   string imageID = 2;
   string imageName = 3;
   string state = 4;
+  string health = 13;
   string name = 5;
   string created = 6;
   repeated Port ports = 7;

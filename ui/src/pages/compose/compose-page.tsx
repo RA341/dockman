@@ -1,5 +1,5 @@
-import {type JSX, useEffect, useMemo} from 'react';
-import {Navigate, Outlet, useNavigate} from 'react-router-dom';
+import {type JSX, useEffect, useMemo, useRef, useState} from 'react';
+import {Navigate, Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {Box, CircularProgress, IconButton, Tab, Tabs, Tooltip, Typography} from '@mui/material';
 import {FileList} from "./components/file-list.tsx";
 import {Close} from '@mui/icons-material';
@@ -17,10 +17,10 @@ import FileSearch from "./dialogs/file-search.tsx";
 import FileCreate from "./dialogs/file-create.tsx";
 import FileDelete from "./dialogs/file-delete.tsx";
 import FileRename from "./dialogs/file-rename.tsx";
-import {useAliasStore, useHostStore} from "./state/files.ts";
+import {useAliasStore, useHostStore, useLastOpened} from "./state/files.ts";
 import AliasProvider, {useAlias} from "../../context/alias-context.tsx";
-import {useEditorUrl} from "../../lib/editor.ts";
 import AliasDialog from "./components/add-alias-dialog.tsx";
+import useResizeBar from "./hooks/resize-hook.ts";
 
 export function FilesLayout() {
     return (
@@ -32,25 +32,36 @@ export function FilesLayout() {
     );
 }
 
-export function FileIndexRedirect() {
-    const lastOpened = useTabsStore(state => state.lastOpened);
-    const tabs = useTabsStore(state => state.allTabs);
-
-    const editorUrl = useEditorUrl()
+function FileIndexRedirect() {
+    const lastUrl = useLastOpened(state => state.lastEditorUrl)
     const {aliases} = useAlias()
 
-    const path = lastOpened
-        ? editorUrl(lastOpened, tabs[lastOpened])
+    const path = lastUrl
+        ? lastUrl
         : aliases.at(0)?.alias ?? '';
+
+    console.log("last path", path, aliases.at(0)?.alias)
 
     if (!path) {
         return <InvalidAlias/>
     }
 
+    console.log(`Nav to ${path}`)
+
     return <Navigate to={path} replace/>;
 }
 
+export default FileIndexRedirect
+
 export const ComposePage = () => {
+    const location = useLocation()
+    const setLast = useLastOpened(state => state.setUrl)
+
+    useEffect(() => {
+        const fullPath = location.pathname + location.search + location.hash;
+        setLast(fullPath)
+    }, [location.pathname, location.search, location.hash]);
+
     const {aliases, isLoading} = useAlias();
     const {host, alias} = useFileComponents();
 
@@ -100,7 +111,8 @@ export const ComposePage = () => {
 }
 
 export const ComposePageInner = () => {
-    const {filename, alias} = useFileComponents()
+    const {filename, alias, splitFilename} = useFileComponents()
+
     const setAlias = useAliasStore(state => state.setAlias)
     useEffect(() => {
         setAlias(alias)
@@ -110,9 +122,27 @@ export const ComposePageInner = () => {
     const host = useHostStore(state => state.host)
     useEffect(() => {
         clearTabs()
-    }, [clearTabs, host]);
+    }, [host]);
 
-    console.log("compose nav to ", filename)
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerWidth, setContainerWidth] = useState(1200);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const observer = new ResizeObserver(([entry]) => {
+            setContainerWidth(entry.contentRect.width);
+        });
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    const {panelRef, panelSize, handleMouseDown, cursor} =
+        useResizeBar('right',
+            800,
+            150,
+            containerWidth - 150);
+
+    const needSplit = !!splitFilename
 
     return (
         <Box sx={{
@@ -137,13 +167,19 @@ export const ComposePageInner = () => {
                 }}>
                     <FileList/>
 
-                    <Box sx={{
-                        flexGrow: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden'
-                    }}>
-                        <FileTabBar/>
+                    {/* Left editor - resizable */}
+                    <Box
+                        ref={panelRef}
+                        sx={{
+                            flexGrow: needSplit ? 0 : 1,
+                            width: needSplit ? panelSize : 'auto',
+                            flexShrink: needSplit ? 0 : 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <FileTabBar track={0}/>
                         <Box sx={{
                             flexGrow: 1,
                             overflow: 'auto',
@@ -152,10 +188,50 @@ export const ComposePageInner = () => {
                         }}>
                             {!filename ?
                                 <CoreComposeEmpty/> :
-                                <CoreCompose/>
+                                <CoreCompose filename={filename} track={0}/>
                             }
                         </Box>
                     </Box>
+
+                    {needSplit && (
+                        <>
+                            {/* Resize handle */}
+                            <Box
+                                onMouseDown={handleMouseDown}
+                                sx={{
+                                    width: '4px',
+                                    flexShrink: 0,
+                                    cursor: cursor,
+                                    backgroundColor: 'divider',
+                                    '&:hover': {
+                                        backgroundColor: 'primary.main',
+                                    },
+                                    transition: 'background-color 0.2s',
+                                }}
+                            />
+
+                            {/* Right editor - takes remaining space */}
+                            <Box sx={{
+                                flexGrow: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden'
+                            }}>
+                                <FileTabBar track={1}/>
+                                <Box sx={{
+                                    flexGrow: 1,
+                                    overflow: 'auto',
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}>
+                                    {!splitFilename ?
+                                        <CoreComposeEmpty/> :
+                                        <CoreCompose filename={splitFilename} track={1}/>
+                                    }
+                                </Box>
+                            </Box>
+                        </>
+                    )}
                 </Box>
                 <LogsPanel/>
             </Box>
@@ -168,22 +244,22 @@ function getTabName(filename: string): string {
     return s.slice(0, 19) // max name limit of 19 chars
 }
 
-const FileTabBar = () => {
-    const {filename} = useFileComponents()
+const FileTabBar = ({track}: { track: number }) => {
+    const {filename, splitFilename, host, alias} = useFileComponents()
+    const currentFilename = track === 0 ? filename : (splitFilename ?? '')
 
     const navigate = useNavigate();
     const {closeTab, onTabClick} = useTabs();
 
-    const {host} = useHostStore.getState();
-    const {alias} = useAliasStore.getState();
-    const contextKey = `${host}/${alias}`;
+    const contextKey = `${host}/${alias}`
 
-    const tabs = useTabsStore(state => state.contextTabs)[contextKey] ?? {}
-    const activeTab = useTabsStore(state => state.lastOpened)
+    const contextTabs = useTabsStore(state => state.contextTabs)[contextKey] ?? {0: new Set(), 1: new Set()}
+    const tabs = contextTabs[track] ?? new Set()
+    const activeTab = useTabsStore(state => state.lastOpened[track])
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const tabNames = Object.keys(tabs);
+            const tabNames = Array.from(tabs);
 
             if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.repeat && (e.key == "ArrowLeft" || e.key == "ArrowRight")) {
                 let currentIndex = tabNames.indexOf(activeTab);
@@ -206,13 +282,13 @@ const FileTabBar = () => {
                 }
 
                 const name = tabNames[currentIndex]
-                onTabClick(name);
+                onTabClick(name, track);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [navigate, tabs, activeTab, onTabClick])
+    }, [navigate, tabs, activeTab, onTabClick, track])
 
     const tablist = useMemo(() => {
         return Array.from(tabs);
@@ -221,8 +297,8 @@ const FileTabBar = () => {
     return (
         <Box sx={{borderBottom: 1, borderColor: 'divider', flexShrink: 0}}>
             <Tabs
-                value={filename}
-                onChange={(_event, value) => onTabClick(value as string)}
+                value={currentFilename}
+                onChange={(_event, value) => onTabClick(value as string, track)}
                 variant="scrollable"
                 scrollButtons="auto"
             >
@@ -245,7 +321,7 @@ const FileTabBar = () => {
                                     component="div"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        closeTab(tabFilename)
+                                        closeTab(tabFilename, track)
                                     }}
                                     sx={{ml: 1.5}}
                                 >
@@ -260,22 +336,23 @@ const FileTabBar = () => {
     );
 };
 
-const CoreCompose = () => {
-    const {host, alias, filename} = useFileComponents()
+const specialFileSupport = (filename: string): Map<string, JSX.Element> => new Map([
+    ["db", <ViewerSqlite filename={filename}/>],
+])
+
+const CoreCompose = ({filename, track}: { filename: string, track: number }) => {
+    const {host, alias} = useFileComponents()
 
     if (filename === formatDockyaml(alias, host)) {
-        return <ViewerDockyaml/>
+        return <ViewerDockyaml filename={filename}/>
     }
 
-    const ext = getExt(filename!)
-    const specialFileSupport: Map<string, JSX.Element> = new Map([
-        ["db", <ViewerSqlite/>],
-    ])
+    const ext = getExt(filename)
 
-    const viewer = specialFileSupport.get(ext)
+    const viewer = specialFileSupport(filename).get(ext)
     if (viewer) {
         return viewer
     }
 
-    return <ViewerText/>;
+    return <ViewerText filename={filename} track={track}/>;
 };
