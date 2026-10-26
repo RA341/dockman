@@ -1,3 +1,17 @@
+# [3.3.0](https://github.com/RA341/dockman/compare/v3.2.0...v3.3.0) (2026-10-26)
+
+
+### Bug Fixes
+
+* added container health status ([6639cee](https://github.com/RA341/dockman/commit/6639cee949f9e8b864fafda127f3460998a4bd1a))
+* update deps ([e14bf81](https://github.com/RA341/dockman/commit/e14bf812c22319e4b021988c0678d1cf1bf6e765))
+
+
+### Features
+
+* compose file status ([ee60de9](https://github.com/RA341/dockman/commit/ee60de9412b3a9ef798867f934e6387ce270fd75)), closes [#162](https://github.com/RA341/dockman/issues/162)
+* split tabs ([3b350a5](https://github.com/RA341/dockman/commit/3b350a5ed8eeeea29d9ebb101f91448617d01fe7)), closes [#184](https://github.com/RA341/dockman/issues/184)
+
 # [3.2.0](https://github.com/RA341/dockman/compare/v3.1.0...v3.2.0) (2026-02-13)
 
 
