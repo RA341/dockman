@@ -1,3 +1,10 @@
+## [3.3.1](https://github.com/RA341/dockman/compare/v3.3.0...v3.3.1) (2026-10-27)
+
+
+### Bug Fixes
+
+* **docker:** guard optional container fields in listing ([37a76a2](https://github.com/RA341/dockman/commit/37a76a22c1891f2b4da6337f514b349db398a7f5))
+
 # [3.3.0](https://github.com/RA341/dockman/compare/v3.2.0...v3.3.0) (2026-10-26)
 
 
