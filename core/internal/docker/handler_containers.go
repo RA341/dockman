@@ -343,13 +343,18 @@ func (h *Handler) containersToRpc(result []container.Summary, host string, srv *
 func (h *Handler) ToProto(stack container.Summary, portSlice []*v1.Port, update updater.ImageUpdate) *v1.ContainerList {
 	ipAddr := extractIPAddr(stack)
 
+	name := ""
+	if len(stack.Names) > 0 {
+		name = strings.TrimPrefix(stack.Names[0], "/")
+	}
+
 	var he string
-	if stack.Health.Status != container.NoHealthcheck {
+	if stack.Health != nil && stack.Health.Status != container.NoHealthcheck {
 		he = string(stack.Health.Status)
 	}
 
 	return &v1.ContainerList{
-		Name:            strings.TrimPrefix(stack.Names[0], "/"),
+		Name:            name,
 		Id:              stack.ID,
 		ImageID:         stack.ImageID,
 		ImageName:       stack.Image,
@@ -372,10 +377,12 @@ func extractIPAddr(stack container.Summary) (hosts []string) {
 	}
 
 	var ipAddr string
-	for _, netConf := range stack.NetworkSettings.Networks {
-		ipAddr = netConf.IPAddress.String()
-		if ipAddr != "invalid IP" {
-			hosts = append(hosts, ipAddr)
+	if stack.NetworkSettings != nil {
+		for _, netConf := range stack.NetworkSettings.Networks {
+			ipAddr = netConf.IPAddress.String()
+			if ipAddr != "invalid IP" {
+				hosts = append(hosts, ipAddr)
+			}
 		}
 	}
 
