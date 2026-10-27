@@ -1,6 +1,18 @@
 import React, {type ReactElement, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import {Box, Button, CircularProgress, Fade, Tab, Tabs, Tooltip} from '@mui/material';
+import {
+    Box,
+    Button,
+    CircularProgress,
+    Fade,
+    FormControlLabel,
+    IconButton,
+    Switch,
+    Tab,
+    Tabs,
+    Tooltip,
+    Typography
+} from '@mui/material';
 import {useFileComponents} from "../state/terminal.tsx";
 import {callRPC, useHostClient} from "../../../lib/api.ts";
 import {isComposeFile, useEditorUrl} from "../../../lib/editor.ts";
@@ -9,10 +21,11 @@ import {ShortcutFormatter} from "./shortcut-formatter.tsx";
 import {TabDeploy} from "../tab-deploy.tsx";
 import {TabStat} from "../tab-stats.tsx";
 import CenteredMessage from "../../../components/centered-message.tsx";
-import {ErrorOutline} from "@mui/icons-material";
+import {ErrorOutline, SaveOutlined} from "@mui/icons-material";
 import {useOpenFiles} from "../state/files.ts";
 import {FileService} from "../../../gen/files/v1/files_pb.ts";
 import {indicatorMap, type SaveState} from "../hooks/status-hook.tsx";
+import {useEditorSave} from "../state/save.ts";
 
 export enum TabType {
     // noinspection JSUnusedGlobalSymbols
@@ -108,6 +121,11 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
 
     const [saveStatus, setSaveStatus] = useState<SaveState>('idle')
 
+    const autoSave = useEditorSave(state => state.autoSave)
+    const toggleAutoSave = useEditorSave(state => state.toggleAutoSave)
+    const isDirty = useEditorSave(state => state.dirtyFiles[filename] ?? false)
+    const saveNow = useEditorSave(state => state.savers[filename])
+
 
     const tabsList: TabDetails[] = useMemo(() => {
         if (!filename) return [];
@@ -116,7 +134,21 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
 
         map.push({
             label: 'Editor',
+            // TabEditor/EditorCommon keep their own loading/contents state in
+            // React, which does NOT reset just because the filename prop
+            // changes — the same instance is reused across a file switch.
+            // That leaves a render where filename already points at the new
+            // file but contents/loading are still the previous file's, which
+            // MonacoEditor then bakes into a brand-new model as its
+            // defaultValue (permanent, since keepCurrentModel never
+            // overwrites an existing model afterwards): one file's tab can
+            // end up showing another file's content. Keying on filename
+            // forces a clean remount per file instead. This does not lose
+            // undo history or unsaved drafts — those live in Monaco's own
+            // model registry and the useEditorSave store, both outside this
+            // component's lifecycle.
             component: <TabEditor
+                key={filename}
                 selectedPage={filename}
                 setFileSaveStatus={setSaveStatus}
             />,
@@ -223,7 +255,7 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
                 </Tabs>
 
                 {selectedTab === TabType.EDITOR &&
-                    <Box sx={{display: 'flex', gap: 1, px: 2}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1, px: 2, ml: 'auto'}}>
                         {buttonList.map((details) => (
                             <Button
                                 size="small"
@@ -234,6 +266,49 @@ function ViewerTextEditor({filename, track}: { filename: string, track: number }
                                 {details.title}
                             </Button>
                         ))}
+
+                        <Tooltip title={<ShortcutFormatter title={"Save file"} keyCombo={["CTRL", "S"]}/>}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    aria-label="Save file"
+                                    disabled={!isDirty}
+                                    color={isDirty ? "warning" : "default"}
+                                    onClick={() => saveNow?.()}
+                                >
+                                    <SaveOutlined/>
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip title={
+                            <Box sx={{maxWidth: 240}}>
+                                <Typography variant="caption" display="block">
+                                    {autoSave
+                                        ? "Auto-save is on: changes are saved as you type."
+                                        : "Auto-save is off: save manually with the save button or CTRL + S."}
+                                </Typography>
+                                <Typography variant="caption" display="block" sx={{mt: 0.5, opacity: 0.8}}>
+                                    Unsaved changes are kept when switching tabs, but are lost if you fully reload the page.
+                                </Typography>
+                            </Box>
+                        }>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        size="small"
+                                        checked={autoSave}
+                                        onChange={toggleAutoSave}
+                                    />
+                                }
+                                label={
+                                    <Typography variant="caption" color="text.secondary">
+                                        Auto-save
+                                    </Typography>
+                                }
+                                sx={{mr: 0, ml: 0, whiteSpace: 'nowrap'}}
+                            />
+                        </Tooltip>
                     </Box>
                 }
             </Box>

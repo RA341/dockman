@@ -1,9 +1,10 @@
 import {MonacoEditor} from "./editor.tsx";
-import {useEffect, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {useSnackbar} from "../../../hooks/snackbar.ts";
 import {Alert, AlertTitle, Box, Button, CircularProgress, Link, Typography} from '@mui/material';
 import {ErrorOutline, WarningAmber} from '@mui/icons-material';
 import {type SaveState, useSaveStatus} from "../hooks/status-hook.tsx";
+import {useEditorSave} from "../state/save.ts";
 import {ErrFileNotSupported} from "../../../context/file-context.tsx";
 
 interface TextEditorProps {
@@ -22,7 +23,20 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
 
-    const {status, handleContentChange} = useSaveStatus(500, filename);
+    const registerSaver = useEditorSave(state => state.registerSaver);
+    const unregisterSaver = useEditorSave(state => state.unregisterSaver);
+
+    const saveContents = useCallback(async (newContent: string): Promise<SaveState> => {
+        const err = await saveFile(filename, newContent);
+        if (err) {
+            showError(`Could not save contents: ${err}`);
+            return 'error'
+        } else {
+            return 'success'
+        }
+    }, [filename, saveFile, showError]);
+
+    const {status, handleContentChange, saveNow, setBaseline} = useSaveStatus(500, filename, saveContents);
 
     const refreshFile = async () => {
         await getFile(filename)
@@ -33,7 +47,19 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         setLoading(true)
 
         const {contents, err} = await getFile(filename)
-        if (err) {
+
+        if (!err) {
+            // the on-disk content is the baseline used to decide whether the
+            // file has unsaved changes (reverting edits clears "unsaved")
+            setBaseline(contents)
+        }
+
+        // prefer an in-memory draft (unsaved edits from before a tab switch)
+        // over the persisted content coming from the backend
+        const draft = useEditorSave.getState().drafts[filename];
+        if (draft !== undefined) {
+            setContents(draft)
+        } else if (err) {
             setErr(err)
         } else {
             setContents(contents)
@@ -42,27 +68,51 @@ function EditorCommon({filename, setFileSaveStatus, saveFile, getFile}: TextEdit
         setLoading(false);
     };
 
-    const saveContents = async (newContent: string): Promise<SaveState> => {
-        const err = await saveFile(filename, newContent);
-        if (err) {
-            showError(`Could not save contents: ${err}`);
-            return 'error'
-        } else {
-            return 'success'
-        }
-    };
-
     useEffect(() => {
         setFileSaveStatus(status)
     }, [status]);
 
     useEffect(() => {
         loadFile().then();
-    }, []);
+        // reload content when switching to a different file
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filename]);
+
+    // expose the manual save so toolbar buttons (diskette) can trigger it
+    useEffect(() => {
+        registerSaver(filename, saveNow);
+        return () => unregisterSaver(filename);
+    }, [filename, saveNow, registerSaver, unregisterSaver]);
+
+    // CTRL+S / CMD+S saves pending changes, even when auto-save is enabled
+    // (flushes the debounce immediately)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                if (!e.repeat) {
+                    saveNow().then();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [saveNow]);
+
+    // warn before closing the browser tab with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (useEditorSave.getState().dirtyFiles[filename]) {
+                e.preventDefault();
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [filename]);
 
     const onContentChange = (value: string | undefined) => {
-        if (!value) return;
-        handleContentChange(value, saveContents)
+        if (value === undefined) return;
+        handleContentChange(value)
     }
 
     if (loading) {
